@@ -1,0 +1,10 @@
+{
+  "name": "seven_position_toy",
+  "positions": ["p0","p1","p2","p3","p4","p5","p6"],
+  "boundary": ["p1","p2","p3","p4","p5","p6"],
+  "inner": ["p0"],
+  "edges": [["p1","p2"],["p2","p3"],["p3","p4"],["p4","p5"],["p5","p6"],["p6","p1"]],
+  "inventory": {"fresh":3,"once_burned":3,"twice_burned":1},
+  "symmetry_pairs": [],
+  "description": "Seven-position abstract verification core; categories are synthetic labels, not physical material states."
+}
