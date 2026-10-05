@@ -1,6 +1,20 @@
 {
   "title": "Confidence-Bounded Physical Feasibility Ranking (CB-PFR)",
-  "description": "Research software and methodological artifacts for an uncertainty-aware post-optimization candidate ranking layer.",
-  "creators": [{"name": "Fahry Bagus Adiputra"}],
-  "license": "MIT"
+  "description": "Research software and methodological artifacts for an uncertainty-aware post-optimization candidate ranking layer. Version 0.1.0. The release contains the CB-PFR implementation, abstract QUBO model, frozen synthetic benchmark configuration and trial-level results, reproducibility/audit scripts, and explicit documentation of the unresolved physical-validation boundary.",
+  "creators": [
+    {
+      "name": "Fachry Bagus Adiputra",
+      "affiliation": "SMAN 1 Karawang"
+    }
+  ],
+  "version": "0.1.0",
+  "publication_date": "2026-10-05",
+  "license": "MIT",
+  "keywords": [
+    "QUBO",
+    "combinatorial optimization",
+    "uncertainty quantification",
+    "candidate ranking",
+    "decision-making under uncertainty"
+  ]
 }
