@@ -1,7 +1,7 @@
 # Paper artifacts
 
-The methodological working paper is the primary research document for CB-PFR.
+The methodological working paper is available as `CB-PFR_Methodological_Working_Paper.pdf` in this directory. The paper is provided alongside its bibliography and available source materials.
 
-The source release was compiled separately and audited for equations, tables, bibliography, and visual layout. The repository keeps the bibliography and paper metadata alongside the software.
+The paper is a methodological working paper, not a claim of physical validation. The presence of the paper or software does not establish a defensible QUBO-to-reactor-physics mapping or demonstrate physical CB-PFR performance.
 
-The authoritative release package contains the compiled PDF and complete LaTeX source. This GitHub repository focuses on the inspectable source/software layer; do not infer physical validation from the presence of the paper.
+Before citing the paper, check its title page and references and cite the version/date shown in the PDF. For software citation metadata, use the repository's `CITATION.cff`.
