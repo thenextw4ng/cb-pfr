@@ -1,0 +1,2 @@
+# CB-PFR core package intentionally uses Python standard-library modules only.
+# Optional research environments may add numpy/pandas/scipy as needed for future benchmarks.
