@@ -37,11 +37,11 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 
 | Evidence | Status |
 |---|---|
-| CB-PFR implementation and automated CI | **Present; latest CI run passed** |
+| CB-PFR implementation and automated CI | **Present; check the Actions badge/run for current status** |
 | Abstract QUBO implementation and exact enumeration | **Present** |
-| Reduced 1,000-trial synthetic benchmark runner and configuration | **Present; reproducibility check is part of CI** |
-| Archived trial-level `per_seed_results.csv` | **Not yet checked into this public repository** |
-| Compiled methodological working paper PDF | **Not yet checked into this public repository** |
+| Reduced 1,000-trial synthetic benchmark runner and configuration | **Present** |
+| Archived trial-level `results/per_seed_results.csv` | **Included; 4,000 method/trial rows (1,000 trials × 4 methods)** |
+| Compiled methodological working paper PDF | **Included at `paper/CB-PFR_Methodological_Working_Paper.pdf`** |
 | MC/DC C5G7 execution evidence | **Recorded execution evidence** |
 | CB-PFR physical validation | **Not established** |
 | QUBO → C5G7 mapping | **NO_DEFENSIBLE_MAPPING_FOUND** |
@@ -53,10 +53,10 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 |---|---:|
 | QUBO-only | 0.857 |
 | Point estimate | 0.933 |
-| **CB-PFR** | **0.976** |
+| **CB-PFR** | **0.976 |
 | Uniform margin | 0.966 |
 
-These are conditional synthetic benchmark results. They are not physical evidence and do not establish universal superiority.
+These are conditional synthetic benchmark results. They are not physical evidence and do not establish universal superiority. Interpret them only under the benchmark's declared data-generating process and protocol.
 
 ## Physical-model boundary
 
@@ -78,6 +78,7 @@ A future physical study requires documented geometry, material/depletion states,
     ├── LICENSE-CODE.txt
     ├── LICENSE-PAPER.txt
     ├── paper/
+    │   ├── CB-PFR_Methodological_Working_Paper.pdf
     │   ├── README.md
     │   └── source/
     ├── src/cbpfr/
@@ -89,6 +90,8 @@ A future physical study requires documented geometry, material/depletion states,
     │   └── openmc.py
     ├── config/
     ├── results/
+    │   ├── main_results.csv
+    │   └── per_seed_results.csv
     ├── reports/
     ├── examples/
     ├── tests/
@@ -115,7 +118,7 @@ Use a new output directory (the runner refuses to overwrite a nonempty one):
 
     python scripts/run_reduced_synthetic_calibration.py --results-dir results/reproduced_run
 
-This generates trial-level output and aggregate/audit files from the checked-in code and configuration. The original archival `per_seed_results.csv` is not currently included, so row-by-row comparison against that original artifact is not possible from this public repository alone. See [docs/reproducibility.md](docs/reproducibility.md) and [FINAL_RELEASE_AUDIT.md](FINAL_RELEASE_AUDIT.md) for the exact evidence boundary.
+This generates fresh trial-level output and aggregate/audit files from the checked-in code and configuration. The preserved archival `results/per_seed_results.csv` is provided for inspection and independent row-level comparison; a fresh run should not be described as an exact reproduction unless the environment, protocol, seeds, and row-level comparison have been checked. See [docs/reproducibility.md](docs/reproducibility.md), [docs/limitations.md](docs/limitations.md), and [FINAL_RELEASE_AUDIT.md](FINAL_RELEASE_AUDIT.md) for the evidence boundary.
 
 ## Design principles
 
@@ -149,7 +152,7 @@ The repository currently documents the early stages honestly; later stages are f
 
 ## Citation
 
-Use CITATION.cff for repository metadata and cite the working paper for methodological discussion.
+Use [CITATION.cff](CITATION.cff) for repository metadata and cite the working paper for methodological discussion.
 
 ## License
 
