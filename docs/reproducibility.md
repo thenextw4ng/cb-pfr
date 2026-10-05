@@ -2,9 +2,9 @@
 
 ## Status
 
-The released source and configuration include a 1,000-trial synthetic benchmark runner. The repository's latest GitHub Actions run completed successfully, and the workflow includes the synthetic reproducibility check. This supports software/protocol reproducibility under the declared synthetic data-generating process.
+The released source and configuration include a 1,000-trial synthetic benchmark runner. GitHub Actions has previously completed successfully; check the repository's Actions page for the latest run status. The archived trial-level output is also checked into the repository as `results/per_seed_results.csv`.
 
-The original archival `per_seed_results.csv` (4,000 method/trial rows) is **not currently checked into this public repository**. As a result, the repository user can generate a fresh trial-level output but cannot compare every row to that original archival file using this repository alone.
+The archive contains 4,000 method/trial rows (1,000 trials × 4 methods). It supports direct inspection and row-level auditing. Do not assume that a newly generated run is an exact reproduction until you compare the outputs and account for the software environment and protocol.
 
 ## Protocol
 
@@ -35,9 +35,13 @@ These are conditional synthetic benchmark rates, not physical outcomes.
 
 Use a new, empty output directory. The runner refuses to overwrite a nonempty results directory. It writes trial-level selections, aggregate tables, coverage information, and a protocol snapshot.
 
-## Archival audit boundary
+## Archival audit
 
-`results/recorded_results_audit.json` contains a statistical audit of the recorded outputs. The original `per_seed_results.csv` is tracked in Issue #9 for synchronization; until it is committed or attached to a stable public archive, the exact archival row-by-row comparison cannot be independently performed from this repository alone.
+The archived file `results/per_seed_results.csv` records the original trial-level results. Its SHA-256 is:
+
+`f7fb629fa182778645c41dcbc20f063599b41e09d428ea8204d4af10855e2133`
+
+A prior audit reports that an independent rerun matched all 4,000 substantive method/trial rows. To reproduce that audit, compare the fresh output against the archive using the same row keys and documented substantive columns; do not compare generated timestamps or non-substantive metadata as if they were scientific outcomes.
 
 ## What this does not prove
 
