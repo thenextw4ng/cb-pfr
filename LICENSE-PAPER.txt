@@ -1,0 +1,7 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+The manuscript and documentation in this repository are intended to be shared
+under the terms of the Creative Commons Attribution 4.0 International license.
+See https://creativecommons.org/licenses/by/4.0/ for the license text.
+
+Copyright (c) 2026 Fahry Bagus Adiputra.
