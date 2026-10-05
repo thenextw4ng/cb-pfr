@@ -26,7 +26,6 @@ def main()->None:
         discordant=cb_only+base_only
         comparisons[baseline]={"cb_only":cb_only,"baseline_only":base_only,"ties":len(cb)-discordant,"discordant":discordant,"exact_two_sided_sign_test_p":exact_sign_test(min(cb_only,base_only),discordant) if discordant else 1.0}
     audit={"status":"VERIFIED FROM AVAILABLE ARTIFACTS","independent_full_rerun":False,"physical_validation":False,"rows":len(rows),"trials":len(outcomes["cb_pfr"]),"rates":rates,"paired_comparisons":comparisons,"interpretation":"This audits recorded trial-level outputs; it does not establish physical effectiveness or independent end-to-end reproduction."}
-    OUTPUT.write_text(json.dumps(audit,indent=2,sort_keys=True)+"
-",encoding="utf-8")
+    OUTPUT.write_text(json.dumps(audit,indent=2,sort_keys=True)+"\\n",encoding="utf-8")
     print(json.dumps(audit,indent=2,sort_keys=True))
 if __name__=="__main__": main()
