@@ -2,9 +2,9 @@
 
 ## Release status
 
-CB-PFR is released as a transparent research/software prototype and methodological working paper. The public repository includes the source, benchmark configuration, aggregate results, archival trial-level CSV, and working-paper PDF. Physical CB-PFR validation remains **not established**.
+CB-PFR is prepared as a transparent research/software prototype and methodological working paper. The public repository contains the source code, benchmark configuration, aggregate results, archival trial-level CSV, reproducibility/audit documentation, and software metadata. The methodological working paper is maintained as a separate publication artifact. Physical CB-PFR validation remains **not established**.
 
-This audit describes the repository state and evidence boundary; it is not a claim of peer review, physical validation, or production readiness.
+This audit describes the repository evidence boundary; it is not a claim of peer review, physical validation, or production readiness.
 
 ## Repository contents checked
 
@@ -14,17 +14,16 @@ This audit describes the repository state and evidence boundary; it is not a cla
 - Reduced 1,000-trial synthetic benchmark runner and configuration.
 - Aggregate result table and statistical audit metadata.
 - Archived `results/per_seed_results.csv` with 4,000 method/trial rows.
-- `paper/CB-PFR_Methodological_Working_Paper.pdf`.
 - Reproducibility, limitations, and physical-mapping documentation.
+- Software citation metadata in `CITATION.cff` and `.zenodo.json`.
 
 ## Evidence taxonomy
 
 - **Synthetic software/protocol evidence:** reported 1,000-trial study under a known synthetic normal observation model.
 - **Archived data:** `results/per_seed_results.csv`, retained for inspection and row-level comparison.
+- **Independent computational rerun:** the released source and frozen configuration were executed to regenerate the benchmark; substantive trial-level fields and aggregate rates matched the archival output. This is not an external third-party replication.
 - **Recorded transport execution evidence:** MC/DC C5G7 benchmark run; this is not CB-PFR physical validation.
 - **Physical CB-PFR validation:** not established.
-
-A prior audit reports that an independent rerun matched all 4,000 substantive method/trial rows. Readers should treat that as a documented audit result, not infer exact reproducibility merely because source and archived data are present. Check the protocol and row-level comparison before claiming reproduction.
 
 ## Recorded synthetic rates
 
@@ -48,15 +47,15 @@ The MC/DC C5G7 report is execution evidence only. It does not establish a valida
 ## Artifact identity
 
 - `results/per_seed_results.csv` SHA-256: `f7fb629fa182778645c41dcbc20f063599b41e09d428ea8204d4af10855e2133`
-- `paper/CB-PFR_Methodological_Working_Paper.pdf` SHA-256 recorded before upload: `89e786d529ca3131e0182fcaad315dd4332491aa51253f936072cfda37bd5d96`
-- `paper/source/main.tex` SHA-256 (source from audited workspace): `c0369fd420cba0b9c205503bee03841cd6bcdf082ba35838ad7ef7b90290a56f`
+- Final methodological working-paper PDF SHA-256 (publication artifact): `726b7859250e348f092bcd15640822f8f0b19ccba9f192659147e97ff2664d15`
+- Final LaTeX source SHA-256 (publication workspace): `7f1481e343d2220f4ce9a47deb2a3dab034ebca006b9e1d420be057f1cc14940`
 
-The local SHA-256 values above identify the audited source artifacts. The PDF checksum should be independently rechecked after download from GitHub if byte-for-byte identity is important.
+The paper checksum identifies the exact publication artifact prepared for the separate Zenodo preprint record.
 
 ## Remaining research gates
 
-1. Re-run tests and benchmark in a clean environment and retain logs/checksums.
-2. Reproduce the archived row-level comparison from documented commands and environment.
+1. Publish the GitHub `v0.1.0` release and archive it through Zenodo.
+2. Add the resulting software DOI to the publication record and paper citation section.
 3. Conduct uncertainty calibration, sensitivity analysis, and pre-specified ablations.
 4. Define and justify a defensible physical benchmark and category-to-material mapping.
 5. Evaluate against relevant optimization/selection baselines using equal physical-evaluation budgets.
