@@ -15,9 +15,27 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install package
+        run: python -m pip install -e .
       - name: Compile Python sources
-        run: python -m py_compile src/cbpfr/*.py tests/*.py examples/*.py
-      - name: Run smoke tests
-        env:
-          PYTHONPATH: src
+        run: python -m py_compile src/cbpfr/*.py tests/*.py examples/*.py scripts/*.py
+      - name: Run automated tests
         run: python -m unittest discover -s tests -v
+      - name: Run examples
+        run: |
+          python examples/toy_qubo_example.py
+          python examples/basic_ranking.py
+      - name: Reproduce frozen synthetic benchmark
+        run: |
+          python scripts/run_reduced_synthetic_calibration.py --results-dir /tmp/cbpfr-reproduced
+          python - <<'PY'
+          import csv
+          expected = {"qubo_only": 0.857, "point_estimate": 0.933, "cb_pfr": 0.976, "uniform_margin": 0.966}
+          with open("/tmp/cbpfr-reproduced/main_results.csv", newline="", encoding="utf-8") as f:
+              rows = list(csv.DictReader(f))
+          actual = {r["method"]: float(r["selected_true_feasibility_rate"]) for r in rows}
+          for method, rate in expected.items():
+              if abs(actual[method] - rate) > 1e-12:
+                  raise SystemExit(f"{method}: expected {rate}, got {actual[method]}")
+          print("Frozen synthetic aggregate reproduced exactly:", actual)
+          PY
