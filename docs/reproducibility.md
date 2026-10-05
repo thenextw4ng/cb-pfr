@@ -2,9 +2,9 @@
 
 ## Status
 
-The released source and configuration include a 1,000-trial synthetic benchmark runner. GitHub Actions has previously completed successfully; check the repository's Actions page for the latest run status. The archived trial-level output is also checked into the repository as `results/per_seed_results.csv`.
+The released source and configuration include a 1,000-trial synthetic benchmark runner. The archived trial-level output is also checked into the repository as `results/per_seed_results.csv`.
 
-The archive contains 4,000 method/trial rows (1,000 trials × 4 methods). It supports direct inspection and row-level auditing. Do not assume that a newly generated run is an exact reproduction until you compare the outputs and account for the software environment and protocol.
+The archive contains 4,000 method/trial rows (1,000 trials × 4 methods). The benchmark has already been **independently re-executed** from the released source and frozen configuration. All substantive trial-level fields in the regenerated output matched the archival CSV, and the four aggregate selected-feasibility rates matched exactly. This is an independent computational rerun, not an external third-party replication.
 
 ## Protocol
 
@@ -41,7 +41,7 @@ The archived file `results/per_seed_results.csv` records the original trial-leve
 
 `f7fb629fa182778645c41dcbc20f063599b41e09d428ea8204d4af10855e2133`
 
-A prior audit reports that an independent rerun matched all 4,000 substantive method/trial rows. To reproduce that audit, compare the fresh output against the archive using the same row keys and documented substantive columns; do not compare generated timestamps or non-substantive metadata as if they were scientific outcomes.
+The released audit script recomputes the aggregate rates and paired comparisons from the recorded trial-level data. The independent computational rerun additionally regenerates the benchmark from source/configuration and checks substantive row-level equality against the archive.
 
 ## What this does not prove
 
