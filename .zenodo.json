@@ -1,0 +1,6 @@
+{
+  "title": "Confidence-Bounded Physical Feasibility Ranking (CB-PFR)",
+  "description": "Research software and methodological artifacts for an uncertainty-aware post-optimization candidate ranking layer.",
+  "creators": [{"name": "Fahry Bagus Adiputra"}],
+  "license": "MIT"
+}
