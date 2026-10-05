@@ -6,4 +6,5 @@
 4. **Normalization and weights matter.** Changing scales or weights can change the ranking.
 5. **No universal superiority claim.** The observed synthetic advantage is conditional on the released data-generating process and protocol.
 6. **No safety claim.** CB-PFR is not a reactor-safety method.
-7. **No independent full rerun claim.** The artifact audit verifies recorded outputs; it is not equivalent to independent reproduction.
+7. **Archival artifact gap.** The released runner and configuration can generate the synthetic benchmark, and CI checks the reproduction path. However, the original 4,000-row archival `per_seed_results.csv` is not yet checked into this public repository, so readers cannot compare every generated row against that original file from the repository alone.
+8. **Physical mapping remains unresolved.** MC/DC C5G7 execution evidence is separate from CB-PFR physical validation. The mapping audit status remains `NO_DEFENSIBLE_MAPPING_FOUND`.
