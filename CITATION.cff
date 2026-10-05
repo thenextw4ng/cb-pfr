@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use CB-PFR in research, please cite the methodological working paper and repository."
+title: "Confidence-Bounded Physical Feasibility Ranking (CB-PFR)"
+type: software
+version: 0.1.0
+date-released: 2026-10-05
+authors:
+  - family-names: Adiputra
+    given-names: Fahry Bagus
+repository-code: "https://github.com/thenextw4ng/cb-pfr"
+license: MIT
+abstract: "A post-optimization candidate-ranking layer that incorporates uncertainty-aware physical-feasibility screening."
