@@ -47,7 +47,7 @@ The MC/DC C5G7 report is execution evidence only. It does not establish a valida
 ## Artifact identity
 
 - `results/per_seed_results.csv` SHA-256: `f7fb629fa182778645c41dcbc20f063599b41e09d428ea8204d4af10855e2133`
-- Final methodological working-paper PDF SHA-256 (publication artifact): `726b7859250e348f092bcd15640822f8f0b19ccba9f192659147e97ff2664d15`
+- Final methodological working-paper PDF SHA-256 (publication artifact): `f9f5fa0aa34120e5708f29b578cf75d0a63b75660b271410a8cc2a6b9e5c3965`
 - Final LaTeX source SHA-256 (publication workspace): `7f1481e343d2220f4ce9a47deb2a3dab034ebca006b9e1d420be057f1cc14940`
 
 The paper checksum identifies the exact publication artifact prepared for the separate Zenodo preprint record.
