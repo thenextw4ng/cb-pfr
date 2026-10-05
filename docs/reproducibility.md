@@ -2,9 +2,12 @@
 
 ## Status
 
-The frozen 1,000-trial synthetic benchmark has now been independently reproduced from the released source and configuration in a clean working environment.
+The released source and configuration include a 1,000-trial synthetic benchmark runner. The repository's latest GitHub Actions run completed successfully, and the workflow includes the synthetic reproducibility check. This supports software/protocol reproducibility under the declared synthetic data-generating process.
 
-Protocol:
+The original archival `per_seed_results.csv` (4,000 method/trial rows) is **not currently checked into this public repository**. As a result, the repository user can generate a fresh trial-level output but cannot compare every row to that original archival file using this repository alone.
+
+## Protocol
+
 - 1,000 trials
 - 12 candidates per trial
 - seed = 20261005 + trial_index
@@ -14,33 +17,28 @@ Protocol:
 - candidate-specific standard errors of 0.004 or 0.010
 - uniform comparison margin 0.008
 
-## Exact reproduction check
+## Aggregate reference rates
 
-The regenerated trial-level selections, latent truth values, feasibility flags, observed estimates, and reported standard errors match the preserved archival result artifact for all 4,000 method/trial rows.
-
-Aggregate rates:
 - QUBO-only: 0.857
 - point estimate: 0.933
 - CB-PFR: 0.976
 - uniform margin: 0.966
 
-This establishes software/protocol reproducibility for the synthetic mathematical experiment. It does not establish physical validation.
+These are conditional synthetic benchmark rates, not physical outcomes.
 
 ## Clean run
 
     python -m venv .venv
     . .venv/bin/activate
     pip install -e .
-    PYTHONPATH=src python scripts/run_reduced_synthetic_calibration.py --results-dir results/reproduced_run
+    python scripts/run_reduced_synthetic_calibration.py --results-dir results/reproduced_run
 
-The runner refuses to overwrite an existing nonempty results directory.
+Use a new, empty output directory. The runner refuses to overwrite a nonempty results directory. It writes trial-level selections, aggregate tables, coverage information, and a protocol snapshot.
 
-## Audit
+## Archival audit boundary
 
-per_seed_results.csv is the archived 4,000-row result artifact. results/recorded_results_audit.json contains the statistical audit of that artifact.
-
-The exact reproduced output agrees on the substantive experiment columns. Metadata columns added during release auditing are provenance annotations and do not change the experiment.
+`results/recorded_results_audit.json` contains a statistical audit of the recorded outputs. The original `per_seed_results.csv` is tracked in Issue #9 for synchronization; until it is committed or attached to a stable public archive, the exact archival row-by-row comparison cannot be independently performed from this repository alone.
 
 ## What this does not prove
 
-A successful rerun verifies the deterministic software protocol under the declared synthetic data-generating process. It does not calibrate uncertainty for MC/DC/OpenMC, establish physical relevance, or demonstrate universal superiority.
+A successful rerun verifies the software protocol under the declared synthetic data-generating process. It does not calibrate uncertainty for MC/DC/OpenMC, establish physical relevance, demonstrate universal superiority, or establish safety. The MC/DC C5G7 run is execution evidence only; no defensible mapping from the abstract QUBO labels to that benchmark has been established.
