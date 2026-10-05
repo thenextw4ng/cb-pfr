@@ -1,0 +1,26 @@
+{
+  "study_id": "cbpfr_known_normal_uncertainty_calibration_and_post_evaluation_ranking_v1",
+  "frozen_protocol_date": "2026-10-05",
+  "scope": "Synthetic mathematical experiment only. It verifies nominal coverage under an explicitly generated normal observation model and compares post-evaluation ranking rules with an equal number of synthetic observations. It is not a transport, reactor, fuel-management, or physical CB-PFR experiment.",
+  "seed": 20261005,
+  "trials": 1000,
+  "candidate_pool_size": 12,
+  "metric": {
+    "name": "synthetic_response",
+    "upper": 0.98,
+    "z": 1.0,
+    "scale": 0.01,
+    "weight": 1.0,
+    "units": "synthetic units",
+    "uncertainty_kind": "known standard error in the predeclared synthetic normal observation model",
+    "bound_kind": "known_normal_one_sided"
+  },
+  "uniform_margin": 0.008,
+  "true_response_base": 0.954,
+  "fresh_ring_pair_increment": 0.013,
+  "arrangement_increment": 0.002,
+  "low_standard_error": 0.004,
+  "high_standard_error": 0.010,
+  "held_out_truth_rule": "A selection is feasible exactly when its generated latent true response is less than or equal to the predeclared upper limit. The ranking observes only the noisy estimate and its supplied known standard error.",
+  "nominal_one_sided_coverage": 0.8413447460685429
+}
