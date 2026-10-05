@@ -1,21 +1,46 @@
 # Reproducibility
 
-## What is verified
+## Status
 
-- The supplied 1,000-trial synthetic result table can be audited from the released trial-level CSV.
-- The lightweight software smoke tests exercise QUBO energy consistency, conservative ranking, and fail-closed uncertainty handling.
-- The MC/DC C5G7 execution record documents real simulator execution and repeatability checks.
+The frozen 1,000-trial synthetic benchmark has now been independently reproduced from the released source and configuration in a clean working environment.
 
-## What is not claimed
+Protocol:
+- 1,000 trials
+- 12 candidates per trial
+- seed = 20261005 + trial_index
+- four methods receive the identical synthetic observation pool
+- known synthetic normal observation model
+- 0.98 upper feasibility limit
+- candidate-specific standard errors of 0.004 or 0.010
+- uniform comparison margin 0.008
 
-The archived 1,000-trial generator is **not turnkey in this release**. Its original execution path expects additional components (`cbpfr.experiments`, `config/toy_core_7.json`, and related historical experiment utilities) that are not part of the supplied workspace. Consequently, the repository does not claim a fresh end-to-end reproduction of the reported 1,000 trials.
+## Exact reproduction check
 
-The physical simulator record is execution evidence, not CB-PFR physical validation. A defensible physical study requires a traceable QUBO-to-physics mapping and a documented model/data provenance.
+The regenerated trial-level selections, latent truth values, feasibility flags, observed estimates, and reported standard errors match the preserved archival result artifact for all 4,000 method/trial rows.
 
-## Audit commands
+Aggregate rates:
+- QUBO-only: 0.857
+- point estimate: 0.933
+- CB-PFR: 0.976
+- uniform margin: 0.966
 
-```bash
-python -m unittest discover -s tests -v
-python -m py_compile src/cbpfr/*.py scripts/*.py
-python scripts/audit_recorded_results.py
-```
+This establishes software/protocol reproducibility for the synthetic mathematical experiment. It does not establish physical validation.
+
+## Clean run
+
+    python -m venv .venv
+    . .venv/bin/activate
+    pip install -e .
+    PYTHONPATH=src python scripts/run_reduced_synthetic_calibration.py --results-dir results/reproduced_run
+
+The runner refuses to overwrite an existing nonempty results directory.
+
+## Audit
+
+per_seed_results.csv is the archived 4,000-row result artifact. results/recorded_results_audit.json contains the statistical audit of that artifact.
+
+The exact reproduced output agrees on the substantive experiment columns. Metadata columns added during release auditing are provenance annotations and do not change the experiment.
+
+## What this does not prove
+
+A successful rerun verifies the deterministic software protocol under the declared synthetic data-generating process. It does not calibrate uncertainty for MC/DC/OpenMC, establish physical relevance, or demonstrate universal superiority.
