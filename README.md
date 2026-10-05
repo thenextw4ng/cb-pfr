@@ -37,11 +37,11 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 
 | Evidence | Status |
 |---|---|
-| CB-PFR implementation | **Verified** |
-| Abstract QUBO implementation | **Verified** |
-| 1,000-trial synthetic result artifacts | **Verified from supplied artifacts** |
-| Recorded-result audit | **Verified** |
-| Independent fresh 1,000-trial rerun | **Not claimed** |
+| CB-PFR implementation and automated CI | **Present; latest CI run passed** |
+| Abstract QUBO implementation and exact enumeration | **Present** |
+| Reduced 1,000-trial synthetic benchmark runner and configuration | **Present; reproducibility check is part of CI** |
+| Archived trial-level `per_seed_results.csv` | **Not yet checked into this public repository** |
+| Compiled methodological working paper PDF | **Not yet checked into this public repository** |
 | MC/DC C5G7 execution evidence | **Recorded execution evidence** |
 | CB-PFR physical validation | **Not established** |
 | QUBO → C5G7 mapping | **NO_DEFENSIBLE_MAPPING_FOUND** |
@@ -64,7 +64,7 @@ The toy model has seven abstract positions, three categorical states (fresh, onc
 
 The repository deliberately refuses to silently map those labels to C5G7 UO2/MOX material categories. The physical audit records:
 
-NO_DEFENSIBLE_MAPPING_FOUND
+`NO_DEFENSIBLE_MAPPING_FOUND`
 
 A future physical study requires documented geometry, material/depletion states, nuclear-data provenance, category-to-material mapping, limits, and an independent validation protocol.
 
@@ -78,13 +78,14 @@ A future physical study requires documented geometry, material/depletion states,
     ├── LICENSE-CODE.txt
     ├── LICENSE-PAPER.txt
     ├── paper/
-    │   ├── CB-PFR_Methodological_Working_Paper.pdf
+    │   ├── README.md
     │   └── source/
     ├── src/cbpfr/
     │   ├── __init__.py
     │   ├── ranking.py
     │   ├── qubo.py
     │   ├── synthetic.py
+    │   ├── experiments.py
     │   └── openmc.py
     ├── config/
     ├── results/
@@ -101,22 +102,20 @@ The core package uses the Python standard library.
 
     git clone https://github.com/thenextw4ng/cb-pfr.git
     cd cb-pfr
-    export PYTHONPATH=src
+    python -m venv .venv
+    . .venv/bin/activate
+    pip install -e .
     python examples/toy_qubo_example.py
     python examples/basic_ranking.py
     python -m unittest discover -s tests -v
 
-## Reproducibility boundary
+## Reproduce the reduced synthetic benchmark
 
-The archived 1,000-trial generator is retained as research history, but it is **not turnkey in this release**: its original execution path expects additional experiment utilities and a toy-core configuration that are not present in the supplied workspace.
+Use a new output directory (the runner refuses to overwrite a nonempty one):
 
-Therefore:
-1. per_seed_results.csv is a recorded trial-level artifact.
-2. recorded_results_audit.json audits the supplied outputs.
-3. Smoke tests verify important implementation behavior.
-4. A fresh independent 1,000-trial run remains future work.
+    python scripts/run_reduced_synthetic_calibration.py --results-dir results/reproduced_run
 
-See docs/reproducibility.md and FINAL_RELEASE_AUDIT.md.
+This generates trial-level output and aggregate/audit files from the checked-in code and configuration. The original archival `per_seed_results.csv` is not currently included, so row-by-row comparison against that original artifact is not possible from this public repository alone. See [docs/reproducibility.md](docs/reproducibility.md) and [FINAL_RELEASE_AUDIT.md](FINAL_RELEASE_AUDIT.md) for the exact evidence boundary.
 
 ## Design principles
 
@@ -127,8 +126,6 @@ See docs/reproducibility.md and FINAL_RELEASE_AUDIT.md.
 - **Reusable:** the method is separated from the manuscript.
 
 ## Research → inventor trajectory
-
-The intended path is:
 
     mathematical idea
           ↓
@@ -148,7 +145,7 @@ The intended path is:
           ↓
     measurable adoption
 
-The repository currently documents the early stages honestly; later stages are future work. This distinction is important for research credibility.
+The repository currently documents the early stages honestly; later stages are future work.
 
 ## Citation
 
