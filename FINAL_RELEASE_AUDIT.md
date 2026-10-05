@@ -15,7 +15,7 @@ This repository is a transparent research/software release of CB-PFR. It is **no
 
 ## Not claimed
 
-- Independent fresh reproduction of all 1,000 synthetic trials.
+- Physical validation of CB-PFR.
 - Physical CB-PFR validation.
 - Reactor-safety validation.
 - Universal superiority.
@@ -30,6 +30,10 @@ The historical runner expects experiment utilities and a toy-core configuration 
 The seven-position QUBO uses abstract fresh/once-burned/twice-burned labels. These are not silently converted into C5G7 UO2/MOX material states. The mapping audit status is:
 
 NO_DEFENSIBLE_MAPPING_FOUND
+
+## Current archival artifact gap
+
+The original workspace still contains the full `per_seed_results.csv` and compiled paper PDF. They are tracked in Issue #9 for synchronization into the public GitHub release because the current GitHub connector cannot directly transfer local binary/large artifacts into the repository. Their SHA-256 identities are recorded in the release notes rather than replaced with placeholders.
 
 ## Next research gates
 
