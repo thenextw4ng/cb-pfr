@@ -120,6 +120,12 @@ jobs:
             --tally-csv /tmp/openmc-statepoint-audit/tally_values_flat.csv \
             --outdir /tmp/openmc-statepoint-audit/plots
 
+      - name: Inventory archived run inputs and checksums
+        shell: bash -el {0}
+        run: |
+          python scripts/inventory_openmc_runs.py /tmp/openmc-hdf5-evidence \
+            --out /tmp/openmc-statepoint-audit/artifact_inventory.json
+
       - name: Preserve machine-derived audit output
         uses: actions/upload-artifact@v4
         with:
