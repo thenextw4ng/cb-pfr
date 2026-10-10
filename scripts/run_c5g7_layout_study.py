@@ -74,7 +74,7 @@ def validate_design_space(path: Path) -> dict:
     return data
 
 
-def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int) -> None:
+def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int, seed: int = 620000) -> None:
     source = builder.read_text(encoding="utf-8")
     if source.count(CANONICAL_ASSIGNMENT) != 1:
         raise ValueError("upstream lattice assignment differs from audited template; refusing to patch")
@@ -100,6 +100,12 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
         source = source.replace(old, new)
     if inactive >= batches:
         raise ValueError("inactive batches must be fewer than total batches")
+    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+        raise ValueError("seed must be a non-negative integer")
+    seed_anchor = "settings_file.particles = particles"
+    if source.count(seed_anchor) != 1:
+        raise ValueError(f"upstream runtime setting differs from audited template: {seed_anchor!r}")
+    source = source.replace(seed_anchor, seed_anchor + f"\nsettings_file.seed = {seed}")
     builder.write_text(source, encoding="utf-8")
 
 
@@ -186,9 +192,10 @@ def main() -> int:
     parser.add_argument("--inactive", type=int, default=10, help="inactive batches; default is a smoke-test profile")
     parser.add_argument("--particles", type=int, default=1000, help="particles per batch; default is a smoke-test profile")
     parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument("--seed-base", type=int, default=620000, help="base seed; each candidate gets a deterministic consecutive seed")
     args = parser.parse_args()
-    if args.batches < 2 or args.inactive < 0 or args.inactive >= args.batches or args.particles < 1 or args.threads < 1:
-        parser.error("require batches >= 2, 0 <= inactive < batches, particles >= 1, and threads >= 1")
+    if args.batches < 2 or args.inactive < 0 or args.inactive >= args.batches or args.particles < 1 or args.threads < 1 or args.seed_base < 0:
+        parser.error("require batches >= 2, 0 <= inactive < batches, particles >= 1, threads >= 1, and seed-base >= 0")
 
     source_root = Path(args.source_root).expanduser().resolve()
     design_path = Path(args.design_space).expanduser().resolve()
@@ -215,7 +222,7 @@ def main() -> int:
         "upstream_model_builder_sha256": sha256(upstream_model / BUILDER_RELATIVE),
         "design_space_sha256": sha256(design_path),
         "mode": args.mode,
-        "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads},
+        "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed_policy": "seed_base + stable candidate order index"},
         "profile_warning": "Default settings are smoke-test settings only; do not compare to benchmark reference or claim converged physics without a separate convergence study.",
         "cases": [],
         "nonclaims": [
@@ -224,15 +231,18 @@ def main() -> int:
             "Smoke-test results are not benchmark-grade and must not be presented as converged physical evidence.",
         ],
     }
-    for candidate in sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"])):
+    ordered_candidates = sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"]))
+    for candidate_index, candidate in enumerate(ordered_candidates):
+        seed = args.seed_base + candidate_index
         case_dir = output / candidate["candidate_id"]
         case_dir.mkdir()
         model_copy = case_dir / "model"
         shutil.copytree(upstream_model, model_copy)
         builder = model_copy / BUILDER_RELATIVE
-        patch_builder(builder, candidate["fuel_assembly_layout"], args.batches, args.inactive, args.particles)
+        patch_builder(builder, candidate["fuel_assembly_layout"], args.batches, args.inactive, args.particles, seed=seed)
         case = {
             "candidate_id": candidate["candidate_id"],
+            "seed": seed,
             "layout": candidate["fuel_assembly_layout"],
             "is_canonical_reference_arrangement": candidate["is_canonical_reference_arrangement"],
             "status": "prepared",
