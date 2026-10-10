@@ -1,0 +1,16 @@
+{
+  "created_local": "2026-10-11T00:19:13.309221+07:00",
+  "source_tree": "/Users/catur/c5g7-work/c5g7-run",
+  "output_directory": "/Users/catur/C5G7_openmc_production/c5g7_2d_20261011_001910",
+  "openmc_python_version": "0.16.0",
+  "openmc_executable": "/opt/anaconda3/envs/openmc-env/bin/openmc",
+  "settings": {
+    "run_mode": "eigenvalue",
+    "energy_mode": "multi-group",
+    "batches": 20000,
+    "inactive": 500,
+    "particles": 10000
+  },
+  "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+  "note": "Transcribed from user-provided terminal output. HDF5 files were not transferred to GitHub by this commit; regenerate and verify locally."
+}
