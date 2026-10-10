@@ -136,6 +136,9 @@ with tab_repeatability:
     raw_runs = st.text_area("Run rankings (JSON)", value=default_runs, height=140)
     top_k = st.number_input("Top-k set size", min_value=1, max_value=100, value=2, step=1)
     if st.button("Analyze repeatability"):
+        # Never leave an earlier successful summary visible after a failed re-analysis.
+        st.session_state.pop("repeatability_summary", None)
+        st.session_state.pop("repeatability_input", None)
         try:
             parsed_runs = json.loads(raw_runs)
             if not isinstance(parsed_runs, list) or any(not isinstance(row, list) for row in parsed_runs):
