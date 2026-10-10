@@ -70,6 +70,19 @@ class OptimizerRunLogTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "0/1"):
             validate_optimizer_run_record(run)
 
+
+    def test_rejects_candidate_identity_drift_across_runs(self):
+        first, second = valid_run("r1"), valid_run("r2")
+        second["candidate_records"][0]["candidate_vector"] = [0, 0, 1]
+        with self.assertRaisesRegex(ValueError, "different vectors across runs"):
+            validate_experiment_payload({"runs": [first, second]})
+
+    def test_rejects_inconsistent_vector_lengths(self):
+        first, second = valid_run("r1"), valid_run("r2")
+        second["candidate_records"][0]["candidate_vector"] = [1, 0]
+        with self.assertRaisesRegex(ValueError, "length must be consistent"):
+            validate_experiment_payload({"runs": [first, second]})
+
     def test_rejects_missing_provenance_fields(self):
         run = valid_run()
         del run["optimizer_version"]
