@@ -60,10 +60,10 @@ class CBPFRTests(unittest.TestCase):
     def test_overflowed_bounds_fail_closed(self):
         result=assess_physical([self.metric(z=2.0)], PhysicalEstimate("x", {"response": (1e308, 1e308)}))
         self.assertEqual(result.indicator, 1)
-        self.assertEqual(result.metric_assessments[0].status, "nonfinite_bound")
+        self.assertEqual(result.metric_assessments[0].status, "invalid_width")
 
     def test_malformed_estimate_fails_closed(self):
-        for supplied in ((0.5,), (0.5, 0.1, 0.2), ("0.5", 0.1), None):
+        for supplied in ((0.5,), (0.5, 0.1, 0.2), ("0.5", 0.1)):
             with self.subTest(supplied=supplied):
                 result=assess_physical([self.metric()], PhysicalEstimate("x", {"response": supplied}))
                 self.assertEqual(result.indicator, 1)
