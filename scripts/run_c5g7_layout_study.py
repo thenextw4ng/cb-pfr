@@ -125,6 +125,7 @@ def run_case(case_dir: Path, threads: int) -> dict:
         ["openmc", "-s", str(threads)],
     ]
     records = []
+    pre_transport_hashes = None
     for command in commands:
         started = datetime.now(timezone.utc).isoformat()
         try:
@@ -145,9 +146,34 @@ def run_case(case_dir: Path, threads: int) -> dict:
         )
         if proc.returncode != 0:
             return {"status": "failed", "commands": records, "failure": f"command exited {proc.returncode}"}
+        if command[1] == "build-xml-2d.py":
+            # Freeze hashes after XML generation but before transport execution.
+            pre_transport_hashes = file_manifest(case_dir)
+
+    post_transport_hashes = file_manifest(case_dir)
+    pre_transport_hashes = pre_transport_hashes or {}
+    mutated = {
+        path: {"before_sha256": digest, "after_sha256": post_transport_hashes[path]}
+        for path, digest in pre_transport_hashes.items()
+        if path in post_transport_hashes and post_transport_hashes[path] != digest
+    }
+    mgxs_path = "model/2d/mgxs.h5"
+    provenance = {
+        "pre_transport_hashes": pre_transport_hashes,
+        "post_transport_hashes": post_transport_hashes,
+        "mutated_preexisting_files": mutated,
+        "mgxs_sha256_before_transport": pre_transport_hashes.get(mgxs_path),
+        "mgxs_sha256_after_transport": post_transport_hashes.get(mgxs_path),
+    }
+
     statepoints = sorted(workdir.glob("statepoint.*.h5"), key=lambda p: p.stat().st_mtime)
     if not statepoints:
-        return {"status": "failed", "commands": records, "failure": "OpenMC exited successfully but no statepoint file was found"}
+        return {
+            "status": "failed",
+            "commands": records,
+            "failure": "OpenMC exited successfully but no statepoint file was found",
+            **provenance,
+        }
     try:
         import openmc  # type: ignore
         with openmc.StatePoint(statepoints[-1]) as sp:
@@ -159,6 +185,7 @@ def run_case(case_dir: Path, threads: int) -> dict:
                 "keff_mean": float(keff.nominal_value),
                 "keff_std_dev": float(keff.std_dev),
                 "tallies": {},
+                **provenance,
             }
             for name in ("tally 2", "tally 1"):
                 try:
@@ -179,6 +206,7 @@ def run_case(case_dir: Path, threads: int) -> dict:
             "statepoint": str(statepoints[-1].relative_to(case_dir)),
             "parser_error": f"{type(exc).__name__}: {exc}",
             "note": "Raw statepoint retained; do not use candidate for ranking until parsed and reviewed.",
+            **provenance,
         }
 
 
