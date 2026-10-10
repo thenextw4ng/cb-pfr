@@ -25,7 +25,7 @@ This is the current handoff after consolidating the conversation archives, audit
 | CB-PFR ranking software | Implemented; automated tests pass | Software functionality, not reactor validity |
 | ReactorQ Studio dashboard | Integrated | Synthetic demo plus OpenMC readiness checks; it does not launch a transport calculation |
 | C5G7 six-layout design-space generator | Integrated and tested | Enumerates 6 two-UO2/two-MOX permutations; not itself physical evidence |
-| C5G7 transport-case preparation/runner | Integrated and tested with fixtures | Actual upstream preparation/production run still requires a compatible local model/data setup |
+| C5G7 transport-case preparation/runner | Six isolated cases prepared successfully against pinned upstream commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450` | [Preparation artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084994157); no transport simulation was run |
 | Synthetic benchmark and archived trial data | Present; documented as synthetic | Supports conclusions only under its declared synthetic data-generating process |
 | Production C5G7 statepoint scalar | Independently read via OpenMC 0.16.0; recorded mean/SD match | Verifies extraction and provenance, not benchmark acceptance |
 | Production mesh and aggregate tallies | Exported and summarized; six plots generated | Descriptive scores and Monte Carlo uncertainty only |
@@ -44,7 +44,7 @@ Details: [Stage 3–4 statepoint provenance audit](stage34_statepoint_provenance
 
 ## Remaining scientific work
 
-1. Stage the upstream C5G7 reference source, record the exact commit, and prepare the six case directories with `scripts/run_c5g7_layout_study.py --mode prepare`. Review every generated XML and the canonical arrangement before running transport.
+1. Review the six prepared input cases from [the C5G7 preparation workflow artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084994157), including the canonical arrangement and per-case input hashes. The source revision is pinned in `config/benchmarks/c5g7_2x2_design_space.json`.
 2. Ensure a compatible OpenMC executable, MGXS/cross-section data, and all input files are present in the actual run environment. The committed HDF5 archive does not bundle the full cross-section library.
 3. Define stable candidate IDs and save each candidate's exact material layout, settings, model/material/geometry hashes, random seed, log, summary, and statepoint together.
 4. Run the six intended candidates with a predeclared common computational budget. For repeatability, run genuinely independent seeds and verify the seed is paired with the statepoint it generated.
