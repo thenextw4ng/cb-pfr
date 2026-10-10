@@ -1,7 +1,7 @@
 # C5G7/OpenMC baseline: recorded execution evidence
 
 **Recorded date:** 2026-10-11  
-**Status:** raw evidence ZIP `OpenMC_HDF5_Evidence_2026-10-11.zip` is now present in the `openmc-evidence-20261011` branch. The HDF5 files have not yet been independently extracted and audited by this integration; scalar values below remain transcribed pending that check.
+**Status:** raw evidence ZIP `OpenMC_HDF5_Evidence_2026-10-11.zip` is committed on `main`. GitHub Actions extracted the production statepoint and read it with the OpenMC 0.16.0 Python API; the API-derived `k_eff` mean and standard deviation matched the transcribed summary. See `reports/openmc_statepoint_audit_2026-10-11.md` and [the successful audit workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38083671809).
 
 ## Reported result
 
