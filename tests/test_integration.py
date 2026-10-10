@@ -64,9 +64,18 @@ class IntegrationAdapterTests(unittest.TestCase):
     def test_estimate_key_mismatch_rejected(self):
         candidate = self.candidates[0]
         mismatched = {"wrong-id": PhysicalEstimate(candidate.candidate_id, {"synthetic_response": (0.5, 0.01)})}
-        with self.assertRaisesRegex(ValueError, "does not match"):
+        with self.assertRaisesRegex(ValueError, "unknown candidate IDs"):
             rank_candidate_batch(
                 self.model, [candidate], mismatched, self.metrics,
+                {"synthetic_response": 0.02},
+            )
+
+    def test_non_string_candidate_id_rejected_cleanly(self):
+        candidate = self.candidates[0]
+        invalid = type(candidate)(None, candidate.vector)
+        with self.assertRaisesRegex(ValueError, "non-empty strings"):
+            rank_candidate_batch(
+                self.model, [invalid], {}, self.metrics,
                 {"synthetic_response": 0.02},
             )
 
