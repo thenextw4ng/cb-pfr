@@ -137,6 +137,7 @@ def parse_openmc_stdout_keff(text: str) -> tuple[float, float]:
 
 
 def parse_openmc_statepoint(path: str | Path) -> dict[str, Any]:
+    """Read a statepoint's combined keff summary, failing closed on malformed files."""
     statepoint = Path(path)
     if not statepoint.is_file():
         raise OpenMCIntegrationError(f"statepoint file does not exist: {statepoint}")
@@ -144,20 +145,46 @@ def parse_openmc_statepoint(path: str | Path) -> dict[str, Any]:
         import h5py
     except ImportError as exc:
         raise OpenMCIntegrationError("h5py is required to parse an OpenMC statepoint") from exc
-    with h5py.File(statepoint, "r") as handle:
-        if "k_combined" not in handle:
-            raise OpenMCIntegrationError("statepoint lacks documented k_combined dataset")
-        keff = handle["k_combined"][()]
-        if len(keff) != 2:
-            raise OpenMCIntegrationError("k_combined does not contain mean and standard deviation")
-        result = {"keff_mean": float(keff[0]), "keff_standard_deviation": float(keff[1])}
-        if not math.isfinite(result["keff_mean"]) or not math.isfinite(result["keff_standard_deviation"]):
-            raise OpenMCIntegrationError("statepoint k-effective mean and standard deviation must be finite")
-        if result["keff_standard_deviation"] < 0:
-            raise OpenMCIntegrationError("k-effective standard deviation cannot be negative")
-        for key in ("n_particles", "n_batches", "n_inactive", "generations_per_batch"):
-            if key in handle:
-                result[key] = int(handle[key][()])
-        if "openmc_version" in handle:
-            result["openmc_version"] = [int(value) for value in handle["openmc_version"][()]]
-        return result
+
+    try:
+        with h5py.File(statepoint, "r") as handle:
+            if "k_combined" not in handle:
+                raise OpenMCIntegrationError("statepoint lacks documented k_combined dataset")
+            keff = handle["k_combined"][()]
+            try:
+                value_count = len(keff)
+            except TypeError as exc:
+                raise OpenMCIntegrationError(
+                    "k_combined must contain mean and standard deviation"
+                ) from exc
+            if value_count != 2:
+                raise OpenMCIntegrationError(
+                    "k_combined does not contain mean and standard deviation"
+                )
+            result = {
+                "keff_mean": float(keff[0]),
+                "keff_standard_deviation": float(keff[1]),
+            }
+            if not (
+                math.isfinite(result["keff_mean"])
+                and math.isfinite(result["keff_standard_deviation"])
+            ):
+                raise OpenMCIntegrationError(
+                    "statepoint k-effective mean and standard deviation must be finite"
+                )
+            if result["keff_standard_deviation"] < 0:
+                raise OpenMCIntegrationError(
+                    "statepoint k-effective standard deviation cannot be negative"
+                )
+            for key in ("n_particles", "n_batches", "n_inactive", "generations_per_batch"):
+                if key in handle:
+                    result[key] = int(handle[key][()])
+            if "openmc_version" in handle:
+                result["openmc_version"] = [int(value) for value in handle["openmc_version"][()]]
+            return result
+    except OpenMCIntegrationError:
+        raise
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise OpenMCIntegrationError(
+            f"could not read a valid OpenMC statepoint at {statepoint}: {exc}"
+        ) from exc
