@@ -89,6 +89,18 @@ jobs:
             --tally-csv /tmp/openmc-statepoint-audit/tally_values_flat.csv \
             --out /tmp/openmc-statepoint-audit/tally_summary.json
 
+      - name: Install plotting dependency
+        shell: bash -el {0}
+        run: python -m pip install matplotlib
+
+      - name: Render mesh tally and relative-uncertainty maps
+        shell: bash -el {0}
+        run: |
+          python scripts/plot_openmc_tallies.py \
+            --audit-json /tmp/openmc-statepoint-audit/statepoint_audit.json \
+            --tally-csv /tmp/openmc-statepoint-audit/tally_values_flat.csv \
+            --outdir /tmp/openmc-statepoint-audit/plots
+
       - name: Preserve machine-derived audit output
         uses: actions/upload-artifact@v4
         with:
