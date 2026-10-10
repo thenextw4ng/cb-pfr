@@ -47,7 +47,11 @@ def summarize_repeated_rankings(rankings: Sequence[Sequence[str]], *, top_k: int
         "top_k": top_k,
         "pair_count": pair_count,
         "top1_selection_counts": top1_selection_counts,
+        "top1_selection_frequencies": {
+            candidate: count / run_count for candidate, count in sorted(top1_counts.items())
+        },
         "top1_dominance": max(top1_counts.values()) / run_count,
+        "top_k_selection_counts": dict(sorted(top_k_counts.items())),
         "top_k_selection_frequencies": {
             candidate: count / run_count for candidate, count in sorted(top_k_counts.items())
         },
