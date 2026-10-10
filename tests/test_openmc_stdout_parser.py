@@ -26,6 +26,14 @@ class OpenMCStdoutParserTests(unittest.TestCase):
         with self.assertRaises(OpenMCIntegrationError):
             parse_openmc_stdout_keff("Combined k-effective = 1.002 +/- -0.001")
 
+    def test_rejects_non_finite_mean(self):
+        with self.assertRaises(OpenMCIntegrationError):
+            parse_openmc_stdout_keff("Combined k-effective = 1e999 +/- 0.001")
+
+    def test_rejects_non_finite_uncertainty(self):
+        with self.assertRaises(OpenMCIntegrationError):
+            parse_openmc_stdout_keff("Combined k-effective = 1.002 +/- 1e999")
+
 
 if __name__ == "__main__":
     unittest.main()
