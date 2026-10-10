@@ -31,8 +31,14 @@ class RepeatedRankingSummaryTests(unittest.TestCase):
             summarize_repeated_rankings([["a", "a"]])
 
     def test_rejects_invalid_top_k(self):
-        with self.assertRaisesRegex(ValueError, "positive"):
-            summarize_repeated_rankings([["a"]], top_k=0)
+        for value in (0, 1.5, True):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "positive"):
+                    summarize_repeated_rankings([["a"]], top_k=value)
+
+    def test_rejects_string_instead_of_run_list(self):
+        with self.assertRaisesRegex(ValueError, "not a string"):
+            summarize_repeated_rankings(["candidate-A"])
 
 
 if __name__ == "__main__":
