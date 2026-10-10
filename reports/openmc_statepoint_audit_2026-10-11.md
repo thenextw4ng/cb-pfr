@@ -4,8 +4,9 @@
 
 **OpenMC Python API audit: passed.** The committed `OpenMC_HDF5_Evidence_2026-10-11.zip` was extracted in GitHub Actions, and `openmc.StatePoint` successfully read the production `statepoint.20000.h5` using OpenMC 0.16.0. The machine-derived mean and standard deviation of (k_\mathrm{eff}) matched the transcribed `result_summary.json` within the workflow's declared tolerance.
 
-- Workflow: [OpenMC evidence audit](https://github.com/thenextw4ng/cb-pfr/actions/runs/38083671809)
-- Machine-derived audit artifact: `openmc-statepoint-audit` attached to that workflow run.
+- Workflow: [OpenMC evidence audit](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209709)
+- Machine-derived audit artifact: `openmc-statepoint-audit` attached to that workflow run. It contains statepoint/tally JSON and CSV, run-input provenance, all-run summary, and six mesh-index plots.
+- Four archived statepoints were read successfully. The three stage34 statepoints have a provenance/independence problem; see [the dedicated audit](stage34_statepoint_provenance_audit_2026-10-11.md).
 - Statepoint read success: `true`
 - OpenMC version: `0.16.0`
 - Run mode: `eigenvalue`
@@ -82,4 +83,4 @@ Not established:
 
 ## Reproduction
 
-The workflow extracts the archived statepoint, runs `scripts/audit_openmc_statepoint.py`, compares the machine-derived eigenvalue summary with `evidence/openmc_local_baseline_2026-10-11/result_summary.json`, and preserves `statepoint_audit.json` plus `tally_values_flat.csv` as a workflow artifact. `scripts/summarize_openmc_tallies.py` generates a score-level descriptive summary from those machine-derived files.
+The workflow extracts the archived evidence, audits all four statepoints with `scripts/audit_openmc_statepoint.py`, compares the production eigenvalue summary with `evidence/openmc_local_baseline_2026-10-11/result_summary.json`, inventories artifact hashes and parsed settings, summarizes tally uncertainty, and renders six mesh-index plots. The generated JSON/CSV/PNG outputs are preserved as a downloadable workflow artifact. The stage34 outputs are not treated as independent repetitions because their settings/seed provenance is unresolved.
