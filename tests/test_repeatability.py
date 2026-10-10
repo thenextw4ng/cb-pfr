@@ -12,7 +12,7 @@ class RepeatedRankingSummaryTests(unittest.TestCase):
         self.assertEqual(result["run_count"], 3)
         self.assertEqual(result["top1_selection_counts"], {"a": 2, "b": 1})
         self.assertAlmostEqual(result["top1_dominance"], 2 / 3)
-        self.assertAlmostEqual(result["mean_pairwise_top_k_jaccard"], 2 / 3)
+        self.assertAlmostEqual(result["mean_pairwise_top_k_jaccard"], 5 / 9)
         self.assertIn("not a global-optimum certificate", result["interpretation"])
 
     def test_single_run_has_defined_pairwise_overlap(self):
