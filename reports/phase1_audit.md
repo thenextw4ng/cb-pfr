@@ -59,7 +59,7 @@ Existing benchmark rates (QUBO-only 0.857, point estimate 0.933, CB-PFR 0.976, u
 - [x] Fix the numeric validation and malformed-input issues listed above.
 - [x] Add regression tests for the new guards, including strict JSON export with missing metrics.
 - [x] Update documentation with explicit scientific and execution limits.
-- [x] Confirm GitHub Actions passes on Python 3.10, 3.11, and 3.12 (workflow run 38034236052, commit c566cb475770284d6a3cceb18cace18895168506).
+- [x] Confirm GitHub Actions passes on Python 3.10, 3.11, and 3.12 (workflow run 38034285730, commit f08871dd1185d951454fb08bbcf0adb049db8521).
 
 ## Exit decision
 
