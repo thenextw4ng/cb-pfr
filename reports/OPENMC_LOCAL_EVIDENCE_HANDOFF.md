@@ -13,10 +13,12 @@ The `main` branch includes `OpenMC_HDF5_Evidence_2026-10-11.zip` at the reposito
 - `scripts/inventory_openmc_runs.py`: artifact inventory and SHA-256 checksums.
 
 ## Still missing for a full candidate-level physical study
-1. Actual HDF5 statepoint files or locally generated machine-derived exports.
-2. Candidate IDs and exact configuration vectors matched to each run.
-3. Verified proof that the five fixed reflector positions remain unchanged for each candidate.
-4. Candidate-specific manifests, input hashes, logs, settings and statepoints.
-5. A defensible QUBO-state-to-C5G7-material mapping and independent physical-validation protocol.
+1. Stable candidate IDs and exact configuration vectors matched to each physical statepoint.
+2. Verified proof that the five fixed reflector positions remain unchanged for each candidate.
+3. A defensible QUBO-state-to-C5G7-material/depletion mapping, or a clearly separated and justified C5G7 assembly-placement formulation.
+4. Independent candidate runs with documented seeds and per-run settings/log/statepoint hashes.
+5. A predeclared benchmark comparison and physical acceptance protocol.
 
-Do not claim that the six candidates have all been physically simulated until these are verified. This branch is a staging/evidence branch; it does not overwrite `main`.
+The production baseline statepoint has been read successfully through OpenMC 0.16.0, and its (k_\mathrm{eff}) mean/standard deviation match the transcribed summary. Three recovered stage34 statepoints also read successfully, but they have identical settings hashes with no explicit seed and nearly identical tallies; they must **not** be counted as independent repeated runs. The separate settings files with seeds 481730–481732 have no matching statepoints in the archive. See `reports/stage34_statepoint_provenance_audit_2026-10-11.md`.
+
+Do not claim that six candidates have been physically simulated until candidate identity, input provenance, and independent statepoints are verified. The archive and software tools are now merged into `main`; physical CB-PFR validation remains unresolved.
