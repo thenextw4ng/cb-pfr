@@ -75,9 +75,9 @@ The `openmc-evidence-20261011` branch preserves two separate archives:
 - `OpenMC_HDF5_Evidence_2026-10-11.zip`: local C5G7/OpenMC HDF5, XML, log, and run metadata supplied for audit.
 - `CBPFR_ReactorQ__Archive_2026-10-11.zip`: 86 historical project artifacts recovered from prior conversations and the ChatGPT Library.
 
-Archive integrity is checked in CI with `scripts/audit_evidence_archive.py`. This validates ZIP CRCs and computes SHA-256 hashes for archive members; it does **not** parse HDF5 semantics or establish physical validity. Machine-derived statepoint/tally exports must still be generated with the matching OpenMC environment and checked against the transcribed baseline.
+Archive integrity is checked in CI with `scripts/audit_evidence_archive.py`. The OpenMC audit workflow reads all four archived statepoints with OpenMC 0.16.0, checks the production (k_\mathrm{eff}) summary, inventories input hashes/settings, summarizes tally uncertainty, and creates mesh-index plots. This verifies the archived scalar and data extraction, not benchmark validity or candidate-level physical validation.
 
-See [the remaining-work audit](reports/REMAINING_WORK_AUDIT_2026-10-11.md) and [the OpenMC handoff](reports/OPENMC_LOCAL_EVIDENCE_HANDOFF.md).
+Reports: [production statepoint/tally audit](reports/openmc_statepoint_audit_2026-10-11.md), [Stage 3–4 provenance warning](reports/stage34_statepoint_provenance_audit_2026-10-11.md), and [remaining-work audit](reports/REMAINING_WORK_AUDIT_2026-10-11.md). The [OpenMC evidence workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209709) preserves the machine-derived JSON, CSV, settings audit, and six plots as a downloadable artifact.
 
 ## Repository architecture
 
