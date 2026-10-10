@@ -36,7 +36,7 @@ Neither can be inferred from the existing code. Choosing one silently would inve
 From the repository root, with Git installed:
 
 ```bash
-python scripts/prepare_c5g7_reference.py --destination external/mit-crpg-benchmarks
+mkdir -p external\npython scripts/prepare_c5g7_reference.py --destination external/mit-crpg-benchmarks
 ```
 
 The script is deliberately source-only. It does not install OpenMC, obtain all required nuclear data, execute a transport calculation, or compare results with benchmark reference values. Follow [the C5G7 reproducible handoff](c5g7_reproducible_handoff.md) before running the selected case.
