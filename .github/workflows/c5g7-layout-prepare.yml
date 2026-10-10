@@ -165,13 +165,28 @@ jobs:
               raise SystemExit("candidate XML audit failed")
           PY
 
-      - name: Preserve prepared model cases and source provenance
+      - name: Run six low-budget transport smoke tests (not benchmark-grade)
+        shell: bash -el {0}
+        run: |
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output /tmp/c5g7-layout-study-smoke-run \
+            --mode run \
+            --batches 100 \
+            --inactive 10 \
+            --particles 1000 \
+            --threads 1
+
+      - name: Preserve prepared inputs and smoke-run outputs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: c5g7-layout-study-prepared
+          name: c5g7-layout-study-prepared-and-smoke
           path: |
             /tmp/c5g7-design-space-generated.json
             config/benchmarks/c5g7_2x2_design_space.json
             /tmp/c5g7-layout-study-prepared/
+            /tmp/c5g7-layout-study-smoke-run/
             /tmp/mit-crpg-benchmarks/UPSTREAM_PROVENANCE.json
           if-no-files-found: error
