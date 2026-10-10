@@ -6,7 +6,7 @@ This report links the existing CB-PFR repository evidence with a separately reco
 The main branch already contains the CB-PFR implementation, tests/CI, the reduced synthetic benchmark runner and configuration, archival `results/per_seed_results.csv`, and methodological reproducibility/limitations audits. The recorded synthetic selected-feasibility rates are QUBO-only 0.857, point estimate 0.933, CB-PFR 0.976, and uniform margin 0.966. These are conditional synthetic results, not physical reactor results.
 
 ## Added local-run evidence
-The branch now includes `OpenMC_HDF5_Evidence_2026-10-11.zip` at the repository root, alongside `evidence/openmc_local_baseline_2026-10-11/` metadata. The ZIP's presence in GitHub is verified, but its HDF5 contents have not yet been independently extracted and recomputed in this integration environment. Until the statepoint audit output is generated and compared, the scalar summary remains labelled as transcribed evidence.
+The `main` branch includes `OpenMC_HDF5_Evidence_2026-10-11.zip` at the repository root, alongside `evidence/openmc_local_baseline_2026-10-11/` metadata. GitHub Actions extracted the production statepoint and read it with the OpenMC 0.16.0 API; the derived `k_eff` mean and standard deviation matched the transcribed summary. See `reports/openmc_statepoint_audit_2026-10-11.md`. This verifies the scalar extraction, not benchmark validity or candidate-level physical validation.
 
 ## Added reproducibility tools
 - `scripts/audit_openmc_statepoint.py`: read-only extraction of scalar statepoint metadata and tally mean/std-dev values through OpenMC's API.
