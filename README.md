@@ -101,6 +101,18 @@ The core package uses the Python standard library.
     python examples/basic_ranking.py
     python -m unittest discover -s tests -v
 
+## ReactorQ Studio dashboard (MVP)
+
+On the `integration/reactorq-studio` branch, an optional Streamlit interface is available:
+
+    pip install -r requirements-dashboard.txt
+    streamlit run app.py
+
+It demonstrates abstract QUBO candidate ranking and CSV/JSON export using explicitly labelled synthetic estimates. Its OpenMC panel performs **preflight checks only**; it does not launch a transport calculation. No physical keff, neutron-flux, or power result is produced by the dashboard. See [docs/reactorq_studio.md](docs/reactorq_studio.md) for setup and scientific limitations.
+
+
+The branch also includes repeatability analysis (`scripts/analyze_repeatability.py`), a structured optimizer-run log validator (`scripts/validate_optimizer_runs.py`), and an experiment summary tool (`scripts/analyze_optimizer_experiment.py`) that tracks failed runs, candidate feasibility, recorded objective quality, and cross-run ranking stability. These tools analyze supplied records; they do not run an optimizer or establish physical validity. See [ReactorQ Studio documentation](docs/reactorq_studio.md) for the record schema and commands. The gated [OpenMC handoff checklist](reports/openmc_handoff_checklist.md) remains required before physical claims.
+
 ## Reproduce the reduced synthetic benchmark
 
 Use a new output directory (the runner refuses to overwrite a nonempty one):

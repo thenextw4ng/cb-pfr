@@ -57,6 +57,18 @@ class CBPFRTests(unittest.TestCase):
         result=assess_physical([self.metric()], PhysicalEstimate("x", {"response": (math.nan, 0.1)}))
         self.assertEqual(result.metric_assessments[0].status, "nonfinite_or_negative")
 
+    def test_overflowed_bounds_fail_closed(self):
+        result=assess_physical([self.metric(z=2.0)], PhysicalEstimate("x", {"response": (1e308, 1e308)}))
+        self.assertEqual(result.indicator, 1)
+        self.assertEqual(result.metric_assessments[0].status, "invalid_width")
+
+    def test_malformed_estimate_fails_closed(self):
+        for supplied in ((0.5,), (0.5, 0.1, 0.2), ("0.5", 0.1)):
+            with self.subTest(supplied=supplied):
+                result=assess_physical([self.metric()], PhysicalEstimate("x", {"response": supplied}))
+                self.assertEqual(result.indicator, 1)
+                self.assertEqual(result.metric_assessments[0].status, "invalid_estimate")
+
     def test_upper_and_lower_bounds_are_conservative(self):
         metric=self.metric(lower=0.2, upper=0.8, z=2.0)
         result=assess_physical([metric], PhysicalEstimate("x", {"response": (0.5, 0.1)}))
@@ -118,6 +130,31 @@ class CBPFRTests(unittest.TestCase):
         estimates={candidates[0].candidate_id: PhysicalEstimate(candidates[0].candidate_id, {"response": (0.5,0.1)})}
         with self.assertRaises(ValueError):
             rank_all_methods(self.model,candidates,estimates,[self.metric()],{"wrong":0.1})
+
+    def test_metric_rejects_nonfinite_limits_and_parameters(self):
+        for kwargs in (
+            {"upper": math.nan}, {"lower": -math.inf}, {"z": math.inf},
+            {"scale": math.nan}, {"weight": math.inf},
+        ):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                self.metric(**kwargs)
+
+    def test_metric_rejects_empty_name(self):
+        with self.assertRaisesRegex(ValueError, "name"):
+            self.metric(name="  ")
+
+    def test_duplicate_metric_names_are_rejected(self):
+        candidates=self.candidates[:1]
+        estimates={candidates[0].candidate_id: PhysicalEstimate(candidates[0].candidate_id, {"response": (0.5,0.1)})}
+        with self.assertRaisesRegex(ValueError, "unique"):
+            rank_all_methods(self.model,candidates,estimates,[self.metric(), self.metric()],{"response":0.0})
+
+    def test_nonfinite_uniform_margin_is_rejected(self):
+        candidates=self.candidates[:1]
+        estimates={candidates[0].candidate_id: PhysicalEstimate(candidates[0].candidate_id, {"response": (0.5,0.1)})}
+        for value in (math.nan, math.inf, -math.inf, -0.1):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                rank_all_methods(self.model,candidates,estimates,[self.metric()],{"response":value})
 
     def test_equal_budget_guard(self):
         require_equal_evaluation_budget({"a":12,"b":12},12)
