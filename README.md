@@ -79,6 +79,25 @@ Archive integrity is checked in CI with `scripts/audit_evidence_archive.py`. The
 
 Reports: [production statepoint/tally audit](reports/openmc_statepoint_audit_2026-10-11.md), [Stage 3–4 provenance warning](reports/stage34_statepoint_provenance_audit_2026-10-11.md), and [remaining-work audit](reports/REMAINING_WORK_AUDIT_2026-10-11.md). The [OpenMC evidence workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209709) preserves the machine-derived JSON, CSV, settings audit, and six plots as a downloadable artifact.
 
+## ReactorQ Studio and C5G7 layout-study tools
+
+The optional Streamlit dashboard is available with:
+
+```bash
+python -m pip install -r requirements-dashboard.txt
+streamlit run app.py
+```
+
+The built-in demo is synthetic. The “OpenMC preflight” tab checks executable, cross-section path, and XML readability; it does not launch a transport calculation or prove that the physical model is valid.
+
+The separate C5G7 assembly-placement study is available through:
+- `scripts/prepare_c5g7_reference.py` — stage public upstream source and record its exact revision.
+- `scripts/enumerate_c5g7_layouts.py` — enumerate six two-UO₂/two-MOX placements for the explicit 2×2 design formulation.
+- `scripts/run_c5g7_layout_study.py` — prepare isolated cases or run them when a compatible OpenMC installation and nuclear-data setup are available.
+- `config/benchmarks/c5g7_manifest.json` — fail-closed benchmark/mapping gate.
+
+The assembly-placement formulation is **separate** from the legacy `fresh / once_burned / twice_burned` QUBO. The six layouts are not all official benchmark reference cases. The canonical arrangement is a baseline identity check; physical ranking must wait for a reviewed model, matched candidate manifests, and a predeclared reference/acceptance protocol. The current archived Stage 3–4 statepoints are not valid independent-seed repetitions; see [the provenance audit](reports/stage34_statepoint_provenance_audit_2026-10-11.md).
+
 ## Repository architecture
 
     cb-pfr/
