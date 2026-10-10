@@ -81,7 +81,11 @@ class RankedCandidate:
 def _assessment_for_metric(metric: MetricLimit, supplied: tuple[float, float] | None, width_override: float | None) -> MetricAssessment:
     if supplied is None:
         return MetricAssessment(metric.name, None, None, None, None, math.inf, math.inf, False, "missing")
+    if not isinstance(supplied, (tuple, list)) or len(supplied) != 2:
+        return MetricAssessment(metric.name, None, None, None, None, math.inf, math.inf, False, "invalid_estimate")
     mean, uncertainty = supplied
+    if any(isinstance(value, bool) or not isinstance(value, (int, float)) for value in (mean, uncertainty)):
+        return MetricAssessment(metric.name, None, None, None, None, math.inf, math.inf, False, "invalid_estimate")
     if not (math.isfinite(mean) and math.isfinite(uncertainty)) or uncertainty < 0:
         return MetricAssessment(metric.name, mean, uncertainty, None, None, math.inf, math.inf, False, "nonfinite_or_negative")
     width = metric.z * uncertainty if width_override is None else width_override
