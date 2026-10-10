@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "design_study_id": "C5G7-2x2-two-UO2-two-MOX-layout-enumeration",
+  "purpose": "Explicit assembly-placement reformulation; not the legacy burnup-state QUBO.",
+  "source_model": {
+    "repository": "https://github.com/mit-crpg/benchmarks",
+    "expected_upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+    "model_path": "c5g7/openmc/2d/build-xml-2d.py",
+    "benchmark_specification": "https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation"
+  },
+  "positions_order": ["p00", "p01", "p10", "p11"],
+  "fixed_reflector_positions": ["p02", "p12", "p20", "p21", "p22"],
+  "canonical_reference_layout": {"p00": "UO2", "p01": "MOX", "p10": "MOX", "p11": "UO2"},
+  "constraints": {
+    "exactly_one_material_per_fuel_position": true,
+    "exactly_two_UO2_assemblies": true,
+    "exactly_two_MOX_assemblies": true,
+    "reflector_positions_fixed": true
+  },
+  "candidate_count": 6,
+  "candidate_layouts": [
+    {
+      "candidate_id": "c5g7-2x2-MMUU",
+      "layout_signature_order": ["p00", "p01", "p10", "p11"],
+      "fuel_assembly_layout": {"p00": "MOX", "p01": "MOX", "p10": "UO2", "p11": "UO2"},
+      "counts": {"UO2": 2, "MOX": 2},
+      "is_canonical_reference_arrangement": false,
+      "requires_transport_evaluation": true,
+      "physical_results": null
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUMU",
+      "layout_signature_order": ["p00", "p01", "p10", "p11"],
+      "fuel_assembly_layout": {"p00": "MOX", "p01": "UO2", "p10": "MOX", "p11": "UO2"},
+      "counts": {"UO2": 2, "MOX": 2},
+      "is_canonical_reference_arrangement": false,
+      "requires_transport_evaluation": true,
+      "physical_results": null
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUUM",
+      "layout_signature_order": ["p00", "p01", "p10", "p11"],
+      "fuel_assembly_layout": {"p00": "MOX", "p01": "UO2", "p10": "UO2", "p11": "MOX"},
+      "counts": {"UO2": 2, "MOX": 2},
+      "is_canonical_reference_arrangement": false,
+      "requires_transport_evaluation": true,
+      "physical_results": null
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMMU",
+      "layout_signature_order": ["p00", "p01", "p10", "p11"],
+      "fuel_assembly_layout": {"p00": "UO2", "p01": "MOX", "p10": "MOX", "p11": "UO2"},
+      "counts": {"UO2": 2, "MOX": 2},
+      "is_canonical_reference_arrangement": true,
+      "requires_transport_evaluation": true,
+      "physical_results": null
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMUM",
+      "layout_signature_order": ["p00", "p01", "p10", "p11"],
+      "fuel_assembly_layout": {"p00": "UO2", "p01": "MOX", "p10": "UO2", "p11": "MOX"},
+      "counts": {"UO2": 2, "MOX": 2},
+      "is_canonical_reference_arrangement": false,
+      "requires_transport_evaluation": true,
+      "physical_results": null
+    },
+    {
+      "candidate_id": "c5g7-2x2-UUMM",
+      "layout_signature_order": ["p00", "p01", "p10", "p11"],
+      "fuel_assembly_layout": {"p00": "UO2", "p01": "UO2", "p10": "MOX", "p11": "MOX"},
+      "counts": {"UO2": 2, "MOX": 2},
+      "is_canonical_reference_arrangement": false,
+      "requires_transport_evaluation": true,
+      "physical_results": null
+    }
+  ],
+  "optimization_protocol": {
+    "objective": null,
+    "candidate_score": null,
+    "status": "design_space_defined_physics_not_yet_evaluated",
+    "required_outputs": ["effective multiplication factor with statistical uncertainty", "benchmark-compatible pin/assembly power or fission-rate tallies"]
+  },
+  "nonclaims": [
+    "No transport calculation or physical ranking is performed by this design-space manifest.",
+    "The canonical reference arrangement is a baseline identity check, not an optimization result.",
+    "The other five layouts are design variants, not official C5G7 benchmark reference cases.",
+    "C5G7 UO2/MOX categories are not substitutes for legacy fresh/once_burned/twice_burned states.",
+    "No CB-PFR physical validation is claimed."
+  ]
+}
