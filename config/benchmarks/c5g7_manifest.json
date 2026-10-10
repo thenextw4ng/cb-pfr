@@ -3,7 +3,7 @@
   "benchmark_id": "OECD-NEA-C5G7",
   "benchmark_title": "Benchmark specification for deterministic 2-D/3-D MOX fuel assembly transport calculations without spatial homogenization (C5G7)",
   "benchmark_role": "transport-code-verification-reference-only",
-  "evidence_status": "baseline_statepoint_read_verified_mapping_blocked",
+  "evidence_status": "selected_not_instantiated",
   "primary_sources": [
     {
       "organization": "OECD Nuclear Energy Agency",
@@ -41,9 +41,10 @@
     "model_inputs_bundled": false,
     "cross_sections_bundled": false,
     "reference_values_transcribed_and_reviewed": false,
-    "openmc_baseline_run_verified": true,
+    "openmc_baseline_run_verified": false,
     "candidate_mapping_status": "blocked",
-    "reason": "The production statepoint scalar was independently read with OpenMC 0.16.0 and matched the recorded mean/standard deviation; this does not verify benchmark agreement or candidate mapping. The legacy fresh/once_burned/twice_burned QUBO labels still have no defensible mapping to C5G7 UO2/MOX enrichment or depletion compositions."
+    "reason": "The production statepoint scalar was independently read with OpenMC 0.16.0 and matched the recorded mean/standard deviation, but the benchmark baseline has not been compared against a reviewed primary reference/acceptance protocol. The legacy fresh/once_burned/twice_burned QUBO labels still have no defensible mapping to C5G7 UO2/MOX enrichment or depletion compositions.",
+    "statepoint_scalar_read_verified": true
   },
   "mapping_contract": {
     "required_position_map": null,
