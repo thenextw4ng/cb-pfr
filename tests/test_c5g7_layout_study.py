@@ -28,7 +28,8 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             CANONICAL_ASSIGNMENT + "\n"
             "batches = 20000\n"
             "inactive = 500\n"
-            "particles = 10000\n",
+            "particles = 10000\n"
+            "settings_file.particles = particles\n",
             encoding="utf-8",
         )
         self.design = self.root / "design.json"
@@ -78,6 +79,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         self.assertIn("batches = 40", text)
         self.assertIn("inactive = 5", text)
         self.assertIn("particles = 200", text)
+        self.assertIn("settings_file.seed = 620000", text)
         self.assertNotIn(CANONICAL_ASSIGNMENT, text)
 
     def test_patch_fails_closed_when_upstream_template_changes(self):
