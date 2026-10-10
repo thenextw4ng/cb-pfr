@@ -1,55 +1,69 @@
-# Phase 1 Audit — ReactorQ Studio Integration
+# Phase 1 — Final Software Audit: ReactorQ Studio
 
 **Date:** 2026-10-10  
-**Repository:** `thenextw4ng/cb-pfr`  
-**Integration branch:** `integration/reactorq-studio`  
-**Scope:** repository-level audit using GitHub source and CI metadata. No local MacBook environment was accessed.
+**Repository:** thenextw4ng/cb-pfr  
+**Branch:** integration/reactorq-studio  
+**Scope:** source and test review through GitHub, focused on the core QUBO/ranking contracts, dashboard data flow, repeatability analysis, OpenMC preflight/parser, exports, documentation, and CI. No local MacBook environment was accessed.
 
-## Executive summary
+## Executive result
 
-CB-PFR is a research prototype for uncertainty-aware post-optimization ranking. It is a suitable foundation for a staged integration, provided the existing method and evidence boundaries are preserved. Phase 1 does not attempt physical simulation, UI implementation, or changes to the CB-PFR algorithm.
+The software MVP and its tests are implemented on the integration branch. This final audit identified and fixed input-validation gaps in ranking configuration and integration records. The ranking layer now rejects non-finite metric limits/parameters, duplicate metric names, non-finite or negative comparison margins, malformed physical estimate tuples, and arithmetic overflow in calculated bounds. The integration adapter now validates candidate IDs as non-empty strings and rejects estimates for candidates outside the submitted batch. The OpenMC statepoint reader now gives explicit errors for malformed data rather than allowing several malformed-file errors to escape unclassified.
 
-## Repository and CI status
+The final CI run for the latest commit must be green before this audit can be called test-verified. GitHub Actions is the execution evidence; this audit does not claim tests ran on the user's machine.
 
-- Default branch: `main`.
-- A separate integration branch, `integration/reactorq-studio`, was created from `main`.
-- The repository's latest visible GitHub Actions run at the time of this audit was completed successfully for commit `cb8580ac714edaaf5e47ad1e64831f486d7b9fc2` (workflow: `.github/workflows/tests.yml`, run 57, recorded 2026-10-05).
-- This CI result is evidence that the workflow passed for that commit. It is not evidence that tests were run on the user's local machine or on the new integration branch.
-- This audit used the repository metadata and selected source/documentation files through GitHub. It did not execute Python tests itself.
+## Reviewed areas
 
-## Existing components found
+- Package metadata and Python support (pyproject.toml; Python >=3.10).
+- QUBO formulation, candidate enumeration, candidate validation, and exact toy-model tests.
+- CB-PFR metric configuration, assessment logic, method comparisons, and tie-breaking.
+- Candidate-batch integration adapter and provenance-labelled records.
+- Streamlit dashboard tabs, state transitions, synthetic labels, error handling, and exports.
+- Repeatability library, dashboard JSON input, CLI validation, and output-file no-overwrite behavior.
+- OpenMC preflight, stdout keff parsing, statepoint parsing, and explicit no-mapping boundary.
+- CI dependency installation, syntax compilation, unit tests, examples, and frozen synthetic benchmark reproduction.
 
-- Python package metadata is defined in `pyproject.toml`; package name is `cb-pfr`, version `0.1.0`, Python requirement `>=3.10`.
-- Existing examples include `examples/toy_qubo_example.py` and `examples/basic_ranking.py`.
-- Unit tests are run by `python -m unittest discover -s tests -v`.
-- CI covers Python 3.10, 3.11, and 3.12; it compiles source/tests/examples/scripts, runs tests and examples, and reproduces the frozen synthetic benchmark.
-- A synthetic benchmark runner and archived trial-level results are documented in `docs/reproducibility.md`.
-- The QUBO implementation is an abstract toy model with seven positions, three categories, 21 binary variables, and 20 feasible candidates after exact enumeration, as documented in the repository.
-- The OpenMC boundary and QUBO-to-physics mapping audit are designed to fail closed when a defensible mapping is missing.
+## Findings and remediation
 
-## Evidence and claims boundary
+| Finding | Remediation | Remaining limitation |
+|---|---|---|
+| NaN/infinity could be supplied as metric bounds, scales, weights, or z values. | Reject non-finite/non-numeric parameters and empty metric names. | Scientific appropriateness of user-selected limits still requires justification. |
+| Duplicate metric names could collapse into one dictionary key. | Ranking now rejects duplicate metric names. | None for this configuration ambiguity. |
+| NaN/infinite uniform margins could pass a simple negative-value check. | Require each margin to be finite, numeric, and nonnegative. | Margin selection remains a methodological choice. |
+| Overflow during mean ± uncertainty-width could produce non-finite bounds. | Fail closed with a nonfinite_bound assessment. | Extremely large finite inputs are rejected at assessment time. |
+| Malformed estimate values could throw instead of producing an explicit failed assessment. | Validate pair shape and numeric types; malformed entries fail closed. | Input provenance is still the caller's responsibility. |
+| Candidate IDs were assumed to be strings and stale estimates could be silently ignored. | Require non-empty string IDs and reject estimate IDs outside the candidate batch. | Adapter does not independently prove that a supplied estimate came from a real simulation. |
+| Malformed OpenMC statepoints could leak low-level parsing exceptions. | Wrap expected HDF5/value/type errors in OpenMCIntegrationError; validate keff shape and finite values. | A well-formed statepoint is not proof of converged or physically correct results. |
 
-The repository documents synthetic benchmark selected-feasibility rates of 0.857 (QUBO-only), 0.933 (point estimate), 0.976 (CB-PFR), and 0.966 (uniform margin). These are conditional synthetic results, not reactor simulation outcomes.
+## Dashboard and reproducibility checks
 
-The report `reports/qubo_physics_mapping.md` states `NO_DEFENSIBLE_MAPPING_FOUND`. The current abstract categories `fresh`, `once_burned`, and `twice_burned` must not be silently mapped to C5G7 UO2/MOX materials. The physical simulator report also says CB-PFR physical validation has not been established. No OpenMC run was performed as part of this audit.
+- The built-in seven-position fixture has 21 binary variables and 20 exactly enumerated feasible candidates; it is clearly described as abstract and not a reactor geometry.
+- Demo estimates are deterministic and labelled synthetic. The dashboard does not invent keff, flux, or power tallies.
+- The OpenMC panel is a preflight only. It checks executable availability, cross-section path/XML readability, and basic well-formedness of required XML files. It does not launch OpenMC, semantically validate the model, check geometry overlaps, demonstrate convergence, or validate physics.
+- Repeatability statistics summarize supplied ordered rankings. They do not launch optimizer runs and do not certify global optimality, physical validity, or statistical confidence.
+- The CLI refuses to overwrite an existing output file and records input run IDs and evidence labels.
+- CI covers Python 3.10, 3.11, and 3.12; syntax compilation; unit tests; examples; and the frozen synthetic benchmark.
 
-## Risks and blockers
+## Scientific evidence boundary and blockers
 
-1. **QUBO-to-physics mapping:** physical evaluation remains blocked until geometry, material/depletion states, category-to-material mapping, nuclear-data provenance, constraints, and an independent validation reference are documented.
-2. **Execution environment:** GitHub source inspection does not establish that the user's local environment has the required Python setup or OpenMC installation.
-3. **UI versus engine:** ReactorQ Studio should not be built as a static dashboard that invents candidate results. The UI must consume real backend outputs and visibly distinguish demo/mock/synthetic data from actual simulation data.
-4. **Algorithm scope:** CB-PFR is a post-optimization ranking layer; it should not be described as a QUBO solver, a reactor safety method, or a global-optimality certificate.
+The repository's mapping audit reports NO_DEFENSIBLE_MAPPING_FOUND. Abstract labels fresh, once_burned, and twice_burned must not be mapped to C5G7 UO2/MOX or any other physical materials without model-specific evidence. Physical validation remains blocked until the benchmark geometry, material/depletion states, category-to-material mapping, nuclear-data provenance, acceptance constraints, and independent reference protocol are documented.
 
-## Phase 1 outcome
+Existing benchmark rates (QUBO-only 0.857, point estimate 0.933, CB-PFR 0.976, uniform margin 0.966) are synthetic conditional results only. They are not reactor simulation outcomes.
 
-**Repository-level audit: COMPLETE.**  
-**Local test execution: NOT PERFORMED in this audit.**  
-**Physical validation: BLOCKED / NOT ESTABLISHED.**
+## Phase 1 exit checklist
 
-## Phase 2 plan
+- [x] Review the core source and existing tests relevant to QUBO, ranking, and candidate constraints.
+- [x] Review the new integration adapter and provenance labels.
+- [x] Review dashboard flow, repeatability input handling, and exports.
+- [x] Review OpenMC preflight and parsing boundaries.
+- [x] Fix the numeric validation and malformed-input issues listed above.
+- [x] Add regression tests for the new guards.
+- [x] Update documentation with explicit scientific and execution limits.
+- [ ] Confirm the latest GitHub Actions workflow passes on Python 3.10, 3.11, and 3.12.
 
-1. Define stable data contracts for a QUBO candidate, constraint-check report, run metadata, and downstream evaluation record.
-2. Inspect the current QUBO and ranking APIs and add a thin adapter rather than rewriting CB-PFR.
-3. Add an integration test using deterministic fixture/synthetic evaluation data, clearly labelled as non-physical.
-4. Preserve the current OpenMC fail-closed behavior; only enable physical execution when a documented model and mapping are supplied.
-5. Keep the UI out of scope until the backend contracts and end-to-end data flow are tested.
+## Exit decision
+
+**Code-review work:** complete.  
+**Phase 1 test verification:** pending latest CI result.  
+**Physical validation:** blocked / not established.
+
+The next phase should strengthen recorded optimizer-run provenance and prepare the model-specific OpenMC handoff. It must not claim physical evaluation until the mapping and reference gates are resolved.
