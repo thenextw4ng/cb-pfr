@@ -1,8 +1,8 @@
-"ReactorQ Studio: transparent dashboard for QUBO/CB-PFR research experiments.
+"""ReactorQ Studio: transparent dashboard for QUBO/CB-PFR research experiments.
 
 The bundled demo estimates are synthetic. This application does not claim to run
 OpenMC unless a separately configured, validated OpenMC model is supplied.
-"
+"""
 from __future__ import annotations
 
 import json
