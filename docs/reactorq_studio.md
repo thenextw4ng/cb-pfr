@@ -22,7 +22,7 @@ The dashboard opens locally in your browser.
 ## Modes
 
 - **Synthetic demo:** creates an abstract seven-position QUBO fixture, ranks a subset of feasible candidates with all four existing comparison methods, and exports CSV/JSON. All generated estimates are explicitly labelled synthetic.
-- **OpenMC preflight:** checks for an OpenMC executable, `OPENMC_CROSS_SECTIONS`, and the required model XML files. This is only a readiness check; it does not launch OpenMC.
+- **OpenMC preflight:** checks for an OpenMC executable, `OPENMC_CROSS_SECTIONS`, and the presence/readability/basic XML well-formedness of the cross-section index plus required model XML files. This is only a shallow readiness check; it does not run OpenMC, validate XML semantics against a specific OpenMC version, check geometry overlap, prove convergence, or validate physics.
 
 ## Important scientific boundary
 
