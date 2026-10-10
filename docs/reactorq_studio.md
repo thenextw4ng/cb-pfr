@@ -94,3 +94,18 @@ python scripts/analyze_optimizer_experiment.py --input results/optimizer_runs.va
 ```
 
 Use `--objective-sense max` when higher objective values are better. Objective summaries are only comparable within a documented experiment and objective definition. Candidate feasibility rate is the fraction of recorded candidate rows marked feasible, not the probability that a future optimizer run succeeds. Failed/interrupted runs remain in the run denominator for reliability counts but are excluded from ranking-stability calculations. The tools validate record structure, not whether the records genuinely came from the stated optimizer. Keep raw logs immutable and record software/configuration hashes externally when available. A complete synthetic input template is provided at `examples/optimizer_runs.example.json`; it is clearly labelled as a template, not research data.
+
+
+## Phase 3: benchmark selection and mapping gate
+
+The project records the OECD/NEA C5G7 MOX fuel-assembly transport benchmark as a reference framework for future transport-code verification. C5G7's UO2/MOX enrichment classes are not equivalent to the abstract QUBO states `fresh`, `once_burned`, and `twice_burned`. The repository therefore does not invent a category-to-material mapping or claim physical validation. Read [the benchmark-selection dossier](../reports/benchmark_selection_c5g7.md) and [Phase 3 report](../reports/phase3_completion.md).
+
+Audit the machine-readable benchmark manifest:
+
+```bash
+python scripts/audit_benchmark_manifest.py \
+  --input config/benchmarks/c5g7_manifest.json \
+  --output results/c5g7_benchmark_gate.json
+```
+
+The current expected status is `blocked` (CLI exit code 2) until the exact benchmark model, nuclear-data provenance, reviewed material/depletion mapping, reference data, and baseline calculation are supplied. This gate audits manifest structure and declared readiness; it does not run OpenMC or validate the physical model.

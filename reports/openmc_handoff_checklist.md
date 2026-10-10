@@ -4,14 +4,16 @@ This checklist separates software readiness from physical-model validity. Reacto
 
 ## Gate 0 — select a defensible model
 
-- [ ] Identify the exact benchmark or reactor model and cite its primary source.
+- [x] Select and cite the OECD/NEA C5G7 benchmark family as a *transport-code reference framework* in [benchmark selection dossier](benchmark_selection_c5g7.md); the machine-readable manifest is `config/benchmarks/c5g7_manifest.json`.
+- [x] Add a fail-closed manifest audit (`scripts/audit_benchmark_manifest.py`) that records missing model/mapping/reference evidence rather than treating it as success.
+- [ ] Instantiate one exact C5G7 exercise and identify the exact benchmark or reactor model configuration to reproduce.
 - [ ] Record the benchmark's intended scope, geometry, materials, boundary conditions, and reported reference quantities.
 - [ ] Verify that the model's geometry and material categories can be represented by the candidate configurations being evaluated.
 - [ ] Document the mapping from each optimizer category to an actual material/composition/depletion state. If this mapping is not supported by source evidence, stop.
 - [ ] Do not equate the repository's abstract fresh, once_burned, and twice_burned labels with UO2/MOX or any other real material without a documented model-specific basis.
 - [ ] Record nuclear-data library name, version, path, and provenance; confirm compatibility with the selected benchmark.
 
-**Stop condition:** if category-to-material mapping, geometry mapping, or benchmark provenance is unresolved, do not report any OpenMC result as a CB-PFR physical validation.
+**Stop condition:** the benchmark family selection is complete, but the physical model is not instantiated and category-to-material mapping remains unresolved. If category-to-material mapping, geometry mapping, or benchmark provenance is unresolved, do not report any OpenMC result as a CB-PFR physical validation.
 
 ## Gate 1 — prepare and validate input files
 
@@ -59,7 +61,7 @@ Preflight success only means that expected runtime and files appear available. I
 
 ## Deliverables for the handoff
 
-1. Benchmark/source citation and mapping rationale.
+1. Benchmark/source citation and mapping rationale ([benchmark-selection dossier](benchmark_selection_c5g7.md) completed; physical mapping still blocked).
 2. Versioned OpenMC input files and nuclear-data provenance record.
 3. Baseline run log and reference-comparison report.
 4. Candidate manifest linking each optimizer candidate to exact physical inputs.
