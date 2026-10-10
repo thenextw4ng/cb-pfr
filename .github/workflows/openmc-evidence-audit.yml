@@ -20,11 +20,11 @@ jobs:
             openmc=0.16.0
           cache-environment: true
 
-      - name: Extract and locate production statepoint
+      - name: Extract and inventory archived statepoints
         shell: bash -el {0}
         run: |
           python - <<'PY'
-          from pathlib import Path
+          from pathlib import Path, PurePosixPath
           import zipfile
 
           archive = Path("OpenMC_HDF5_Evidence_2026-10-11.zip")
@@ -34,23 +34,42 @@ jobs:
               bad = zf.testzip()
               if bad:
                   raise SystemExit(f"ZIP CRC failure: {bad}")
-              names = [n for n in zf.namelist() if Path(n).name == "statepoint.20000.h5"]
-              if not names:
-                  raise SystemExit("production statepoint.20000.h5 not found in evidence ZIP")
-              if len(names) != 1:
-                  raise SystemExit(f"expected one production statepoint, found {len(names)}: {names}")
-              zf.extract(names[0], target)
-              statepoint = target / names[0]
-              print(f"statepoint={statepoint}")
-              print(f"size_bytes={statepoint.stat().st_size}")
+              for info in zf.infolist():
+                  member = PurePosixPath(info.filename)
+                  if member.is_absolute() or ".." in member.parts:
+                      raise SystemExit(f"unsafe archive member path: {info.filename}")
+              zf.extractall(target)
+          statepoints = sorted(target.rglob("statepoint*.h5"))
+          production = [p for p in statepoints if p.name == "statepoint.20000.h5"]
+          if len(production) != 1:
+              raise SystemExit(f"expected one production statepoint.20000.h5, found {len(production)}")
+          if not statepoints:
+              raise SystemExit("no statepoint*.h5 files found in evidence ZIP")
+          print(f"statepoint_count={len(statepoints)}")
+          for path in statepoints:
+              print(f"statepoint={path} size_bytes={path.stat().st_size}")
           PY
 
-      - name: Audit statepoint with OpenMC API and compare recorded scalar
+      - name: Audit all archived statepoints with OpenMC API
         shell: bash -el {0}
         run: |
-          statepoint="$(find /tmp/openmc-hdf5-evidence -name statepoint.20000.h5 -print -quit)"
-          test -n "$statepoint"
-          python scripts/audit_openmc_statepoint.py --statepoint "$statepoint" --outdir /tmp/openmc-statepoint-audit
+          production="$(find /tmp/openmc-hdf5-evidence -name statepoint.20000.h5 -print -quit)"
+          test -n "$production"
+          python scripts/audit_openmc_statepoint.py --statepoint "$production" --outdir /tmp/openmc-statepoint-audit
+          while IFS= read -r statepoint; do
+            if [ "$statepoint" = "$production" ]; then
+              continue
+            fi
+            relative="${statepoint#/tmp/openmc-hdf5-evidence/}"
+            label="$(printf '%s' "$relative" | tr '/.' '__')"
+            python scripts/audit_openmc_statepoint.py \
+              --statepoint "$statepoint" \
+              --outdir "/tmp/openmc-statepoint-audit/runs/$label"
+          done < <(find /tmp/openmc-hdf5-evidence -type f -name 'statepoint*.h5' | sort)
+          python scripts/summarize_openmc_run_audits.py \
+            --audit-root /tmp/openmc-statepoint-audit \
+            --out-csv /tmp/openmc-statepoint-audit/statepoint_runs.csv \
+            --out-json /tmp/openmc-statepoint-audit/statepoint_runs.json
           python - <<'PY'
           import json
           import math
