@@ -59,8 +59,8 @@ def build_demo():
     return spec, model, candidates
 
 spec, model, candidates = build_demo()
-tab_overview, tab_rank, tab_openmc, tab_export = st.tabs(
-    ["Overview", "Candidate ranking", "OpenMC status", "Export & provenance"]
+tab_overview, tab_rank, tab_repeatability, tab_openmc, tab_export = st.tabs(
+    ["Overview", "Candidate ranking", "Repeatability", "OpenMC status", "Export & provenance"]
 )
 
 with tab_overview:
