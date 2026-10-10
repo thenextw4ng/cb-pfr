@@ -96,7 +96,7 @@ The separate C5G7 assembly-placement study is available through:
 - `scripts/run_c5g7_layout_study.py` — prepare isolated cases or run them when a compatible OpenMC installation and nuclear-data setup are available.
 - `config/benchmarks/c5g7_manifest.json` — fail-closed benchmark/mapping gate.
 
-The assembly-placement formulation is **separate** from the legacy `fresh / once_burned / twice_burned` QUBO. The six layouts are not all official benchmark reference cases. The canonical arrangement is a baseline identity check; physical ranking must wait for a reviewed model, matched candidate manifests, and a predeclared reference/acceptance protocol. The current archived Stage 3–4 statepoints are not valid independent-seed repetitions; see [the provenance audit](reports/stage34_statepoint_provenance_audit_2026-10-11.md).
+The assembly-placement formulation is **separate** from the legacy `fresh / once_burned / twice_burned` QUBO. The six isolated input cases have been prepared in CI against pinned upstream commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450`; download the [prepared-case artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084994157). This preparation did **not** run transport. The six layouts are not all official benchmark reference cases. The canonical arrangement is a baseline identity check; physical ranking must wait for a reviewed model, matched candidate manifests, and a predeclared reference/acceptance protocol. The current archived Stage 3–4 statepoints are not valid independent-seed repetitions; see [the provenance audit](reports/stage34_statepoint_provenance_audit_2026-10-11.md).
 
 ## Repository architecture
 
