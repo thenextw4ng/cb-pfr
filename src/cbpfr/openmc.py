@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import asdict,dataclass
 import json,os,re,shutil
 from pathlib import Path
+import xml.etree.ElementTree as ET
 from typing import Any
 from .qubo import Candidate,CandidateMappingError,QuboModel
 
@@ -30,9 +31,24 @@ def preflight_openmc(model_directory:str|Path)->OpenMCPreflight:
     missing_files=tuple(filename for filename in required_files if not (model_directory/filename).is_file())
     reasons=[]
     if executable is None: reasons.append("OpenMC executable is not on PATH")
-    if not cross_sections: reasons.append("OPENMC_CROSS_SECTIONS is unset")
-    elif not Path(cross_sections).is_file(): reasons.append("OPENMC_CROSS_SECTIONS does not name a readable XML file")
-    if missing_files: reasons.append("required model XML is absent")
+    if not cross_sections:
+        reasons.append("OPENMC_CROSS_SECTIONS is unset")
+    elif not Path(cross_sections).is_file():
+        reasons.append("OPENMC_CROSS_SECTIONS does not name a readable XML file")
+    else:
+        try:
+            ET.parse(cross_sections)
+        except (ET.ParseError, OSError):
+            reasons.append("OPENMC_CROSS_SECTIONS does not name a readable XML file")
+    if missing_files:
+        reasons.append("required model XML is absent")
+    for filename in required_files:
+        path=model_directory/filename
+        if path.is_file():
+            try:
+                ET.parse(path)
+            except (ET.ParseError, OSError):
+                reasons.append(f"{filename} is not valid readable XML")
     return OpenMCPreflight(status="ready" if not reasons else "blocked",executable=executable,cross_sections=cross_sections,missing_files=missing_files,reasons=tuple(reasons))
 
 def candidate_loading_manifest(model:QuboModel,candidate:Candidate)->dict[str,Any]:
