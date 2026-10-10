@@ -76,7 +76,7 @@ Before any physical run, follow [the gated OpenMC handoff checklist](../reports/
 For each optimizer invocation, preserve the raw output and create a run record containing at least:
 
 - unique `run_id`, optimizer name/version, seed (or `null` if unseeded), full parameter object, stopping condition, and run status;
-- one `candidate_records` entry per recorded candidate, with a stable candidate ID, the full binary `candidate_vector`, rank, QUBO energy, and independently recorded feasibility flag. The validator rejects duplicate IDs, duplicate vectors, duplicate ranks, non-binary vectors, and non-finite values;
+- one `candidate_records` entry per recorded candidate, with a stable candidate ID, the full binary `candidate_vector`, rank, QUBO energy, and independently recorded feasibility flag. The validator rejects duplicate IDs, duplicate vectors, duplicate ranks, non-binary vectors, non-finite values, and candidate ID/vector drift across runs;
 - `objective_value` when a separate objective is available; do not assume QUBO energy is interchangeable with a physical objective;
 - `failure_reason` for failed, cancelled, or timed-out runs;
 - `evidence_kind` and `physical_simulation_performed` provenance fields.
