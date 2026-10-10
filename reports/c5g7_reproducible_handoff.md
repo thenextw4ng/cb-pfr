@@ -17,7 +17,7 @@ The upstream model is an implementation reference. Before claiming a benchmark r
 Run from the repository root in an environment where Git is installed:
 
 ```bash
-python scripts/prepare_c5g7_reference.py --destination external/mit-crpg-benchmarks
+mkdir -p external\npython scripts/prepare_c5g7_reference.py --destination external/mit-crpg-benchmarks
 ```
 
 The script clones the public upstream repository into a new destination and writes `UPSTREAM_PROVENANCE.json` containing the full checked-out commit SHA, source URL, and UTC preparation time. It refuses to overwrite an existing destination. Preserve that provenance file with all subsequent outputs.
