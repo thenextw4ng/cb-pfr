@@ -126,6 +126,13 @@ jobs:
           python scripts/inventory_openmc_runs.py /tmp/openmc-hdf5-evidence \
             --out /tmp/openmc-statepoint-audit/artifact_inventory.json
 
+      - name: Audit settings and log provenance
+        shell: bash -el {0}
+        run: |
+          python scripts/audit_openmc_run_inputs.py \
+            --root /tmp/openmc-hdf5-evidence \
+            --out /tmp/openmc-statepoint-audit/run_input_audit.json
+
       - name: Preserve machine-derived audit output
         uses: actions/upload-artifact@v4
         with:
