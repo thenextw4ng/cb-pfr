@@ -43,7 +43,7 @@ def candidate_loading_manifest(model:QuboModel,candidate:Candidate)->dict[str,An
 def write_candidate_manifest(model:QuboModel,candidate:Candidate,path:str|Path)->dict[str,Any]:
     manifest=candidate_loading_manifest(model,candidate); Path(path).write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8"); return manifest
 
-_KEFF_PATTERN=re.compile(r"Combined k-effective\\s*=\\s*([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[Ee][+-]?\\d+)?)\\s*\\+/-\\s*([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[Ee][+-]?\\d+)?)")
+_KEFF_PATTERN=re.compile(r"Combined k-effective\s*=\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?)\s*\+/-\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?)")
 
 def parse_openmc_stdout_keff(text:str)->tuple[float,float]:
     match=_KEFF_PATTERN.search(text)
