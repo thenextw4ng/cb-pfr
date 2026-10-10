@@ -69,3 +69,28 @@ The output path must not already exist; use a new path for each analysis. Keep t
 ## OpenMC handoff
 
 Before any physical run, follow [the gated OpenMC handoff checklist](../reports/openmc_handoff_checklist.md). It requires a defensible benchmark, geometry/material mapping, nuclear-data provenance, a validated baseline, and recorded run metadata before candidate-level physical claims are made.
+
+
+## Phase 2: auditable optimizer-run records
+
+For each optimizer invocation, preserve the raw output and create a run record containing at least:
+
+- unique `run_id`, optimizer name/version, seed (or `null` if unseeded), full parameter object, stopping condition, and run status;
+- one `candidate_records` entry per recorded candidate, with a stable candidate ID, rank, QUBO energy, and independently recorded feasibility flag;
+- `objective_value` when a separate objective is available; do not assume QUBO energy is interchangeable with a physical objective;
+- `failure_reason` for failed, cancelled, or timed-out runs;
+- `evidence_kind` and `physical_simulation_performed` provenance fields.
+
+Validate a raw experiment log before analyzing it:
+
+```bash
+python scripts/validate_optimizer_runs.py --input results/optimizer_runs.json --output results/optimizer_runs.validated.json
+```
+
+Summarize the validated experiment, including completed/failed run counts, candidate feasibility rate, best recorded objective values, and ranking stability across completed runs:
+
+```bash
+python scripts/analyze_optimizer_experiment.py --input results/optimizer_runs.validated.json --output results/optimizer_experiment_summary.json --top-k 3 --objective-sense min
+```
+
+Use `--objective-sense max` when higher objective values are better. Objective summaries are only comparable within a documented experiment and objective definition. Candidate feasibility rate is the fraction of recorded candidate rows marked feasible, not the probability that a future optimizer run succeeds. Failed/interrupted runs remain in the run denominator for reliability counts but are excluded from ranking-stability calculations. The tools validate record structure, not whether the records genuinely came from the stated optimizer. Keep raw logs immutable and record software/configuration hashes externally when available.
