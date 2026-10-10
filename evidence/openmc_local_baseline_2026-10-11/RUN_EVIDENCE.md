@@ -1,7 +1,7 @@
 # C5G7/OpenMC baseline: recorded execution evidence
 
 **Recorded date:** 2026-10-11  
-**Status:** baseline execution reported; local HDF5 not independently available in this GitHub commit.
+**Status:** raw evidence ZIP `OpenMC_HDF5_Evidence_2026-10-11.zip` is now present in the `openmc-evidence-20261011` branch. The HDF5 files have not yet been independently extracted and audited by this integration; scalar values below remain transcribed pending that check.
 
 ## Reported result
 
