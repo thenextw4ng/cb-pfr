@@ -57,6 +57,11 @@ class CBPFRTests(unittest.TestCase):
         result=assess_physical([self.metric()], PhysicalEstimate("x", {"response": (math.nan, 0.1)}))
         self.assertEqual(result.metric_assessments[0].status, "nonfinite_or_negative")
 
+    def test_overflowed_bounds_fail_closed(self):
+        result=assess_physical([self.metric(z=2.0)], PhysicalEstimate("x", {"response": (1e308, 1e308)}))
+        self.assertEqual(result.indicator, 1)
+        self.assertEqual(result.metric_assessments[0].status, "nonfinite_bound")
+
     def test_upper_and_lower_bounds_are_conservative(self):
         metric=self.metric(lower=0.2, upper=0.8, z=2.0)
         result=assess_physical([metric], PhysicalEstimate("x", {"response": (0.5, 0.1)}))
