@@ -16,6 +16,7 @@ from cbpfr.integration import rank_candidate_batch, ranking_to_records
 from cbpfr.openmc import preflight_openmc
 from cbpfr.qubo import CoreSpec, build_usmanov_style_qubo, enumerate_feasible_candidates
 from cbpfr.ranking import MetricLimit, PhysicalEstimate
+from cbpfr.repeatability import summarize_repeated_rankings
 
 st.set_page_config(page_title="ReactorQ Studio", page_icon="⚛️", layout="wide")
 st.markdown("""
@@ -125,6 +126,37 @@ with tab_rank:
         st.dataframe(summary, use_container_width=True, hide_index=True)
     else:
         st.info("Click Run experiment in the sidebar to generate demo rankings or check OpenMC readiness.")
+
+
+with tab_repeatability:
+    st.subheader("Repeated-run consistency")
+    st.write("Paste ordered candidate IDs from independent optimizer runs as a JSON array of arrays. Each inner array is ranked best-first. This analysis does not run an optimizer.")
+    default_runs = '[["candidate_A", "candidate_B", "candidate_C"], ["candidate_A", "candidate_C", "candidate_B"], ["candidate_B", "candidate_A", "candidate_C"]]'
+    raw_runs = st.text_area("Run rankings (JSON)", value=default_runs, height=140)
+    top_k = st.number_input("Top-k set size", min_value=1, max_value=100, value=2, step=1)
+    if st.button("Analyze repeatability"):
+        try:
+            parsed_runs = json.loads(raw_runs)
+            if not isinstance(parsed_runs, list) or any(not isinstance(row, list) for row in parsed_runs):
+                raise ValueError("Input must be a JSON array of arrays of candidate IDs.")
+            summary = summarize_repeated_rankings(parsed_runs, top_k=int(top_k))
+            st.session_state["repeatability_summary"] = summary
+            st.session_state["repeatability_input"] = parsed_runs
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            st.error(f"Could not analyze rankings: {exc}")
+    summary = st.session_state.get("repeatability_summary")
+    if summary:
+        st.caption("Descriptive stability statistics only; results depend on the supplied runs.")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Runs", summary["run_count"])
+        m2.metric("Top-1 dominance", f'{summary["top1_dominance"]:.1%}')
+        m3.metric("Mean top-k Jaccard", f'{summary["mean_pairwise_top_k_jaccard"]:.3f}')
+        st.markdown("**Top-1 selection frequencies**")
+        st.dataframe(pd.DataFrame([{"candidate_id": key, "count": summary["top1_selection_counts"][key], "frequency": value} for key, value in summary["top1_selection_frequencies"].items()]), use_container_width=True, hide_index=True)
+        st.markdown("**Top-k selection frequencies**")
+        st.dataframe(pd.DataFrame([{"candidate_id": key, "count": summary["top_k_selection_counts"][key], "frequency": value} for key, value in summary["top_k_selection_frequencies"].items()]), use_container_width=True, hide_index=True)
+        st.download_button("Download repeatability summary JSON", json.dumps({"runs": st.session_state.get("repeatability_input", []), "summary": summary}, indent=2).encode("utf-8"), "reactorq_repeatability.json", "application/json")
+        st.warning(summary["interpretation"])
 
 with tab_openmc:
     st.subheader("OpenMC runtime and model preflight")
