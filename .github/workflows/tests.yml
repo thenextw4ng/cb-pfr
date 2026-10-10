@@ -25,6 +25,12 @@ jobs:
         run: |
           python examples/toy_qubo_example.py
           python examples/basic_ranking.py
+      - name: Audit committed evidence archives
+        run: |
+          python scripts/audit_evidence_archive.py --archive OpenMC_HDF5_Evidence_2026-10-11.zip --out /tmp/openmc-evidence-archive-audit.json --require-statepoint
+          python scripts/audit_evidence_archive.py --archive CBPFR_ReactorQ__Archive_2026-10-11.zip --out /tmp/conversation-archive-audit.json
+          cat /tmp/openmc-evidence-archive-audit.json
+          cat /tmp/conversation-archive-audit.json
       - name: Reproduce frozen synthetic benchmark
         run: |
           python scripts/run_reduced_synthetic_calibration.py --results-dir /tmp/cbpfr-reproduced
