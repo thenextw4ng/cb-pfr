@@ -124,6 +124,10 @@ Phase 4 explicitly separates the legacy abstract burnup-state QUBO from a new C5
 
 See [the Phase 4 reformulation report](reports/phase4_c5g7_reformulation.md). This is a design-space generator, not a physics solver: physical ranking remains unavailable until a reviewed transport model is run and its outputs are compared with the primary benchmark specification. The legacy `fresh/once_burned/twice_burned` QUBO remains unmapped and is not physically validated.
 
+
+
+Phase 5 adds `scripts/run_c5g7_layout_study.py`, a fail-closed adapter that prepares isolated inputs for the six explicitly reformulated layouts and can optionally invoke OpenMC. See [the Phase 5–10 transport pipeline and validation gates](reports/phase5_10_transport_pipeline.md). Preparation mode does not need OpenMC; execution mode requires a working OpenMC installation. Its default low-cost settings are smoke-test-only, not benchmark-grade. No physical CB-PFR validation is claimed until a real canonical run is compared with the primary benchmark, all candidate runs are recorded, and repeatability/statistical analyses are completed.
+
 ## Reproduce the reduced synthetic benchmark
 
 Use a new output directory (the runner refuses to overwrite a nonempty one):
