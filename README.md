@@ -117,6 +117,13 @@ Phase 3 adds a cited OECD/NEA C5G7 benchmark-selection dossier and fail-closed m
 
 See [the reproducible C5G7 handoff](reports/c5g7_reproducible_handoff.md) for source provenance, run protocol, and the strict distinction between a standalone transport benchmark and CB-PFR candidate validation. The current abstract burnup categories still have no defensible material/depletion mapping, so a standalone C5G7 run must not be presented as physical validation of the existing QUBO candidates.
 
+
+Phase 4 explicitly separates the legacy abstract burnup-state QUBO from a new C5G7 assembly-placement design study. The new formulation uses four fuel-assembly positions, binary UO2/MOX assignment variables, and exact two-UO2/two-MOX constraints. The six feasible layouts can be enumerated without OpenMC:
+
+    python scripts/enumerate_c5g7_layouts.py --output results/c5g7_design_space.json
+
+See [the Phase 4 reformulation report](reports/phase4_c5g7_reformulation.md). This is a design-space generator, not a physics solver: physical ranking remains unavailable until a reviewed transport model is run and its outputs are compared with the primary benchmark specification. The legacy `fresh/once_burned/twice_burned` QUBO remains unmapped and is not physically validated.
+
 ## Reproduce the reduced synthetic benchmark
 
 Use a new output directory (the runner refuses to overwrite a nonempty one):
