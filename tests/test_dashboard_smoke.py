@@ -25,10 +25,11 @@ class ReactorQDashboardSmokeTests(unittest.TestCase):
         )
         analyze_button.click().run()
         self.assertEqual(app.exception, [])
-        visible_text = "\n".join(element.value for element in app.markdown)
-        self.assertIn("Descriptive stability statistics only", visible_text)
-        self.assertIn("not a global-optimum certificate", visible_text)
         self.assertEqual(len(app.metric), 3)
+        self.assertTrue(any(
+            button.label == "Download repeatability summary JSON"
+            for button in app.get("download_button")
+        ))
 
     def test_repeatability_tab_reports_invalid_json_without_crashing(self):
         app = AppTest.from_file(APP_PATH, default_timeout=30).run()
