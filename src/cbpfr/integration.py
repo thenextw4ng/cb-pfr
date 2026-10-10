@@ -28,10 +28,13 @@ def rank_candidate_batch(
     if not candidates:
         raise ValueError("candidate batch cannot be empty")
     ids = [candidate.candidate_id for candidate in candidates]
-    if any(not candidate_id.strip() for candidate_id in ids):
-        raise ValueError("candidate IDs must be non-empty")
+    if any(not isinstance(candidate_id, str) or not candidate_id.strip() for candidate_id in ids):
+        raise ValueError("candidate IDs must be non-empty strings")
     if len(set(ids)) != len(ids):
         raise ValueError("candidate IDs must be unique within a batch")
+    unexpected_estimates = set(estimates) - set(ids)
+    if unexpected_estimates:
+        raise ValueError(f"estimates contain unknown candidate IDs: {sorted(unexpected_estimates)}")
     for key, estimate in estimates.items():
         if key != estimate.candidate_id:
             raise ValueError(
