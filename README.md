@@ -26,7 +26,8 @@ v_{i,j}=\max(0,L_j-B^-_{i,j})+\max(0,B^+_{i,j}-U_j)
 \]
 
 \[
-V_{CB}(x_i)=\sum_j w_j\frac{v_{i,j}}{s_j^{scale}}.
+V_{CB}(x_i)=\sum_j w_j\frac{v_{i,j}}{s_j^{scale}.
+}
 \]
 
 The deterministic ranking prioritizes QUBO feasibility, conservative physical feasibility, aggregate violation, QUBO energy, and input order.
@@ -90,8 +91,6 @@ The methodological working paper is maintained as a separate publication artifac
 
 ## Quick start
 
-The core package uses the Python standard library.
-
     git clone https://github.com/thenextw4ng/cb-pfr.git
     cd cb-pfr
     python -m venv .venv
@@ -110,8 +109,13 @@ On the `integration/reactorq-studio` branch, an optional Streamlit interface is 
 
 It demonstrates abstract QUBO candidate ranking and CSV/JSON export using explicitly labelled synthetic estimates. Its OpenMC panel performs **preflight checks only**; it does not launch a transport calculation. No physical keff, neutron-flux, or power result is produced by the dashboard. See [docs/reactorq_studio.md](docs/reactorq_studio.md) for setup and scientific limitations.
 
+The branch also includes repeatability analysis (`scripts/analyze_repeatability.py`), a structured optimizer-run log validator (`scripts/validate_optimizer_runs.py`), and an experiment summary tool (`scripts/analyze_optimizer_experiment.py`) that tracks failed runs, candidate feasibility, recorded objective quality, and cross-run ranking stability. These tools analyze supplied records; they do not run an optimizer or establish physical validity. See [ReactorQ Studio documentation](docs/reactorq_studio.md) for the record schema and commands.
 
-The branch also includes repeatability analysis (`scripts/analyze_repeatability.py`), a structured optimizer-run log validator (`scripts/validate_optimizer_runs.py`), and an experiment summary tool (`scripts/analyze_optimizer_experiment.py`) that tracks failed runs, candidate feasibility, recorded objective quality, and cross-run ranking stability. These tools analyze supplied records; they do not run an optimizer or establish physical validity. See [ReactorQ Studio documentation](docs/reactorq_studio.md) for the record schema and commands. The gated [OpenMC handoff checklist](reports/openmc_handoff_checklist.md) remains required before physical claims. Phase 3 adds a cited OECD/NEA C5G7 benchmark-selection dossier and fail-closed manifest audit (`scripts/audit_benchmark_manifest.py`); the current state correctly remains blocked because the abstract burnup categories have no defensible material/depletion mapping. See [Phase 3 report](reports/phase3_completion.md).
+Phase 3 adds a cited OECD/NEA C5G7 benchmark-selection dossier and fail-closed manifest audit (`scripts/audit_benchmark_manifest.py`). A source-staging helper now obtains the public MIT CRPG benchmark repository and records its exact commit:
+
+    python scripts/prepare_c5g7_reference.py --destination external/mit-crpg-benchmarks
+
+See [the reproducible C5G7 handoff](reports/c5g7_reproducible_handoff.md) for source provenance, run protocol, and the strict distinction between a standalone transport benchmark and CB-PFR candidate validation. The current abstract burnup categories still have no defensible material/depletion mapping, so a standalone C5G7 run must not be presented as physical validation of the existing QUBO candidates.
 
 ## Reproduce the reduced synthetic benchmark
 
