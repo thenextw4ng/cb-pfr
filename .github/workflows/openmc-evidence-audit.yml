@@ -1,0 +1,89 @@
+name: OpenMC evidence audit
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  audit-statepoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenMC Python API
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: openmc-audit
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+
+      - name: Extract and locate production statepoint
+        shell: bash -el {0}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          archive = Path("OpenMC_HDF5_Evidence_2026-10-11.zip")
+          target = Path("/tmp/openmc-hdf5-evidence")
+          target.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(archive) as zf:
+              bad = zf.testzip()
+              if bad:
+                  raise SystemExit(f"ZIP CRC failure: {bad}")
+              names = [n for n in zf.namelist() if Path(n).name == "statepoint.20000.h5"]
+              if not names:
+                  raise SystemExit("production statepoint.20000.h5 not found in evidence ZIP")
+              if len(names) != 1:
+                  raise SystemExit(f"expected one production statepoint, found {len(names)}: {names}")
+              zf.extract(names[0], target)
+              statepoint = target / names[0]
+              print(f"statepoint={statepoint}")
+              print(f"size_bytes={statepoint.stat().st_size}")
+          PY
+
+      - name: Audit statepoint with OpenMC API and compare recorded scalar
+        shell: bash -el {0}
+        run: |
+          statepoint="$(find /tmp/openmc-hdf5-evidence -name statepoint.20000.h5 -print -quit)"
+          test -n "$statepoint"
+          python scripts/audit_openmc_statepoint.py --statepoint "$statepoint" --outdir /tmp/openmc-statepoint-audit
+          python - <<'PY'
+          import json
+          import math
+          from pathlib import Path
+
+          expected = json.loads(Path("evidence/openmc_local_baseline_2026-10-11/result_summary.json").read_text())
+          audit = json.loads(Path("/tmp/openmc-statepoint-audit/statepoint_audit.json").read_text())
+          observed = audit.get("keff")
+          if not isinstance(observed, dict):
+              raise SystemExit(f"OpenMC API did not return scalar keff metadata: {observed!r}")
+          mean = observed.get("mean")
+          sd = observed.get("std_dev")
+          if mean is None or sd is None:
+              raise SystemExit(f"OpenMC API did not return mean and standard deviation: {observed!r}")
+          checks = {
+              "keff_mean": math.isclose(float(mean), float(expected["keff_mean"]), rel_tol=1e-6, abs_tol=1e-12),
+              "keff_std_dev": math.isclose(float(sd), float(expected["keff_std_dev"]), rel_tol=1e-6, abs_tol=1e-12),
+          }
+          print(json.dumps({
+              "expected": {"mean": expected["keff_mean"], "std_dev": expected["keff_std_dev"]},
+              "observed": {"mean": mean, "std_dev": sd},
+              "checks": checks,
+              "openmc_version": audit.get("openmc_version"),
+              "statepoint_read_success": audit.get("statepoint_read_success"),
+              "tally_count": len(audit.get("tallies", [])),
+          }, indent=2))
+          if not all(checks.values()):
+              raise SystemExit("Statepoint keff does not match the transcribed summary within tolerance")
+          PY
+
+      - name: Preserve machine-derived audit output
+        uses: actions/upload-artifact@v4
+        with:
+          name: openmc-statepoint-audit
+          path: /tmp/openmc-statepoint-audit/
+          if-no-files-found: error
