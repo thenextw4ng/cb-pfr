@@ -24,18 +24,44 @@ jobs:
         shell: bash -el {0}
         run: |
           python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          expected = json.loads(Path("config/benchmarks/c5g7_2x2_design_space.json").read_text())
+          provenance = json.loads(Path("/tmp/mit-crpg-benchmarks/UPSTREAM_PROVENANCE.json").read_text())
+          expected_commit = expected["source_model"]["expected_upstream_commit"]
+          actual_commit = provenance["source_commit"]
+          print(f"expected upstream commit: {expected_commit}")
+          print(f"actual upstream commit:   {actual_commit}")
+          if actual_commit != expected_commit:
+              raise SystemExit("upstream source changed; review and update the pinned design-space provenance explicitly")
+          PY
 
       - name: Enumerate six assembly-placement layouts
         shell: bash -el {0}
         run: |
-          python scripts/enumerate_c5g7_layouts.py --output /tmp/c5g7-design-space.json
+          python scripts/enumerate_c5g7_layouts.py --output /tmp/c5g7-design-space-generated.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          generated = json.loads(Path("/tmp/c5g7-design-space-generated.json").read_text())
+          frozen = json.loads(Path("config/benchmarks/c5g7_2x2_design_space.json").read_text())
+          fields = ("candidate_id", "fuel_assembly_layout", "is_canonical_reference_arrangement")
+          def project(data):
+              return sorted([{key: row[key] for key in fields} for row in data["candidate_layouts"]], key=lambda row: row["candidate_id"])
+          if generated["candidate_count"] != frozen["candidate_count"] or project(generated) != project(frozen):
+              raise SystemExit("generated six-layout enumeration differs from the frozen design-space manifest")
+          print("Generated candidate enumeration matches the frozen six-layout design space.")
+          PY
 
       - name: Prepare six isolated model input cases (no transport run)
         shell: bash -el {0}
         run: |
           python scripts/run_c5g7_layout_study.py \
             --source-root /tmp/mit-crpg-benchmarks \
-            --design-space /tmp/c5g7-design-space.json \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
             --output /tmp/c5g7-layout-study-prepared \
             --mode prepare
           python - <<'PY'
@@ -55,7 +81,8 @@ jobs:
         with:
           name: c5g7-layout-study-prepared
           path: |
-            /tmp/c5g7-design-space.json
+            /tmp/c5g7-design-space-generated.json
+            config/benchmarks/c5g7_2x2_design_space.json
             /tmp/c5g7-layout-study-prepared/
             /tmp/mit-crpg-benchmarks/UPSTREAM_PROVENANCE.json
           if-no-files-found: error
