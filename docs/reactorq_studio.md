@@ -36,3 +36,7 @@ This repository currently does not provide a defensible mapping from the abstrac
 ## Status
 
 Research MVP; not reactor design software, a safety tool, or a physical validation certificate.
+
+## Repeated-run consistency analysis
+
+The package also exposes `cbpfr.repeatability.summarize_repeated_rankings(runs, top_k=1)` for post-processing ordered candidate IDs from independent optimizer runs. It reports top-1 selection frequency, top-k selection frequency, top-1 dominance, and mean pairwise Jaccard overlap of top-k candidate sets. The Jaccard score compares set membership, not rank positions. With only one run, pairwise overlap is defined as 1.0 by convention and should not be interpreted as observed cross-run stability. These are descriptive repeatability measures only: they do not certify a global optimum or physical validity.
