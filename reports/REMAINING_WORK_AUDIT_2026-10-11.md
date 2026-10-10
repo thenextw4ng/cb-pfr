@@ -43,7 +43,7 @@ This is a candid handoff of what has been completed in the repository, what can 
 4. Recover or regenerate the exact six candidate configuration manifests. A run is candidate evidence only if its configuration, input hashes, log and statepoint are joined by a stable candidate/run ID.
 5. Review the C5G7 model/material/geometry changes and benchmark reference before interpreting any candidate-to-candidate difference.
 6. Only after the mapping is scientifically defensible, run candidates with a predeclared common computational budget, repeat seeds where applicable, and quantify Monte Carlo uncertainty separately from between-run/configuration variability.
-7. Run the full CI suite after code changes. The parser regression tests were added to the branch; a passing workflow result should be checked on GitHub before treating them as green.
+7. The full CI suite passed on Python 3.10, 3.11 and 3.12 after the parser fix and restoration of the experiment-log/repeatability modules and validation CLI: [GitHub Actions run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38083497013). This is software verification, not physical simulation validation.
 
 ## Release language
 
