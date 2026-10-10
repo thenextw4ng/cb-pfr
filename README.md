@@ -110,6 +110,9 @@ On the `integration/reactorq-studio` branch, an optional Streamlit interface is 
 
 It demonstrates abstract QUBO candidate ranking and CSV/JSON export using explicitly labelled synthetic estimates. Its OpenMC panel performs **preflight checks only**; it does not launch a transport calculation. No physical keff, neutron-flux, or power result is produced by the dashboard. See [docs/reactorq_studio.md](docs/reactorq_studio.md) for setup and scientific limitations.
 
+
+The branch also includes a repeatability analysis utility for recorded optimizer runs (`scripts/analyze_repeatability.py`) and a gated [OpenMC handoff checklist](reports/openmc_handoff_checklist.md). The repeatability utility analyzes supplied rankings; it does not run an optimizer or establish physical validity.
+
 ## Reproduce the reduced synthetic benchmark
 
 Use a new output directory (the runner refuses to overwrite a nonempty one):
