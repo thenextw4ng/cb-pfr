@@ -88,6 +88,8 @@ def _assessment_for_metric(metric: MetricLimit, supplied: tuple[float, float] | 
     if not math.isfinite(width) or width < 0:
         return MetricAssessment(metric.name, mean, uncertainty, None, None, math.inf, math.inf, False, "invalid_width")
     lower_bound, upper_bound = mean - width, mean + width
+    if not (math.isfinite(lower_bound) and math.isfinite(upper_bound)):
+        return MetricAssessment(metric.name, mean, uncertainty, None, None, math.inf, math.inf, False, "nonfinite_bound")
     violation = 0.0
     if metric.lower is not None:
         violation += max(0.0, metric.lower - lower_bound)
