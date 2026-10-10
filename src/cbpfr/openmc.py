@@ -7,6 +7,7 @@ geometry without a documented benchmark mapping.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import math
 import json
 import os
 import re
@@ -128,6 +129,8 @@ def parse_openmc_stdout_keff(text: str) -> tuple[float, float]:
     if match is None:
         raise OpenMCIntegrationError("no 'Combined k-effective = mean +/- std' line found")
     mean, uncertainty = float(match.group(1)), float(match.group(2))
+    if not math.isfinite(mean) or not math.isfinite(uncertainty):
+        raise OpenMCIntegrationError("k-effective mean and standard deviation must be finite")
     if uncertainty < 0:
         raise OpenMCIntegrationError("k-effective standard deviation cannot be negative")
     return mean, uncertainty
@@ -148,6 +151,8 @@ def parse_openmc_statepoint(path: str | Path) -> dict[str, Any]:
         if len(keff) != 2:
             raise OpenMCIntegrationError("k_combined does not contain mean and standard deviation")
         result = {"keff_mean": float(keff[0]), "keff_standard_deviation": float(keff[1])}
+        if not math.isfinite(result["keff_mean"]) or not math.isfinite(result["keff_standard_deviation"]):
+            raise OpenMCIntegrationError("statepoint k-effective mean and standard deviation must be finite")
         if result["keff_standard_deviation"] < 0:
             raise OpenMCIntegrationError("k-effective standard deviation cannot be negative")
         for key in ("n_particles", "n_batches", "n_inactive", "generations_per_batch"):
