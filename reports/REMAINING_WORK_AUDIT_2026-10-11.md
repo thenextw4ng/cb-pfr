@@ -2,51 +2,55 @@
 
 ## Purpose
 
-This is a candid handoff of what has been completed in the repository, what can be advanced using the committed artifacts, and what remains blocked by the need to execute or inspect the real local OpenMC environment. It is not a claim that the research is complete.
+This report separates completed repository/software work from the scientific gates that still require a defensible candidate-to-physics formulation and independent candidate runs. It is not a claim that the research is complete.
 
-## Verified repository actions on this branch
+## Work completed and verified
 
-- Indexed the recovered conversation archive: `archive/conversation-artifacts/CONVERSATION_ARTIFACT_MANIFEST.json` inventories 86 artifacts.
-- Added the 21.7 MB consolidated conversation archive as `CBPFR_ReactorQ__Archive_2026-10-11.zip`.
-- Added the separate local HDF5 evidence archive as `OpenMC_HDF5_Evidence_2026-10-11.zip` (1,398,773 bytes).
-- Preserved the baseline metadata under `evidence/openmc_local_baseline_2026-10-11/`.
-- Added read-only OpenMC statepoint audit and run-inventory scripts.
-- Fixed an escaping defect in the OpenMC stdout keff parser. The old raw-string regex used doubled backslashes and would not match ordinary whitespace/digits.
-- Added regression tests for decimal values, scientific notation, and malformed OpenMC stdout records.
-- Updated handoff text to distinguish “ZIP committed” from “HDF5 values independently audited.”
+- Consolidated and indexed 86 historical project artifacts in `CBPFR_ReactorQ__Archive_2026-10-11.zip` and `archive/conversation-artifacts/CONVERSATION_ARTIFACT_MANIFEST.json`.
+- Added `OpenMC_HDF5_Evidence_2026-10-11.zip` (1,398,773 bytes) to the repository.
+- Fixed a doubled-backslash regular-expression bug in the OpenMC stdout (k_\mathrm{eff}) parser and added regression tests.
+- Restored the experiment-log validator, repeated-ranking summary, and validation CLI needed by the repository test suite.
+- Added OpenMC statepoint/tally audit, ZIP integrity audit, run-input hash/settings audit, tally-summary, plot, and all-run inventory scripts.
+- Added a GitHub Actions workflow that installs OpenMC 0.16.0, extracts and reads every archived statepoint, checks the production (k_\mathrm{eff}) scalar against the recorded summary, inventories settings/log hashes, summarizes tally uncertainty, and generates six mesh-index plots.
+- The full software CI passed on Python 3.10, 3.11 and 3.12: [CB-PFR CI](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209681).
+- The OpenMC audit workflow passed: [OpenMC evidence audit](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209709).
 
 ## Current scientific status
 
 | Item | Status | Meaning |
 |---|---|---|
-| CB-PFR ranking software and abstract QUBO | Implemented in repository | Software functionality, not reactor validity |
-| Synthetic benchmark and archived trial data | Present; documented as synthetic | Supports only conclusions under the declared synthetic data-generating process |
-| Conversation archive | Committed to this branch | Historical artifact preservation; older artifacts may be superseded |
-| Raw OpenMC evidence ZIP | Committed to this branch | Presence is verified from the repository tree; contents have not been extracted/audited by this integration |
-| Reported 20,000-batch C5G7 baseline scalar | Transcribed from terminal output | Must be regenerated from the statepoint audit before being treated as independently verified |
-| Six candidate layouts evaluated by OpenMC | Not established | Existing stage34 runs are not yet matched to candidate IDs/configuration hashes |
-| Abstract QUBO category to C5G7 material/depletion mapping | Blocked | No defensible mapping is documented |
-| CB-PFR physical validation | Not established | Cannot be inferred from C5G7 execution alone |
-| Independent external replication | Not established | Local rerun is not third-party replication |
+| CB-PFR ranking software and abstract QUBO | Implemented; CI passes | Software functionality, not reactor validity |
+| Synthetic benchmark and archived trial data | Present; documented as synthetic | Supports conclusions only under its declared synthetic data-generating process |
+| Conversation archive and raw HDF5 evidence ZIP | Committed to `main`; ZIP integrity checks pass | Historical preservation and reproducible input evidence |
+| Production C5G7 statepoint scalar | Independently read through OpenMC 0.16.0; recorded mean/SD match | Verifies scalar extraction, not benchmark validity |
+| Production mesh and aggregate tallies | Exported and summarized; six plots generated | Descriptive score distributions and Monte Carlo uncertainty only |
+| Three recovered stage34 statepoints | Read successfully, but **not demonstrated independent repetitions** | Colocated settings files are identical and have no explicit seed; tallies/keff are almost identical |
+| Separate settings files with seeds 481730–481732 | Present, but corresponding statepoints are absent from those directories in the archive | Cannot pair these seeded inputs with the recovered stage34 outputs |
+| Six candidate layouts evaluated and ranked physically | Not established | Candidate IDs/configuration hashes are not matched to the statepoints |
+| Abstract QUBO categories mapped to C5G7 materials/depletion states | Blocked | No defensible mapping is documented |
+| CB-PFR physical validation | Not established | Cannot be inferred from successful C5G7 execution alone |
+| Independent external replication | Not established | GitHub Actions audit is a reproducible software workflow, not third-party replication |
 
-## Next technical sequence
+## Most important new finding
 
-1. Extract `OpenMC_HDF5_Evidence_2026-10-11.zip` in the OpenMC environment and run:
-   ```bash
-   conda activate openmc-env
-   python scripts/audit_openmc_statepoint.py \
-     --statepoint "$HOME/C5G7_openmc_production/c5g7_2d_20261011_001910/c5g7-run/2d/statepoint.20000.h5" \
-     --outdir results/openmc_local_baseline_2026-10-11
-   ```
-2. Generate checksums and an inventory for the extracted tree with `scripts/inventory_openmc_runs.py`.
-3. Compare machine-derived keff, run settings, tally names, tally dimensions and uncertainty against `result_summary.json`; retain discrepancies rather than overwriting them silently.
-4. Recover or regenerate the exact six candidate configuration manifests. A run is candidate evidence only if its configuration, input hashes, log and statepoint are joined by a stable candidate/run ID.
-5. Review the C5G7 model/material/geometry changes and benchmark reference before interpreting any candidate-to-candidate difference.
-6. Only after the mapping is scientifically defensible, run candidates with a predeclared common computational budget, repeat seeds where applicable, and quantify Monte Carlo uncertainty separately from between-run/configuration variability.
-7. The full CI suite passed on Python 3.10, 3.11 and 3.12 after the parser fix and restoration of the experiment-log/repeatability modules and validation CLI: [GitHub Actions run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38083497013). This is software verification, not physical simulation validation.
+The three recovered stage34 statepoints each report 100 batches, 20 inactive batches, 1,000 particles per batch, and 80 active realizations. Their (k_\mathrm{eff}) means differ by only about (1.55\times10^{-15}); the largest absolute difference among their exported mesh-tally means is about (6.4\times10^{-14}). Their colocated `settings.xml` files share SHA-256:
+
+`ec18cf927d20edc3593b01378b7b856e3b66bbf3b5d4d511f385707b4d921baa`
+
+and contain no explicit seed. Meanwhile, separate `stage34_runs/run_01-03/settings.xml` files specify seeds 481730, 481731, and 481732 but have no matching statepoints in the archive. **Do not treat the recovered trio as independent seeded runs.** See [Stage 3–4 statepoint provenance audit](stage34_statepoint_provenance_audit_2026-10-11.md).
+
+## Remaining research gates
+
+1. Recover or regenerate the exact six candidate configuration manifests and assign stable candidate IDs.
+2. Decide on a scientifically defensible formulation: the existing abstract `fresh / once_burned / twice_burned` QUBO must not be silently mapped to C5G7 UO₂/MOX categories. If using C5G7 assembly-placement variants, state clearly that this is a separate formulation and document why each layout is physically meaningful.
+3. Run each candidate from a per-run directory containing its exact input XMLs, model/material/geometry hashes, seed, log, summary, and statepoint. Confirm that the five fixed reflector positions are unchanged if that is part of the design contract.
+4. For repeatability, run genuinely independent seeds with matched settings and verify that each statepoint is produced by its paired settings file.
+5. Predeclare benchmark reference values and acceptance tolerances before comparing (k_\mathrm{eff}), flux, or fission tallies. Keep Monte Carlo uncertainty separate from model bias and nuclear-data uncertainty.
+6. Only after the mapping and candidate identity gates pass, compute candidate rankings, sensitivity analyses, and reliability statistics. Do not use the recovered stage34 trio as independent-run evidence.
+7. Update the manuscript to match these evidence boundaries and avoid claims of physical validation or reactor safety.
 
 ## Release language
 
-Safe: “CB-PFR is an open research prototype with reproducible synthetic benchmark evidence and a separately recorded C5G7/OpenMC execution baseline; physical CB-PFR validation and the abstract-QUBO-to-C5G7 mapping remain unresolved.”
+Safe: “CB-PFR is an open research prototype with a reproducible synthetic benchmark, a machine-audited C5G7/OpenMC baseline, and an explicit unresolved candidate-to-physics mapping.”
 
-Unsafe without new evidence: “physically validated optimizer,” “validated reactor design,” “six candidates successfully compared,” or any reactor-safety claim.
+Unsafe without new evidence: “physically validated optimizer,” “validated reactor design,” “six candidates successfully compared,” “independent three-seed confirmation,” or any reactor-safety claim.
