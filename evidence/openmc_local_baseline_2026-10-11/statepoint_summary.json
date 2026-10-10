@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "evidence_status": "statepoint_read_and_scalar_cross_check_passed",
-  "audit_workflow": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38083671809",
+  "audit_workflow": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209709",
   "openmc_version": "0.16.0",
   "run_mode": "eigenvalue",
   "run_settings": {
@@ -21,7 +21,11 @@
       "index": 1,
       "name": "tally 1",
       "filter": "MeshFilter",
-      "mesh_dimension": [51, 51, 1],
+      "mesh_dimension": [
+        51,
+        51,
+        1
+      ],
       "bin_count": 2601,
       "scores": {
         "flux": {
@@ -33,7 +37,7 @@
           "q95": 0.060296490524401,
           "max": 0.0735085399788323,
           "median_relative_standard_deviation_percent_positive_bins": 0.1803484198306536,
-          "q95_relative_standard_deviation_percent_positive_bins": 1.7378293551481735,
+          "q95_relative_standard_deviation_percent_positive_bins": 1.7378293551481736,
           "max_relative_standard_deviation_percent_positive_bins": 7.394293196756839
         },
         "fission": {
@@ -41,7 +45,7 @@
           "n_positive": 1060,
           "n_zero": 1541,
           "mean_across_mesh_bins": 0.00017394377856117077,
-          "median": 0.0,
+          "median": 0,
           "q95": 0.000833848100627,
           "max": 0.0010720195164507,
           "median_relative_standard_deviation_percent_positive_bins": 0.2279821223628144,
@@ -53,7 +57,7 @@
           "n_positive": 1060,
           "n_zero": 1541,
           "mean_across_mesh_bins": 0.0004560918871841136,
-          "median": 0.0,
+          "median": 0,
           "q95": 0.0020473303754355,
           "max": 0.002629270060239,
           "median_relative_standard_deviation_percent_positive_bins": 0.2271236806891836,
@@ -68,9 +72,18 @@
       "filter": null,
       "bin_count": 1,
       "scores": {
-        "flux": {"mean": 39.97716609233386, "standard_deviation": 0.0017833759169101},
-        "fission": {"mean": 0.4524277680376544, "standard_deviation": 0.00004212618699552408},
-        "nu-fission": {"mean": 1.186294998565931, "standard_deviation": 0.0001085100433054}
+        "flux": {
+          "mean": 39.97716609233386,
+          "standard_deviation": 0.0017833759169101
+        },
+        "fission": {
+          "mean": 0.4524277680376544,
+          "standard_deviation": 0.00004212618699552408
+        },
+        "nu-fission": {
+          "mean": 1.186294998565931,
+          "standard_deviation": 0.0001085100433054
+        }
       },
       "note": "Aggregate nu-fission tally is not the keff estimator."
     }
@@ -81,5 +94,8 @@
     "Flux, fission, and nu-fission scores are not automatically absolute thermal power in watts.",
     "Monte Carlo statistical uncertainty does not quantify model bias, nuclear-data uncertainty, or benchmark validity.",
     "The scalar audit does not establish a defensible mapping from abstract QUBO burnup labels to C5G7 materials."
-  ]
+  ],
+  "statepoint_file_sha256": "0d76dc1a14a2b74a388c01883f01e5c3095480d53eee885910ca2a0c57e6b882",
+  "production_settings_xml_sha256": "e17d67a3373def5cf20ebe37860c5b1755b8f8a5742c3886f3c88c0ef13726b7",
+  "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216"
 }
