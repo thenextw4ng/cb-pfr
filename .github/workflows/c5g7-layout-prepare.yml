@@ -76,6 +76,95 @@ jobs:
           print(json.dumps(summary, indent=2))
           PY
 
+      - name: Build and audit XML inputs for all six cases (no transport run)
+        shell: bash -el {0}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import re
+          import subprocess
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          root = Path("/tmp/c5g7-layout-study-prepared")
+          summary = json.loads((root / "STUDY_SUMMARY.json").read_text())
+          if len(summary.get("cases", [])) != 6:
+              raise SystemExit("expected six prepared cases")
+          audits = []
+          for case in summary["cases"]:
+              candidate_id = case["candidate_id"]
+              case_root = root / candidate_id
+              builder = case_root / "model/2d/build-xml-2d.py"
+              if not builder.is_file():
+                  raise SystemExit(f"{candidate_id}: missing 2-D model builder")
+              source = builder.read_text()
+              match = re.search(r"lattices\['Core'\]\.universes\s*=\s*(\[\[.*?\]\])", source, re.S)
+              if not match:
+                  raise SystemExit(f"{candidate_id}: expected core-lattice assignment not found")
+              symbol = {"UO2": "u", "MOX": "m"}
+              layout = case["layout"]
+              expected = (
+                  f"[[{symbol[layout['p00']]},{symbol[layout['p01']]},w],"
+                  f"[{symbol[layout['p10']]},{symbol[layout['p11']]},w],[w,w,w]]"
+              )
+              normalize = lambda value: re.sub(r"\s+", "", value)
+              if normalize(match.group(1)) != normalize(expected):
+                  raise SystemExit(f"{candidate_id}: core assignment/reflector positions do not match the declared layout")
+              subprocess.run([sys.executable, str(builder)], cwd=builder.parent, check=True)
+              xml_files = []
+              for name in ("materials.xml", "geometry.xml", "settings.xml", "plots.xml", "tallies.xml"):
+                  path = builder.parent / name
+                  if not path.is_file():
+                      raise SystemExit(f"{candidate_id}: missing generated {name}")
+                  ET.parse(path)
+                  data = path.read_bytes()
+                  xml_files.append({"file": name, "size_bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+              settings = ET.parse(builder.parent / "settings.xml").getroot()
+              settings_values = {tag: settings.findtext(tag) for tag in ("run_mode", "energy_mode", "batches", "inactive", "particles")}
+              audits.append({
+                  "candidate_id": candidate_id,
+                  "layout": layout,
+                  "canonical_reference": case["is_canonical_reference_arrangement"],
+                  "core_assignment_verified": True,
+                  "fixed_reflector_positions_verified": True,
+                  "generated_xml_count": len(xml_files),
+                  "xml_files": xml_files,
+                  "settings": settings_values,
+                  "mgxs_file_present": (builder.parent / "mgxs.h5").is_file(),
+                  "transport_run_performed": False
+              })
+          result = {
+              "schema_version": "1.0",
+              "status": "xml_inputs_generated_and_well_formed",
+              "upstream_commit": summary["upstream_commit"],
+              "candidate_count": len(audits),
+              "all_core_assignments_verified": all(item["core_assignment_verified"] for item in audits),
+              "all_xml_well_formed": all(item["generated_xml_count"] == 5 for item in audits),
+              "all_mgxs_files_present": all(item["mgxs_file_present"] for item in audits),
+              "transport_run_performed": False,
+              "cases": audits,
+              "limitations": [
+                  "XML generation and syntax checks do not prove that a transport run can execute.",
+                  "MGXS/cross-section data are not bundled in the prepared-case artifact; no OpenMC transport run was launched.",
+                  "Candidate layouts are not all official benchmark reference cases."
+              ]
+          }
+          out = root / "XML_INPUT_AUDIT.json"
+          out.write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps({
+              "status": result["status"],
+              "candidate_count": result["candidate_count"],
+              "all_core_assignments_verified": result["all_core_assignments_verified"],
+              "all_xml_well_formed": result["all_xml_well_formed"],
+              "all_mgxs_files_present": result["all_mgxs_files_present"],
+              "transport_run_performed": False
+          }, indent=2))
+          if not result["all_core_assignments_verified"] or not result["all_xml_well_formed"]:
+              raise SystemExit("candidate XML audit failed")
+          PY
+
       - name: Preserve prepared model cases and source provenance
         uses: actions/upload-artifact@v4
         with:
