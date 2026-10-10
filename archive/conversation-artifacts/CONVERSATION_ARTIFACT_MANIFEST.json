@@ -1,0 +1,624 @@
+{
+  "title": "CB-PFR / ReactorQ Studio / C5G7-OpenMC conversation artifact archive",
+  "created_date": "2026-10-11",
+  "archive_filename": "CBPFR_ReactorQ_Conversation_Archive_2026-10-11.zip",
+  "archive_sha256": "0eac3a7954935de556449a2193505c643c52511d3486c532df8b2479a95cfea2",
+  "archive_size_bytes": 21746539,
+  "archived_artifact_count": 86,
+  "source": "Project-related files in the user's ChatGPT Library, collected into a single archive; duplicates and historical versions are retained where available.",
+  "categories": {
+    "archives/reactorq_studio": "ReactorQ Studio app/dashboard/delivery and versioned bundles",
+    "archives/c5g7_openmc": "C5G7/OpenMC audit, setup, Stage 1–4 and run bundles",
+    "archives/cbpfr_pipeline": "CB-PFR pipeline versions and audit/hardening bundles",
+    "archives/qubo_openmc": "QUBO–OpenMC bundles",
+    "papers": "CB-PFR methodological working paper versions",
+    "data": "CSV experiment/ranking data",
+    "scripts": "Python and shell research scripts",
+    "reports_notes": "JSON/Markdown/text reports, checklists and notes",
+    "figures_screenshots": "Research workflow screenshots and flux-map figures"
+  },
+  "source_inventory": [
+    {
+      "name": "STAGE1_STAGE2_REPORT.json",
+      "size_bytes": 3122,
+      "mime_type": "application/json",
+      "created_at": "2026-10-10T19:55:57.304548+00:00",
+      "library_file_id": "libfile_a2b214e732f08191865757aaea948f4b"
+    },
+    {
+      "name": "STAGE1_STAGE2_REPORT.md",
+      "size_bytes": 2132,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T19:55:53.627482+00:00",
+      "library_file_id": "libfile_96da1bdd2b288191b36b95c5eeeaee27"
+    },
+    {
+      "name": "ReactorQ_Studio_STAGE1_STAGE2_COMPLETED.zip",
+      "size_bytes": 120468,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T19:55:50.431818+00:00",
+      "library_file_id": "libfile_801992401dc08191b5e91c4d22289d06"
+    },
+    {
+      "name": "ReactorQ_Studio_STAGE3_AUDITED.zip",
+      "size_bytes": 51721,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T19:53:35.470333+00:00",
+      "library_file_id": "libfile_5865068b9314819182c81b2be07b0aff"
+    },
+    {
+      "name": "ReactorQ_Studio_VISUAL_DASHBOARD.zip",
+      "size_bytes": 42304,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T19:37:33.436880+00:00",
+      "library_file_id": "libfile_bf1f29e15e708191b3e465f754a1885d"
+    },
+    {
+      "name": "ReactorQ_Studio_DELIVERY.zip",
+      "size_bytes": 47541,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T19:26:49.459347+00:00",
+      "library_file_id": "libfile_ba97fbce969881918cb257c250274712"
+    },
+    {
+      "name": "qubo_openmc_2h_bundle(1).zip",
+      "size_bytes": 22203,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T19:19:57.421328+00:00",
+      "library_file_id": "libfile_555951952c488191827cd01148274cd4"
+    },
+    {
+      "name": "qubo_openmc_2h_bundle.zip",
+      "size_bytes": 22203,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T19:16:05+00:00",
+      "library_file_id": "libfile_c064f4aa20b48191b4c560448703b6f1"
+    },
+    {
+      "name": "C5G7_deepwork_package.zip",
+      "size_bytes": 387028,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T18:55:55.588816+00:00",
+      "library_file_id": "libfile_eb3fdb037dfc819193fad7cef57c2aaa"
+    },
+    {
+      "name": "C5G7_audit_supplement.zip",
+      "size_bytes": 122699,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T18:51:46+00:00",
+      "library_file_id": "libfile_1cca1a599ba88191bd40fa0b55cc902d"
+    },
+    {
+      "name": "C5G7_audit_outputs.zip",
+      "size_bytes": 258748,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T18:51:03.464616+00:00",
+      "library_file_id": "libfile_8e9540796ccc8191882ba2785abac2c1"
+    },
+    {
+      "name": "C5G7_audit_bundle.zip",
+      "size_bytes": 848834,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T18:49:28+00:00",
+      "library_file_id": "libfile_8ff61ff6d42c8191ad23d46f363a4623"
+    },
+    {
+      "name": "run_c5g7_openmc_once.py",
+      "size_bytes": 4797,
+      "mime_type": "text/x-python",
+      "created_at": "2026-10-10T17:12:36.260206+00:00",
+      "library_file_id": "libfile_5656ba2fbfe8819196b8f3bbdbd7b409"
+    },
+    {
+      "name": "C5G7_PRODUCTION_SETTINGS.json",
+      "size_bytes": 985,
+      "mime_type": "application/json",
+      "created_at": "2026-10-10T17:10:46.329747+00:00",
+      "library_file_id": "libfile_17fffcae0aa88191b2b6d0c821506a75"
+    },
+    {
+      "name": "C5G7_PARAMETER_MATCH_REPORT.md",
+      "size_bytes": 4634,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T17:10:42.822756+00:00",
+      "library_file_id": "libfile_8cf3766699748191ab9633fb7436b5d9"
+    },
+    {
+      "name": "CBPFR_DEEP_AUDIT_v0.4.5.md",
+      "size_bytes": 6207,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T17:05:01+00:00",
+      "library_file_id": "libfile_94bf14c69de88191a96c640399be750e"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.4.5_DEEP_AUDIT.zip",
+      "size_bytes": 72084,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T17:04:57+00:00",
+      "library_file_id": "libfile_de6bc667a6a88191ad9a3940f0e6355f"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.4.4_FAIL_CLOSED_AUDIT.zip",
+      "size_bytes": 24386,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T16:57:09.242302+00:00",
+      "library_file_id": "libfile_d8152ab06cf8819194e7ba769a5adcef"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.4.3_AUDIT_HARDENED.zip",
+      "size_bytes": 117187,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T16:53:52.085583+00:00",
+      "library_file_id": "libfile_0b44f456e62c8191a395ee7fa2f3c085"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.4.2_HARDENED.zip",
+      "size_bytes": 20869,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T16:44:13.938818+00:00",
+      "library_file_id": "libfile_2ce67d00174481918e541e3a8c93f171"
+    },
+    {
+      "name": "CBPFR_v0.4.1_HARDENING_NOTES.md",
+      "size_bytes": 1011,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T16:40:59.865714+00:00",
+      "library_file_id": "libfile_f915c951d0948191a158f1e1167df09f"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.4.1_HARDENED.zip",
+      "size_bytes": 17555,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T16:40:56.393639+00:00",
+      "library_file_id": "libfile_dd343b741ef081918d1a9865a1602b9d"
+    },
+    {
+      "name": "OpenMC_Project_Audit.zip",
+      "size_bytes": 1550809,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T16:32:18+00:00",
+      "library_file_id": "libfile_845ea01c0cd081919c1fbfda1fab29fa"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.4(1).zip",
+      "size_bytes": 18237,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T16:32:17+00:00",
+      "library_file_id": "libfile_2c0a1270e9cc8191a2e4293cb0da0386"
+    },
+    {
+      "name": "STAGE2_DEEP_AUDIT.json",
+      "size_bytes": 4699,
+      "mime_type": "application/json",
+      "created_at": "2026-10-10T15:46:00.825093+00:00",
+      "library_file_id": "libfile_065aafa158c88191bc119c48fa1c0054"
+    },
+    {
+      "name": "STAGE2_DEEPWORK_REPORT.md",
+      "size_bytes": 5200,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T15:45:56.959596+00:00",
+      "library_file_id": "libfile_afb7880a12388191a77202c32fab7b8c"
+    },
+    {
+      "name": "ReactorQ_Studio_STAGE2_DEEPWORK.zip",
+      "size_bytes": 1230450,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T15:45:53.344221+00:00",
+      "library_file_id": "libfile_0d00ee815b1c8191a1b6617e84bbbcb8"
+    },
+    {
+      "name": "STAGE2_CHECKLIST_v1.0.md",
+      "size_bytes": 1716,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T15:42:54.359377+00:00",
+      "library_file_id": "libfile_e6d5048c5468819198bc05bed6820dbe"
+    },
+    {
+      "name": "STAGE2_REMAINING_FIVE_AUDIT_v1.1.md",
+      "size_bytes": 3814,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T15:42:50.939448+00:00",
+      "library_file_id": "libfile_182c57bc733c8191937c05650f00317f"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v1.1_STAGE2_AUDIT.zip",
+      "size_bytes": 917279,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T15:42:47.321832+00:00",
+      "library_file_id": "libfile_0782e646fc9481919b771e92a0dc9c9d"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v1.1_STAGE2_BENCHMARK.zip",
+      "size_bytes": 882291,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T15:40:16.329506+00:00",
+      "library_file_id": "libfile_c0ea243a1a08819198493cd86562448b"
+    },
+    {
+      "name": "STAGE1_FULL_AUDIT_CHECKLIST_v1.1.md",
+      "size_bytes": 7751,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-10T15:38:57.313937+00:00",
+      "library_file_id": "libfile_2eeee854498c8191bfb32b52205235ef"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v1.1_STAGE1_AUDIT.zip",
+      "size_bytes": 878061,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T15:38:49.758515+00:00",
+      "library_file_id": "libfile_a8fb9c4bd3c48191b17d774026bdc902"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v1.1.zip",
+      "size_bytes": 918621,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T15:34:36.542960+00:00",
+      "library_file_id": "libfile_75494de82e188191809189d9ee2f55ac"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v1.0.zip",
+      "size_bytes": 930470,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T15:28:57+00:00",
+      "library_file_id": "libfile_b8cf5aa0025081918f2e8b5eee4d8968"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v0.9.zip",
+      "size_bytes": 405696,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T15:19:57.580362+00:00",
+      "library_file_id": "libfile_06ac52f82590819190bf15aa5f43ec80"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v0.8.1.zip",
+      "size_bytes": 373638,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T11:22:11.006383+00:00",
+      "library_file_id": "libfile_0ce926763b6c8191970fa4034f9e9234"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v0.8.zip",
+      "size_bytes": 328301,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T11:03:01.267230+00:00",
+      "library_file_id": "libfile_5e8f3634e08881919aee462db5ca9837"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v0.7.zip",
+      "size_bytes": 26540,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T10:57:52.472937+00:00",
+      "library_file_id": "libfile_a010fa254f20819183d590be2dd29c38"
+    },
+    {
+      "name": "ReactorQ_Studio_CB-PFR_v0.6.zip",
+      "size_bytes": 22486,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T10:54:45.081667+00:00",
+      "library_file_id": "libfile_2b5639121c4081918e1ab77a409d66dc"
+    },
+    {
+      "name": "Screenshot 2026-10-10 at 17.48.26.png",
+      "size_bytes": 1763405,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T10:48:31+00:00",
+      "library_file_id": "libfile_f3ce261c1878819187c8940f5f599a14"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.5.zip",
+      "size_bytes": 18920,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T10:48:24.050327+00:00",
+      "library_file_id": "libfile_4d46648e54e88191be4691a39f2f0dec"
+    },
+    {
+      "name": "cbpfr_sample_ranked.csv",
+      "size_bytes": 786,
+      "mime_type": "text/csv",
+      "created_at": "2026-10-10T10:40:48+00:00",
+      "library_file_id": "libfile_d02801103f748191b4814149ed1bae9a"
+    },
+    {
+      "name": "Screenshot 2026-10-10 at 17.26.52.png",
+      "size_bytes": 605981,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T10:26:57+00:00",
+      "library_file_id": "libfile_ed9c37ad2b8c8191996af76f43463638"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.4.zip",
+      "size_bytes": 18237,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T10:12:16.681738+00:00",
+      "library_file_id": "libfile_54059f76bb7481919c8d02fdbfb1d941"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.3.zip",
+      "size_bytes": 34940,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T10:07:15.371542+00:00",
+      "library_file_id": "libfile_864fa3f85720819190d21e61ab3b62c1"
+    },
+    {
+      "name": "Screenshot 2026-10-10 at 17.01.31.png",
+      "size_bytes": 74714,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T10:01:34+00:00",
+      "library_file_id": "libfile_45c877c5bc188191aa401cea41fd5b37"
+    },
+    {
+      "name": "CBPFR_Integrated_Pipeline_v0.2.zip",
+      "size_bytes": 10624,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:55:49.332160+00:00",
+      "library_file_id": "libfile_6546a74ff51881919a8f94aaff47e539"
+    },
+    {
+      "name": "CB-PFR_Research_Prototype.zip",
+      "size_bytes": 8298,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:55:41+00:00",
+      "library_file_id": "libfile_efb4ede633f48191bef5807196fcd6de"
+    },
+    {
+      "name": "stage34_final.zip",
+      "size_bytes": 622509,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:47:26+00:00",
+      "library_file_id": "libfile_9f2d583faf8c8191bb349489de431f17"
+    },
+    {
+      "name": "run_stage34_fixed.py",
+      "size_bytes": 4286,
+      "mime_type": "text/x-python",
+      "created_at": "2026-10-10T09:42:38.318139+00:00",
+      "library_file_id": "libfile_44440031cfe48191942eab8885c845ff"
+    },
+    {
+      "name": "stage34_runs.zip",
+      "size_bytes": 638375,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:40:44+00:00",
+      "library_file_id": "libfile_ad82a0092c288191aa38a190504839d6"
+    },
+    {
+      "name": "Screenshot 2026-10-10 at 16.32.18.png",
+      "size_bytes": 106138,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T09:32:21+00:00",
+      "library_file_id": "libfile_f9cdfda3f69081919957ec2673370ae7"
+    },
+    {
+      "name": "c5g7-stage34-ready.zip",
+      "size_bytes": 2135122,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:30:27.447151+00:00",
+      "library_file_id": "libfile_a76cba6b3224819185ef59266c9e21d9"
+    },
+    {
+      "name": "run_stage34.py",
+      "size_bytes": 4675,
+      "mime_type": "text/x-python",
+      "created_at": "2026-10-10T09:28:32.962997+00:00",
+      "library_file_id": "libfile_720621aef19481919a7a512b69817603"
+    },
+    {
+      "name": "statepoint.20_flux_map_log.png",
+      "size_bytes": 63185,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T09:25:51.191664+00:00",
+      "library_file_id": "libfile_4457110fca988191861dc3789554b11c"
+    },
+    {
+      "name": "statepoint.20_flux_map.png",
+      "size_bytes": 61063,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T09:25:47.873476+00:00",
+      "library_file_id": "libfile_1a055a0a029881919672c58df623d391"
+    },
+    {
+      "name": "c5g7-stage12-reviewed.zip",
+      "size_bytes": 1828574,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:25:44.415669+00:00",
+      "library_file_id": "libfile_ece2b91a90908191827ecb2e85a57fe5"
+    },
+    {
+      "name": "smoke_test_flux_map_log.png",
+      "size_bytes": 70672,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T09:20:58.315134+00:00",
+      "library_file_id": "libfile_0c3a3b090dd48191bb58be513177db86"
+    },
+    {
+      "name": "smoke_test_flux_map.png",
+      "size_bytes": 80040,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T09:20:54.804004+00:00",
+      "library_file_id": "libfile_c879624079e88191bbeec4258f846556"
+    },
+    {
+      "name": "c5g7-work-reviewed.zip",
+      "size_bytes": 1791701,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:20:51.758369+00:00",
+      "library_file_id": "libfile_fb77ad656bec819182468c293d00243c"
+    },
+    {
+      "name": "c5g7-work.zip",
+      "size_bytes": 1959612,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-10T09:19:16+00:00",
+      "library_file_id": "libfile_1e7275a1bf488191bd00e2460a2baf7d"
+    },
+    {
+      "name": "Pasted text(7).txt",
+      "size_bytes": 23550,
+      "mime_type": "text/plain",
+      "created_at": "2026-10-10T08:36:22+00:00",
+      "library_file_id": "libfile_2447d59a6a508191b156dad2cd670572"
+    },
+    {
+      "name": "Pasted text(6).txt",
+      "size_bytes": 16655,
+      "mime_type": "text/plain",
+      "created_at": "2026-10-10T08:35:13+00:00",
+      "library_file_id": "libfile_32e111f645c48191bcedefb2b9409dd4"
+    },
+    {
+      "name": "Screenshot 2026-10-10 at 15.32.55.png",
+      "size_bytes": 74237,
+      "mime_type": "image/png",
+      "created_at": "2026-10-10T08:32:58+00:00",
+      "library_file_id": "libfile_d2ddf09ad9b88191bace7fe5169e832c"
+    },
+    {
+      "name": "Pasted text(5).txt",
+      "size_bytes": 10887,
+      "mime_type": "text/plain",
+      "created_at": "2026-10-10T08:32:02+00:00",
+      "library_file_id": "libfile_725b1e85f82c81918117b8444e83d5cf"
+    },
+    {
+      "name": "CB-PFR_Methodological_Working_Paper_Final.pdf",
+      "size_bytes": 324722,
+      "mime_type": "application/pdf",
+      "created_at": "2026-10-05T01:54:16+00:00",
+      "library_file_id": "libfile_de26386495fc8191a18630997ce1a588"
+    },
+    {
+      "name": "per_seed_results.csv",
+      "size_bytes": 1536596,
+      "mime_type": "text/csv",
+      "created_at": "2026-10-05T01:37:38+00:00",
+      "library_file_id": "libfile_bb4164b823f481919df01437d1a39d5d"
+    },
+    {
+      "name": "CB-PFR_Methodological_Working_Paper(1).pdf",
+      "size_bytes": 276521,
+      "mime_type": "application/pdf",
+      "created_at": "2026-10-05T01:37:23+00:00",
+      "library_file_id": "libfile_bc3d9d58fb208191b60d8dbaa4befb6e"
+    },
+    {
+      "name": "CB-PFR_Methodological_Working_Paper.pdf",
+      "size_bytes": 276521,
+      "mime_type": "application/pdf",
+      "created_at": "2026-10-04T22:51:17+00:00",
+      "library_file_id": "libfile_fc5500bc95548191bc7db7e17ba6a90d"
+    },
+    {
+      "name": "CB-PFR_Fahry_Bagus_Adiputra_Working_Paper(1).pdf",
+      "size_bytes": 391009,
+      "mime_type": "application/pdf",
+      "created_at": "2026-10-04T22:05:42+00:00",
+      "library_file_id": "libfile_eda55070b57081919ebd67fa18af8d5e"
+    },
+    {
+      "name": "run_synthetic_pilot.py",
+      "size_bytes": 2470,
+      "mime_type": "text/x-python",
+      "created_at": "2026-10-04T19:35:56+00:00",
+      "library_file_id": "libfile_ebad7c53fd78819180c715f24ae29181"
+    },
+    {
+      "name": "run_reduced_synthetic_calibration.py",
+      "size_bytes": 8516,
+      "mime_type": "text/x-python",
+      "created_at": "2026-10-04T19:35:56+00:00",
+      "library_file_id": "libfile_d1e3424618b08191bd0ad3b361d3d88d"
+    },
+    {
+      "name": "reproduce_research.sh",
+      "size_bytes": 2518,
+      "mime_type": "text/x-shellscript",
+      "created_at": "2026-10-04T19:35:56+00:00",
+      "library_file_id": "libfile_82b7bc4a5c548191a1e4bd19bc06c623"
+    },
+    {
+      "name": "assemble_research_tables.py",
+      "size_bytes": 2691,
+      "mime_type": "text/x-python",
+      "created_at": "2026-10-04T19:35:56+00:00",
+      "library_file_id": "libfile_623fb070d24c8191888db2efeba4e525"
+    },
+    {
+      "name": "analyze_reduced_synthetic_benchmark.py",
+      "size_bytes": 5939,
+      "mime_type": "text/x-python",
+      "created_at": "2026-10-04T19:35:56+00:00",
+      "library_file_id": "libfile_2c61f93b34dc8191bf3fcf2f7c7cdb70"
+    },
+    {
+      "name": "CB-PFR_Fahry_Bagus_Adiputra_Working_Paper.pdf",
+      "size_bytes": 391009,
+      "mime_type": "application/pdf",
+      "created_at": "2026-10-04T19:21:20+00:00",
+      "library_file_id": "libfile_38c39d47a1e48191a2903e1e6d383a90"
+    },
+    {
+      "name": "CB-PFR_Adiputra.pdf",
+      "size_bytes": 272075,
+      "mime_type": "application/pdf",
+      "created_at": "2026-10-04T17:33:37+00:00",
+      "library_file_id": "libfile_b23a1a100604819183322e4aa8abef77"
+    },
+    {
+      "name": "CBPFR_PhysicsProxy_v0.3.zip",
+      "size_bytes": 5330,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-04T16:19:49.143810+00:00",
+      "library_file_id": "libfile_37f71f34c2ec8191a13ba14d459c16cb"
+    },
+    {
+      "name": "CBPFR_ABC_Simulation_v0.2.zip",
+      "size_bytes": 13657,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-04T16:17:22.986120+00:00",
+      "library_file_id": "libfile_023f8c8748fc819194f085c4c7f139b5"
+    },
+    {
+      "name": "CBPFR_Research_Scaffold_v0.1.zip",
+      "size_bytes": 17049,
+      "mime_type": "application/zip",
+      "created_at": "2026-10-04T16:11:12.958453+00:00",
+      "library_file_id": "libfile_d6fc2df7067c8191acd0bece577e2f96"
+    },
+    {
+      "name": "experiment_note.md",
+      "size_bytes": 2805,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-04T15:32:36.435387+00:00",
+      "library_file_id": "libfile_0fd14342da90819187c7673e63fe4c0f"
+    },
+    {
+      "name": "results.csv",
+      "size_bytes": 2352,
+      "mime_type": "text/csv",
+      "created_at": "2026-10-04T15:32:32.980738+00:00",
+      "library_file_id": "libfile_6251408df26c8191be6f8fb1ed491f9a"
+    },
+    {
+      "name": "Pasted markdown(5).md",
+      "size_bytes": 22460,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-04T14:18:11+00:00",
+      "library_file_id": "libfile_26ffb4f850f081919da8c1c9fd4d9e17"
+    },
+    {
+      "name": "Pasted markdown(4).md",
+      "size_bytes": 16272,
+      "mime_type": "text/markdown",
+      "created_at": "2026-10-04T14:05:24+00:00",
+      "library_file_id": "libfile_b6fb9436e1688191acd15fc9843a6cf2"
+    },
+    {
+      "name": "Pasted markdown(3).md",
+      "size_bytes": 17515,
+      "mime_type": "text/plain",
+      "created_at": "2026-10-04T13:57:37+00:00",
+      "library_file_id": "libfile_f80173b04578819191fd91190cc10a11"
+    }
+  ]
+}
