@@ -22,7 +22,7 @@ class BenchmarkAuditCliTests(unittest.TestCase):
             report = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(report["audit"]["status"], "blocked")
             self.assertTrue(any("required_state_to_material_map" in b for b in report["audit"]["blockers"]))
-            self.assertIn("structural gate status only", report["audit"]["claim_boundary"])
+            self.assertIn("Structural gate status only", report["audit"]["claim_boundary"])
 
     def test_cli_refuses_to_overwrite_existing_report(self):
         with tempfile.TemporaryDirectory() as tmp:
