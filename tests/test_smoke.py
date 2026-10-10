@@ -62,6 +62,13 @@ class CBPFRTests(unittest.TestCase):
         self.assertEqual(result.indicator, 1)
         self.assertEqual(result.metric_assessments[0].status, "nonfinite_bound")
 
+    def test_malformed_estimate_fails_closed(self):
+        for supplied in ((0.5,), (0.5, 0.1, 0.2), ("0.5", 0.1), None):
+            with self.subTest(supplied=supplied):
+                result=assess_physical([self.metric()], PhysicalEstimate("x", {"response": supplied}))
+                self.assertEqual(result.indicator, 1)
+                self.assertEqual(result.metric_assessments[0].status, "invalid_estimate")
+
     def test_upper_and_lower_bounds_are_conservative(self):
         metric=self.metric(lower=0.2, upper=0.8, z=2.0)
         result=assess_physical([metric], PhysicalEstimate("x", {"response": (0.5, 0.1)}))
