@@ -1,0 +1,61 @@
+name: C5G7 layout preparation audit
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  prepare-layouts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenMC Python API
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-prepare
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+
+      - name: Stage upstream C5G7 source and record revision
+        shell: bash -el {0}
+        run: |
+          python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+
+      - name: Enumerate six assembly-placement layouts
+        shell: bash -el {0}
+        run: |
+          python scripts/enumerate_c5g7_layouts.py --output /tmp/c5g7-design-space.json
+
+      - name: Prepare six isolated model input cases (no transport run)
+        shell: bash -el {0}
+        run: |
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space /tmp/c5g7-design-space.json \
+            --output /tmp/c5g7-layout-study-prepared \
+            --mode prepare
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("/tmp/c5g7-layout-study-prepared")
+          summary_path = root / "STUDY_SUMMARY.json"
+          if not summary_path.is_file():
+              raise SystemExit("prepared study did not write STUDY_SUMMARY.json")
+          summary = json.loads(summary_path.read_text())
+          print(json.dumps(summary, indent=2))
+          PY
+
+      - name: Preserve prepared model cases and source provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-layout-study-prepared
+          path: |
+            /tmp/c5g7-design-space.json
+            /tmp/c5g7-layout-study-prepared/
+            /tmp/mit-crpg-benchmarks/UPSTREAM_PROVENANCE.json
+          if-no-files-found: error
