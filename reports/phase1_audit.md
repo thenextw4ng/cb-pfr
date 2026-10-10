@@ -59,12 +59,12 @@ Existing benchmark rates (QUBO-only 0.857, point estimate 0.933, CB-PFR 0.976, u
 - [x] Fix the numeric validation and malformed-input issues listed above.
 - [x] Add regression tests for the new guards, including strict JSON export with missing metrics.
 - [x] Update documentation with explicit scientific and execution limits.
-- [ ] Confirm the latest GitHub Actions workflow passes on Python 3.10, 3.11, and 3.12.
+- [x] Confirm GitHub Actions passes on Python 3.10, 3.11, and 3.12 (workflow run 38034236052, commit c566cb475770284d6a3cceb18cace18895168506).
 
 ## Exit decision
 
 **Code-review work:** complete.  
-**Phase 1 test verification:** pending latest CI result.  
+**Phase 1 test verification:** passed on Python 3.10, 3.11, and 3.12 for the audited code.  
 **Physical validation:** blocked / not established.
 
 The next phase should strengthen recorded optimizer-run provenance and prepare the model-specific OpenMC handoff. It must not claim physical evaluation until the mapping and reference gates are resolved.
