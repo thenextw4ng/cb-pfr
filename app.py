@@ -131,6 +131,7 @@ with tab_rank:
 with tab_repeatability:
     st.subheader("Repeated-run consistency")
     st.write("Paste ordered candidate IDs from independent optimizer runs as a JSON array of arrays. Each inner array is ranked best-first. This analysis does not run an optimizer.")
+    st.info("The prefilled rankings are synthetic examples for demonstrating the interface, not experimental results. Replace them with recorded optimizer runs before using the summary in research.")
     default_runs = '[["candidate_A", "candidate_B", "candidate_C"], ["candidate_A", "candidate_C", "candidate_B"], ["candidate_B", "candidate_A", "candidate_C"]]'
     raw_runs = st.text_area("Run rankings (JSON)", value=default_runs, height=140)
     top_k = st.number_input("Top-k set size", min_value=1, max_value=100, value=2, step=1)
