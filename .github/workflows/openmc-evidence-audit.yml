@@ -81,6 +81,14 @@ jobs:
               raise SystemExit("Statepoint keff does not match the transcribed summary within tolerance")
           PY
 
+      - name: Summarize tally distributions and relative uncertainty
+        shell: bash -el {0}
+        run: |
+          python scripts/summarize_openmc_tallies.py \
+            --audit-json /tmp/openmc-statepoint-audit/statepoint_audit.json \
+            --tally-csv /tmp/openmc-statepoint-audit/tally_values_flat.csv \
+            --out /tmp/openmc-statepoint-audit/tally_summary.json
+
       - name: Preserve machine-derived audit output
         uses: actions/upload-artifact@v4
         with:
