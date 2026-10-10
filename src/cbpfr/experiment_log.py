@@ -109,6 +109,24 @@ def validate_experiment_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
     ids = [run["run_id"] for run in normalized]
     if len(set(ids)) != len(ids):
         raise ValueError("run_id values must be unique")
+    # Across runs, a stable candidate ID must always identify the same vector,
+    # and a vector must not silently acquire a different ID.
+    id_to_vector: dict[str, tuple[int, ...]] = {}
+    vector_to_id: dict[tuple[int, ...], str] = {}
+    vector_lengths: set[int] = set()
+    for run in normalized:
+        for candidate in run["candidate_records"]:
+            cid = candidate["candidate_id"]
+            vector = tuple(candidate["candidate_vector"])
+            vector_lengths.add(len(vector))
+            if cid in id_to_vector and id_to_vector[cid] != vector:
+                raise ValueError(f"candidate_id {cid} maps to different vectors across runs")
+            if vector in vector_to_id and vector_to_id[vector] != cid:
+                raise ValueError(f"candidate vector maps to different IDs across runs: {cid}")
+            id_to_vector[cid] = vector
+            vector_to_id[vector] = cid
+    if len(vector_lengths) > 1:
+        raise ValueError("candidate vector length must be consistent across the experiment")
     experiment_id = payload.get("experiment_id", "unspecified")
     if not isinstance(experiment_id, str) or not experiment_id.strip():
         raise ValueError("experiment_id must be a non-empty string")
