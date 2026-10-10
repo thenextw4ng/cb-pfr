@@ -34,6 +34,16 @@ class ReactorQDashboardSmokeTests(unittest.TestCase):
 
     def test_repeatability_tab_reports_invalid_json_without_crashing(self):
         app = AppTest.from_file(APP_PATH, default_timeout=30).run()
+        analyze_button = next(
+            button for button in app.button
+            if button.label == "Analyze repeatability"
+        )
+        analyze_button.click().run()
+        self.assertTrue(any(
+            button.label == "Download repeatability summary JSON"
+            for button in app.get("download_button")
+        ))
+
         app.text_area[0].set_value("{invalid json")
         analyze_button = next(
             button for button in app.button
@@ -42,6 +52,10 @@ class ReactorQDashboardSmokeTests(unittest.TestCase):
         analyze_button.click().run()
         self.assertEqual(app.exception, [])
         self.assertTrue(any("Could not analyze rankings" in element.value for element in app.error))
+        self.assertFalse(any(
+            button.label == "Download repeatability summary JSON"
+            for button in app.get("download_button")
+        ))
 
 
 if __name__ == "__main__":
