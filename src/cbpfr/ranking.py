@@ -23,13 +23,24 @@ class MetricLimit:
     units: str = "unspecified"
     bound_kind: str = "operational_heuristic"
     def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValueError("metric name must be a non-empty string")
         if self.lower is None and self.upper is None:
             raise ValueError(f"metric {self.name} needs a lower and/or upper limit")
+        numeric_values = {
+            "lower": self.lower, "upper": self.upper, "z": self.z,
+            "scale": self.scale, "weight": self.weight,
+        }
+        for field_name, value in numeric_values.items():
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"metric {self.name} has non-finite or non-numeric {field_name}")
         if self.lower is not None and self.upper is not None and self.lower > self.upper:
             raise ValueError(f"metric {self.name} has lower limit above upper limit")
         if self.z < 0 or self.scale <= 0 or self.weight < 0:
             raise ValueError(f"metric {self.name} has invalid z, scale, or weight")
-        if not self.uncertainty_kind.strip():
+        if not isinstance(self.uncertainty_kind, str) or not self.uncertainty_kind.strip():
             raise ValueError(f"metric {self.name} must identify uncertainty_kind")
         if self.bound_kind not in {"operational_heuristic", "known_normal_one_sided"}:
             raise ValueError(f"metric {self.name} has unsupported bound_kind; it must not imply an untested confidence claim")
@@ -121,8 +132,13 @@ def rank_all_methods(model: QuboModel, candidates: Sequence[Candidate], estimate
     if not metrics:
         raise ValueError("at least one physical metric must be declared")
     expected = {metric.name for metric in metrics}
-    if set(uniform_margins) != expected or any(value < 0 for value in uniform_margins.values()):
-        raise ValueError("uniform margins must give one nonnegative value for every metric")
+    if len(expected) != len(metrics):
+        raise ValueError("metric names must be unique")
+    if set(uniform_margins) != expected:
+        raise ValueError("uniform margins must give one value for every metric")
+    for name, value in uniform_margins.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            raise ValueError(f"uniform margin for {name!r} must be finite and nonnegative")
     return {
         "qubo_only": _rank("qubo_only", model, candidates, estimates, metrics, mode="qubo"),
         "point_estimate": _rank("point_estimate", model, candidates, estimates, metrics, mode="point"),
