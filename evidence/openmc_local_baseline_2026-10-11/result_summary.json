@@ -1,0 +1,22 @@
+{
+  "statepoint": "/Users/catur/C5G7_openmc_production/c5g7_2d_20261011_001910/c5g7-run/2d/statepoint.20000.h5",
+  "keff_mean": 1.186394144702191,
+  "keff_std_dev": 0.000056113408647969484,
+  "n_batches": 20000,
+  "n_particles": 10000,
+  "n_inactive": 500,
+  "n_realizations": 19500,
+  "run_mode": "eigenvalue",
+  "energy_mode": "multi-group",
+  "tally_mesh_dimension": [
+    51,
+    51,
+    1
+  ],
+  "tally_scores": [
+    "flux",
+    "fission",
+    "nu-fission"
+  ],
+  "evidence_status": "transcribed_from_user_provided_terminal_output_not_independently_recomputed"
+}

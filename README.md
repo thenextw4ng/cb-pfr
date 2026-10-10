@@ -68,6 +68,17 @@ The repository deliberately refuses to silently map those labels to C5G7 UO2/MOX
 
 A future physical study requires documented geometry, material/depletion states, nuclear-data provenance, category-to-material mapping, limits, and an independent validation protocol.
 
+## Evidence archives and local OpenMC baseline
+
+The `openmc-evidence-20261011` branch preserves two separate archives:
+
+- `OpenMC_HDF5_Evidence_2026-10-11.zip`: local C5G7/OpenMC HDF5, XML, log, and run metadata supplied for audit.
+- `CBPFR_ReactorQ__Archive_2026-10-11.zip`: 86 historical project artifacts recovered from prior conversations and the ChatGPT Library.
+
+Archive integrity is checked in CI with `scripts/audit_evidence_archive.py`. This validates ZIP CRCs and computes SHA-256 hashes for archive members; it does **not** parse HDF5 semantics or establish physical validity. Machine-derived statepoint/tally exports must still be generated with the matching OpenMC environment and checked against the transcribed baseline.
+
+See [the remaining-work audit](reports/REMAINING_WORK_AUDIT_2026-10-11.md) and [the OpenMC handoff](reports/OPENMC_LOCAL_EVIDENCE_HANDOFF.md).
+
 ## Repository architecture
 
     cb-pfr/
