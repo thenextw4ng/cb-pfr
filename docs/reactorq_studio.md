@@ -65,3 +65,7 @@ python scripts/analyze_repeatability.py --input results/optimizer_runs.json --ou
 ```
 
 The output path must not already exist; use a new path for each analysis. Keep the original per-run outputs and record optimizer name/version, parameter settings, seed, stopping condition, candidate feasibility, and any physical-simulation linkage separately. Candidate IDs must identify the same configuration consistently across runs. The tool does not verify those experimental conditions for you.
+
+## OpenMC handoff
+
+Before any physical run, follow [the gated OpenMC handoff checklist](../reports/openmc_handoff_checklist.md). It requires a defensible benchmark, geometry/material mapping, nuclear-data provenance, a validated baseline, and recorded run metadata before candidate-level physical claims are made.
