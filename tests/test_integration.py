@@ -79,6 +79,18 @@ class IntegrationAdapterTests(unittest.TestCase):
                 {"synthetic_response": 0.02},
             )
 
+    def test_missing_estimates_export_as_strict_json(self):
+        import json
+
+        result = rank_candidate_batch(
+            self.model, self.candidates[:1], {}, self.metrics,
+            {"synthetic_response": 0.02},
+        )
+        records = ranking_to_records(result, data_kind="synthetic")
+        encoded = json.dumps(records, allow_nan=False)
+        self.assertIn('"aggregate_violation": null', encoded)
+        self.assertIn('"normalized_violation": null', encoded)
+
     def test_invalid_data_kind_rejected(self):
         result = rank_candidate_batch(
             self.model, self.candidates, self.estimates, self.metrics,
