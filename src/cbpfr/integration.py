@@ -7,6 +7,7 @@ OpenMC results.
 from __future__ import annotations
 
 from dataclasses import asdict
+import math
 from typing import Mapping, Sequence
 
 from .qubo import Candidate, QuboModel
@@ -61,10 +62,16 @@ def ranking_to_records(
                     "indicator": item.physical.indicator,
                     "aggregate_violation": (
                         item.physical.aggregate_violation
-                        if item.physical.aggregate_violation != float("inf")
+                        if math.isfinite(item.physical.aggregate_violation)
                         else None
                     ),
-                    "metrics": [asdict(metric) for metric in item.physical.metric_assessments],
+                    "metrics": [
+                        {
+                            key: (value if not isinstance(value, float) or math.isfinite(value) else None)
+                            for key, value in asdict(metric).items()
+                        }
+                        for metric in item.physical.metric_assessments
+                    ],
                 }
             records.append({
                 "data_kind": data_kind,
