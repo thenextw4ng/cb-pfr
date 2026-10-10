@@ -76,7 +76,7 @@ Before any physical run, follow [the gated OpenMC handoff checklist](../reports/
 For each optimizer invocation, preserve the raw output and create a run record containing at least:
 
 - unique `run_id`, optimizer name/version, seed (or `null` if unseeded), full parameter object, stopping condition, and run status;
-- one `candidate_records` entry per recorded candidate, with a stable candidate ID, rank, QUBO energy, and independently recorded feasibility flag;
+- one `candidate_records` entry per recorded candidate, with a stable candidate ID, the full binary `candidate_vector`, rank, QUBO energy, and independently recorded feasibility flag. The validator rejects duplicate IDs, duplicate vectors, duplicate ranks, non-binary vectors, non-finite values, and candidate ID/vector drift across runs;
 - `objective_value` when a separate objective is available; do not assume QUBO energy is interchangeable with a physical objective;
 - `failure_reason` for failed, cancelled, or timed-out runs;
 - `evidence_kind` and `physical_simulation_performed` provenance fields.
@@ -93,4 +93,4 @@ Summarize the validated experiment, including completed/failed run counts, candi
 python scripts/analyze_optimizer_experiment.py --input results/optimizer_runs.validated.json --output results/optimizer_experiment_summary.json --top-k 3 --objective-sense min
 ```
 
-Use `--objective-sense max` when higher objective values are better. Objective summaries are only comparable within a documented experiment and objective definition. Candidate feasibility rate is the fraction of recorded candidate rows marked feasible, not the probability that a future optimizer run succeeds. Failed/interrupted runs remain in the run denominator for reliability counts but are excluded from ranking-stability calculations. The tools validate record structure, not whether the records genuinely came from the stated optimizer. Keep raw logs immutable and record software/configuration hashes externally when available.
+Use `--objective-sense max` when higher objective values are better. Objective summaries are only comparable within a documented experiment and objective definition. Candidate feasibility rate is the fraction of recorded candidate rows marked feasible, not the probability that a future optimizer run succeeds. Failed/interrupted runs remain in the run denominator for reliability counts but are excluded from ranking-stability calculations. The tools validate record structure, not whether the records genuinely came from the stated optimizer. Keep raw logs immutable and record software/configuration hashes externally when available. A complete synthetic input template is provided at `examples/optimizer_runs.example.json`; it is clearly labelled as a template, not research data.

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "replace-with-experiment-id",
+  "experiment_description": "TEMPLATE ONLY. Replace every value with recorded optimizer output.",
+  "runs": [
+    {
+      "run_id": "seed-11",
+      "optimizer": "replace-with-optimizer-name",
+      "optimizer_version": "replace-with-version-or-commit",
+      "seed": 11,
+      "parameters": {"reads": 100, "sweeps": 500},
+      "stopping_condition": "replace-with-actual-stopping-rule",
+      "run_status": "completed",
+      "evidence_kind": "synthetic_template",
+      "physical_simulation_performed": false,
+      "candidate_records": [
+        {"candidate_id": "candidate-A", "candidate_vector": [1, 0, 1], "rank": 1, "qubo_energy": -3.25, "feasible": true, "objective_value": null},
+        {"candidate_id": "candidate-B", "candidate_vector": [0, 1, 0], "rank": 2, "qubo_energy": -2.5, "feasible": false, "objective_value": null}
+      ]
+    },
+    {
+      "run_id": "seed-12",
+      "optimizer": "replace-with-optimizer-name",
+      "optimizer_version": "replace-with-version-or-commit",
+      "seed": 12,
+      "parameters": {"reads": 100, "sweeps": 500},
+      "stopping_condition": "replace-with-actual-stopping-rule",
+      "run_status": "timeout",
+      "failure_reason": "replace-with-observed-reason",
+      "evidence_kind": "synthetic_template",
+      "physical_simulation_performed": false,
+      "candidate_records": []
+    }
+  ]
+}
