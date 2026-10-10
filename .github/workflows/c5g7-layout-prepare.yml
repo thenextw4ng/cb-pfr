@@ -122,7 +122,7 @@ jobs:
                   data = path.read_bytes()
                   xml_files.append({"file": name, "size_bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
               settings = ET.parse(builder.parent / "settings.xml").getroot()
-              settings_values = {tag: settings.findtext(tag) for tag in ("run_mode", "energy_mode", "batches", "inactive", "particles")}
+              settings_values = {tag: settings.findtext(tag) for tag in ("run_mode", "energy_mode", "batches", "inactive", "particles", "seed")}
               audits.append({
                   "candidate_id": candidate_id,
                   "layout": layout,
@@ -176,7 +176,8 @@ jobs:
             --batches 100 \
             --inactive 10 \
             --particles 1000 \
-            --threads 1
+            --threads 1 \
+            --seed-base 620000
 
       - name: Preserve prepared inputs and smoke-run outputs
         if: always()
