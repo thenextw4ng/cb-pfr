@@ -79,7 +79,7 @@ class OptimizerRunLogTests(unittest.TestCase):
 
     def test_rejects_inconsistent_vector_lengths(self):
         first, second = valid_run("r1"), valid_run("r2")
-        second["candidate_records"][0]["candidate_vector"] = [1, 0]
+        second["candidate_records"][1]["candidate_vector"] = [0, 1]
         with self.assertRaisesRegex(ValueError, "length must be consistent"):
             validate_experiment_payload({"runs": [first, second]})
 
