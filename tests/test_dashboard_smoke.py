@@ -11,6 +11,8 @@ class ReactorQDashboardSmokeTests(unittest.TestCase):
         visible_text = "\n".join(element.value for element in app.markdown)
         self.assertIn("ReactorQ Studio", visible_text)
         self.assertIn("synthetic", visible_text.lower())
+        tab_labels = [element.label for element in app.tabs]
+        self.assertIn("Repeatability", tab_labels)
 
 
 if __name__ == "__main__":
