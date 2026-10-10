@@ -47,9 +47,9 @@ def build_demo():
     spec = CoreSpec(
         name="abstract-seven-position-demo",
         positions=tuple(f"p{i}" for i in range(7)),
-        boundary=frozenset(f"p{i}" for i in range(6)),
-        inner=frozenset({"p6"}),
-        edges=tuple((f"p{i}", f"p{(i + 1) % 6}") for i in range(6)),
+        boundary=frozenset({f"p{i}" for i in range(1, 7)}),
+        inner=frozenset({"p0"}),
+        edges=tuple((f"p{i}", f"p{1 + (i % 6)}") for i in range(1, 7)),
         inventory=(3, 3, 1),
         description="Abstract topology for software demonstration; not a reactor geometry.",
     )
