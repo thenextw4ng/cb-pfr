@@ -32,6 +32,7 @@ The final CI run for the latest commit must be green before this audit can be ca
 | Overflow during mean ± uncertainty-width could produce non-finite bounds. | Fail closed with a nonfinite_bound assessment. | Extremely large finite inputs are rejected at assessment time. |
 | Malformed estimate values could throw instead of producing an explicit failed assessment. | Validate pair shape and numeric types; malformed entries fail closed. | Input provenance is still the caller's responsibility. |
 | Candidate IDs were assumed to be strings and stale estimates could be silently ignored. | Require non-empty string IDs and reject estimate IDs outside the candidate batch. | Adapter does not independently prove that a supplied estimate came from a real simulation. |
+| Missing assessments could export Infinity values that are not valid strict JSON. | Convert non-finite assessment numbers to JSON null and add a strict JSON serialization regression test. | Null indicates unavailable/invalid assessment values; downstream users must retain status fields. |
 | Malformed OpenMC statepoints could leak low-level parsing exceptions. | Wrap expected HDF5/value/type errors in OpenMCIntegrationError; validate keff shape and finite values. | A well-formed statepoint is not proof of converged or physically correct results. |
 
 ## Dashboard and reproducibility checks
@@ -56,7 +57,7 @@ Existing benchmark rates (QUBO-only 0.857, point estimate 0.933, CB-PFR 0.976, u
 - [x] Review dashboard flow, repeatability input handling, and exports.
 - [x] Review OpenMC preflight and parsing boundaries.
 - [x] Fix the numeric validation and malformed-input issues listed above.
-- [x] Add regression tests for the new guards.
+- [x] Add regression tests for the new guards, including strict JSON export with missing metrics.
 - [x] Update documentation with explicit scientific and execution limits.
 - [ ] Confirm the latest GitHub Actions workflow passes on Python 3.10, 3.11, and 3.12.
 
