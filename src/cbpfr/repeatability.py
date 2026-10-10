@@ -20,11 +20,13 @@ def summarize_repeated_rankings(
     """
     if not runs:
         raise ValueError("at least one run is required")
-    if top_k < 1:
+    if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:
         raise ValueError("top_k must be a positive integer")
 
     normalized: list[tuple[str, ...]] = []
     for run_index, run in enumerate(runs):
+        if isinstance(run, (str, bytes)):
+            raise ValueError(f"run {run_index} must be a sequence of candidate IDs, not a string")
         row = tuple(run)
         if not row:
             raise ValueError(f"run {run_index} cannot be empty")
