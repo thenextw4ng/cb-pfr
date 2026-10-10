@@ -26,7 +26,7 @@ v_{i,j}=\max(0,L_j-B^-_{i,j})+\max(0,B^+_{i,j}-U_j)
 \]
 
 \[
-V_{CB}(x_i)=\sum_j w_j\frac{v_{i,j}}{s_j^{scale}.
+V_{CB}(x_i)=\sum_j w_j\frac{v_{i,j}}{s_j^{\mathrm{scale}}.
 }
 \]
 
