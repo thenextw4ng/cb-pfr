@@ -330,6 +330,26 @@ def analyze(args: argparse.Namespace) -> None:
         },
     }
     (output / "beavrs_cycle1_day0_map_comparison.json").write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
+
+    # Keep the preparation manifest truthful after transport and analysis. The
+    # manifest is part of the archived evidence, so it must not retain the
+    # pre-run PREPARED_NOT_RUN state after a successful analysis step.
+    manifest["status"] = "COMPLETED_PRELIMINARY_ANALYSIS_NOT_VALIDATED"
+    manifest["analysis_result"] = {
+        "status": result["status"],
+        "physical_validation_claim": result["physical_validation_claim"],
+        "comparison_json": "beavrs_cycle1_day0_map_comparison.json",
+        "comparison_csv": "beavrs_cycle1_day0_map_comparison.csv",
+        "statepoint": result["statepoint"],
+        "statepoint_sha256": result["statepoint_sha256"],
+        "batches_completed": result["batches_completed"],
+        "detector_count": result["detector_count"],
+        "keff": result["keff"],
+        "metrics": result["metrics"],
+    }
+    (output / "beavrs_run_manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n"
+    )
     print(json.dumps(result, indent=2, allow_nan=False))
 
 
