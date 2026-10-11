@@ -33,6 +33,10 @@ The archived full mesh was re-indexed under the current coordinate mapping and s
 
 These transforms are diagnostic hypotheses, not candidate corrections. The best observed correlation is still modest and was identified after examining the result; adopting it would be post-hoc fitting and is prohibited as validation evidence. This table does **not** establish that the current map is wrong, nor does it establish that any alternative is correct. It establishes that orientation must be resolved independently before another expensive transport run.
 
+## Geometry-plot diagnostic workflow
+
+A plot-only GitHub Actions workflow has been added at `.github/workflows/beavrs-coordinate-audit.yml`. It freezes the same BEAVRS source revision, exports the coordinate crosswalk, renders the upstream OpenMC geometry plots, and uploads the artifacts **without running neutron transport**. Its purpose is to make coordinate review possible before spending compute on another physics run. The workflow and its resulting plots still require review against the published detector-layout schematic; a successful plot render is not a physical-validation pass.
+
 ## Required gate before rerunning transport
 
 1. Create a coordinate crosswalk for all 58 labels showing the detector label, upstream assembly-template row/column, physical assembly center (x,y), and OpenMC mesh bin.
