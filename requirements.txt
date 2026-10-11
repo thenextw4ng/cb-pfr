@@ -5,3 +5,6 @@
 streamlit>=1.36,<2
 pandas>=2.0,<3
 plotly>=5.22,<7
+
+# HDF5 reader for verified OpenMC statepoint tally visualization
+h5py>=3.10,<4
