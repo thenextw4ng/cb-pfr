@@ -1,4 +1,4 @@
-""""CB-PFR research workstation overview; demo and smoke data are clearly bounded."""
+"""CB-PFR research workstation overview; demo and smoke data are clearly bounded."""
 import plotly.graph_objects as go
 import streamlit as st
 
