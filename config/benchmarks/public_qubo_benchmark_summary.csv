@@ -1,2 +1,6 @@
-benchmark,comparison,instance_family,instances_total,matched_instances,classical_lower_objective,classical_same_objective,dwave_missing_result,classical_lower_pct_of_matched,classical_same_pct_of_matched,evidence_type,independent_reanalysis,source_url,interpretation_limit
-Public QUBO Solver Benchmark,D-Wave Advantage vs classical reference,"graph-structured; random; spin-glass; QPLIB",1912,1856,1280,576,56,69.0,31.0,"published aggregate summary",no,https://www.qubos.org/,"Not trial-level data; no TTS or quantum-advantage inference; not nuclear fuel loading or CB-PFR validation"
+benchmark,instance_family,total_instances,classical_lower_objective,equal_objective,dwave_lower_objective,dwave_result_missing,matched_results,source_type,independent_reanalysis,source_repository,source_commit
+Public QUBO Solver Benchmark,compsup,480,80,360,0,40,440,published aggregate summary,no,https://github.com/ml-uhh/qubo-benchmark,68ab9f51e4af928088cf1bccd57a6c25fa68bcac
+Public QUBO Solver Benchmark,random,23,13,7,0,3,20,published aggregate summary,no,https://github.com/ml-uhh/qubo-benchmark,68ab9f51e4af928088cf1bccd57a6c25fa68bcac
+Public QUBO Solver Benchmark,s28-qac,1386,1177,200,0,9,1377,published aggregate summary,no,https://github.com/ml-uhh/qubo-benchmark,68ab9f51e4af928088cf1bccd57a6c25fa68bcac
+Public QUBO Solver Benchmark,QPLIB,23,10,9,0,4,19,published aggregate summary,no,https://github.com/ml-uhh/qubo-benchmark,68ab9f51e4af928088cf1bccd57a6c25fa68bcac
+Public QUBO Solver Benchmark,ALL,1912,1280,576,0,56,1856,published aggregate summary,no,https://github.com/ml-uhh/qubo-benchmark,68ab9f51e4af928088cf1bccd57a6c25fa68bcac
