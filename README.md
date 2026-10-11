@@ -60,6 +60,7 @@ The [C5G7 selection integration report](reports/c5g7_cbpfr_selection_smoke_2026-
 A reproducible full-core BEAVRS Cycle 1 day-0 radial detector-map comparison runner and GitHub Actions workflow are now included:
 
 - [BEAVRS comparison protocol](reports/BEAVRS_CYCLE1_EXPERIMENTAL_COMPARISON_PROTOCOL.md)
+- [BEAVRS coordinate-registration audit (current mapping still under investigation)](reports/BEAVRS_COORDINATE_REGISTRATION_AUDIT_2026-10-11.md)
 - [BEAVRS validation execution plan](reports/BEAVRS_VALIDATION_EXECUTION_PLAN_2026-10-11.md)
 - [Run manifest](config/benchmarks/beavrs_validation_manifest.json)
 - [Runner script](scripts/run_beavrs_cycle1_map_validation.py)

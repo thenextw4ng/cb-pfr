@@ -7,10 +7,29 @@ from scripts.run_beavrs_cycle1_map_validation import (
     build_assembly_map,
     load_measurements,
     fahrenheit_to_kelvin,
+    update_manifest_analysis,
 )
 
 
 class BeavrsCycle1MapValidationTests(unittest.TestCase):
+    def test_analysis_updates_manifest_without_claiming_validation(self):
+        manifest = {"status": "PREPARED_NOT_RUN"}
+        result = {
+            "status": "PRELIMINARY_EXPERIMENTAL_COMPARISON",
+            "physical_validation_claim": "NOT_ESTABLISHED",
+            "statepoint": "statepoint.500.h5",
+            "statepoint_sha256": "abc123",
+            "batches_completed": 500,
+            "detector_count": 58,
+            "keff": {"mean": 1.0, "standard_deviation": 0.001},
+            "metrics": {"pearson_correlation": 0.03},
+        }
+        updated = update_manifest_analysis(manifest, result)
+        self.assertEqual(updated["status"], "COMPLETED_PRELIMINARY_ANALYSIS_NOT_VALIDATED")
+        self.assertEqual(updated["analysis_result"]["statepoint_sha256"], "abc123")
+        self.assertEqual(updated["analysis_result"]["detector_count"], 58)
+        self.assertEqual(updated["analysis_result"]["physical_validation_claim"], "NOT_ESTABLISHED")
+
     def test_cycle1_temperature_conversion_matches_reported_inlet_temperature(self):
         self.assertAlmostEqual(fahrenheit_to_kelvin(558.875), 565.8583333333, places=8)
         with self.assertRaisesRegex(ValueError, "finite"):

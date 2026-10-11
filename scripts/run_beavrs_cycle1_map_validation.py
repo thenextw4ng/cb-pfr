@@ -224,6 +224,24 @@ def prepare(args: argparse.Namespace) -> None:
     print(json.dumps({"prepared": True, "output": str(output), "detectors": len(measurements)}))
 
 
+def update_manifest_analysis(manifest: dict, result: dict) -> dict:
+    """Record completed comparison metadata without implying physical validation."""
+    manifest["status"] = "COMPLETED_PRELIMINARY_ANALYSIS_NOT_VALIDATED"
+    manifest["analysis_result"] = {
+        "status": result["status"],
+        "physical_validation_claim": result["physical_validation_claim"],
+        "comparison_json": "beavrs_cycle1_day0_map_comparison.json",
+        "comparison_csv": "beavrs_cycle1_day0_map_comparison.csv",
+        "statepoint": result["statepoint"],
+        "statepoint_sha256": result["statepoint_sha256"],
+        "batches_completed": result["batches_completed"],
+        "detector_count": result["detector_count"],
+        "keff": result["keff"],
+        "metrics": result["metrics"],
+    }
+    return manifest
+
+
 def analyze(args: argparse.Namespace) -> None:
     import openmc
 
@@ -330,6 +348,11 @@ def analyze(args: argparse.Namespace) -> None:
         },
     }
     (output / "beavrs_cycle1_day0_map_comparison.json").write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
+
+    update_manifest_analysis(manifest, result)
+    (output / "beavrs_run_manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n"
+    )
     print(json.dumps(result, indent=2, allow_nan=False))
 
 
