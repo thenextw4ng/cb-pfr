@@ -4,13 +4,14 @@ import streamlit as st
 
 from cbpfr.dashboard_ui import (
     CYAN, ORANGE, MUTED, apply_workstation_style, base_layout, candidate_label,
-    load_smoke, render_header,
+    load_smoke, render_header, render_workspace_sidebar,
 )
 
 st.set_page_config(page_title="CB-PFR · Monte Carlo Results", page_icon="⚛", layout="wide")
 apply_workstation_style()
 render_header("Monte Carlo", "EXPLORATORY SMOKE DATA · NOT A RELIABILITY STUDY")
 df = load_smoke().sort_values("candidate_id").reset_index(drop=True)
+render_workspace_sidebar("Monte Carlo Results", df)
 
 st.markdown('<div class="section-kicker">Transport run evidence</div>', unsafe_allow_html=True)
 st.title("Monte Carlo & Reliability")
