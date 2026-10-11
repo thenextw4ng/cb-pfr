@@ -1,9 +1,6 @@
 name: C5G7 intermediate-budget repeatability screen
 
 on:
-  push:
-    paths:
-      - ".github/workflows/c5g7-intermediate-screen.yml"
   workflow_dispatch:
     inputs:
       batches:
