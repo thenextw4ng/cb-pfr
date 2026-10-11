@@ -64,3 +64,21 @@ The plot-only workflow completed successfully without neutron transport: [run 38
 The plot-only audit reduces concern about a simple mesh-center/extent offset, but it does not explain the poor detector-map agreement. Do **not** select a reflected/rotated map because it yields a better correlation. Next, independently compare the 58 red-box positions with the published detector-layout schematic and review the physical model's state/loading assumptions and the measurement operator. A new high-budget transport run is not justified until that review is recorded.
 
 The BEAVRS spatial-validation claim remains **NOT_ESTABLISHED**; the existing U-235 run's correlation (0.03236) and normalized RMSE (0.32892) are unchanged.
+
+
+## Independent detector-position and raw-map cross-check — 11 October 2026
+
+The detector label set was independently checked against the pinned upstream model's Core._set_instrument_tube_positions dictionary, rather than inferred only from the generated overlay. The upstream model has **58 unique instrumented assembly labels**; the raw Cycle-1 day-0 detector CSV has **58 unique labels**; their symmetric difference is empty (58/58 exact match). The official BEAVRS specification's Figure 31 lists assembly columns R through A and rows 1 through 15, and its detector layout is consistent with the generated labeled overlay ([BEAVRS v2.0.2 specification, Section 2.2.3.3, Figure 31](https://bpb-us-e1.wpmucdn.com/sites.mit.edu/dist/9/643/files/2017/01/BEAVRS_2.0.2_spec.pdf); [pinned upstream source](https://github.com/mit-crpg/BEAVRS/blob/1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22/models/openmc/beavrs/core.py)). This resolves the detector-label set and makes a simple x/y reflection or one-bin shift an unsupported explanation for the poor result.
+
+The archived U-235 statepoint was also compared against both the raw detector map and the tilt-corrected map, without rerunning transport. Both comparisons use the same 58 calculated values and normalize each measurement subset to mean 1:
+
+| Reference map | Normalized RMSE | Normalized MAE | Mean absolute relative error | Pearson correlation |
+|---|---:|---:|---:|---:|
+| Raw radial detector map | 0.36212 | 0.30079 | 31.44% | -0.13886 |
+| Tilt-corrected radial map | 0.32892 | 0.26960 | 27.75% | 0.03236 |
+
+The tilt-corrected map is descriptively closer, but both comparisons remain poor. The benchmark documentation explicitly notes that the reason for the measured tilt and the validity of the planar tilt correction are not definitive; neither map should be treated as a guaranteed ground truth without its uncertainty context.
+
+### Updated next step
+
+Coordinate registration is now supported by (1) the generated geometry overlay, (2) the official detector-layout diagram, and (3) exact equality between the 58 upstream instrument-tube labels and 58 raw measurement labels. Do not spend another run trying arbitrary coordinate flips. Investigate the physical-model/observable mismatch next: verify the exact Cycle-1 fuel-loading and burnable-absorber states, rod insertion conventions and geometry, and the mapping from chamber-derived measurements to the U-235 tally. Then predeclare a physically justified comparison rule and uncertainty treatment. Physical validation remains **NOT_ESTABLISHED**.
