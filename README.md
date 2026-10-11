@@ -64,6 +64,7 @@ A reproducible full-core BEAVRS Cycle 1 day-0 radial detector-map comparison run
 - [Run manifest](config/benchmarks/beavrs_validation_manifest.json)
 - [Runner script](scripts/run_beavrs_cycle1_map_validation.py)
 - [GitHub Actions workflow](.github/workflows/beavrs-cycle1-map-validation.yml)
+- [Final 15×15 tilt-corrected BEAVRS run (currently executing)](https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412)
 
 The workflow uses the pinned public BEAVRS source, OpenMC 0.15.3, and the official ENDF/B-VII.1 HDF5 data library; it records data hashes and uploads raw run/comparison artifacts. It compares a normalized 58-assembly detector map with mesh-integrated fission rates. A known bank-E insertion mismatch (measurement: 230 steps withdrawn; upstream model default: 228) and the absence of a detector-response/uncertainty-weighted acceptance analysis mean this is an **initial experimental comparison**, not by itself a complete physical-validation certificate. Check the linked workflow run and its artifacts before reporting any numerical result.
 
