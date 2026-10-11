@@ -238,6 +238,7 @@ def main() -> int:
     parser.add_argument("--particles", type=int, default=1000, help="particles per batch; default is a smoke-test profile")
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--seed-base", type=int, default=620000, help="base seed; each candidate gets a deterministic consecutive seed")
+    parser.add_argument("--candidate-ids", nargs="+", help="optional subset of candidate IDs; default runs all six layouts")
     args = parser.parse_args()
     if args.batches < 2 or args.inactive < 0 or args.inactive >= args.batches or args.particles < 1 or args.threads < 1 or args.seed_base < 0:
         parser.error("require batches >= 2, 0 <= inactive < batches, particles >= 1, threads >= 1, and seed-base >= 0")
@@ -277,9 +278,22 @@ def main() -> int:
             "Smoke-test results are not benchmark-grade and must not be presented as converged physical evidence.",
         ],
     }
-    ordered_candidates = sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"]))
-    for candidate_index, candidate in enumerate(ordered_candidates):
-        seed = args.seed_base + candidate_index
+    all_ordered_candidates = sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"]))
+    seed_offsets = {candidate["candidate_id"]: i for i, candidate in enumerate(all_ordered_candidates)}
+    if args.candidate_ids:
+        requested = set(args.candidate_ids)
+        known = {candidate["candidate_id"] for candidate in all_ordered_candidates}
+        unknown = sorted(requested - known)
+        if unknown:
+            parser.error(f"unknown candidate IDs: {unknown}")
+        ordered_candidates = [candidate for candidate in all_ordered_candidates if candidate["candidate_id"] in requested]
+        if not ordered_candidates:
+            parser.error("--candidate-ids must select at least one candidate")
+    else:
+        ordered_candidates = all_ordered_candidates
+    summary["selected_candidate_ids"] = [candidate["candidate_id"] for candidate in ordered_candidates]
+    for candidate in ordered_candidates:
+        seed = args.seed_base + seed_offsets[candidate["candidate_id"]]
         case_dir = output / candidate["candidate_id"]
         case_dir.mkdir()
         model_copy = case_dir / "model"
@@ -309,7 +323,7 @@ def main() -> int:
                     "candidate_id": other["candidate_id"],
                     "status": "not_run_after_prior_failure",
                     "physical_results": None,
-                } for other in sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"])) if other["candidate_id"] != candidate["candidate_id"] and other["candidate_id"] not in {c["candidate_id"] for c in summary["cases"]})
+                } for other in ordered_candidates if other["candidate_id"] != candidate["candidate_id"] and other["candidate_id"] not in {c["candidate_id"] for c in summary["cases"]})
                 break
         summary["cases"].append(case)
     else:
