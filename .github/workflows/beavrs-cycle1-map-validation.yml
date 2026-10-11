@@ -30,9 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      BATCHES: \${{ inputs.batches || '250' }}
-      INACTIVE: \${{ inputs.inactive || '30' }}
-      PARTICLES: \${{ inputs.particles || '2000' }}
+      BATCHES: ${{ inputs.batches || '250' }}
+      INACTIVE: ${{ inputs.inactive || '30' }}
+      PARTICLES: ${{ inputs.particles || '2000' }}
       SEED: "20261011"
       OMP_NUM_THREADS: "2"
       BEAVRS_COMMIT: "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22"
@@ -116,7 +116,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: beavrs-cycle1-map-comparison-\${{ github.run_id }}
+          name: beavrs-cycle1-map-comparison-${{ github.run_id }}
           path: |
             /tmp/beavrs-run/
           if-no-files-found: warn
