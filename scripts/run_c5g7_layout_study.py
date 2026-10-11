@@ -141,6 +141,21 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     if source.count(seed_anchor) != 1:
         raise ValueError(f"upstream runtime setting differs from audited template: {seed_anchor!r}")
     source = source.replace(seed_anchor, seed_anchor + f"\nsettings_file.seed = {seed}")
+    entropy_anchor = (
+        "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\n"
+        "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\n"
+        "settings_file.entropy_dimension = [51, 51, 1]"
+    )
+    if source.count(entropy_anchor) != 1:
+        raise ValueError("upstream entropy-mesh construction differs from audited template; refusing to patch")
+    entropy_replacement = (
+        "entropy_mesh = openmc.RegularMesh()\n"
+        "entropy_mesh.dimension = [51, 51, 1]\n"
+        "entropy_mesh.lower_left = [-32.13, -32.13, -1.0]\n"
+        "entropy_mesh.upper_right = [32.13, 32.13, 1.0]\n"
+        "settings_file.entropy_mesh = entropy_mesh"
+    )
+    source = source.replace(entropy_anchor, entropy_replacement)
     builder.write_text(source, encoding="utf-8")
 
 
