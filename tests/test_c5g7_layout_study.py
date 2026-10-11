@@ -79,12 +79,13 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exactly six"):
             validate_design_space(self.design)
 
-    def test_patch_normalizes_mgxs_energy_group_endpoints(self):
+    def test_patch_uses_standard_c5g7_energy_group_boundaries(self):
         patch_mgxs_energy_boundaries(self.materials)
         text = self.materials.read_text()
-        self.assertIn("energy_boundaries[0] = 1.0e-5", text)
-        self.assertIn("energy_boundaries[-1] = 1.0e7", text)
+        self.assertIn("energy_boundaries = np.array([1.0e-5, 0.0635, 10.0, 100.0, 1000.0, 500000.0, 1000000.0, 20000000.0], dtype=float)", text)
+        self.assertIn("OECD/NEA C5G7 standard seven-group energy boundaries", text)
         self.assertIn("groups = openmc.mgxs.EnergyGroups(energy_boundaries)", text)
+        self.assertNotIn("np.logspace", text)
         self.assertIn("rest = True", text)
 
     def test_patch_mgxs_fails_closed_when_upstream_template_changes(self):
