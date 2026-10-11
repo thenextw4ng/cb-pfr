@@ -16,6 +16,7 @@ This audit describes the repository evidence boundary; it is not a claim of peer
 - Archived `results/per_seed_results.csv` with 4,000 method/trial rows.
 - Reproducibility, limitations, and physical-mapping documentation.
 - Six low-budget C5G7 assembly-placement smoke runs with candidate IDs, explicit seeds, statepoint/input hashes, and summary CSV/JSON under `results/c5g7_layout_smoke_2026-10-10/`.
+- An 18-run, three-round C5G7 repeatability smoke study with raw-HDF5 audit results, per-run statepoint hashes, between-run variability, and descriptive ranking stability under `results/c5g7_repeatability_smoke_2026-10-11/`.
 - Software citation metadata in `CITATION.cff` and `.zenodo.json`.
 
 ## Evidence taxonomy

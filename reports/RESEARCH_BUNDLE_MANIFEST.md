@@ -56,6 +56,19 @@ A separate GitHub Actions run completed all six explicitly reformulated 2×2 UO2
 
 These are smoke tests, not benchmark-grade results. One run per layout does not establish same-layout repeatability, the physical objective is not yet preregistered, and exact model/material correspondence to the primary benchmark remains under review. Do not infer an optimal or safe layout from the descriptive k_eff order.
 
+## Three-round repeated-seed smoke reliability study
+
+- Workflow: https://github.com/thenextw4ng/cb-pfr/actions/runs/38097472734
+- Committed analysis: `reports/c5g7_repeatability_smoke_2026-10-11.md`
+- Machine-readable results: `results/c5g7_repeatability_smoke_2026-10-11/`
+- Three seed bases: 620000, 630000, 640000; six layouts per round (18 runs total).
+- Raw HDF5 checks: 336/336 pass; 18 unique seeds and 18 unique statepoint hashes.
+- Descriptive Spearman correlations between round rankings: 0.886, 0.943, 0.943.
+- Five of six candidates have between-run sample SD above pooled within-run reported SD; with only three low-budget repetitions, this is a warning signal, not a calibrated uncertainty conclusion.
+- MGXS dataset payloads match across the initial and repeatability artifacts, but one root metadata energy boundary differs by one floating-point step. See `scripts/fingerprint_hdf5_semantics.py` and the report's MGXS comparison section.
+
+These results improve repeatability evidence but remain smoke-budget results, not benchmark-grade convergence, a physical optimum, or reactor-safety evidence.
+
 ## Remaining scientific gates
 
 1. Review geometry, boundary conditions, material definitions, MGXS provenance, and exact correspondence to the primary 2-D C5G7 benchmark specification.

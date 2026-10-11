@@ -23,6 +23,7 @@ These scripts are supported by the current repository and should be used accordi
 - `prepare_c5g7_reference.py` — clone and record the exact upstream C5G7 source revision.
 - `enumerate_c5g7_layouts.py` — enumerate the six arrangements with exactly two UO2 and two MOX assemblies in the explicitly reformulated 2×2 design space.
 - `run_c5g7_layout_study.py` — prepare isolated cases or optionally run them when the required OpenMC environment and data are available. Defaults are smoke-test settings, not benchmark-grade settings.
+- `analyze_c5g7_repeatability.py` — aggregate three independent seed rounds across the six layouts; report between-run variability separately from within-run Monte Carlo SD and compute descriptive ranking stability.
 
 ## Important limits
 
