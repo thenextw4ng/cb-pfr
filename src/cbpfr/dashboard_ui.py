@@ -52,6 +52,14 @@ def apply_workstation_style():
         .panel-subtitle {{ color: {MUTED}; font-size: .76rem; margin-bottom: 10px; }}
         .evidence-note {{ border-left: 3px solid {ORANGE}; background: {PANEL}; padding: 10px 13px; color: {MUTED}; font-size: .83rem; }}
         .small-muted {{ color: {MUTED}; font-size: .78rem; }}
+        .workspace-kicker {{ color: {MUTED}; font-size: .67rem; letter-spacing: .12em; text-transform: uppercase; }}
+        .workspace-value {{ color: {TEXT}; font-size: .82rem; font-weight: 600; }}
+        .workspace-note {{ color: {MUTED}; font-size: .72rem; line-height: 1.45; }}
+        .metric-caption {{ color: {MUTED}; font-size: .72rem; margin-top: -7px; }}
+        .status-line {{ display: flex; gap: 8px; align-items: center; font-size: .78rem; color: {TEXT}; padding: 7px 0; border-bottom: 1px solid {LINE}; }}
+        .status-dot {{ width: 7px; height: 7px; display: inline-block; border-radius: 50%; background: {ORANGE}; flex-shrink: 0; }}
+        .scientific-panel {{ background: {PANEL}; border: 1px solid {LINE}; border-radius: 4px; padding: 13px 15px; }}
+        .scientific-panel-title {{ font-size: .87rem; color: {TEXT}; font-weight: 650; }}
         hr {{ border-color: {LINE}; }}
         </style>
         """,
@@ -88,6 +96,49 @@ def render_header(active: str, status: str = "RESEARCH PROTOTYPE"):
             else:
                 st.page_link(path, label=label)
 
+
+
+def render_workspace_sidebar(active: str, df: pd.DataFrame):
+    """Shared project/evidence sidebar matching the Geometry Explorer workstation."""
+    with st.sidebar:
+        st.markdown(
+            '<div class="cbpfr-brand"><div class="brand">CB-PFR</div>'
+            '<div class="descriptor">RESEARCH WORKSPACE</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown('<div class="workspace-kicker">Workspace & evidence</div>', unsafe_allow_html=True)
+        st.caption("C5G7 · 2×2 assembly study")
+        st.markdown("---")
+        st.markdown('<div class="workspace-kicker">Project modules</div>', unsafe_allow_html=True)
+        modules = [
+            ("Overview", "app.py"),
+            ("C5G7 Layout Explorer", "pages/01_C5G7_Layout_Explorer.py"),
+            ("Physics Fields", "pages/02_Physics_Field_Explorer.py"),
+            ("Monte Carlo Results", "pages/03_Monte_Carlo_Reliability.py"),
+            ("QUBO / Optimization", "pages/04_QUBO_Optimization.py"),
+            ("Provenance & Validation", "pages/05_Provenance_Validation.py"),
+        ]
+        for label, path in modules:
+            if label == active:
+                st.markdown(
+                    f'<div style="border:1px solid {CYAN};background:#0b2b46;border-radius:3px;'
+                    f'padding:8px 10px;margin:5px 0;color:{TEXT};font-size:.79rem;font-weight:650">'
+                    f'● &nbsp;{label}</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.page_link(path, label=label)
+        st.markdown("---")
+        st.markdown('<div class="workspace-kicker">System status</div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-line"><span class="status-dot"></span> OpenMC results <b style="margin-left:auto">SMOKE</b></div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-line"><span class="status-dot"></span> Spatial tallies <b style="margin-left:auto">PENDING</b></div>', unsafe_allow_html=True)
+        hash_ok = bool((df["mgxs_sha256_before_transport"].astype(str) == df["mgxs_sha256_after_transport"].astype(str)).all())
+        dot = GREEN if hash_ok else RED
+        label = "MATCHED" if hash_ok else "REVIEW"
+        st.markdown(f'<div class="status-line"><span class="status-dot" style="background:{dot}"></span> MGXS hash <b style="margin-left:auto">{label}</b></div>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown('<div class="workspace-kicker">Evidence boundary</div>', unsafe_allow_html=True)
+        st.markdown('<div class="workspace-note">Current data supports aggregate comparisons only. Spatial fields and physical validation remain unavailable until source evidence is supplied.</div>', unsafe_allow_html=True)
 
 def load_smoke() -> pd.DataFrame:
     if not SMOKE_CSV.exists():
