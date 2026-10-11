@@ -5,6 +5,8 @@ import argparse, csv, hashlib, json, math, statistics
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+C5G7_GROUP_BOUNDARIES = (1.0e-5, 0.0635, 10.0, 100.0, 1000.0, 500000.0, 1000000.0, 20000000.0)
+
 
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -53,6 +55,8 @@ def main():
             cid=c["candidate_id"]; phys=c.get("physical_results") or {}
             if c.get("status")!="completed" or phys.get("status")!="completed":
                 p.error(f"{rd.name}/{cid}: run incomplete")
+            if phys.get("mgxs_group_structure_audit") != "PASS" or tuple(phys.get("mgxs_energy_group_boundaries") or ()) != C5G7_GROUP_BOUNDARIES:
+                p.error(f"{rd.name}/{cid}: nonstandard or unaudited C5G7 energy-group boundaries; historical smoke runs are not benchmark-valid")
             if cid in layouts and layouts[cid]!=c["layout"]:
                 p.error(f"{cid}: layout changed across rounds")
             layouts[cid]=c["layout"]
@@ -86,6 +90,8 @@ def main():
                 "inactive":cfg["inactive"],"particles_per_batch":cfg["particles"],
                 "keff_mean":k,"keff_std_dev":sd,"relative_sd_percent":sd/abs(k)*100,
                 "statepoint_sha256":sp_hash,"settings_sha256":settings_hash,"mgxs_sha256":mgxs_hash,
+                "mgxs_group_structure_audit":phys.get("mgxs_group_structure_audit"),
+                "mgxs_energy_group_boundaries":";".join(str(v) for v in phys.get("mgxs_energy_group_boundaries", [])),
                 "raw_hdf5_audit":"PASS"})
     if len(layouts)!=6 or len(commits)!=1 or len(profiles)!=1 or len(set(seed_list))!=18 or len(set(statepoint_hashes))!=18 or len(set(mgxs_hashes))!=1:
         p.error("cross-round identity/settings/seed/statepoint/MGXS checks failed")
