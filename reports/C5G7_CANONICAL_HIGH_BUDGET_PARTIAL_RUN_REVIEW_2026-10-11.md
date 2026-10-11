@@ -53,7 +53,9 @@ The generated settings revealed that the current adapter had narrowed the entrop
 - Test assertions for the axial extent: `a60c3d5e33bab9786d533c971b650f1ea008cd66`
 - The intermediate-budget workflow was changed to require manual dispatch so a code edit does not automatically start 18 transport runs: `ef5837ba3648c946ac6214316b6d8c1741dba045`
 
-These are code-level corrections, **not proof that the entropy-mesh fix works in transport**. CI was still queued/in progress at the time of this report, and no post-fix OpenMC run has validated the absence of warnings. Run a small targeted diagnostic only after CI passes; do not restart the high-budget run just to test the fix.
+The follow-up low-budget transport workflow then completed successfully: [run 38110780563](https://github.com/thenextw4ng/cb-pfr/actions/runs/38110780563). All 18 cases (six layouts × three seed rounds; 100 batches, 10 inactive, 1,000 particles/batch) completed; all 18 logs had zero entropy-box warnings; each round's raw-HDF5 audit passed 112 checks with zero failures; each evidence-integrity audit passed 23 checks; the independent spatial-mapping audit passed all 18 cases. Artifact ID: `11690758521`; ZIP SHA-256: `eee7d38c359c7d8d8d92dd8193280890a6f587c826d626bee4db7a9ed75f7551`.
+
+This validates that the corrected entropy-mesh bounds remove the warnings in the smoke-budget workflow. It does **not** retroactively repair the entropy diagnostics of the two earlier high-budget runs, establish benchmark-grade convergence, or validate the physical model. The smoke objective analysis remains `EXPLORATORY_DESCRIPTIVE_ONLY`; no layout winner is declared.
 
 ## What is verified versus not verified
 
