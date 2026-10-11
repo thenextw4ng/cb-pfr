@@ -46,6 +46,21 @@ jobs:
           assert report["is_official_benchmark_acceptance"] is False, report
           print("Smoke data integrity passed; low-budget canonical scalar screen correctly remains unpassed.")
           PY
+      - name: Audit corrected-group objective and fail-closed selection
+        run: |
+          python scripts/audit_c5g7_corrected_objective.py \
+            --runs-csv results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv \
+            --out /tmp/c5g7-corrected-objective-audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/c5g7-corrected-objective-audit.json").read_text())
+          assert report["status"] == "EVIDENCE_INTEGRITY_PASS_DESIGN_SELECTION_BLOCKED", report
+          assert report["run_count"] == 18 and report["layout_count"] == 6, report
+          assert all(report["checks"].values()), report
+          assert report["decision"]["winner_selected"] is False, report
+          print("Corrected-group smoke evidence is internally consistent; physical selection remains fail-closed.")
+          PY
       - name: Audit committed evidence archives
         run: |
           python -m pip install h5py
