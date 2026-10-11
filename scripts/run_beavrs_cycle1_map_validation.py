@@ -23,7 +23,8 @@ PITCH_CM = 21.50364
 FUEL_BOTTOM_CM = 36.748
 FUEL_TOP_CM = 402.508
 MESH_N = 15
-MEASUREMENT_REL = Path("measurements/detector_signals/cycle_1/0/radial_measurements_full.csv")
+MEASUREMENT_RAW_REL = Path("measurements/detector_signals/cycle_1/0/radial_measurements_full.csv")
+MEASUREMENT_REL = Path("measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv")
 SUMMARY_REL = Path("measurements/detector_signals/cycle_1/0/summary.csv")
 TALLY_NAME = "beavrs_cycle1_day0_assembly_fission_rate"
 MODEL_COMMIT = "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22"
@@ -37,7 +38,7 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def load_measurements(path: Path) -> dict[str, float]:
+def load_measurement_values(path: Path) -> dict[str, float]:
     values: dict[str, float] = {}
     with path.open(newline="", encoding="utf-8-sig") as handle:
         for row in csv.reader(handle):
@@ -50,9 +51,25 @@ def load_measurements(path: Path) -> dict[str, float]:
             if label in values:
                 raise ValueError(f"duplicate detector label {label}")
             values[label] = value
+    if not values:
+        raise ValueError(f"no measurement values found in {path}")
+    return values
+
+
+def load_measurements(path: Path) -> dict[str, float]:
+    values = load_measurement_values(path)
     if len(values) != 58:
         raise ValueError(f"expected 58 instrumented assembly measurements, got {len(values)}")
     mean = sum(values.values()) / len(values)
+    return {label: value / mean for label, value in values.items()}
+
+
+def normalize_detector_subset(values: dict[str, float]) -> dict[str, float]:
+    if len(values) != 58:
+        raise ValueError(f"expected 58 instrumented detector positions, got {len(values)}")
+    mean = sum(values.values()) / len(values)
+    if not math.isfinite(mean) or mean <= 0:
+        raise ValueError("invalid mean for detector-map normalization")
     return {label: value / mean for label, value in values.items()}
 
 
@@ -101,7 +118,7 @@ def prepare(args: argparse.Namespace) -> None:
     # 228 to match the state and record the step-width assumption in provenance.
     rcca = {
         "A": 228, "B": 228, "C": 228, "D": 213,
-        "SA": 228, "SB": 228, "SC": 228, "SD": 228, "SE": 228,
+        "SA": 228, "SB": 228, "SC": 228, "SD": 228, "SE": 230,
     }
     builder = BEAVRS(boron_ppm=975.25, is_symmetric=False, is_2d=False, rcca_z=rcca)
     builder.set_params(particles=args.particles, batches=args.batches, inactive=args.inactive)
@@ -128,7 +145,14 @@ def prepare(args: argparse.Namespace) -> None:
     }
 
     assembly_map = build_assembly_map(Core.core_lattice_template)
-    measurements = load_measurements(beavrs_root / MEASUREMENT_REL)
+    instrumented_raw = load_measurement_values(beavrs_root / MEASUREMENT_RAW_REL)
+    if len(instrumented_raw) != 58:
+        raise ValueError(f"expected 58 raw instrumented labels, got {len(instrumented_raw)}")
+    tilt_corrected_all = load_measurement_values(beavrs_root / MEASUREMENT_REL)
+    missing_corrected = sorted(set(instrumented_raw) - set(tilt_corrected_all))
+    if missing_corrected:
+        raise ValueError(f"tilt-corrected map lacks instrumented labels: {missing_corrected}")
+    measurements = normalize_detector_subset({label: tilt_corrected_all[label] for label in instrumented_raw})
     missing = sorted(set(measurements) - set(assembly_map))
     if missing:
         raise ValueError(f"measurement labels not present in assembly map: {missing}")
@@ -137,6 +161,10 @@ def prepare(args: argparse.Namespace) -> None:
         "upstream_repository": "https://github.com/mit-crpg/BEAVRS",
         "upstream_commit": MODEL_COMMIT,
         "measured_data": str(beavrs_root / MEASUREMENT_REL),
+        "measured_data_sha256": sha256_file(beavrs_root / MEASUREMENT_REL),
+        "instrumented_positions_source": str(beavrs_root / MEASUREMENT_RAW_REL),
+        "instrumented_positions_source_sha256": sha256_file(beavrs_root / MEASUREMENT_RAW_REL),
+        "measurement_processing": "Use tilt-corrected full-core map values only at the 58 labels present in the raw instrumented-detector map; renormalize those 58 values to mean 1.",
         "measured_summary": str(beavrs_root / SUMMARY_REL),
         "measured_detector_count": len(measurements),
         "measurement_normalization": "mean over 58 reported normalized detector values = 1",
@@ -145,9 +173,9 @@ def prepare(args: argparse.Namespace) -> None:
             "boron_ppm": 975.25,
             "temperature_K": 566.483,
             "RCCA_steps_withdrawn": rcca,
-            "measured_RCCE_steps_withdrawn": 230,
-            "upstream_model_RCCE_steps_withdrawn": 228,
-            "known_mismatch": "Bank E insertion differs by 2 reported steps; upstream builder range is 0..228.",
+            "measured_SE_steps_withdrawn": 230,
+            "upstream_default_SE_steps_withdrawn": 228,
+            "SE_override": "Set SE to 230 to match the Cycle 1 day-0 summary; this exceeds the generic helper guard and retains the upstream axial step width, so geometry and sensitivity review are required.",
             "fuel_axial_range_cm": [FUEL_BOTTOM_CM, FUEL_TOP_CM],
             "mesh": {
                 "dimension": [MESH_N, MESH_N, 1],
@@ -267,7 +295,7 @@ def analyze(args: argparse.Namespace) -> None:
         },
         "limitations": [
             "BEAVRS upstream model uses bank E withdrawn 228 steps; Cycle 1 day-0 measurements report 230.",
-            "The measurement map has been normalized; this is a shape comparison, not absolute power validation.",
+            "The tilt-corrected measurement map is a derived reference; uncertainty from tilt correction must be considered. The comparison is normalized shape, not absolute power validation.",
             "Measurement uncertainty and model-form uncertainty are not propagated.",
             "Normalization-induced covariance between detector bins is not propagated; reported tally SDs are raw-bin relative Monte Carlo uncertainties.",
             "No acceptance threshold has been established by the benchmark authors for this exact model setup.",
