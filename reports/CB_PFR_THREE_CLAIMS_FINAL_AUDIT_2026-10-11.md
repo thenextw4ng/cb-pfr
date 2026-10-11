@@ -89,7 +89,7 @@ This claim cannot be converted into a positive result by writing more code for a
 
 The confirmatory synthetic benchmark script on `research/fixed-budget-ranking-selection-benchmark` had a stale metric label: `nominal_95pct_lower_bound_empirical_coverage`. Because `estimate - 1.96 × reported_se` is a one-sided lower bound corresponding to nominal 97.5% one-sided coverage under calibrated Gaussian assumptions, the key has been corrected to `nominal_97_5pct_one_sided_lower_bound_empirical_coverage` in commit [092c44f](https://github.com/thenextw4ng/cb-pfr/commit/092c44f32f878e6d55cd92a7131ba1098ce4a778). The workflow triggered by that commit must finish and its artifact be reviewed before reporting confirmatory synthetic metrics. This correction does not alter the benchmark's thresholds, random seeds, scenarios, or selection rules.
 
-The confirmatory benchmark is synthetic only. Its point-estimate baseline is a fixed-pool comparator, not an adaptive sequential ranking-and-selection algorithm. Any result must be described with that limitation.
+The confirmatory benchmark completed successfully on GitHub Actions (run [38122708676](https://github.com/thenextw4ng/cb-pfr/actions/runs/38122708676)); the raw CSV and JSON summary were downloaded and reviewed. Across 40,000 synthetic pools, CB-PFR improved selected true-feasibility by +0.4875 percentage points over both point-estimate selection and uniform margin (paired 95% CIs +0.3725 to +0.6000 pp and +0.3700 to +0.6025 pp; Holm-adjusted McNemar p = 1.165×10⁻¹⁶ for each). This fails the preregistered ≥2 pp practical-effect threshold, so the protocol returns `prespecified_synthetic_advantage_supported = false`. There was no selection-feasibility gain in the calibrated homoscedastic or shifted/near-threshold scenarios. Empirical lower-bound coverage fell to 83.58% when reported uncertainty was halved and 73.42% under the shifted scenario, illustrating calibration sensitivity. Full results and hashes are in [the confirmatory results report](https://github.com/thenextw4ng/cb-pfr/blob/research/fixed-budget-ranking-selection-benchmark/reports/CB_PFR_RS_SYNTHETIC_CONFIRMATORY_RESULTS_2026-10-11.md). The benchmark is synthetic only. Its point-estimate baseline is a fixed-pool comparator, not an adaptive sequential ranking-and-selection algorithm. These results do not support general or physical superiority.
 
 ## 5. Final publication checklist
 
@@ -98,7 +98,7 @@ The confirmatory benchmark is synthetic only. Its point-estimate baseline is a f
 - [x] Record that the archived physical integration smoke test is not evidence of comparative physical improvement.
 - [x] Record that classical SQA and QUBO encoding are not quantum advantage.
 - [x] Correct the stale synthetic coverage metric label.
-- [ ] Review the corrected confirmatory synthetic workflow output and raw artifact before quoting results.
+- [x] Review the corrected confirmatory synthetic workflow output and raw artifact before quoting results.
 - [ ] Run and audit a predeclared, higher-budget C5G7 candidate comparison before making a physical-effectiveness claim.
 - [ ] Obtain actual quantum-device results and conduct a fair classical benchmark before making a quantum-advantage claim.
 
