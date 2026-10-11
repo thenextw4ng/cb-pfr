@@ -8,9 +8,11 @@ The existing Usmanov-style QUBO encodes `fresh / once_burned / twice_burned` cat
 
 The upstream [MIT-CRPG reactor-physics benchmark repository](https://github.com/mit-crpg/benchmarks) includes an OpenMC C5G7 model. The OECD/NEA [C5G7 benchmark page](https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation) and its cited specification define the benchmark. These sources provide a model/specification; they do **not** automatically provide comparable result rows for all six non-reference material permutations.
 
+The repository includes one source-attributed published baseline row in `examples/c5g7_published_reference_baseline.csv`, taken from Song et al. (2020), [*GPU Based Two-Level CMFD Accelerating Two-Dimensional MOC Neutron Transport Calculation*](https://doi.org/10.3389/fenrg.2020.00124). The paper reports the canonical C5G7-2D reference (k_{eff}=1.18655\pm9.5\) pcm and maximum pin power 2.498 with a reported relative uncertainty of 0.16%. The (k_{eff}) uncertainty is stored as 0.000095; the max-pin-power relative uncertainty is converted to an absolute uncertainty in the optional peaking-factor field. Treat this as **one canonical baseline only**, not six candidate results, not a run of the user's OpenMC model, and not a result for the other five permutations.
+
 ## Input CSV contract
 
-Start from `examples/c5g7_external_results_template.csv`. Required columns:
+Start from `examples/c5g7_external_results_template.csv` or inspect the one-row published baseline in `examples/c5g7_published_reference_baseline.csv`. Required columns:
 
 - `candidate_id`: one of the six IDs `c5g7-2x2-<signature>`, where signature order is p00,p01,p10,p11 and M=MOX/U=UO2.
 - `benchmark_case`: exact benchmark/model case and boundary-condition description.
