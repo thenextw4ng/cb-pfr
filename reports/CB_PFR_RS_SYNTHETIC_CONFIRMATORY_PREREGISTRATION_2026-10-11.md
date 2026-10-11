@@ -1,6 +1,6 @@
 # CB-PFR vs fixed-budget R&S: locked synthetic confirmatory protocol
 
-**Protocol version:** 1.0  
+**Protocol version:** 1.1 (pre-execution clarification)  
 **Lock date:** 2026-10-11  
 **Branch:** `research/fixed-budget-ranking-selection-benchmark`  
 **Status:** `PREREGISTERED_PROTOCOL_PENDING_EXECUTION`  
@@ -46,7 +46,7 @@ Per scenario, the selected candidate's true-feasibility indicator \(I(\theta_{se
 - False-feasible selection rate: selected candidate is declared feasible by the method but \(\theta_{selected}<0.98\).
 - Feasible-best selection: selected candidate is the highest-latent-response candidate among truly feasible candidates, where at least one feasible candidate exists.
 - Regret: best feasible latent response minus selected latent response when a feasible candidate exists; separately flag infeasible selections.
-- Coverage/calibration: empirical coverage of nominal one-sided lower bounds, reported by uncertainty stratum.
+- Coverage/calibration: empirical coverage of the prespecified \(\hat\theta - 1.96s\) lower bound, reported by uncertainty stratum; under Gaussian calibrated noise this corresponds to 97.5% one-sided coverage (equivalently the lower endpoint of a central 95% interval).
 - No-feasible-pool frequency and fallback-selection frequency.
 
 ### Uncertainty and multiplicity
@@ -73,7 +73,7 @@ If any criterion fails, report that the confirmatory benchmark did not establish
 
 Even if all decision criteria pass, the conclusion is limited to the locked synthetic scenario family and implementation. It does not establish performance on real OpenMC results, general algorithmic superiority, a valid QUBO-to-reactor mapping, or physical reactor validity. Physical claims are outside this protocol and remain `NOT_ESTABLISHED`.
 
-## 8. Execution record
+## 8. Pre-execution clarification\n\nVersion 1.1 clarifies that the confirmatory comparisons are CB-PFR versus point-estimate R&S and uniform margin. The QUBO-only comparator is not run in this confirmation because no valid QUBO-energy signal is defined by the synthetic data-generating process; inventing a proxy after seeing exploratory results would be misleading. This clarification is made before the confirmatory workflow run.\n\n## 9. Execution record
 
 - Execution status: `PENDING`
 - Raw output: pending
