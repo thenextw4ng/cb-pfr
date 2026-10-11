@@ -42,7 +42,7 @@ def build_model(pattern):
                   and np.asarray(c.fill.universes, dtype=object).shape == (2, 2)]
     if not candidates:
         raise RuntimeError("2x2 top-level lattice not found in bundled example")
-    lat = candidates[0]
+    lat = candidates[0].fill
     arr = np.asarray(lat.universes, dtype=object)
     flat = list(arr.flat)
     counts = {id(u): sum(id(v) == id(u) for v in flat) for u in flat}
