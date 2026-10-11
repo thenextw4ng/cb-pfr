@@ -37,6 +37,10 @@ python scripts/run_c5g7_external_data_bridge.py --input examples/c5g7_external_r
 
 The second command requires real peaking-factor values for all six candidates. The script refuses to invent values or rank incomplete coverage. `keff` is not automatically minimized or treated as a safety objective; the user must choose the objective and predeclare physical acceptance limits separately.
 
+## Important optimization caveat
+
+There are only six layouts in this restricted 2x2 design space, so direct exhaustive enumeration is simpler and should be the baseline comparator. The one-hot selector QUBO is included to test the data-to-QUBO interface and document an explicit formulation; it is **not** a computational advantage, a quantum-annealing result, or a novelty claim. For a substantive optimization study, expand and justify the design space, use the physical model or validated surrogate to score candidates, and compare the QUBO workflow against exact enumeration or another transparent baseline.
+
 ## What this integration does and does not claim
 
 - Loads source-attributed, candidate-matched C5G7 data.
