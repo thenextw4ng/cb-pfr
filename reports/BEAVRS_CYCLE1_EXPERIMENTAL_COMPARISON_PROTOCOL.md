@@ -91,3 +91,12 @@ The first completed OpenMC run exposed a mesh-extent error: 17 mesh bins were pl
 Source inspection found that the upstream BEAVRS builder sets the default operating temperature to 566.483 K, while the Cycle 1 day-0 summary reports an inlet temperature of 558.875°F (565.8583 K). The runner now sets the model's OpenMC temperature default from that recorded value and stores both the selected temperature and upstream default in the manifest. This removes a known avoidable state mismatch, but does not resolve the poor spatial comparison by itself. The new code and conversion test have been committed; the resulting transport rerun and artifact review are required before judging whether the map discrepancy changes.
 
 The previous run's result remains an observed result for its recorded configuration, not a pass. The corrected-temperature run is tracked through the [BEAVRS workflow](https://github.com/thenextw4ng/cb-pfr/actions/workflows/beavrs-cycle1-map-validation.yml). Even if the next run improves, a physically defensible detector-response operator, uncertainty treatment, and predeclared acceptance criteria are still needed.
+
+
+## Observable-operator correction — U-235 fission tally
+
+The BEAVRS specification describes the 58-position radial maps as derived from in-core U-235 fission-chamber signals, and the benchmark text recommends comparing measured data with an axial edit of a tally such as U-235 fission. The runner previously tallied total fission over all nuclides, which is a weaker proxy for a U-235 chamber-derived signal.
+
+The runner has now been changed to score `U235` fission specifically in the assembly mesh, while retaining the active-fuel-height integration. This is a closer observable match, but still **not an exact detector-response model**: the calculation does not explicitly reproduce the chamber, the 61 axial detector positions, detector response/gain processing, or the full measurement-uncertainty covariance. A fresh transport run is needed; previous total-fission metrics must not be presented as results from the U-235 tally configuration.
+
+Sources: BEAVRS v2.0.1 specification, Section 3.2 (radial map construction and U-235 fission tally guidance); BEAVRS measurement documentation and uncertainty analysis. See [BEAVRS repository](https://github.com/mit-crpg/BEAVRS), [benchmark specification PDF](https://bamboo.xjtu.edu.cn/images/48970167_beavrs_2.0.1_spec.pdf), and [BEAVRS uncertainty paper](https://doi.org/10.1016/j.pnucene.2020.103488).
