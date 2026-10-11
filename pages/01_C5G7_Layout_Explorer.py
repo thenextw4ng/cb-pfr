@@ -62,6 +62,42 @@ table{width:100%;border-collapse:collapse;font-size:10px}th,td{text-align:left;p
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 @media(max-width:1150px){.grid{grid-template-columns:175px minmax(0,1fr)}.right{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.info{border-right:1px solid #143b5e}.brand{min-width:200px}.nav button{padding:0 7px}.online{display:none}}
 @media(max-width:760px){.top{height:auto;flex-wrap:wrap;padding:9px}.brand{min-width:0}.nav{order:3;flex-basis:100%;height:34px;overflow:auto}.grid{grid-template-columns:1fr}.sidebar{display:none}.right{grid-column:auto;display:block}.viewport{grid-template-columns:1fr}.legend{display:none}.lower{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* MagicPath-inspired scientific workstation layout — replaces the old Figma-like 3-column shell */
+:root{color-scheme:dark;--bg:#080e17;--panel:#0d1826;--line:#243448;--text:#e8eff8;--muted:#8ea1b7;--cyan:#58d7df;--orange:#f5b95f;--blue:#7ba8ff}
+html,body{background:var(--bg);color:var(--text);font-size:13px}
+.app{min-height:100vh;background:radial-gradient(ellipse at 60% -15%,#142b3d 0,#080e17 54%)}
+.top{display:none}
+.grid{max-width:1720px;margin:0 auto;grid-template-columns:228px minmax(0,1fr);gap:16px;padding:18px 22px 28px;align-items:start}
+.sidebar{position:sticky;top:14px;border-radius:10px;background:linear-gradient(180deg,#0d1a29,#0a1420);border-color:#243448;padding:16px 13px;min-height:calc(100vh - 40px)}
+.sec{font-size:10px;letter-spacing:.14em;color:#9bb0c5;border-bottom-color:#26374a;padding:6px 2px 11px}
+.menu button{border-radius:6px;padding:11px 10px;margin:3px 0;font-size:12px;transition:background .15s,border-color .15s}
+.menu button.active{background:#12303d;border-left:2px solid var(--cyan);color:#f2fbff}
+.tree{font-size:10px;line-height:2.05;color:#b7c8dc}
+.state{font-size:10px;padding:5px 1px}
+.main{gap:15px}
+.panel,.mini{border-radius:10px;background:linear-gradient(145deg,#0e1d2c,#0a1522);border-color:#26394d;box-shadow:0 10px 30px rgba(0,0,0,.13)}
+.head{padding:14px 16px;background:linear-gradient(90deg,#112639,#0e1d2c);border-bottom-color:#26394d;min-height:62px}
+.head h2{font-size:14px;letter-spacing:-.015em}
+.eyebrow{font-size:9px;letter-spacing:.16em;font-weight:700}
+.badge{border-radius:5px;letter-spacing:.08em;padding:5px 8px}
+select{font-size:11px;padding:8px 10px;border-radius:6px}
+.tabs{padding:0 14px;background:#0a1623}
+.tabs button{padding:12px 14px;font-size:12px}
+.viewport{min-height:400px;background:radial-gradient(ellipse at 48% 44%,#12283a 0,#08111c 72%)}
+svg.geometry{min-height:400px}
+.legend{margin-top:14px;border-radius:7px;background:#0d1a29;padding:12px}
+.lower{gap:15px}
+.mini .body{padding:15px}
+.metric{border-radius:8px;padding:12px;background:#112437;border-color:#2b4055}
+.label{letter-spacing:.035em;font-size:9px}
+.value{font-size:21px}
+.info{padding:14px;border-color:#26394d}
+.right{display:none}
+.bottom{margin:0;border-radius:8px;border-color:#26394d;background:#0b1928;padding:13px 16px}
+@media(max-width:1050px){.grid{grid-template-columns:190px minmax(0,1fr);padding:12px}.sidebar{position:static}.lower{grid-template-columns:1fr}}
+@media(max-width:760px){.grid{grid-template-columns:1fr;padding:10px}.sidebar{display:block;position:static;min-height:0}.menu{display:grid;grid-template-columns:1fr 1fr;gap:4px}.tree{display:none}.viewport{grid-template-columns:1fr}.legend{display:none}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 </style></head><body><div class="app">
 <header class="top"><div class="brand"><svg class="atom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="24" cy="24" rx="21" ry="8" transform="rotate(55 24 24)"/><ellipse cx="24" cy="24" rx="21" ry="8" transform="rotate(-55 24 24)"/><ellipse cx="24" cy="24" rx="21" ry="8"/><circle cx="24" cy="24" r="3" fill="currentColor"/></svg><div><b>CB-PFR</b><small>CONFIDENCE-BOUNDED PHYSICAL FEASIBILITY RANKING</small></div></div><nav class="nav"><button class="active">Geometry</button><button data-jump="results">Recorded Metrics</button><button data-jump="qubo">QUBO Constraint</button><button data-jump="prov">Provenance</button></nav><div class="online"><i class="dot"></i>Evidence loaded</div></header>
 <div class="grid">
