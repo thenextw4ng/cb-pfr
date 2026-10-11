@@ -23,7 +23,7 @@ def sample_sd(values: list[float]) -> float | None:
 
 
 def analyze_study(study_root: Path) -> tuple[list[dict], list[dict], dict]:
-    from scripts.analyze_c5g7_assembly_fission import analyze_statepoint
+    from analyze_c5g7_assembly_fission import analyze_statepoint
 
     run_rows = []
     rounds = sorted(p for p in study_root.iterdir() if p.is_dir() and p.name.startswith("round_"))
