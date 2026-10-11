@@ -48,7 +48,7 @@ Do **not** apply the canonical reference (k_\mathrm{eff}=1.18655) as an automati
 
 The legacy states `fresh`, `once_burned`, and `twice_burned` denote burnup history categories. C5G7's UO₂/MOX labels denote specified material/composition families. These are different physical concepts, so no direct mapping is justified.
 
-A defensible mapping requires an operational definition and units for each burnup category; irradiation/power history and cooling time; isotopic number densities from a documented depletion calculation or traceable source; compatible depletion-chain and nuclear-data provenance; explicit material definitions; and independent review. Without these, the correct status is **`NO_DEFENSIBLE_MAPPING_FOUND`**.
+A defensible mapping requires an operational definition and units for each burnup category; irradiation/power history and cooling time; isotopic number densities from a documented depletion calculation or traceable source; compatible depletion-chain and nuclear-data provenance; explicit material definitions; and independent review. Without these, the correct status is **`NO_DEFENSIBLE_MAPPING_FOUND`**. The fail-closed checker `scripts/audit_c5g7_mapping_contract.py --manifest config/benchmarks/c5g7_manifest.json` reports missing provenance fields and deliberately never auto-certifies physical validity.
 
 The four-variable QUBO in `src/cbpfr/c5g7_design_qubo.py` is retained as a separate formulation: (y_i=0) means UO₂ at position (i), (y_i=1) means MOX, with exactly two MOX positions. It encodes the material-count constraint only; it does not predict (k_\mathrm{eff}), power, or burnup.
 
