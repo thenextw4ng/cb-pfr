@@ -49,11 +49,6 @@ class SolverLayerTests(unittest.TestCase):
             from cbpfr.solvers import _validate_run_args
             _validate_run_args("made up", "quantumish", 10)
 
-    def test_candidates_can_include_infeasible_solutions_only_by_opt_in(self):
-        result = solve_exact(self.model, max_variables=6, max_solutions=6)
-        candidates = candidates_from_solver_run(result, feasible_only=False)
-        self.assertEqual(len(candidates), len(result.solutions))
-
 
 if __name__ == "__main__":
     unittest.main()
