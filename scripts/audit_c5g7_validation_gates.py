@@ -61,7 +61,6 @@ def audit_rows(rows: list[dict], reference_keff: float = 1.18655,
     for row in rows:
         candidates[row["candidate_id"]].append(row)
     settings = {(r["_batches"], r["_inactive"], r["_particles"]) for r in rows}
-    threads_not_in_schema = True
     seeds = [r["_seed"] for r in rows]
     statepoint_hashes = [r["statepoint_sha256"] for r in rows]
     mgxs_hashes = {r["mgxs_sha256"] for r in rows}
@@ -72,7 +71,6 @@ def audit_rows(rows: list[dict], reference_keff: float = 1.18655,
         "unique_statepoint_hashes": len(statepoint_hashes) == len(set(statepoint_hashes)),
         "single_mgxs_hash": len(mgxs_hashes) == 1,
         "all_raw_hdf5_audits_pass": raw_audits_pass,
-        "thread_count_in_csv": not threads_not_in_schema,
     }
     per_candidate = []
     for cid, group in sorted(candidates.items()):
