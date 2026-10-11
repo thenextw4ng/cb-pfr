@@ -28,7 +28,25 @@ def apply_workstation_style():
         :root {{ color-scheme: dark; }}
         .stApp {{ background: radial-gradient(ellipse at 52% -15%, #132a38 0%, {BG} 58%); color: {TEXT}; }}
         .block-container {{ max-width: 1640px; padding: 1.15rem 2rem 3rem; }}
-        section[data-testid="stSidebar"] {{ background: #0a1925; border-right: 1px solid {LINE}; }}
+        /* MagicPath workstation port: suppress Streamlit's duplicate default page list. */
+        header[data-testid="stHeader"] {{ background: rgba(7,17,27,.94); }}
+        [data-testid="stToolbar"] {{ visibility: hidden; height: 0; }}
+        section[data-testid="stSidebar"] {{ background: #081724; border-right: 1px solid {LINE}; }}
+        section[data-testid="stSidebar"] div[data-testid="stSidebarNav"] {{ display: none; }}
+        section[data-testid="stSidebar"] div[data-testid="stSidebarContent"] {{ padding-top: 1rem; }}
+        .stApp {{ background: linear-gradient(180deg, #0b1a27 0%, {BG} 260px); color: {TEXT}; }}
+        .block-container {{ max-width: 1580px; padding: 1rem 1.7rem 3rem; }}
+        div[data-testid="stVerticalBlockBorderWrapper"] {{ border-color: {LINE}; }}
+        div[data-testid="stTabs"] button {{ font-weight: 650; }}
+        div[data-testid="stTabs"] button[aria-selected="true"] {{ color: {CYAN}; border-bottom-color: {CYAN}; }}
+        div[data-testid="stMetric"] {{ box-shadow: inset 0 1px 0 rgba(255,255,255,.025); }}
+        .cbpfr-brand {{ padding-bottom: 13px; }}
+        .cbpfr-brand .brand {{ font-size: 1.55rem; letter-spacing: .025em; }}
+        .section-kicker {{ margin-top: 6px; }}
+        .scientific-panel {{ box-shadow: 0 8px 24px rgba(0,0,0,.10); }}
+        @media (max-width: 900px) {{
+          .block-container {{ padding-left: 1rem; padding-right: 1rem; }}
+        }}
         section[data-testid="stSidebar"] * {{ color: {TEXT}; }}
         h1, h2, h3 {{ color: {TEXT}; letter-spacing: -.025em; }}
         h1 {{ font-size: clamp(1.65rem, 2.4vw, 2.15rem); font-weight: 700; }}
