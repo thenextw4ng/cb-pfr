@@ -45,6 +45,16 @@ The generated settings use a 51×51×1 entropy mesh with z bounds ([-1,1]) cm. T
 
 The descriptive (k)-generation half-window difference was approximately -17.42 pcm for seed 720000 and -21.22 pcm for seed 730000. The analysis script correctly leaves both as `DIAGNOSTIC_REVIEW_REQUIRED`; no predeclared acceptance threshold is supplied, and a scalar window comparison alone cannot certify convergence.
 
+## Follow-up code hardening after artifact review
+
+The generated settings revealed that the current adapter had narrowed the entropy mesh z bounds to `[-1, 1]` even though the 2-D C5G7 geometry has no finite axial boundary. The adapter has now been changed on `main` to use one z bin spanning `[-1e50, 1e50]`, matching the upstream model's intended unbounded-axial treatment:
+
+- Adapter fix commit: `6acce23615d4f5186343281d1f9b5e7a6db27979`
+- Test assertions for the axial extent: `a60c3d5e33bab9786d533c971b650f1ea008cd66`
+- The intermediate-budget workflow was changed to require manual dispatch so a code edit does not automatically start 18 transport runs: `ef5837ba3648c946ac6214316b6d8c1741dba045`
+
+These are code-level corrections, **not proof that the entropy-mesh fix works in transport**. CI was still queued/in progress at the time of this report, and no post-fix OpenMC run has validated the absence of warnings. Run a small targeted diagnostic only after CI passes; do not restart the high-budget run just to test the fix.
+
 ## What is verified versus not verified
 
 ### Verified by retained artifacts
