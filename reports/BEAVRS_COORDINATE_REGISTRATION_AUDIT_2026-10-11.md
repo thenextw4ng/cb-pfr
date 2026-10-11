@@ -48,3 +48,19 @@ A plot-only GitHub Actions workflow has been added at `.github/workflows/beavrs-
 ## Claim boundary
 
 The run and artifact integrity audit succeeded, but the scientific conclusion remains **physical validation NOT ESTABLISHED**. This audit does not validate CB-PFR's selection benefit, the legacy burnup-state QUBO mapping, or any quantum-hardware advantage.
+
+
+## Plot-only coordinate audit result — 11 October 2026
+
+The plot-only workflow completed successfully without neutron transport: [run 38120609560](https://github.com/thenextw4ng/cb-pfr/actions/runs/38120609560), [artifact bundle](https://github.com/thenextw4ng/cb-pfr/actions/runs/38120609560/artifacts/11695646081).
+
+- The source-derived crosswalk contains **193 unique assembly labels** and marks **58 instrumented locations**.
+- The generated OpenMC midplane plot and labeled overlay are included in the artifact as radial_mats_midplane.png and beavrs_coordinate_overlay.png.
+- Visual inspection shows the crosswalk label centers align with the generated assembly-cell grid; there is no obvious one-bin translation or mesh-extent mismatch in the overlay.
+- This is an internal geometry-registration check, not independent confirmation that the experimental detector map uses the same orientation. The red boxes are derived from the same detector-label CSV and crosswalk, so they must still be compared with the published BEAVRS detector-layout schematic.
+
+### Updated interpretation
+
+The plot-only audit reduces concern about a simple mesh-center/extent offset, but it does not explain the poor detector-map agreement. Do **not** select a reflected/rotated map because it yields a better correlation. Next, independently compare the 58 red-box positions with the published detector-layout schematic and review the physical model's state/loading assumptions and the measurement operator. A new high-budget transport run is not justified until that review is recorded.
+
+The BEAVRS spatial-validation claim remains **NOT_ESTABLISHED**; the existing U-235 run's correlation (0.03236) and normalized RMSE (0.32892) are unchanged.
