@@ -7,7 +7,7 @@
 - Upstream benchmark repository: https://github.com/mit-crpg/BEAVRS
 - Frozen upstream revision: `1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22`
 - Upstream OpenMC model generator: `models/openmc/make_beavrs.py` and `models/openmc/beavrs/`
-- Experimental observable: Cycle 1 day-0 normalized radial detector map at `measurements/detector_signals/cycle_1/0/radial_measurements_full.csv`
+- Experimental observable: Cycle 1 day-0 tilt-corrected radial map at `measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv`, restricted to the 58 instrumented labels identified by `radial_measurements_full.csv`
 - Experimental state summary: `measurements/detector_signals/cycle_1/0/summary.csv`
 - Runner: `scripts/run_beavrs_cycle1_map_validation.py`
 - Workflow: `.github/workflows/beavrs-cycle1-map-validation.yml`
@@ -35,9 +35,9 @@ A source-level audit against the pinned upstream `Core.core_lattice_template` ma
 
 ## Known model-to-measurement mismatch
 
-The Cycle 1 day-0 summary reports average boron 975.25 ppm, inlet coolant temperature 558.875°F (565.858 K), and control-bank withdrawals A/B/C/D/E = 228/228/228/213/230 steps. The upstream model builder's supported default uses nominal 975 ppm, temperature 566.483 K (a difference of about 0.625 K), and bank E at 228 steps withdrawn (its generic RCCA input range is 0–228). The runner uses 975.25 ppm and the upstream model temperature, but records the two-step bank-E mismatch rather than extrapolating the upstream geometry.
+The Cycle 1 day-0 summary reports average boron 975.25 ppm, inlet coolant temperature 558.875°F (565.858 K), and control-bank withdrawals A/B/C/D/SE = 228/228/228/213/230 steps. The upstream builder default uses nominal 975 ppm, temperature 566.483 K (about 0.625 K higher), and SE at 228 steps. The runner now overrides SE to 230 to match the experimental state while retaining the upstream axial step width. This is an explicit model adaptation that must be reviewed; it is not automatically validated merely because OpenMC runs.
 
-Because of this mismatch, and because the initial comparison does not yet propagate the measurement uncertainty or fully model the detector response, **even a favorable numerical result is preliminary evidence, not a complete experimental-validation certificate**.
+The BEAVRS uncertainty literature reports 95% confidence values of about 1.4% for radial map uncertainty by theoretical analysis and 1.8% from repeated radial measurements; these are benchmark-level context, not per-detector uncertainties in the CSV. The runner does not yet propagate the per-position measurement uncertainty or normalization-induced covariance and does not model the detector response exactly. **Even a favorable numerical result is preliminary evidence, not a complete experimental-validation certificate.** See [Kumar et al. (2020), BEAVRS measurement and uncertainty paper](https://doi.org/10.1016/j.pnucene.2020.103488).
 
 ## Acceptance and interpretation
 
