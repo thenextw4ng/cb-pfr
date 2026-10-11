@@ -1,0 +1,11 @@
+# Source: Usmanov et al., J. Phys.: Conf. Ser. 2701 (2024) 012031, Table 1.
+# DOI: https://doi.org/10.1088/1742-6596/2701/1/012031
+# This is published instance metadata, NOT raw trial-level quantum-device data.
+core_cells,fresh_elements,once_burnt_elements,twice_burnt_elements,source_table
+13,8,4,1,Table 1
+37,16,17,4,Table 1
+69,33,21,15,Table 1
+97,36,36,25,Table 1
+121,49,45,36,Table 1
+193,64,80,49,Table 1
+241,75,100,65,Table 1
