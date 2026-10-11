@@ -34,6 +34,14 @@ A content-aware comparison using `scripts/fingerprint_hdf5_semantics.py` found i
 
 Reproduce the comparison after downloading the original smoke artifact (run 38085586809) and repeatability artifact (run 38097472734): `python scripts/fingerprint_hdf5_semantics.py --files original/mgxs.h5 repeated/mgxs.h5 --require-datasets-identical`.
 
+## MGXS provenance correction
+
+The initial workflow artifact (run 38097472734) contained an MGXS file with a one-ULP difference in the root group-structure boundary compared with the archived production MGXS. The root cause was traced to the upstream `materials.py` constructing group boundaries with `np.logspace(-5, 7, 8)` at import time. The adapter now explicitly normalizes the first and last boundaries to exact `1.0e-5` and `1.0e7` before generating the library.
+
+The normalized rerun completed 18/18 cases with all 18 raw HDF5 audits passing and one shared MGXS hash identical to production: `170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216`. See the [normalized repeatability data](../results/c5g7_repeatability_normalized_2026-10-11/README.md), [run-level hashes](../results/c5g7_repeatability_normalized_2026-10-11/run_level_results.csv), [MGXS identity record](../results/c5g7_repeatability_normalized_2026-10-11/mgxs_identity.json), and [rerun workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238).
+
+The earlier result folder is retained as historical evidence of the discrepancy; the normalized folder is the corrected repeatability record. Both runs remain smoke-budget evidence, not benchmark-grade convergence.
+
 ## Interpretation limits
 
 1. These are exploratory smoke-budget runs, not benchmark-grade convergence results.
