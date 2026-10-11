@@ -1,0 +1,78 @@
+{
+  "study_id": "cbpfr_fixed_budget_ranking_selection_confirmatory_candidate_run_v1",
+  "status": "executed_locally_candidate_confirmatory_run_not_preregistered_final",
+  "seed": 20261011,
+  "independent_pools": 1000,
+  "candidates_per_pool": 12,
+  "feasibility_threshold": 0.98,
+  "cbpfr_z": 1.96,
+  "uniform_margin": 0.008,
+  "methods": [
+    "qubo_only",
+    "point_estimate",
+    "cb_pfr",
+    "uniform_margin"
+  ],
+  "synthetic_only": true,
+  "physical_validation": "NOT_ESTABLISHED",
+  "aggregate": {
+    "qubo_only": {
+      "pools": 1000,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.834,
+      "feasible_count": 834,
+      "mean_selected_latent_response": 0.967833
+    },
+    "point_estimate": {
+      "pools": 1000,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.918,
+      "feasible_count": 918,
+      "mean_selected_latent_response": 0.964736
+    },
+    "cb_pfr": {
+      "pools": 1000,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.994,
+      "feasible_count": 994,
+      "mean_selected_latent_response": 0.960052
+    },
+    "uniform_margin": {
+      "pools": 1000,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.959,
+      "feasible_count": 959,
+      "mean_selected_latent_response": 0.961568
+    }
+  },
+  "paired_cbpfr_minus_baseline": {
+    "point_estimate": {
+      "paired_feasibility_rate_difference": 0.076,
+      "normal_approx_95pct_interval": [
+        0.05910549371118698,
+        0.09289450628881302
+      ],
+      "cbpfr_feasible_baseline_infeasible": 78,
+      "cbpfr_infeasible_baseline_feasible": 2
+    },
+    "uniform_margin": {
+      "paired_feasibility_rate_difference": 0.035,
+      "normal_approx_95pct_interval": [
+        0.02327094160595955,
+        0.04672905839404046
+      ],
+      "cbpfr_feasible_baseline_infeasible": 36,
+      "cbpfr_infeasible_baseline_feasible": 1
+    },
+    "qubo_only": {
+      "paired_feasibility_rate_difference": 0.16,
+      "normal_approx_95pct_interval": [
+        0.13676424004813828,
+        0.18323575995186173
+      ],
+      "cbpfr_feasible_baseline_infeasible": 163,
+      "cbpfr_infeasible_baseline_feasible": 3
+    }
+  },
+  "caveat": "Executed local 1000-pool run using the repository's toy synthetic DGP. This is not physical validation and does not establish general superiority. A preregistered confirmatory run must independently reproduce results and evaluate calibration, robustness, and comparison criteria."
+}
