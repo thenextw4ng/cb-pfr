@@ -79,7 +79,13 @@
       1000000,
       20000000
     ],
-    "production_mgxs_byte_identity_is_not_benchmark_validation": true
+    "production_mgxs_byte_identity_is_not_benchmark_validation": true,
+    "c5g7_specific_selection_qubo": "IMPLEMENTED_REQUIRES_USER_SPECIFIED_KEFF_BAND",
+    "c5g7_specific_selection_qubo_script": "scripts/build_c5g7_layout_selection_qubo.py",
+    "legacy_burnup_state_mapping": "BLOCKED_NO_DEFENSIBLE_FRESH_ONCE_BURNED_TWICE_BURNED_TO_UO2_MOX_MAPPING",
+    "corrected_group_repeatability_run_count": 18,
+    "corrected_group_repeatability_workflow_run_id": 38103007310,
+    "fission_objective_reanalysis_workflow_run_id": 38103279843
   },
   "mapping_contract": {
     "required_position_map": null,
