@@ -1,0 +1,55 @@
+name: C5G7 CB-PFR/QUBO selection integration smoke (not physical validation)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/c5g7-cbpfr-selection-smoke.yml"
+      - "scripts/prepare_c5g7_selection_input.py"
+      - "scripts/run_c5g7_cbpfr_physical_selection.py"
+      - "results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv"
+      - "tests/test_prepare_c5g7_selection_input.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  selection-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare and audit archived corrected-group smoke rows
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c5g7-selection-smoke
+          python scripts/prepare_c5g7_selection_input.py \
+            --input results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv \
+            --output /tmp/c5g7-selection-smoke/run_level_selection_input.csv \
+            --audit-out /tmp/c5g7-selection-smoke/input_integrity_audit.json
+          cat /tmp/c5g7-selection-smoke/input_integrity_audit.json
+      - name: Run CB-PFR and exact one-hot QUBO integration with explicitly illustrative limits
+        run: |
+          set -euo pipefail
+          python scripts/run_c5g7_cbpfr_physical_selection.py \
+            --run-level-csv /tmp/c5g7-selection-smoke/run_level_selection_input.csv \
+            --out /tmp/c5g7-selection-smoke/cbpfr_qubo_selection.json \
+            --keff-min 1.13 \
+            --keff-max 1.22 \
+            --fission-peaking-max 2.0 \
+            --uncertainty-multiplier 2.0 \
+            --keff-scale 0.01 \
+            --fission-peaking-scale 0.1 \
+            --risk-weight 1.0 \
+            --min-batches 100 \
+            --min-particles 1000 \
+            --min-replicates 3
+          cat /tmp/c5g7-selection-smoke/cbpfr_qubo_selection.json
+      - name: Preserve selection and audit outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-cbpfr-selection-smoke-\${{ github.run_id }}
+          path: /tmp/c5g7-selection-smoke/
+          if-no-files-found: warn
+          retention-days: 30
