@@ -15,6 +15,7 @@ This is the current handoff after consolidating the conversation archives, audit
 - Hardened OpenMC preflight to reject malformed XML.
 - Added reproducible OpenMC statepoint/tally audit, archive-integrity, settings/log provenance, run inventory, tally summary, and plot utilities.
 - OpenMC 0.16.0 read all four archived statepoints successfully. The production (k_\mathrm{eff}) mean and standard deviation matched the transcribed summary. The tally arrays and six mesh-index plots are available from the audit workflow artifact.
+- Added a separate raw-HDF5 statepoint parser to CI. It reads `c5g7-run/2d/statepoint.20000.h5` directly from the committed ZIP and passed 10/10 metadata, eigenvalue, mesh-dimension, and score checks on Python 3.10, 3.11, and 3.12: [raw-HDF5 audit run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38096943383). Statepoint SHA-256: `0d76dc1a14a2b74a388c01883f01e5c3095480d53eee885910ca2a0c57e6b882`.
 - Full software CI passed on Python 3.10, 3.11 and 3.12 on the integration branch: [CI run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084756074). The post-merge `main` CI is running/should be checked before the next release.
 - The OpenMC audit workflow passed on the integration branch: [audit run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084756095).
 
@@ -27,7 +28,7 @@ This is the current handoff after consolidating the conversation archives, audit
 | C5G7 six-layout design-space generator | Integrated and tested | Enumerates 6 two-UO2/two-MOX permutations; not itself physical evidence |
 | C5G7 transport-case preparation/runner | Six isolated cases prepared successfully against pinned upstream commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450` | [Preparation artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084994157); no transport simulation was run |
 | Synthetic benchmark and archived trial data | Present; documented as synthetic | Supports conclusions only under its declared synthetic data-generating process |
-| Production C5G7 statepoint scalar | Independently read via OpenMC 0.16.0; recorded mean/SD match | Verifies extraction and provenance, not benchmark acceptance |
+| Production C5G7 statepoint scalar | Independently read via OpenMC 0.16.0 and separately checked from raw HDF5; 10/10 metadata/scalar/tally checks pass | Verifies extraction and consistency, not benchmark acceptance |
 | Production mesh and aggregate tallies | Exported and summarized; six plots generated | Descriptive scores and Monte Carlo uncertainty only |
 | Three recovered stage34 statepoints | Read successfully, but **not demonstrated independent repetitions** | Colocated settings files are byte-identical, have no explicit seed, and outputs are nearly identical |
 | Separate settings files with seeds 481730–481732 | Present, but matching statepoints are absent in those seeded directories | Cannot pair seeded inputs to recovered outputs |
