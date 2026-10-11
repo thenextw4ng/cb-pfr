@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SOURCE_REPO = "https://github.com/mit-crpg/benchmarks.git"
+PINNED_UPSTREAM_COMMIT = "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450"
 MODEL_RELATIVE = Path("c5g7/openmc")
 BUILDER_RELATIVE = Path("2d/build-xml-2d.py")
 CANONICAL_ASSIGNMENT = "lattices['Core'].universes = [[u, m, w], [m, u, w], [w, w, w]]"
@@ -47,6 +48,10 @@ def validate_source(source_root: Path) -> tuple[Path, str]:
         raise ValueError("unexpected upstream repository in provenance")
     if not isinstance(revision, str) or len(revision) != 40 or any(c not in "0123456789abcdef" for c in revision):
         raise ValueError("provenance lacks a full lowercase Git commit SHA")
+    if revision != PINNED_UPSTREAM_COMMIT:
+        raise ValueError(
+            f"upstream source commit {revision} differs from pinned audited commit {PINNED_UPSTREAM_COMMIT}"
+        )
     model = source_root / MODEL_RELATIVE
     builder = model / BUILDER_RELATIVE
     if not builder.is_file():
