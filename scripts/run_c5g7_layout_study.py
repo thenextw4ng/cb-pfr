@@ -66,23 +66,49 @@ def validate_design_space(path: Path) -> dict:
     candidates = data.get("candidate_layouts")
     if not isinstance(candidates, list) or len(candidates) != 6:
         raise ValueError("expected exactly six enumerated layouts")
-    seen = set()
+
+    # The five reflector cells are not decision variables. Fail closed if the
+    # manifest drifts from the audited 3x3 lattice contract.
+    expected_reflectors = ("p02", "p12", "p20", "p21", "p22")
+    if tuple(data.get("fixed_reflector_positions", ())) != expected_reflectors:
+        raise ValueError(
+            "fixed_reflector_positions must remain exactly "
+            f"{list(expected_reflectors)}"
+        )
+    constraints = data.get("constraints", {})
+    if constraints.get("reflector_positions_fixed") is not True:
+        raise ValueError("design-space constraints must declare reflector_positions_fixed=true")
+
+    expected_reference = {"p00": "UO2", "p01": "MOX", "p10": "MOX", "p11": "UO2"}
+    seen_ids = set()
+    seen_signatures = set()
     baseline_count = 0
     for item in candidates:
+        candidate_id = item.get("candidate_id")
         layout = item.get("fuel_assembly_layout", {})
         if set(layout) != set(POSITION_ORDER):
-            raise ValueError(f"invalid position set in {item.get('candidate_id')}")
+            raise ValueError(f"invalid position set in {candidate_id}")
+        if any(material not in ("UO2", "MOX") for material in layout.values()):
+            raise ValueError(f"unknown fuel material in {candidate_id}")
         if sorted(layout.values()) != ["MOX", "MOX", "UO2", "UO2"]:
-            raise ValueError(f"invalid material counts in {item.get('candidate_id')}")
+            raise ValueError(f"invalid material counts in {candidate_id}")
         signature = "".join("M" if layout[p] == "MOX" else "U" for p in POSITION_ORDER)
-        if signature in seen:
+        expected_id = f"c5g7-2x2-{signature}"
+        if candidate_id != expected_id:
+            raise ValueError(f"candidate ID/layout signature mismatch: {candidate_id} != {expected_id}")
+        if candidate_id in seen_ids:
+            raise ValueError(f"duplicate candidate ID: {candidate_id}")
+        if signature in seen_signatures:
             raise ValueError(f"duplicate layout signature: {signature}")
-        seen.add(signature)
-        baseline_count += bool(item.get("is_canonical_reference_arrangement"))
-    if len(seen) != 6 or baseline_count != 1:
+        seen_ids.add(candidate_id)
+        seen_signatures.add(signature)
+        is_reference = layout == expected_reference
+        if bool(item.get("is_canonical_reference_arrangement")) != is_reference:
+            raise ValueError(f"canonical reference flag does not match layout for {candidate_id}")
+        baseline_count += int(is_reference)
+    if len(seen_signatures) != 6 or baseline_count != 1:
         raise ValueError("design space must have six unique layouts and exactly one canonical baseline")
     return data
-
 
 def patch_mgxs_energy_boundaries(materials_file: Path) -> None:
     """Replace nonstandard upstream log-spaced edges with official C5G7 7-group boundaries."""
@@ -110,6 +136,21 @@ def audit_mgxs_group_structure(mgxs_file: Path) -> tuple[float, ...]:
 
 
 def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int, seed: int = 620000) -> None:
+    if not isinstance(layout, dict) or set(layout) != set(POSITION_ORDER):
+        raise ValueError(f"layout must define exactly these fuel positions: {POSITION_ORDER}")
+    if any(material not in ("UO2", "MOX") for material in layout.values()):
+        raise ValueError("fuel materials must be exactly 'UO2' or 'MOX'")
+    if sorted(layout.values()) != ["MOX", "MOX", "UO2", "UO2"]:
+        raise ValueError("layout must contain exactly two UO2 and two MOX assemblies")
+    if isinstance(batches, bool) or not isinstance(batches, int) or batches < 2:
+        raise ValueError("batches must be an integer >= 2")
+    if isinstance(inactive, bool) or not isinstance(inactive, int) or inactive < 0 or inactive >= batches:
+        raise ValueError("inactive batches must satisfy 0 <= inactive < batches")
+    if isinstance(particles, bool) or not isinstance(particles, int) or particles < 1:
+        raise ValueError("particles must be a positive integer")
+    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+        raise ValueError("seed must be a non-negative integer")
+
     source = builder.read_text(encoding="utf-8")
     if source.count(CANONICAL_ASSIGNMENT) != 1:
         raise ValueError("upstream lattice assignment differs from audited template; refusing to patch")
@@ -119,8 +160,10 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
         for col in range(2):
             material = layout[f"p{row}{col}"]
             cells.append("u" if material == "UO2" else "m")
+        # The right-hand reflector column is invariant for all candidates.
         cells.append("w")
         rows.append("[" + ", ".join(cells) + "]")
+    # The bottom reflector row is invariant for all candidates.
     rows.append("[w, w, w]")
     replacement = "lattices['Core'].universes = [" + ", ".join(rows) + "]"
     source = source.replace(CANONICAL_ASSIGNMENT, replacement)
@@ -133,10 +176,6 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
         if source.count(old) != 1:
             raise ValueError(f"upstream runtime setting differs from audited template: {old!r}")
         source = source.replace(old, new)
-    if inactive >= batches:
-        raise ValueError("inactive batches must be fewer than total batches")
-    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
-        raise ValueError("seed must be a non-negative integer")
     seed_anchor = "settings_file.particles = particles"
     if source.count(seed_anchor) != 1:
         raise ValueError(f"upstream runtime setting differs from audited template: {seed_anchor!r}")
@@ -157,7 +196,6 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     )
     source = source.replace(entropy_anchor, entropy_replacement)
     builder.write_text(source, encoding="utf-8")
-
 
 def file_manifest(case_dir: Path) -> dict:
     result = {}
