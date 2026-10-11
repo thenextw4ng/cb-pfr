@@ -58,6 +58,11 @@ class BeavrsCycle1MapValidationTests(unittest.TestCase):
         self.assertAlmostEqual(by_label["J1"]["mesh_center_y_cm"], 7 * PITCH_CM)
         self.assertTrue(by_label["J1"]["is_instrumented_detector"])
         self.assertFalse(by_label["A15"]["is_instrumented_detector"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "crosswalk.csv"
+            write_coordinate_crosswalk(path, rows)
+            self.assertIn("template_token", path.read_text())
+            self.assertIn("J1", path.read_text())
 
     def test_synthetic_asymmetric_mesh_detects_orientation_and_offset_errors(self):
         # Distinct x/y coefficients make a transpose or reflection observable.
