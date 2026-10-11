@@ -1,5 +1,5 @@
 import unittest
-from scripts.audit_c5g7_validation_gates import audit_rows
+from scripts.audit_c5g7_validation_gates import audit_rows, PRODUCTION_MGXS_SHA256
 
 
 def row(cid, sig, seed, keff=1.18655, sd=0.00001):
@@ -8,7 +8,7 @@ def row(cid, sig, seed, keff=1.18655, sd=0.00001):
         "_batches": 2000, "_inactive": 100, "_particles": 5000,
         "_keff": keff, "_sd": sd, "seed": str(seed),
         "statepoint_sha256": f"statepoint-{seed}", "settings_sha256": "same-settings",
-        "mgxs_sha256": "same-mgxs", "raw_hdf5_audit": "PASS"
+        "mgxs_sha256": PRODUCTION_MGXS_SHA256, "raw_hdf5_audit": "PASS"
     }
 
 
@@ -37,6 +37,13 @@ class C5G7ValidationGateTests(unittest.TestCase):
         rows[2]["statepoint_sha256"] = rows[0]["statepoint_sha256"]
         result = audit_rows(rows)
         self.assertEqual(result["status"], "FAIL_DATA_INTEGRITY_OR_COMMON_SETTINGS")
+
+    def test_wrong_mgxs_hash_fails_global_integrity(self):
+        rows = [row("canonical", "UMMU", seed) for seed in range(3)]
+        rows[1]["mgxs_sha256"] = "not-production-mgxs"
+        result = audit_rows(rows)
+        self.assertEqual(result["status"], "FAIL_DATA_INTEGRITY_OR_COMMON_SETTINGS")
+        self.assertFalse(result["global_checks"]["mgxs_byte_identical_to_production"])
 
     def test_review_flags_do_not_override_failed_scalar_screen(self):
         rows = [row("canonical", "UMMU", seed, keff=1.19, sd=0.0002) for seed in range(3)]
