@@ -205,6 +205,14 @@ jobs:
             --study-summary /tmp/c5g7-layout-study-smoke-run/STUDY_SUMMARY.json \
             --outdir /tmp/c5g7-layout-study-smoke-run/analysis
 
+      - name: Cross-check all six raw HDF5 smoke statepoints
+        shell: bash -el {0}
+        run: |
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary /tmp/c5g7-layout-study-smoke-run/STUDY_SUMMARY.json \
+            --out /tmp/c5g7-layout-study-smoke-run/analysis/raw_hdf5_audit.json
+          cat /tmp/c5g7-layout-study-smoke-run/analysis/raw_hdf5_audit.json
+
       - name: Preserve prepared inputs and smoke-run outputs
         if: always()
         uses: actions/upload-artifact@v4
