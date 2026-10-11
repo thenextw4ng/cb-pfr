@@ -3,7 +3,7 @@
   "description": "Research software and methodological artifacts for an uncertainty-aware post-optimization candidate ranking layer. Version 0.1.0. The release contains the CB-PFR implementation, abstract QUBO model, frozen synthetic benchmark configuration and trial-level results, reproducibility/audit scripts, and explicit documentation of the unresolved physical-validation boundary.",
   "creators": [
     {
-      "name": "Fachry Bagus Adiputra",
+      "name": "Fahry Bagus Adiputra",
       "affiliation": "SMAN 1 Karawang"
     }
   ],

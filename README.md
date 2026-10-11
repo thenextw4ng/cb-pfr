@@ -2,7 +2,7 @@
 
 > An uncertainty-aware post-optimization selection layer for candidate configurations.
 
-**Author:** Fachry Bagus Adiputra  
+**Author:** Fahry Bagus Adiputra  
 **Version:** 0.1.0  
 **Status:** research prototype / methodological working paper
 
