@@ -47,6 +47,10 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 | QUBO → C5G7 mapping | **NO_DEFENSIBLE_MAPPING_FOUND** |
 | Universal superiority | **Not claimed** |
 
+## Eureka claim-to-evidence matrix
+
+The [claim-to-evidence matrix](reports/EUREKA_CLAIM_EVIDENCE_MATRIX_2026-10-11.md) maps every physical, QUBO, CB-PFR, and quantum claim to required artifacts and states which claims are currently supported, pending, or not established.
+
 ## BEAVRS experimental comparison workflow
 
 A reproducible full-core BEAVRS Cycle 1 day-0 radial detector-map comparison runner and GitHub Actions workflow are now included:
