@@ -121,7 +121,7 @@ def load_runs(root: Path) -> list[dict]:
         rows.append({
             "round": round_dir.name,
             "candidate_id": case.get("candidate_id"),
-            "layout_signature": "".join("M" if case["layout"][p] == "MOX" else "UO2" for p in ("p00", "p01", "p10", "p11")),
+            "layout_signature": "".join("M" if case["layout"][p] == "MOX" else "U" for p in ("p00", "p01", "p10", "p11")),
             "seed": int(case["seed"]),
             "batches": int(summary["settings"]["batches"]),
             "inactive": int(summary["settings"]["inactive"]),
