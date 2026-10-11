@@ -75,7 +75,19 @@
     }
   ],
   "optimization_protocol": {
-    "objective": null,
+    "objective": {
+      "name": "minimize_assembly_integrated_fission_rate_peaking_factor",
+      "formula": "F_fission = max_a(R_a) / mean_a(R_a)",
+      "direction": "minimize",
+      "interpretation": "Exploratory relative fission-rate shape proxy, not absolute power or a safety metric.",
+      "status": "template_only_not_approved_for_final_ranking",
+      "blocking_requirements": [
+        "Independently validate the mesh-to-assembly spatial mapping and tally integration.",
+        "Predeclare a design-specific acceptable k_eff band; do not apply the canonical reference to noncanonical layouts automatically.",
+        "Propagate tally and between-seed uncertainty to the objective.",
+        "Use a higher common computational budget and report unresolved comparisons as inconclusive."
+      ]
+    },
     "candidate_score": null,
     "status": "design_space_defined_physics_not_yet_evaluated",
     "required_outputs": ["effective multiplication factor with statistical uncertainty", "benchmark-compatible pin/assembly power or fission-rate tallies"]
