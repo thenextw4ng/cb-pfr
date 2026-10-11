@@ -63,6 +63,24 @@ Appropriate only after successful run and artifact review: “An initial BEAVRS 
 Not supported by this workflow alone: “CB-PFR is fully physically validated,” “CB-PFR improves reactor fuel loading,” or “quantum advantage was demonstrated.”
 
 
+
+## Final corrected-run result — 11 October 2026
+
+Run: [GitHub Actions 38117279412](https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412)  
+Artifact: [beavrs-cycle1-map-comparison-38117279412.zip](https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412)
+
+- OpenMC transport completed at 500 batches (50 inactive, 3,000 particles/batch).
+- Criticality consistency: (k_\mathrm{eff}=1.00036455\pm0.00076289). The 95% Monte Carlo interval includes unity. This is a consistency check for the modeled critical state, not by itself a complete validation certificate.
+- Spatial comparison against the tilt-corrected map at 58 instrumented positions: normalized RMSE **0.33426**, normalized MAE **0.27573**, mean absolute relative error **29.00%**, Pearson correlation **−0.0780**.
+- Mean / maximum raw-bin relative Monte Carlo tally standard deviation: **2.45% / 3.75%**.
+- Independent artifact-integrity audit: **PASS_INTEGRITY_ONLY**, zero failed integrity checks.
+
+### Interpretation
+
+The model reproduces the critical condition within its Monte Carlo uncertainty, but the spatial map comparison is poor and does **not** pass as a validated flux-shape comparison. Therefore the overall BEAVRS physical-validation gate remains **NOT ESTABLISHED**. The next technical task is to resolve the model-to-observable mismatch (the assembly-integrated fission-rate proxy is not the detector response operator), examine the fuel-loading and detector-position mapping independently, and propagate benchmark uncertainty before making a physical-validation claim.
+
+The run manifest records SE=230, matching the Cycle 1 day-0 record. The archived comparison JSON's limitation list retained one stale sentence about the upstream SE=228 default; the manifest and source configuration show the actual override. The result's integrity audit checks artifact consistency, not scientific adequacy. A source fix was committed afterward so future runs emit the corrected limitation text.
+
 ## First-run correction record
 
 The first completed OpenMC run exposed a mesh-extent error: 17 mesh bins were placed across only 16 assembly pitches. Its preliminary comparison returned k_eff = 0.998612 ± 0.001239, normalized-map RMSE 0.37981, and Pearson correlation −0.21228. These metrics are recorded for transparency, but that result is superseded and must not be used as validation evidence because the mesh did not align one-to-one with assembly pitch. The runner now uses ±8.5 assembly pitches, reports raw tally statistical uncertainty, and the workflow uses a higher default budget (500 batches, 50 inactive, 3,000 particles/batch) plus an independent artifact-integrity audit. The corrected runs are tracked at [the lower-budget mesh-correction run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116769919) and [the higher-budget run with independent audit](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116778762). Their output must be reviewed before any experimental-comparison claim is made.
