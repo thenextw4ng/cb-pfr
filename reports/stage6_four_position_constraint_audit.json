@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "scope": "combinatorial_constraint_only",
+  "execution": {
+    "script": "scripts/audit_four_position_uox_mox_constraint.py",
+    "execution_status": "LOCAL_LOGIC_EQUIVALENT_RUN_PASS",
+    "note": "The script logic was executed in a local Python environment with exit code 0. The script file in GitHub was not yet executed by GitHub Actions."
+  },
+  "total_binary_assignments": 16,
+  "feasible_assignments": 6,
+  "expected_feasible_assignments": 6,
+  "all_feasible_have_two_U_and_two_M": true,
+  "unique_signatures": true,
+  "position_order": ["P1", "P2", "P3", "P4"],
+  "feasible_signatures": ["UUMM", "UMUM", "UMMU", "MUUM", "MUMU", "MMUU"],
+  "physical_mapping_validated": false,
+  "interpretation": "The combinatorial constraint is verified: exactly six of 16 binary assignments contain two UO2 labels and two MOX labels. This does not verify that the labels correspond to physically correct material definitions, that the generated geometry follows this position order, or that OpenMC results are benchmark-valid."
+}
