@@ -42,7 +42,7 @@ Do not shorten this to “physically validated” or “proven to improve reacto
 ## What would actually close the physical-validation gate
 
 1. A successful corrected BEAVRS run with raw statepoint, input XML hashes, nuclear-data provenance, 58-position comparison CSV, tally statistical uncertainties, and independent artifact-integrity audit.
-2. Resolve or quantify the known model-to-measurement mismatch: the day-0 summary reports bank E at 230 steps withdrawn while the upstream builder supports 228, and the model temperature differs by about 0.625 K from the reported inlet temperature.
+2. Bank E is explicitly set to the recorded 230 steps (with axial step-width sensitivity still open). The earlier run used the upstream temperature default 566.483 K, about 0.625 K above the 558.875°F inlet temperature reported in the day-0 summary. The runner has now been corrected to use the converted measured inlet temperature (565.8583 K); a fresh transport run is required to quantify the effect.
 3. Match the detector measurement operator more closely or explicitly justify the fission-rate proxy; account for measurement uncertainty and normalization-induced covariance.
 4. Predeclare a benchmark-justified acceptance rule and independently review the input-to-result chain. A favorable correlation alone is not sufficient.
 5. Separately, define a defensible physical candidate pool and compare CB-PFR against QUBO-only and other baselines using common compute budgets, repeated physical evaluations, and uncertainty propagation.
