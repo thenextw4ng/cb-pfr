@@ -30,7 +30,7 @@ jobs:
       - name: Audit C5G7 repeatability against provisional validation gates
         run: |
           python scripts/audit_c5g7_validation_gates.py \
-            --runs-csv results/c5g7_repeatability_smoke_2026-10-11/run_level_results.csv \
+            --runs-csv results/c5g7_repeatability_normalized_2026-10-11/run_level_results.csv \
             --out /tmp/c5g7-validation-gates.json
           python - <<'PY'
           import json
