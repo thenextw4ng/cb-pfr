@@ -59,6 +59,9 @@ def build_model(pattern):
     model.settings.batches = BATCHES
     model.settings.inactive = INACTIVE
     model.settings.particles = PARTICLES
+    # The bundled example is configured for random-ray transport. Explicitly clear
+    # those settings so this experiment runs the conventional eigenvalue solver.
+    model.settings.random_ray = {}
     model.settings.output = {"summary": True, "tallies": True}
     return model
 
