@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0",
+  "status": "EXPLORATORY_DESCRIPTIVE_ONLY",
+  "source_run_id": 38103007310,
+  "analysis_run_id": 38103279843,
+  "upstream_source_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "corrected_mgxs_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129",
+  "standard_c5g7_group_boundaries_eV": [
+    0.00001,
+    0.0635,
+    10,
+    100,
+    1000,
+    500000,
+    1000000,
+    20000000
+  ],
+  "run_count": 18,
+  "round_count": 3,
+  "candidate_count": 6,
+  "all_group_structure_audits_passed": true,
+  "all_statepoint_hashes_unique": true,
+  "all_mgxs_hashes_identical": true,
+  "settings": {
+    "batches": 100,
+    "inactive_batches": 10,
+    "particles_per_batch": 1000,
+    "threads": 1
+  },
+  "objective": "minimize max(assembly-integrated fission tally) / mean(assembly-integrated fission tally)",
+  "objective_interpretation": "dimensionless fission-rate shape proxy, not absolute power or a safety metric",
+  "uncertainty_method": "between-seed sample SD of the derived scalar across three runs",
+  "acceptance_status": "BLOCKED_NO_DESIGN_SPECIFIC_KEFF_BAND_OR_BENCHMARK_GRADE_CONVERGENCE",
+  "no_winner_claim": true,
+  "candidate_summary": [
+    {
+      "layout_signature": "MUMU",
+      "n_runs": 3,
+      "mean_keff": 1.1448249163331103,
+      "between_seed_sd_keff": 0.0021695821714275026,
+      "mean_fission_rate_peaking_factor": 1.2962653682223053,
+      "between_seed_sd_fission_peaking_factor": 0.02260486258494142,
+      "fission_peaking_cv_percent": 1.743845291179974,
+      "descriptive_rank_by_fission_peaking": 1
+    },
+    {
+      "layout_signature": "MUUM",
+      "n_runs": 3,
+      "mean_keff": 1.1584736093264791,
+      "between_seed_sd_keff": 0.002096321755473159,
+      "mean_fission_rate_peaking_factor": 1.3102793555983867,
+      "between_seed_sd_fission_peaking_factor": 0.022338286801375146,
+      "fission_peaking_cv_percent": 1.7048491763173323,
+      "descriptive_rank_by_fission_peaking": 2
+    },
+    {
+      "layout_signature": "MMUU",
+      "n_runs": 3,
+      "mean_keff": 1.1454130569114875,
+      "between_seed_sd_keff": 0.003036352193914861,
+      "mean_fission_rate_peaking_factor": 1.3272850417020003,
+      "between_seed_sd_fission_peaking_factor": 0.011865123047094004,
+      "fission_peaking_cv_percent": 0.8939393328714949,
+      "descriptive_rank_by_fission_peaking": 3
+    },
+    {
+      "layout_signature": "UUMM",
+      "n_runs": 3,
+      "mean_keff": 1.2051152251417094,
+      "between_seed_sd_keff": 0.0020118667482282512,
+      "mean_fission_rate_peaking_factor": 1.8253905639219432,
+      "between_seed_sd_fission_peaking_factor": 0.024418569099862848,
+      "fission_peaking_cv_percent": 1.3377175045431553,
+      "descriptive_rank_by_fission_peaking": 4
+    },
+    {
+      "layout_signature": "UMUM",
+      "n_runs": 3,
+      "mean_keff": 1.2078940562672258,
+      "between_seed_sd_keff": 0.002188144744909618,
+      "mean_fission_rate_peaking_factor": 1.8559181595340715,
+      "between_seed_sd_fission_peaking_factor": 0.04689556713919628,
+      "fission_peaking_cv_percent": 2.526812235673658,
+      "descriptive_rank_by_fission_peaking": 5
+    },
+    {
+      "layout_signature": "UMMU",
+      "n_runs": 3,
+      "mean_keff": 1.1861026314460645,
+      "between_seed_sd_keff": 0.0038633985032438967,
+      "mean_fission_rate_peaking_factor": 1.8861131573187928,
+      "between_seed_sd_fission_peaking_factor": 0.028995186254547157,
+      "fission_peaking_cv_percent": 1.537298339817814,
+      "descriptive_rank_by_fission_peaking": 6
+    }
+  ],
+  "limits": [
+    "Smoke settings only; not benchmark-grade convergence.",
+    "Three repetitions are insufficient for calibrated confidence intervals.",
+    "Design-specific acceptable k_eff band is not established.",
+    "Fission-rate peaking is not absolute power or a safety metric.",
+    "Legacy burnup-state QUBO remains unmapped to C5G7 UO2/MOX material definitions."
+  ]
+}
