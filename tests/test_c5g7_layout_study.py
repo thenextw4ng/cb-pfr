@@ -6,6 +6,7 @@ from pathlib import Path
 
 from scripts.run_c5g7_layout_study import (
     CANONICAL_ASSIGNMENT,
+    PINNED_UPSTREAM_COMMIT,
     patch_builder,
     patch_mgxs_energy_boundaries,
     validate_design_space,
@@ -22,7 +23,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         (model / "2d").mkdir(parents=True)
         (self.source / "UPSTREAM_PROVENANCE.json").write_text(json.dumps({
             "source_repository": "https://github.com/mit-crpg/benchmarks.git",
-            "source_commit": "a" * 40,
+            "source_commit": PINNED_UPSTREAM_COMMIT,
         }), encoding="utf-8")
         self.builder = model / "2d" / "build-xml-2d.py"
         self.builder.write_text(
@@ -66,7 +67,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
 
     def test_source_provenance_and_builder_required(self):
         model, revision = validate_source(self.source)
-        self.assertEqual(revision, "a" * 40)
+        self.assertEqual(revision, PINNED_UPSTREAM_COMMIT)
         self.assertTrue((model / "2d" / "build-xml-2d.py").is_file())
 
     def test_design_space_accepts_six_unique_valid_layouts(self):
