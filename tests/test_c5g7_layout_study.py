@@ -7,6 +7,7 @@ from pathlib import Path
 from scripts.run_c5g7_layout_study import (
     CANONICAL_ASSIGNMENT,
     patch_builder,
+    patch_mgxs_energy_boundaries,
     validate_design_space,
     validate_source,
 )
@@ -30,6 +31,13 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             "inactive = 500\n"
             "particles = 10000\n"
             "settings_file.particles = particles\n",
+            encoding="utf-8",
+        )
+        self.materials = model / "materials.py"
+        self.materials.write_text(
+            "import openmc\nimport numpy as np\n"
+            "groups = openmc.mgxs.EnergyGroups(np.logspace(-5, 7, 8))\n"
+            "rest = True\n",
             encoding="utf-8",
         )
         self.design = self.root / "design.json"
@@ -70,6 +78,19 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         self.design.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, "exactly six"):
             validate_design_space(self.design)
+
+    def test_patch_normalizes_mgxs_energy_group_endpoints(self):
+        patch_mgxs_energy_boundaries(self.materials)
+        text = self.materials.read_text()
+        self.assertIn("energy_boundaries[0] = 1.0e-5", text)
+        self.assertIn("energy_boundaries[-1] = 1.0e7", text)
+        self.assertIn("groups = openmc.mgxs.EnergyGroups(energy_boundaries)", text)
+        self.assertIn("rest = True", text)
+
+    def test_patch_mgxs_fails_closed_when_upstream_template_changes(self):
+        self.materials.write_text("groups = something_else\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "energy-group construction differs"):
+            patch_mgxs_energy_boundaries(self.materials)
 
     def test_patch_changes_only_layout_and_runtime_settings(self):
         layout = {"p00":"MOX","p01":"UO2","p10":"MOX","p11":"UO2"}
