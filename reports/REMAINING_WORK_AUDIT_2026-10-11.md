@@ -8,6 +8,12 @@ This is the current handoff after consolidating the conversation archives, audit
 
 A follow-up review on 2026-10-11 found that the upstream `materials.py` used `np.logspace(-5, 7, 8)`, which does not match the standard C5G7 seven-group boundaries `[1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000]` eV. The previous endpoint-only normalization and byte-identical MGXS comparisons did not fix or detect the interior-boundary mismatch. Therefore the historical production/smoke scalar comparison with k_eff=1.18655 is withdrawn as benchmark evidence, and all earlier smoke results are retained only as pipeline/provenance evidence. The corrected runner now replaces the complete boundary list and audits the generated MGXS root attribute before transport. Corrected high-budget runs and primary-specification review are required.
 
+## Corrected-group repeatability smoke study completed
+
+A new 18-run study uses the standard C5G7 seven-group boundaries and the pinned upstream commit. All 18 group-structure audits passed, all statepoint hashes are unique, and all runs share the corrected MGXS hash. The per-seed assembly fission-rate proxy and between-seed variability are recorded in `reports/c5g7_corrected_group_repeatability_smoke_2026-10-11.md` and `results/c5g7_corrected_group_repeatability_smoke_2026-10-11/`.
+
+The descriptive fission-peaking ranking puts MUMU first (mean proxy 1.2963) but its mean k_eff is only 1.1448; the canonical UMMU layout has mean k_eff 1.1861 but a higher proxy of 1.8861. This is not a design recommendation: the budget is only 100 batches / 10 inactive / 1,000 particles per batch, the fission metric is a relative proxy rather than absolute power, and no design-specific k_eff acceptance band is established. Benchmark-grade transport and the legacy-QUBO-to-C5G7 material mapping remain unresolved.
+
 ## Work completed and verified
 
 - Consolidated and indexed 86 historical project artifacts in `CBPFR_ReactorQ__Archive_2026-10-11.zip` and `archive/conversation-artifacts/CONVERSATION_ARTIFACT_MANIFEST.json`.
