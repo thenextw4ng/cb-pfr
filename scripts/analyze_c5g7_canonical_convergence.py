@@ -8,11 +8,11 @@ import math
 import statistics
 from pathlib import Path
 
-PRODUCTION_MGXS_SHA256 = "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216"
+C5G7_GROUP_BOUNDARIES = (1.0e-5, 0.0635, 10.0, 100.0, 1000.0, 500000.0, 1000000.0, 20000000.0)
 REFERENCE_KEFF = 1.18655
 REFERENCE_SD = 0.000095
-PRODUCTION_BASELINE_KEFF = 1.186394144702191
-PRODUCTION_BASELINE_SD = 5.6113408647969484e-05
+HISTORICAL_PRODUCTION_BASELINE_KEFF = 1.186394144702191
+HISTORICAL_PRODUCTION_BASELINE_SD = 5.6113408647969484e-05
 
 
 def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
@@ -26,14 +26,20 @@ def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
     settings = {(int(r["batches"]), int(r["inactive"]), int(r["particles_per_batch"]), int(r["threads"])) for r in rows}
     canonical_only = all(r["candidate_id"] == "c5g7-2x2-UMMU" and r["layout_signature"] == "UMMU" for r in rows)
     audit_pass = all(r["raw_hdf5_audit"] == "PASS" for r in rows)
-    mgxs_production_match = mgxs_hashes == {PRODUCTION_MGXS_SHA256}
+    single_mgxs_hash = len(mgxs_hashes) == 1
+    standard_group_structure = all(
+        r.get("mgxs_group_structure_audit") == "PASS"
+        and tuple(r.get("mgxs_energy_group_boundaries") or ()) == C5G7_GROUP_BOUNDARIES
+        for r in rows
+    )
     global_checks = {
         "canonical_candidate_only": canonical_only,
         "unique_seeds": len(seeds) == len(set(seeds)),
         "unique_statepoint_hashes": len(hashes) == len(set(hashes)),
         "common_compute_settings": len(settings) == 1,
         "raw_hdf5_audits_pass": audit_pass,
-        "mgxs_byte_identical_to_production": mgxs_production_match,
+        "single_mgxs_hash_across_runs": single_mgxs_hash,
+        "standard_c5g7_energy_group_structure": standard_group_structure,
     }
     means = [float(r["keff_mean"]) for r in rows]
     sds = [float(r["keff_std_dev"]) for r in rows]
@@ -47,7 +53,6 @@ def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
     delta_pcm = (mean_keff - REFERENCE_KEFF) * 1e5
     z_score = (mean_keff - REFERENCE_KEFF) / combined_se
     max_run_sd_pcm_observed = max(sds) * 1e5
-    baseline_delta_pcm = (mean_keff - PRODUCTION_BASELINE_KEFF) * 1e5
     numerical_screen_pass = (
         all(global_checks.values())
         and abs(delta_pcm) <= max_delta_pcm
@@ -73,7 +78,12 @@ def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
         "settings_profile": next(iter(settings)) if len(settings) == 1 else None,
         "global_checks": global_checks,
         "reference": {"keff": REFERENCE_KEFF, "standard_uncertainty": REFERENCE_SD},
-        "production_baseline": {"keff": PRODUCTION_BASELINE_KEFF, "reported_sd": PRODUCTION_BASELINE_SD},
+        "historical_production_baseline": {
+            "keff": HISTORICAL_PRODUCTION_BASELINE_KEFF,
+            "reported_sd": HISTORICAL_PRODUCTION_BASELINE_SD,
+            "comparability": "NOT_COMPARABLE",
+            "reason": "Historical production MGXS used nonstandard log-spaced energy boundaries."
+        },
         "limits": {"absolute_reference_delta_pcm_max": max_delta_pcm,
                    "combined_uncertainty_z_max": max_z,
                    "per_run_reported_sd_pcm_max": max_run_sd_pcm,
@@ -86,7 +96,6 @@ def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
             "reference_delta_pcm": delta_pcm,
             "combined_uncertainty_z": z_score,
             "max_single_run_sd_pcm": max_run_sd_pcm_observed,
-            "delta_from_production_baseline_pcm": baseline_delta_pcm,
             "numerical_screen_pass": numerical_screen_pass,
         },
         "runs": rows,
@@ -132,6 +141,8 @@ def load_runs(root: Path) -> list[dict]:
             "statepoint_sha256": audit_case["statepoint_sha256"],
             "settings_sha256": audit_case["settings_sha256"],
             "mgxs_sha256": audit_case["mgxs_sha256"],
+            "mgxs_energy_group_boundaries": physical.get("mgxs_energy_group_boundaries"),
+            "mgxs_group_structure_audit": physical.get("mgxs_group_structure_audit"),
             "raw_hdf5_audit": audit["status"],
         })
     if not rows:
@@ -160,7 +171,7 @@ def main() -> int:
 
 Status: **{report['status']}**
 
-Runs: {report['run_count']}; unique seeds: {len(set(report['seeds']))}; common MGXS matches production: {report['global_checks']['mgxs_byte_identical_to_production']}.
+Runs: {report['run_count']}; unique seeds: {len(set(report['seeds']))}; standard C5G7 energy-group structure: {report['global_checks']['standard_c5g7_energy_group_structure']}.
 
 | Metric | Value |
 |---|---:|
@@ -170,9 +181,8 @@ Runs: {report['run_count']}; unique seeds: {len(set(report['seeds']))}; common M
 | Difference from reference | {m['reference_delta_pcm']:.2f} pcm |
 | Combined-uncertainty z | {m['combined_uncertainty_z']:.3f} |
 | Maximum individual-run SD | {m['max_single_run_sd_pcm']:.2f} pcm |
-| Difference from production baseline | {m['delta_from_production_baseline_pcm']:.2f} pcm |
 
-This is a provisional project numerical screen, not official benchmark acceptance. Primary-specification review and benchmark-compatible spatial tallies remain mandatory even if the scalar screen passes.
+The archived production scalar is not used as a comparison target because its historical MGXS group boundaries were nonstandard. This is a provisional project numerical screen, not official benchmark acceptance. Primary-specification review and benchmark-compatible spatial tallies remain mandatory even if the scalar screen passes.
 """
     a.out_md.write_text(markdown, encoding="utf-8")
     print(json.dumps({"status": report["status"], "run_count": report["run_count"],
