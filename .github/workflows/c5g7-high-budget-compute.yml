@@ -99,16 +99,22 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
-        shell: bash
+        shell: bash -el {0}
     steps:
       - name: Check out CB-PFR
         uses: actions/checkout@v4
 
-      - name: Install analysis runtime
-        uses: actions/setup-python@v5
+      - name: Install pinned OpenMC analysis runtime
+        uses: mamba-org/setup-micromamba@v2
         with:
-          python-version: "3.11"
-      - run: python -m pip install numpy h5py
+          environment-name: openmc
+          cache-environment: true
+          create-args: >-
+            python=3.11
+            openmc=0.16.0
+            numpy
+            h5py
+            git
 
       - name: Download all three seed-round artifacts
         uses: actions/download-artifact@v4
