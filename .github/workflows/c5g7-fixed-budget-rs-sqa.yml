@@ -1,0 +1,40 @@
+name: C5G7 fixed-budget R&S and classical SQA comparison (exploratory)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/c5g7-fixed-budget-rs-sqa.yml"
+      - "scripts/run_c5g7_fixed_budget_rs_comparison.py"
+      - "results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install classical simulated quantum annealing sampler
+        run: python -m pip install --upgrade pip dwave-samplers
+      - name: Run fixed-budget equal-allocation R&S, CB-PFR, exact QUBO, and SQA comparison
+        run: |
+          python scripts/run_c5g7_fixed_budget_rs_comparison.py \
+            --input results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv \
+            --out /tmp/c5g7-fixed-budget-rs-sqa/comparison.json \
+            --sqa-reads 500 \
+            --sqa-sweeps 500
+      - name: Preserve machine-readable result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-fixed-budget-rs-sqa
+          path: /tmp/c5g7-fixed-budget-rs-sqa/
+          if-no-files-found: warn
+          retention-days: 90
