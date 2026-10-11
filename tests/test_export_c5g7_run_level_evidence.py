@@ -64,6 +64,8 @@ class ExportC5G7RunLevelEvidenceTests(unittest.TestCase):
                 "status": "all_runs_completed_needs_independent_validation",
                 "mode": "run",
                 "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+                "upstream_model_builder_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "design_space_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
                 "settings": {
                     "batches": 100, "inactive": 10, "particles": 1000, "threads": 1,
                     "seed_base": seed_base, "seed_policy": "test fixture",
