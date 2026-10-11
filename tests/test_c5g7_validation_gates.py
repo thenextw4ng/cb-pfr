@@ -22,6 +22,9 @@ class C5G7ValidationGateTests(unittest.TestCase):
         result = audit_rows(rows)
         self.assertEqual(result["status"], "BLOCKED_MODEL_IDENTITY_REVIEW")
         self.assertFalse(result["is_official_benchmark_acceptance"])
+        noncanonical = next(c for c in result["candidates"] if c["layout_signature"] == "MMUU")
+        self.assertIsNone(noncanonical["keff_reference_screen_pass"])
+        self.assertEqual(noncanonical["noncanonical_reference_comparison"], "descriptive_only")
 
     def test_inconsistent_settings_fail_closed(self):
         rows = [row("canonical", "UMMU", seed) for seed in range(3)]
