@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "study_id": "reactorq-c5g7-four-position-uox-mox-layout",
+  "workflow": {
+    "run_id": 38103032861,
+    "url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38103032861",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "branch": "research/c5g7-corrected-canonical-run-20261011",
+    "commit": "2771ae3dc157936440d602f895d760b043ca7bdb",
+    "artifact_id": 11691113062,
+    "artifact_name": "c5g7-canonical-high-budget-screen-7000-10000",
+    "artifact_zip_sha256": "76bccd4c28916d27655c2c53c821645709a520397325714abbdba6cca0efa45e",
+    "aggregate_gate": "SKIPPED"
+  },
+  "settings": {
+    "openmc_version": "0.16.0",
+    "run_mode": "eigenvalue",
+    "energy_mode": "multi-group",
+    "batches_total": 7000,
+    "inactive_batches": 100,
+    "active_batches": 6900,
+    "particles_per_batch": 10000,
+    "threads": 1,
+    "candidate_id": "c5g7-2x2-UMMU",
+    "layout": {"p00": "UO2", "p01": "MOX", "p10": "MOX", "p11": "UO2"},
+    "mgxs_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129"
+  },
+  "completed_cases": [
+    {
+      "seed": 720000,
+      "case_status": "completed",
+      "statepoint": "seed_720000/c5g7-2x2-UMMU/model/2d/statepoint.7000.h5",
+      "statepoint_sha256": "76b5460414058309b1d8e99d15043f870f0e24d4cc12da66f2058dd1b0039047",
+      "keff_mean": 1.1864684089013162,
+      "keff_std_dev": 0.00009393562167349067,
+      "raw_hdf5_audit": {"status": "PASS", "passed_count": 22, "failed_count": 0},
+      "source_convergence_status": "DIAGNOSTIC_REVIEW_REQUIRED",
+      "k_generation_half_window_difference_pcm": -17.421793790894924,
+      "fission_rate_peaking_proxy": 1.8686199029155246,
+      "entropy_box_warning_count": 7000
+    },
+    {
+      "seed": 730000,
+      "case_status": "completed",
+      "statepoint": "seed_730000/c5g7-2x2-UMMU/model/2d/statepoint.7000.h5",
+      "statepoint_sha256": "993d1f7416369cfc2200eca04e2a0c430ef73782ae079dc138ba946bf13225ef",
+      "keff_mean": 1.1864698949149912,
+      "keff_std_dev": 0.00009463026275749226,
+      "raw_hdf5_audit": {"status": "PASS", "passed_count": 22, "failed_count": 0},
+      "source_convergence_status": "DIAGNOSTIC_REVIEW_REQUIRED",
+      "k_generation_half_window_difference_pcm": -21.21914940249603,
+      "fission_rate_peaking_proxy": 1.8691309855791747,
+      "entropy_box_warning_count": 7000
+    }
+  ],
+  "incomplete_cases": [
+    {
+      "seed": 740000,
+      "case_status": "incomplete",
+      "completed_statepoint_present": false,
+      "raw_hdf5_audit_present": false
+    }
+  ],
+  "derived_descriptive_comparisons": {
+    "mean_keff_two_completed_seeds": 1.1864691519081538,
+    "absolute_keff_difference": 0.0000014860136750005637,
+    "keff_difference_pcm": 0.14860136750005637,
+    "mean_fission_rate_peaking_proxy": 1.8688754442473496,
+    "fission_rate_peaking_relative_difference_percent": 0.02734706934179357,
+    "interpretation": "Descriptive only. Two seeds do not establish robust between-seed uncertainty or convergence; peaking-proxy uncertainty is not propagated."
+  },
+  "blocking_findings": [
+    "The third seed did not complete and the aggregate gate was skipped.",
+    "Both completed runs emit one entropy-box warning per batch; the 2-D geometry is axially unbounded while the entropy mesh used z bounds [-1, 1].",
+    "Both source-convergence diagnostics remain DIAGNOSTIC_REVIEW_REQUIRED.",
+    "No approved design-specific k-effective acceptance interval or independent reactor-physics review is recorded.",
+    "The four-position layout study is separate from the legacy fresh/once_burned/twice_burned QUBO mapping, which remains UNMAPPED."
+  ],
+  "followup_code_changes": {
+    "entropy_mesh_fix_commit": "6acce23615d4f5186343281d1f9b5e7a6db27979",
+    "entropy_mesh_test_commit": "a60c3d5e33bab9786d533c971b650f1ea008cd66",
+    "intermediate_screen_manual_dispatch_only_commit": "ef5837ba3648c946ac6214316b6d8c1741dba045",
+    "status": "Code and tests committed; CI status must be checked, and no new transport run has yet validated the mesh fix."
+  },
+  "scientific_disposition": "PARTIAL_HIGH_BUDGET_NUMERICAL_EVIDENCE; NOT_A_COMPLETED_THREE_SEED_STUDY; NOT_PHYSICALLY_VALIDATED"
+}
