@@ -10,8 +10,10 @@ Legend: PASS = verified by an artifact; BLOCKED = needs further evidence; NOT ST
 - [x] Exhaustively enumerate all 16 four-position binary assignments; exactly six satisfy two UO2 and two MOX. Machine-readable result: reports/stage6_four_position_constraint_audit.json. The same script logic ran locally with exit code 0; GitHub Actions has not yet executed this script.
 - [ ] BLOCKED: compare generated materials.xml nuclide densities/material IDs line by line with the selected benchmark material definitions.
 - [ ] BLOCKED: verify each candidate string and position order against generated geometry/lattice XML and candidate manifest.
-- [ ] BLOCKED: re-audit group edges and MGXS hash on the canonical high-budget artifact.
-- [ ] BLOCKED: inspect canonical statepoint hashes, run settings, uncertainty and convergence diagnostics.
+- [x] Re-audit group edges and shared MGXS hash in both completed high-budget seeds; exact standard edges are recorded in the partial-run JSON. The third seed is incomplete; source-convergence review remains open.
+- [x] Inspect the two completed canonical statepoint hashes, run settings, and raw-HDF5 audits (22/22 checks each); record the high-budget source-convergence status as DIAGNOSTIC_REVIEW_REQUIRED and the third seed as incomplete.
+- [x] Verify candidate-to-generated-lattice and raw mesh-to-assembly mapping for all 18 corrected-group smoke cases; spatial audit PASS. This is structural evidence, not benchmark validation.
+- [ ] BLOCKED: line-by-line review of generated material definitions against the applicable primary benchmark specification.
 - [ ] BLOCKED: approve comparison protocol and acceptance criteria before declaring any candidate.
 - [ ] NOT STARTED: obtain independent reactor-physics review; do not prefill or fabricate approval.
 - [x] Explicitly leave legacy fresh/once_burned/twice_burned states unmapped until depletion/isotopic evidence exists.
