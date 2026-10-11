@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from pathlib import Path
 
 
@@ -34,13 +35,16 @@ def load_candidates(path: Path) -> list[dict]:
     candidates = []
     seen = set()
     for row in rows:
-        cid = row["candidate_id"]
+        cid = row["candidate_id"].strip()
+        signature = row["layout_signature"].strip()
+        if not cid or not signature:
+            raise ValueError(f"row {len(candidates) + 2}: candidate_id and layout_signature must be nonempty")
         if cid in seen:
             raise ValueError(f"duplicate candidate_id: {cid}")
         seen.add(cid)
         parsed = {
             "candidate_id": cid,
-            "layout_signature": row["layout_signature"],
+            "layout_signature": signature,
             "mean_keff": float(row["mean_keff"]),
             "between_seed_sd_keff": float(row["between_seed_sd_keff"]),
             "mean_fission_rate_peaking_factor": float(row["mean_fission_rate_peaking_factor"]),
@@ -48,11 +52,20 @@ def load_candidates(path: Path) -> list[dict]:
             "n_runs": int(row.get("n_runs", 0)),
         }
         for key, value in parsed.items():
-            if isinstance(value, float) and not __import__("math").isfinite(value):
+            if isinstance(value, float) and not math.isfinite(value):
                 raise ValueError(f"{cid}: non-finite {key}")
+        if parsed["mean_keff"] <= 0:
+            raise ValueError(f"{cid}: mean_keff must be positive")
+        if parsed["mean_fission_rate_peaking_factor"] <= 0:
+            raise ValueError(f"{cid}: fission-peaking factor must be positive")
         if parsed["between_seed_sd_keff"] < 0 or parsed["between_seed_sd_fission_peaking_factor"] < 0:
             raise ValueError(f"{cid}: standard deviations must be nonnegative")
+        if parsed["n_runs"] < 3:
+            raise ValueError(f"{cid}: at least three independent runs are required before candidate-selection QUBO construction")
         candidates.append(parsed)
+    signatures = [row["layout_signature"] for row in candidates]
+    if len(signatures) != len(set(signatures)):
+        raise ValueError("duplicate layout_signature: each candidate must represent a unique layout")
     return candidates
 
 
@@ -65,10 +78,11 @@ def build_qubo(
 ) -> dict:
     if not candidates:
         raise ValueError("no candidates supplied")
-    if not (keff_min < keff_max):
-        raise ValueError("require keff_min < keff_max")
-    if uncertainty_multiplier < 0 or risk_weight < 0:
-        raise ValueError("uncertainty_multiplier and risk_weight must be nonnegative")
+    if not math.isfinite(keff_min) or not math.isfinite(keff_max) or not (0 < keff_min < keff_max):
+        raise ValueError("require finite bounds with 0 < keff_min < keff_max")
+    if (not math.isfinite(uncertainty_multiplier) or not math.isfinite(risk_weight)
+            or uncertainty_multiplier < 0 or risk_weight < 0):
+        raise ValueError("uncertainty_multiplier and risk_weight must be finite and nonnegative")
 
     assessed = []
     for candidate in candidates:
@@ -118,6 +132,8 @@ def build_qubo(
 
     scores = [row["risk_adjusted_fission_peaking_score"] for row in assessed]
     score_range = max(scores) - min(scores)
+    if not math.isfinite(score_range) or any(not math.isfinite(score) for score in scores):
+        raise ValueError("risk-adjusted objective scores overflowed or became non-finite")
     one_hot_penalty = max(1.0, max(scores) + 1.0, score_range + 1.0)
     infeasible_penalty = max(1.0, score_range + 1.0)
     terms = []
@@ -144,8 +160,9 @@ def build_qubo(
 def evaluate_energy(report: dict, bits: list[int]) -> float:
     if report.get("status") != "READY_FOR_EXTERNAL_QUBO_SOLVER":
         raise ValueError("QUBO is not selectable because no feasible candidate exists")
-    if len(bits) != len(report["variables"]) or any(bit not in (0, 1) for bit in bits):
-        raise ValueError("bit vector must contain one binary value per QUBO variable")
+    if (len(bits) != len(report["variables"])
+            or any(isinstance(bit, bool) or bit not in (0, 1) for bit in bits)):
+        raise ValueError("bit vector must contain one integer binary value per QUBO variable")
     energy = float(report["constant_offset"])
     for term in report["qubo_terms"]:
         energy += term["coefficient"] * bits[term["i"]] * bits[term["j"]]
