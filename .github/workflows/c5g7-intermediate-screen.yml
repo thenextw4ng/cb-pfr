@@ -1,6 +1,13 @@
 name: C5G7 intermediate-budget repeatability screen
 
 on:
+  push:
+    paths:
+      - ".github/workflows/c5g7-intermediate-screen.yml"
+      - "scripts/run_c5g7_layout_study.py"
+      - "scripts/analyze_c5g7_repeatability.py"
+      - "scripts/audit_c5g7_smoke_statepoints.py"
+      - "config/benchmarks/c5g7_2x2_design_space.json"
   workflow_dispatch:
     inputs:
       batches:
