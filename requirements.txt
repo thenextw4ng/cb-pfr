@@ -1,6 +1,7 @@
-# Install the local CB-PFR package so imports from src/cbpfr resolve.
+# Install the local CB-PFR package so dashboard imports resolve.
 -e .
 
 # Dashboard runtime dependencies
 streamlit>=1.36,<2
 pandas>=2.0,<3
+plotly>=5.22,<7
