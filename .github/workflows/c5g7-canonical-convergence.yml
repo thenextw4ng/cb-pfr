@@ -1,6 +1,11 @@
 name: C5G7 canonical high-budget numerical screen
 
 on:
+  push:
+    branches:
+      - research/c5g7-canonical-convergence-run-20261011
+    paths:
+      - ".github/workflows/c5g7-canonical-convergence.yml"
   workflow_dispatch:
     inputs:
       batches:
