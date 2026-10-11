@@ -31,7 +31,10 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             "batches = 20000\n"
             "inactive = 500\n"
             "particles = 10000\n"
-            "settings_file.particles = particles\n",
+            "settings_file.particles = particles\n"
+            "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\n"
+            "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\n"
+            "settings_file.entropy_dimension = [51, 51, 1]\n",
             encoding="utf-8",
         )
         self.materials = model / "materials.py"
@@ -103,6 +106,9 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         self.assertIn("inactive = 5", text)
         self.assertIn("particles = 200", text)
         self.assertIn("settings_file.seed = 620000", text)
+        self.assertIn("entropy_mesh = openmc.RegularMesh()", text)
+        self.assertIn("settings_file.entropy_mesh = entropy_mesh", text)
+        self.assertNotIn("settings_file.entropy_lower_left", text)
         self.assertNotIn(CANONICAL_ASSIGNMENT, text)
 
     def test_patch_fails_closed_when_upstream_template_changes(self):
