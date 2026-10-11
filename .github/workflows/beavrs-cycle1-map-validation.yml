@@ -6,15 +6,15 @@ on:
       batches:
         description: "Total OpenMC batches"
         required: true
-        default: "250"
+        default: "500"
       inactive:
         description: "Inactive batches"
         required: true
-        default: "30"
+        default: "50"
       particles:
         description: "Particles per batch"
         required: true
-        default: "2000"
+        default: "3000"
   push:
     branches: [main]
     paths:
@@ -30,9 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      BATCHES: ${{ inputs.batches || '250' }}
-      INACTIVE: ${{ inputs.inactive || '30' }}
-      PARTICLES: ${{ inputs.particles || '2000' }}
+      BATCHES: ${{ inputs.batches || '500' }}
+      INACTIVE: ${{ inputs.inactive || '50' }}
+      PARTICLES: ${{ inputs.particles || '3000' }}
       SEED: "20261011"
       OMP_NUM_THREADS: "2"
       BEAVRS_COMMIT: "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22"
@@ -111,6 +111,15 @@ jobs:
           python scripts/run_beavrs_cycle1_map_validation.py \
             --mode analyze --output /tmp/beavrs-run
           cat /tmp/beavrs-run/beavrs_cycle1_day0_map_comparison.json
+
+      - name: Independently audit comparison artifact integrity
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/audit_beavrs_cycle1_map_result.py \
+            --run-dir /tmp/beavrs-run \
+            --out /tmp/beavrs-run/beavrs_integrity_audit.json
+          cat /tmp/beavrs-run/beavrs_integrity_audit.json
 
       - name: Upload raw run and comparison evidence
         if: always()
