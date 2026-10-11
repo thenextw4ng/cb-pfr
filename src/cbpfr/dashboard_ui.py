@@ -87,27 +87,15 @@ def render_header(active: str, status: str = "RESEARCH PROTOTYPE"):
         """,
         unsafe_allow_html=True,
     )
-    nav = st.columns([1.05, 1.1, 1.3, 1.2, .85, 1.0])
-    items = [
-        ("Overview", "app.py"),
-        ("Geometry", "pages/01_C5G7_Layout_Explorer.py"),
-        ("Physics fields", "pages/02_Physics_Field_Explorer.py"),
-        ("Monte Carlo", "pages/03_Monte_Carlo_Reliability.py"),
-        ("QUBO", "pages/04_QUBO_Optimization.py"),
-        ("Provenance", "pages/05_Provenance_Validation.py"),
-    ]
-    for col, (label, path) in zip(nav, items):
-        with col:
-            if label == active:
-                st.markdown(
-                    f'<div style="border:1px solid {CYAN};background:#123242;border-radius:6px;'
-                    f'padding:9px 11px;color:{TEXT};font-size:.8rem;font-weight:700;text-align:center">'
-                    f'{label}</div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.page_link(path, label=label)
-
+    st.markdown(
+        f'<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;'
+        f'border-bottom:1px solid {LINE};padding:0 0 13px;margin:0 0 20px;'
+        f'color:{MUTED};font-size:.7rem;letter-spacing:.09em">'
+        f'<span>CB-PFR</span><span style="color:{CYAN}">/</span>'
+        f'<span>RESEARCH WORKSTATION</span><span style="color:{CYAN}">/</span>'
+        f'<b style="color:{TEXT}">{active.upper()}</b></div>',
+        unsafe_allow_html=True,
+    )
 
 def render_page_intro(kicker: str, title: str, subtitle: str):
     st.markdown(f'<div class="section-kicker">{kicker}</div>', unsafe_allow_html=True)
