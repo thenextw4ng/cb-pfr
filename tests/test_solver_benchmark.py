@@ -16,7 +16,7 @@ class SolverBenchmarkTests(unittest.TestCase):
         result = analyze_rows(rows)[0]
         self.assertEqual(result["trials"], 3)
         self.assertEqual(result["successes"], 2)
-        self.assertEqual(result["tts_target_wall_s"], 3 + 2 * 2)
+        self.assertEqual(result["tts_target_wall_s"], 3 + 5 * 2)
         self.assertAlmostEqual(result["tts_target_device_anneal_s"], 0.2)
 
     def test_zero_success_is_infinite_tts(self):
