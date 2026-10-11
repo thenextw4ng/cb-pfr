@@ -50,10 +50,14 @@ A separate 2×2 UO2/MOX assembly-placement formulation has now been run for all 
 
 This is **exploratory smoke-budget evidence**, not benchmark-grade validation. The reported k_eff ranking is descriptive rather than an optimization objective; the current budget is low, only three repetitions exist per layout, and exact production-vs-smoke materials metadata correspondence remains under review. The repeated-run analysis found one root MGXS metadata energy boundary differing by one floating-point step across separate workflow invocations, while all 63 dataset payloads matched; see the [machine-readable comparison](../results/c5g7_repeatability_smoke_2026-10-11/mgxs_semantic_comparison.json).
 
+## Production-versus-regenerated XML comparison
+
+The [input-provenance comparison report](c5g7_input_provenance_comparison_2026-10-11.md) found exact equality for canonical geometry, tallies, and plots. The material XML definitions are identical after normalizing only the local `cross_sections` path. Settings differ by the expected compute budget and explicit smoke seed. The production `mgxs.h5` is absent from the evidence archive, so its bytes and energy-group metadata still cannot be compared directly with the regenerated library. The model-identity gate is therefore partially resolved, not passed.
+
 ## What remains unverified
 
 1. The production statepoint's scalar/settings/tally metadata have passed the OpenMC API audit and a separate raw-HDF5 comparison. The remaining benchmark-verification task is to compare exact geometry, boundary conditions, material definitions, MGXS source and hashes with the primary benchmark specification.
-2. The model/data correspondence and benchmark acceptance tolerance must be reviewed before interpreting the scalar match as benchmark verification.
+2. The XML input comparison narrowed the discrepancy to the absolute cross-section path, but the production MGXS file is missing from the evidence archive. Exact nuclear-data correspondence and benchmark acceptance tolerance must be reviewed before interpreting the scalar match as benchmark verification.
 3. The archived run_01–run_03 stage34 outputs must be linked to exact candidate IDs and configuration/input hashes before they can support a candidate comparison.
 4. The abstract QUBO categories (fresh, once_burned, twice_burned) still have no defensible mapping to C5G7 UO2/MOX material or depletion states.
 5. Benchmark-grade candidate comparison still requires a reviewed physical model/material mapping, a predeclared objective and acceptance protocol, a higher common computational budget, and additional independent seeds per layout. The current three repeated runs per layout are smoke-budget only.
