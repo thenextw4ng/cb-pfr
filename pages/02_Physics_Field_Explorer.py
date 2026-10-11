@@ -8,13 +8,14 @@ import streamlit as st
 
 from cbpfr.dashboard_ui import (
     CYAN, ORANGE, TEXT, MUTED, apply_workstation_style, base_layout,
-    candidate_label, layout_figure, load_smoke, render_header,
+    candidate_label, layout_figure, load_smoke, render_header, render_workspace_sidebar,
 )
 
 st.set_page_config(page_title="CB-PFR · Physics Fields", page_icon="⚛", layout="wide")
 apply_workstation_style()
 render_header("Physics fields", "SPATIAL TALLY ARRAYS REQUIRED")
 df = load_smoke().sort_values("candidate_id").reset_index(drop=True)
+render_workspace_sidebar("Physics Fields", df)
 
 st.markdown('<div class="section-kicker">Field inventory / C5G7 2×2 study</div>', unsafe_allow_html=True)
 st.title("Physics Field Explorer")
