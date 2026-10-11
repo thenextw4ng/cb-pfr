@@ -24,6 +24,7 @@ on:
 permissions:
   contents: read
 
+# Corrected-run invariant: the runner rejects MGXS unless all eight official C5G7 group boundaries match.
 jobs:
   canonical-screen:
     runs-on: ubuntu-latest
