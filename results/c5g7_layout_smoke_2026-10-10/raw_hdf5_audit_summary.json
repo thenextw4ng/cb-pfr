@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS",
+  "workflow_run_id": 38097364817,
+  "workflow_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38097364817",
+  "artifact": {
+    "name": "c5g7-layout-study-prepared-and-smoke",
+    "sha256": "5c3344fcad0a2c14126aa897abeed37d7f38cb956f8efe68697fd4022af07910",
+    "size_bytes": 2953723,
+    "expires_at_utc": "2027-01-09T00:07:44Z"
+  },
+  "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "openmc_version": "0.16.0",
+  "common_settings": {
+    "batches": 100,
+    "inactive": 10,
+    "particles_per_batch": 1000,
+    "active_realizations": 90,
+    "threads": 1,
+    "seeds": [620000, 620001, 620002, 620003, 620004, 620005]
+  },
+  "checks": {
+    "candidate_count": 6,
+    "checks_total": 112,
+    "passed": 112,
+    "failed": 0,
+    "checks_per_candidate": 18,
+    "aggregate_checks": 4
+  },
+  "candidates": [
+    {"candidate_id":"c5g7-2x2-UMMU","layout":"UMMU","seed":620000,"status":"PASS","keff_mean":1.1881792736872105,"keff_std_dev":0.003047919927246576,"statepoint_sha256":"66da7050fbbf49b71270fa11eac2425c76eaa82cc0425e677cd8095c8a58a8cd"},
+    {"candidate_id":"c5g7-2x2-MMUU","layout":"MMUU","seed":620001,"status":"PASS","keff_mean":1.1481094323862011,"keff_std_dev":0.002527861986856661,"statepoint_sha256":"bc48bf28d01b5b191fa2e1a06359a6b165e0d076cfd0c5b61d770eb415d1989b"},
+    {"candidate_id":"c5g7-2x2-MUMU","layout":"MUMU","seed":620002,"status":"PASS","keff_mean":1.1383293452701768,"keff_std_dev":0.002785370997409737,"statepoint_sha256":"6aac9c677278a568c49f34123c04b67460d81136c865c16adbfb9c893a44e757"},
+    {"candidate_id":"c5g7-2x2-MUUM","layout":"MUUM","seed":620003,"status":"PASS","keff_mean":1.156308238717424,"keff_std_dev":0.002844248382436213,"statepoint_sha256":"c2fd4bc892cadc6089bcc5c442aeb7237431675980ce78fb8691909dfa1fe6f8"},
+    {"candidate_id":"c5g7-2x2-UMUM","layout":"UMUM","seed":620004,"status":"PASS","keff_mean":1.2039852128698463,"keff_std_dev":0.002731549856853567,"statepoint_sha256":"ca50494dd2ac6d8e5171ca9c9e5405a882b1172dbd73ad78e2ce70c708ed5e05"},
+    {"candidate_id":"c5g7-2x2-UUMM","layout":"UUMM","seed":620005,"status":"PASS","keff_mean":1.2031326318901272,"keff_std_dev":0.0029574594585127694,"statepoint_sha256":"13f71fe487b3572b08debb1e8f4e566841be59cc9dce14c847af9fc740ba4d3f"}
+  ],
+  "interpretation": "All six raw HDF5 statepoints matched the OpenMC API-derived keff mean/standard deviation, settings seed, run manifest hashes, expected metadata, mesh dimension and score set. This is data extraction and internal consistency evidence, not benchmark validation or a robust physical ranking."
+}
