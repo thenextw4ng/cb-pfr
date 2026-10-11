@@ -23,8 +23,41 @@
     "particles_per_batch": 10000,
     "threads": 1,
     "candidate_id": "c5g7-2x2-UMMU",
-    "layout": {"p00": "UO2", "p01": "MOX", "p10": "MOX", "p11": "UO2"},
-    "mgxs_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129"
+    "layout": {
+      "p00": "UO2",
+      "p01": "MOX",
+      "p10": "MOX",
+      "p11": "UO2"
+    },
+    "mgxs_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129",
+    "mgxs_group_boundaries_eV": [
+      0.00001,
+      0.0635,
+      10,
+      100,
+      1000,
+      500000,
+      1000000,
+      20000000
+    ],
+    "generated_core_lattice_rows": [
+      [
+        "UO2",
+        "MOX",
+        "Reflector"
+      ],
+      [
+        "MOX",
+        "UO2",
+        "Reflector"
+      ],
+      [
+        "Reflector",
+        "Reflector",
+        "Reflector"
+      ]
+    ],
+    "structural_mapping_review": "generated geometry.xml matches recorded UMMU fuel positions and fixed right/bottom reflector cells"
   },
   "completed_cases": [
     {
@@ -34,7 +67,11 @@
       "statepoint_sha256": "76b5460414058309b1d8e99d15043f870f0e24d4cc12da66f2058dd1b0039047",
       "keff_mean": 1.1864684089013162,
       "keff_std_dev": 0.00009393562167349067,
-      "raw_hdf5_audit": {"status": "PASS", "passed_count": 22, "failed_count": 0},
+      "raw_hdf5_audit": {
+        "status": "PASS",
+        "passed_count": 22,
+        "failed_count": 0
+      },
       "source_convergence_status": "DIAGNOSTIC_REVIEW_REQUIRED",
       "k_generation_half_window_difference_pcm": -17.421793790894924,
       "fission_rate_peaking_proxy": 1.8686199029155246,
@@ -47,7 +84,11 @@
       "statepoint_sha256": "993d1f7416369cfc2200eca04e2a0c430ef73782ae079dc138ba946bf13225ef",
       "keff_mean": 1.1864698949149912,
       "keff_std_dev": 0.00009463026275749226,
-      "raw_hdf5_audit": {"status": "PASS", "passed_count": 22, "failed_count": 0},
+      "raw_hdf5_audit": {
+        "status": "PASS",
+        "passed_count": 22,
+        "failed_count": 0
+      },
       "source_convergence_status": "DIAGNOSTIC_REVIEW_REQUIRED",
       "k_generation_half_window_difference_pcm": -21.21914940249603,
       "fission_rate_peaking_proxy": 1.8691309855791747,
