@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: cbpfr-c5g7-high-budget
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   transport:
@@ -166,6 +166,72 @@ jobs:
               "winner_selected": False,
               "physical_validation_certified": False,
           }, indent=2))
+          PY
+
+      - name: Compare high-budget results against archived smoke study
+        run: |
+          python - <<'PY'
+          import csv, json, math, statistics
+          from collections import defaultdict
+          from pathlib import Path
+
+          low_path = Path("results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv")
+          high_path = Path("results/c5g7_high_budget_2026-10-12/run_level_results.csv")
+
+          def load(path):
+              groups = defaultdict(list)
+              with path.open(newline="", encoding="utf-8-sig") as handle:
+                  for row in csv.DictReader(handle):
+                      groups[row["layout_signature"]].append({
+                          "keff": float(row["keff_mean"]),
+                          "keff_sd": float(row["keff_std_dev"]),
+                          "fpeak": float(row["fission_rate_peaking_factor"]),
+                      })
+              if set(groups) != {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}:
+                  raise SystemExit(f"{path}: expected six layout signatures, got {sorted(groups)}")
+              if any(len(values) != 3 for values in groups.values()):
+                  raise SystemExit(f"{path}: expected three independent runs per layout")
+              return groups
+
+          low, high = load(low_path), load(high_path)
+          rows = []
+          for signature in sorted(high):
+              def summary(group, key):
+                  values = [row[key] for row in group]
+                  return {
+                      "mean": statistics.mean(values),
+                      "between_seed_sample_sd": statistics.stdev(values),
+                  }
+              low_k, high_k = summary(low[signature], "keff"), summary(high[signature], "keff")
+              low_f, high_f = summary(low[signature], "fpeak"), summary(high[signature], "fpeak")
+              rows.append({
+                  "layout_signature": signature,
+                  "smoke_keff": low_k,
+                  "high_budget_keff": high_k,
+                  "keff_mean_shift_high_minus_smoke": high_k["mean"] - low_k["mean"],
+                  "smoke_fission_peaking": low_f,
+                  "high_budget_fission_peaking": high_f,
+                  "fission_peaking_mean_shift_high_minus_smoke": high_f["mean"] - low_f["mean"],
+                  "high_budget_mean_reported_within_run_keff_sd": statistics.mean(
+                      row["keff_sd"] for row in high[signature]
+                  ),
+                  "interpretation": "descriptive budget comparison only; different seeds and budgets do not constitute a convergence certificate",
+              })
+          output = {
+              "schema_version": "cbpfr.c5g7-budget-comparison.v1",
+              "status": "DESCRIPTIVE_BUDGET_COMPARISON_COMPLETE",
+              "smoke_input": str(low_path),
+              "high_budget_input": str(high_path),
+              "candidate_count": len(rows),
+              "replicates_per_candidate_per_budget": 3,
+              "candidates": rows,
+              "physical_validation_certified": False,
+              "convergence_certified": False,
+              "winner_selected": False,
+          }
+          destination = Path("results/c5g7_high_budget_2026-10-12/budget_comparison.json")
+          destination.write_text(json.dumps(output, indent=2, sort_keys=True, allow_nan=False) + "\\n", encoding="utf-8")
+          print(json.dumps({"status": output["status"], "candidate_count": len(rows), "convergence_certified": False}, indent=2))
           PY
 
       - name: Upload combined raw data, statepoints, and analysis bundle
