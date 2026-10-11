@@ -46,6 +46,8 @@ def load_and_validate(path: Path, *, min_batches: int, min_particles: int,
         raw = list(reader)
     if not raw:
         raise ValueError("run-level CSV is empty")
+    if min_replicates < 3:
+        raise ValueError("min_replicates must be at least 3 for the declared repeated-run screen")
     rows = []
     for line, row in enumerate(raw, start=2):
         sig = row["layout_signature"].strip()
@@ -109,6 +111,10 @@ def evaluate(rows: list[dict], *, keff_min: float, keff_max: float,
              fission_peaking_max: float, uncertainty_multiplier: float,
              keff_scale: float, fission_peaking_scale: float,
              risk_weight: float) -> dict:
+    numeric_limits = (keff_min, keff_max, fission_peaking_max, uncertainty_multiplier,
+                      keff_scale, fission_peaking_scale, risk_weight)
+    if not all(math.isfinite(value) for value in numeric_limits):
+        raise ValueError("all limits, scales, multipliers, and weights must be finite")
     if not (0 < keff_min < keff_max):
         raise ValueError("require 0 < keff_min < keff_max")
     if fission_peaking_max <= 0 or uncertainty_multiplier < 0 or risk_weight < 0:
