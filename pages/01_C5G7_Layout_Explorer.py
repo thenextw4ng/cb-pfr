@@ -1,111 +1,205 @@
-"""MagicPath-inspired CB-PFR C5G7 geometry workstation, backed by the repository CSV."""
-from pathlib import Path
-import json
-import pandas as pd
-import streamlit as st
-import streamlit.components.v1 as components
+"""Evidence-aware C5G7 layout comparison with native Streamlit controls and Plotly figures."""
+from __future__ import annotations
 
-st.set_page_config(page_title="CB-PFR · C5G7 Geometry", page_icon="⚛", layout="wide")
+import hashlib
+from pathlib import Path
+
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+
+ROOT = Path(__file__).resolve().parents[1]
+CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
+
+st.set_page_config(page_title="CB-PFR | C5G7 Layout", page_icon="⚛️", layout="wide")
+
+st.markdown("""
+<style>
+.block-container {max-width: 1600px; padding-top: 1.1rem; padding-bottom: 2.4rem;}
+[data-testid="stMetric"] {background: linear-gradient(145deg,rgba(18,36,54,.9),rgba(10,20,32,.9)); border:1px solid #294056; padding:15px 17px; border-radius:10px;}
+[data-testid="stMetricLabel"] p {font-size:.75rem; letter-spacing:.07em; text-transform:uppercase;}
+.report-kicker {font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#59d8df;font-weight:700;margin-bottom:.25rem}
+.report-title {font-size:2.15rem;font-weight:750;letter-spacing:-.04em;margin:.1rem 0 .25rem}
+.report-sub {color:#9eb0c3;max-width:900px;font-size:.95rem}
+.evidence-note {border:1px solid #65543a;background:rgba(107,77,32,.15);border-radius:8px;padding:13px 16px;margin:.8rem 0 1.2rem}
+.small-muted {color:#91a4b7;font-size:.82rem}
+</style>
+""", unsafe_allow_html=True)
+
 with st.sidebar:
-    st.markdown("## ⚛ CB·PFR")
+    st.markdown("## ⚛️ CB·PFR")
     st.caption("COMPUTATIONAL REACTOR LAB")
-    st.markdown("---")
+    st.divider()
     st.page_link("pages/01_C5G7_Layout_Explorer.py", label="01 · C5G7 Layout", icon="🧩")
     st.page_link("pages/02_Physics_Field_Explorer.py", label="02 · Physics Field", icon="🌐")
     st.page_link("pages/03_Monte_Carlo_Reliability.py", label="03 · Monte Carlo", icon="🎲")
     st.page_link("pages/04_QUBO_Optimization.py", label="04 · QUBO Lab", icon="⚙️")
     st.page_link("pages/05_Provenance_Validation.py", label="05 · Provenance", icon="🔎")
-st.markdown("""<style>
-[data-testid="stHeader"],[data-testid="stToolbar"],footer{display:none!important}
-[data-testid="stAppViewContainer"]>.main{margin-left:0!important}
-[data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important}
-iframe{display:block}
-</style>""", unsafe_allow_html=True)
-ROOT = Path(__file__).resolve().parents[1]
-CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
-if not CSV.exists():
-    st.error(f"Evidence CSV not found: {CSV}")
+    st.divider()
+    st.caption("DATA MODE: REPOSITORY CSV")
+    st.caption("MODEL STATUS: SCHEMATIC / PARTIAL EVIDENCE")
+
+st.markdown('<div class="report-kicker">RESEARCH MODULE / 01 · CORE CONFIGURATION STUDY</div>', unsafe_allow_html=True)
+st.markdown('<div class="report-title">C5G7 Core <span style="color:#7ba8ff">Layout Explorer</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="report-sub">Interactive inspection of recorded 2 × 2 material-assignment candidates and their transport-summary statistics.</div>', unsafe_allow_html=True)
+
+st.markdown("""
+<div class="evidence-note">
+<b>Evidence boundary</b><br>
+This page visualizes the repository's recorded candidate-summary CSV. The 2 × 2 map is a categorical schematic, not a pin-resolved C5G7 geometry or spatial flux solution. Reported aggregate scores are not spatially resolved physical fields.
+</div>
+""", unsafe_allow_html=True)
+
+if not CSV.is_file():
+    st.error(f"Required evidence CSV was not found at: {CSV.relative_to(ROOT)}")
     st.stop()
-df = pd.read_csv(CSV)
-required = ["candidate_id","layout_signature","canonical_reference","seed","batches","inactive","particles_per_batch","keff_mean","keff_std_dev","aggregate_flux_score","aggregate_fission_score","mgxs_sha256_before_transport","mgxs_sha256_after_transport"]
-missing = [c for c in required if c not in df.columns]
+
+try:
+    raw = pd.read_csv(CSV)
+except Exception as exc:
+    st.error(f"Could not read the candidate-summary CSV: {exc}")
+    st.stop()
+
+required = [
+    "candidate_id", "layout_signature", "canonical_reference", "seed",
+    "batches", "inactive", "particles_per_batch", "keff_mean",
+    "keff_std_dev", "keff_relative_sd_percent", "aggregate_flux_score",
+    "aggregate_fission_score", "mgxs_sha256_before_transport",
+    "mgxs_sha256_after_transport",
+]
+missing = [column for column in required if column not in raw.columns]
 if missing:
-    st.error("Missing CSV columns: " + ", ".join(missing))
+    st.error("Candidate CSV is missing required columns: " + ", ".join(missing))
     st.stop()
-data = []
-for _, r in df.iterrows():
-    sig = str(r["layout_signature"])
-    if len(sig) != 4 or any(c not in "UM" for c in sig):
-        continue
-    data.append({
-        "id":str(r["candidate_id"]), "sig":sig, "canonical":bool(r["canonical_reference"]),
-        "seed":int(r["seed"]), "batches":int(r["batches"]), "inactive":int(r["inactive"]),
-        "particles":int(r["particles_per_batch"]), "keff":float(r["keff_mean"]),
-        "std":float(r["keff_std_dev"]), "flux":float(r["aggregate_flux_score"]),
-        "fission":float(r["aggregate_fission_score"]),
-        "hash0":str(r["mgxs_sha256_before_transport"]), "hash1":str(r["mgxs_sha256_after_transport"])
+
+df = raw.copy()
+df["layout_signature"] = df["layout_signature"].astype(str).str.strip().str.upper()
+df = df[df["layout_signature"].map(lambda value: len(value) == 4 and set(value) <= {"U", "M"})].copy()
+for col in ["seed", "batches", "inactive", "particles_per_batch", "keff_mean", "keff_std_dev", "keff_relative_sd_percent", "aggregate_flux_score", "aggregate_fission_score"]:
+    df[col] = pd.to_numeric(df[col], errors="coerce")
+df = df.dropna(subset=["keff_mean", "keff_std_dev", "aggregate_flux_score", "aggregate_fission_score"])
+if df.empty:
+    st.error("No valid four-position candidate records remain after validation.")
+    st.stop()
+
+df["canonical_reference"] = df["canonical_reference"].astype(str).str.strip().str.lower().isin(["true", "1", "yes"])
+df["candidate_label"] = df["candidate_id"].astype(str) + " · " + df["layout_signature"]
+csv_hash = hashlib.sha256(CSV.read_bytes()).hexdigest()
+candidate_labels = df["candidate_label"].tolist()
+selected_label = st.selectbox("Inspect candidate", candidate_labels, index=next((i for i, x in enumerate(candidate_labels) if bool(df.iloc[i]["canonical_reference"])), 0))
+selected = df.loc[df["candidate_label"] == selected_label].iloc[0]
+
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Recorded candidates", f"{len(df):02d}", help="Valid four-position records in the CSV.")
+m2.metric("Selected k-effective mean", f"{selected['keff_mean']:.6f}", help="Recorded value; interpretation depends on source run methodology.")
+m3.metric("Reported standard deviation", f"{selected['keff_std_dev']:.6f}")
+m4.metric("Relative SD", f"{selected['keff_relative_sd_percent']:.4f}%")
+
+st.divider()
+left, right = st.columns([1.12, 1], gap="large")
+with left:
+    st.markdown("### 01 / Material-assignment schematic")
+    st.caption("Position order follows the stored four-character signature: P00, P10, P01, P11. U = UO₂; M = MOX.")
+    sig = selected["layout_signature"]
+    positions = [("P00", sig[0]), ("P10", sig[1]), ("P01", sig[2]), ("P11", sig[3])]
+    z = [[1 if sig[0] == "U" else 0, 1 if sig[1] == "U" else 0],
+         [1 if sig[2] == "U" else 0, 1 if sig[3] == "U" else 0]]
+    labels = [[f"P00<br>{'UO₂' if sig[0] == 'U' else 'MOX'}", f"P10<br>{'UO₂' if sig[1] == 'U' else 'MOX'}"],
+              [f"P01<br>{'UO₂' if sig[2] == 'U' else 'MOX'}", f"P11<br>{'UO₂' if sig[3] == 'U' else 'MOX'}"]]
+    fig_geo = go.Figure(go.Heatmap(
+        z=z, x=["Column 0", "Column 1"], y=["Row 0", "Row 1"],
+        text=labels, texttemplate="%{text}", textfont={"size": 18},
+        customdata=[[positions[0][1], positions[1][1]], [positions[2][1], positions[3][1]]],
+        hovertemplate="%{y}, %{x}<br>Material: %{customdata}<extra></extra>",
+        colorscale=[[0, "#6a4b26"], [0.49, "#6a4b26"], [0.5, "#234e82"], [1, "#234e82"]],
+        showscale=False, xgap=8, ygap=8,
+    ))
+    fig_geo.update_layout(template="plotly_dark", height=380, margin=dict(l=20,r=20,t=25,b=20),
+                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                         xaxis=dict(side="top", tickfont=dict(size=11), fixedrange=True),
+                         yaxis=dict(autorange="reversed", tickfont=dict(size=11), fixedrange=True),
+                         annotations=[dict(x=0.5,y=-0.14,xref="paper",yref="paper",text="SCHEMATIC ONLY · NOT TO SCALE",showarrow=False,font=dict(size=10,color="#91a4b7"))])
+    st.plotly_chart(fig_geo, use_container_width=True, key="c5g7_layout_schematic")
+    st.caption("Blue = UO₂; amber = MOX. This visualization does not infer pin locations, dimensions, or neutron-flux distribution.")
+
+with right:
+    st.markdown("### 02 / Candidate record")
+    st.markdown(f"**{selected['candidate_id']}**")
+    st.code(f"layout_signature = {sig}", language="text")
+    details = pd.DataFrame([
+        ("Canonical reference", "Yes" if selected["canonical_reference"] else "No"),
+        ("Random seed", f"{int(selected['seed'])}"),
+        ("Batches / inactive", f"{int(selected['batches'])} / {int(selected['inactive'])}"),
+        ("Particles per batch", f"{int(selected['particles_per_batch']):,}"),
+        ("MOX positions", f"{sig.count('M')} / 4"),
+        ("UO₂ positions", f"{sig.count('U')} / 4"),
+        ("MGXS hash before", str(selected["mgxs_sha256_before_transport"])[:20] + "…"),
+        ("MGXS hash after", str(selected["mgxs_sha256_after_transport"])[:20] + "…"),
+    ], columns=["Field", "Recorded value"])
+    st.dataframe(details, hide_index=True, use_container_width=True)
+    same_hash = str(selected["mgxs_sha256_before_transport"]) == str(selected["mgxs_sha256_after_transport"])
+    st.success("MGXS input hash unchanged for this run.") if same_hash else st.warning("MGXS input hash differs before and after transport.")
+    st.caption("Hash equality supports input-file integrity only; it does not establish solver correctness or physical validation.")
+
+st.divider()
+st.markdown("### 03 / Recorded transport-summary comparison")
+st.caption("Each point is a recorded candidate mean. Error bars show the CSV's reported standard deviation (σ), not a confidence interval.")
+plot_df = df.sort_values("keff_mean").reset_index(drop=True)
+fig_compare = go.Figure()
+for is_reference, group in plot_df.groupby("canonical_reference", sort=False):
+    fig_compare.add_trace(go.Scatter(
+        x=group["candidate_id"], y=group["keff_mean"], mode="markers+lines",
+        name="Canonical reference" if is_reference else "Other candidate",
+        marker=dict(size=11, symbol="diamond" if is_reference else "circle"),
+        line=dict(width=1, dash="dot"),
+        error_y=dict(type="data", array=group["keff_std_dev"], visible=True, thickness=1.4, width=4),
+        customdata=group[["layout_signature", "seed", "keff_relative_sd_percent"]].to_numpy(),
+        hovertemplate="<b>%{x}</b><br>Layout: %{customdata[0]}<br>k-effective mean: %{y:.7f}<br>Seed: %{customdata[1]}<br>Relative SD: %{customdata[2]:.4f}%<extra></extra>",
+    ))
+fig_compare.update_layout(template="plotly_dark", height=430, hovermode="closest",
+    margin=dict(l=60,r=25,t=20,b=100), paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Candidate ID",
+    yaxis_title="Recorded k-effective mean", legend=dict(orientation="h",y=1.12),
+    xaxis=dict(tickangle=-25, gridcolor="#25374a"),
+    yaxis=dict(gridcolor="#25374a", zeroline=False))
+st.plotly_chart(fig_compare, use_container_width=True, key="c5g7_keff_comparison")
+
+a, b = st.columns(2, gap="large")
+with a:
+    st.markdown("### 04 / Relative statistical spread")
+    rel = plot_df.sort_values("keff_relative_sd_percent")
+    fig_sd = go.Figure(go.Bar(
+        x=rel["keff_relative_sd_percent"], y=rel["candidate_id"], orientation="h",
+        marker_color=["#58d7df" if x else "#7ba8ff" for x in rel["canonical_reference"]],
+        customdata=rel[["layout_signature", "keff_std_dev"]].to_numpy(),
+        hovertemplate="%{y}<br>Layout %{customdata[0]}<br>Relative SD %{x:.4f}%<br>Reported σ %{customdata[1]:.6f}<extra></extra>",
+    ))
+    fig_sd.update_layout(template="plotly_dark", height=320, margin=dict(l=15,r=20,t=10,b=45),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Relative SD (%)", yaxis_title="", xaxis=dict(gridcolor="#25374a"))
+    st.plotly_chart(fig_sd, use_container_width=True, key="c5g7_relative_sd")
+with b:
+    st.markdown("### 05 / Evidence table")
+    show_cols = ["candidate_id", "layout_signature", "canonical_reference", "seed", "keff_mean", "keff_std_dev", "keff_relative_sd_percent", "aggregate_flux_score", "aggregate_fission_score"]
+    view = df[show_cols].rename(columns={
+        "candidate_id":"Candidate", "layout_signature":"Layout", "canonical_reference":"Reference",
+        "seed":"Seed", "keff_mean":"k-eff mean", "keff_std_dev":"Reported σ",
+        "keff_relative_sd_percent":"Relative SD (%)", "aggregate_flux_score":"Flux score",
+        "aggregate_fission_score":"Fission score",
     })
-if not data:
-    st.error("No valid four-position layout records found.")
-    st.stop()
-payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
-default_id = data[0]["id"]
+    st.dataframe(view, hide_index=True, use_container_width=True, height=320)
 
-html = r"""
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-:root{color-scheme:dark;--bg:#080e17;--surface:#0d1724;--surface2:#111f2e;--line:#26364a;--text:#e7eef7;--muted:#8ea2b8;--cyan:#58d7df;--blue:#7ba8ff;--orange:#f5b95f;--green:#54d6a0}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,select{font:inherit}button{cursor:pointer}
-.shell{min-height:100vh;display:grid;grid-template-columns:238px minmax(0,1fr);background:radial-gradient(ellipse at 65% -20%,#173047 0,#080e17 52%)}
-.sidebar{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto;padding:22px 16px 17px;border-right:1px solid var(--line);background:rgba(10,18,28,.96)}
-.brand{display:flex;align-items:center;gap:10px;padding:0 9px 27px}.atom{width:31px;height:31px;color:var(--cyan)}.brand-name{font-weight:800;font-size:20px;letter-spacing:.04em;line-height:1}.brand-sub{font-size:8px;letter-spacing:.13em;color:var(--muted);margin-top:5px}
-.overline{font-size:9px;letter-spacing:.16em;font-weight:700;color:#71879f;padding:0 10px 10px}.nav{display:grid;gap:4px}.nav button,.nav a{border:1px solid transparent;background:transparent;color:#a7b8cb;text-align:left;text-decoration:none;border-radius:7px;padding:10px 10px;display:flex;gap:10px;align-items:center;font-size:12px}.nav button.active,.nav a.active{background:#122c3a;border-color:#214653;color:#f2fbff}.nav .num{font:10px ui-monospace,monospace;color:#69849b}.nav button.active .num,.nav a.active .num{color:var(--cyan)}.side-bottom{margin-top:auto;border-top:1px solid var(--line);padding:15px 9px 0;color:var(--muted);font-size:10px}.live{color:var(--green);letter-spacing:.08em;font-size:9px;font-weight:700;margin-bottom:10px}.live:before{content:"";display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;margin-right:7px}.side-bottom b{color:#c5d4e4;font-weight:600}
-main{min-width:0}.topbar{height:55px;display:flex;justify-content:space-between;align-items:center;padding:0 29px;border-bottom:1px solid var(--line);background:rgba(8,15,24,.72)}.crumb{font-size:10px;letter-spacing:.12em;color:#8499ae}.crumb b{color:#e4edf8;font-weight:600}.env{border:1px solid #2b4659;border-radius:5px;padding:5px 9px;color:#9eb4c9;font-size:9px;letter-spacing:.08em}
-.content{max-width:1500px;margin:0 auto;padding:29px 30px 35px}.heading{display:flex;justify-content:space-between;align-items:flex-end;gap:22px;margin-bottom:22px}.eyebrow{font-size:9px;letter-spacing:.18em;color:var(--cyan);font-weight:750;display:flex;align-items:center;gap:8px}.eyebrow:before{content:"";width:18px;height:1px;background:var(--cyan)}h1{font-size:29px;letter-spacing:-.04em;line-height:1.12;margin:10px 0 8px;font-weight:680}h1 em{font-style:normal;color:#8aaac4}.subtitle{max-width:720px;color:#9aadc0;font-size:12px;margin:0}.actions{display:flex;gap:8px;flex-shrink:0}.btn{border:1px solid #344a5e;border-radius:6px;padding:9px 12px;background:#101e2c;color:#d9e6f3;font-size:11px}.btn.primary{background:#b3f3f0;color:#06202a;border-color:#b3f3f0;font-weight:750}
-.notice{display:flex;gap:12px;align-items:center;border:1px solid #3a3d36;background:#171e25;border-radius:7px;padding:12px 14px;margin-bottom:17px}.notice .i{display:grid;place-items:center;width:21px;height:21px;flex-shrink:0;border:1px solid #b58b4e;color:var(--orange);border-radius:50%;font-weight:700;font-size:11px}.notice b{display:block;font-size:11px;margin-bottom:2px}.notice span{display:block;color:#a7b5c4;font-size:10px}.notice .tag{margin-left:auto;white-space:nowrap;color:var(--orange);font-size:9px;letter-spacing:.1em}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:17px}
-.layout-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 16px}
-.layout-option{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border:1px solid var(--line);border-radius:7px;background:#0c1927;color:var(--text);padding:11px 12px;min-width:0}
-.layout-option:hover,.layout-option.active{border-color:var(--cyan);background:#102b39}
-.layout-option .sig{font:700 12px ui-monospace,monospace;color:var(--cyan)}
-.layout-option .label{font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
-@media(max-width:700px){.layout-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.metric,.panel{border:1px solid var(--line);border-radius:9px;background:linear-gradient(145deg,rgba(16,31,46,.98),rgba(10,20,32,.98));min-width:0;overflow:hidden}.metric{padding:14px 15px}.mlabel{display:flex;justify-content:space-between;gap:8px;color:#9eb0c3;font-size:9px;letter-spacing:.1em;font-weight:700}.mvalue{font-size:23px;letter-spacing:-.035em;font-weight:700;margin-top:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mfoot{display:flex;align-items:center;gap:6px;color:#8196aa;font-size:9px;margin-top:7px}.dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);display:inline-block}
-.workspace{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.8fr);gap:15px;align-items:stretch}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 17px;border-bottom:1px solid var(--line)}.kicker{font-size:9px;letter-spacing:.15em;color:var(--cyan);font-weight:750}.panel h2{font-size:14px;margin:4px 0 0;font-weight:650;letter-spacing:-.01em}.head-right{display:flex;align-items:center;gap:8px}.pill{font-size:9px;letter-spacing:.08em;border:1px solid #4d493c;color:var(--orange);padding:4px 7px;border-radius:4px;white-space:nowrap}select{background:#0c1825;border:1px solid #31465a;color:#e6eef8;padding:8px 9px;border-radius:5px;max-width:240px;font-size:10px}
-.geometry-wrap{padding:12px;background:radial-gradient(ellipse at 50% 45%,#12283a 0,#0a1522 75%)}#geometry{width:100%;height:auto;min-height:350px;display:block}.panel-foot{display:flex;justify-content:space-between;gap:12px;padding:10px 16px;border-top:1px solid var(--line);color:#8ea3b8;font-size:9px}.legend{display:flex;gap:16px;flex-wrap:wrap}.swatch{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}.swatch.u{background:var(--blue)}.swatch.m{background:var(--orange)}
-.detail{padding:16px}.detail-title{font-size:9px;letter-spacing:.14em;color:#8ea5bc;font-weight:750;margin-bottom:12px}.candidate-id{font-size:20px;font-weight:700;letter-spacing:-.03em}.signature{font:12px ui-monospace,monospace;color:var(--cyan);margin:4px 0 18px}.detail-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #223246;font-size:10px}.detail-row span{color:#8fa3b7}.detail-row b{font-weight:600;text-align:right;overflow-wrap:anywhere}.hash{font:9px ui-monospace,monospace;color:#9cb2c8;max-width:160px;overflow:hidden;text-overflow:ellipsis}
-.bottom-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:15px;margin-top:15px}.chart-body{padding:13px 16px}#plot{height:245px}table{width:100%;border-collapse:collapse;font-size:10px}th{text-align:left;color:#8da3b9;font-weight:600;background:#101f2f}td,th{padding:10px 9px;border-bottom:1px solid #223246;white-space:nowrap}td{color:#dce7f2}tbody tr{cursor:pointer}tbody tr:hover td,tbody tr.selected td{background:#143042}td.num{text-align:right;font-variant-numeric:tabular-nums}.table-wrap{overflow:auto;max-height:280px}.smallnote{font-size:10px;color:#8da2b6;line-height:1.6;padding:12px 16px}.footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px;padding:12px 3px;color:#72879d;font-size:9px;letter-spacing:.05em}
-button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-@media(max-width:1100px){.shell{grid-template-columns:190px minmax(0,1fr)}.content{padding:22px 18px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace{grid-template-columns:1fr}.bottom-grid{grid-template-columns:1fr}.detail{display:grid;grid-template-columns:1fr 1fr;column-gap:22px}.detail-title{grid-column:1/-1}}
-@media(max-width:700px){.shell{grid-template-columns:1fr}.sidebar{position:static;height:auto;padding:13px}.brand{padding-bottom:12px}.nav{grid-template-columns:repeat(2,minmax(0,1fr))}.side-bottom{display:none}.topbar{padding:0 14px}.content{padding:18px 12px}.heading{display:block}.actions{margin-top:15px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mvalue{font-size:19px}.detail{display:block}.notice .tag{display:none}h1{font-size:25px}}
-</style></head><body><div class="shell">
-<aside class="sidebar"><div class="brand"><svg class="atom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="24" cy="24" rx="21" ry="8" transform="rotate(55 24 24)"/><ellipse cx="24" cy="24" rx="21" ry="8" transform="rotate(-55 24 24)"/><ellipse cx="24" cy="24" rx="21" ry="8"/><circle cx="24" cy="24" r="3" fill="currentColor"/></svg><div><div class="brand-name">CB<span style="color:var(--cyan)">·</span>PFR</div><div class="brand-sub">COMPUTATIONAL REACTOR LAB</div></div></div><div class="overline">WORKSPACE</div><nav class="nav"><a class="active" href="/C5G7_Layout_Explorer" target="_top"><span class="num">01</span> C5G7 Layout</a><a href="/Physics_Field_Explorer" target="_top"><span class="num">02</span> Physics Field</a><a href="/Monte_Carlo_Reliability" target="_top"><span class="num">03</span> Monte Carlo</a><a href="/QUBO_Optimization" target="_top"><span class="num">04</span> QUBO Lab</a><a href="/Provenance_Validation" target="_top"><span class="num">05</span> Provenance</a></nav><div class="side-bottom"><div class="live">LOCAL EVIDENCE LOADED</div><div>C5G7 layout study<br><b>Four categorical positions</b></div><p style="margin-top:13px">MODEL STATUS<br><b>SCHEMATIC / PARTIAL EVIDENCE</b></p></div></aside>
-<main><header class="topbar"><div class="crumb">CB-PFR &nbsp;/&nbsp; RESEARCH WORKSTATION &nbsp;/&nbsp; <b id="crumb">C5G7 GEOMETRY</b></div><div class="env">RESEARCH PROTOTYPE · EVIDENCE-AWARE</div></header>
-<div class="content"><section class="heading"><div><div class="eyebrow">RESEARCH MODULE / 01</div><h1>C5G7 Core <em>Geometry</em></h1><p class="subtitle">Inspect four-position material assignments and their recorded transport summaries. The map is categorical; it is not a pin-resolved reactor mesh.</p></div><div class="actions"><button class="btn" id="reset">Reset selection ↺</button><button class="btn primary" id="toResults">View recorded metrics ↗</button></div></section>
-<div class="notice"><div class="i">i</div><div><b>Scientific integrity notice</b><span>Displayed metrics are loaded from the repository CSV. The four-cell layout is a schematic; no pin-level or full-core geometry is supplied.</span></div><div class="tag">DATA STATE / CSV</div></div>
-<section class="metrics"><article class="metric"><div class="mlabel">CANDIDATE LAYOUTS <span>01</span></div><div class="mvalue" id="nLayouts">—</div><div class="mfoot"><i class="dot"></i> Valid four-position records</div></article><article class="metric"><div class="mlabel">k-EFFECTIVE MEAN <span>02</span></div><div class="mvalue" id="mKeff">—</div><div class="mfoot" id="mStd">Reported standard deviation</div></article><article class="metric"><div class="mlabel">AGGREGATE FLUX SCORE <span>03</span></div><div class="mvalue" id="mFlux">—</div><div class="mfoot">Repository score · not spatial flux</div></article><article class="metric"><div class="mlabel">AGGREGATE FISSION SCORE <span>04</span></div><div class="mvalue" id="mFission">—</div><div class="mfoot">Repository score · aggregate only</div></article></section>
-<section class="panel" style="margin-bottom:15px"><div class="panel-head"><div><div class="kicker">CANDIDATE SPACE / 06 RECORDS</div><h2>Six recorded 2 × 2 material layouts</h2></div><span class="pill">CSV-DRIVEN</span></div><div class="detail"><div class="layout-gallery" id="layoutGallery" style="grid-column:1/-1"></div></div></section>
-<section class="workspace"><article class="panel"><div class="panel-head"><div><div class="kicker">01 / GEOMETRY</div><h2>Assembly placement explorer</h2></div><div class="head-right"><span class="pill">2 × 2 DESIGN</span><select id="pick" aria-label="Select candidate"></select></div></div><div class="geometry-wrap"><svg id="geometry" viewBox="0 0 680 390" role="img" aria-label="Interactive four-position categorical material map"></svg></div><div class="panel-foot"><div class="legend"><span><i class="swatch u"></i>UO₂ assembly</span><span><i class="swatch m"></i>MOX assembly</span></div><span>SCHEMATIC · NOT TO SCALE</span></div></article>
-<aside class="panel"><div class="panel-head"><div><div class="kicker">02 / INSPECTOR</div><h2>Selected candidate</h2></div><span class="pill" id="canonPill">RECORDED</span></div><div class="detail"><div class="detail-title">CANDIDATE IDENTIFIER</div><div class="candidate-id" id="candidateId">—</div><div class="signature" id="signature">—</div><div class="detail-row"><span>Canonical reference</span><b id="canonical">—</b></div><div class="detail-row"><span>Seed</span><b id="seed">—</b></div><div class="detail-row"><span>Batches / inactive</span><b id="batches">—</b></div><div class="detail-row"><span>Particles per batch</span><b id="particles">—</b></div><div class="detail-row"><span>MOX positions</span><b id="mCount">—</b></div><div class="detail-row"><span>UO₂ positions</span><b id="uCount">—</b></div><div class="detail-row"><span>MGXS hash before</span><b class="hash" id="hash0">—</b></div><div class="detail-row"><span>MGXS hash after</span><b class="hash" id="hash1">—</b></div></div><div class="smallnote">Hash equality checks input integrity only; it does not establish physical validation or solver correctness.</div></aside></section>
-<section class="bottom-grid" id="results"><article class="panel"><div class="panel-head"><div><div class="kicker">03 / RECORDED RESPONSE</div><h2>Candidate comparison</h2></div><span class="pill">SOURCE CSV</span></div><div class="chart-body"><div id="plot"></div></div><div class="smallnote">Bars show recorded k-effective means; error bars use the reported standard deviation. They are not confidence intervals unless the source methodology establishes that interpretation.</div></article><article class="panel"><div class="panel-head"><div><div class="kicker">04 / EVIDENCE TABLE</div><h2>Layout records</h2></div><span class="pill" id="recordCount">— RECORDS</span></div><div class="table-wrap"><table><thead><tr><th>Candidate</th><th>Layout</th><th>k-effective</th><th>Flux</th><th>Fission</th></tr></thead><tbody id="rows"></tbody></table></div><div class="smallnote">Select a row or candidate selector to inspect the associated material assignment and run configuration.</div></article></section>
-<footer class="footer"><span>CB-PFR · COMPUTATIONAL REACTOR RESEARCH</span><span>DATA SOURCE: candidate_summary.csv</span><span>UI: SCIENTIFIC WORKSTATION</span></footer></div></main></div>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script><script>
-const DATA=__DATA__, byId=id=>document.getElementById(id), NS="http://www.w3.org/2000/svg";
-function svgEl(tag,attrs,text){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,v));if(text!==undefined)n.textContent=text;return n}
-function draw(d){const s=byId("geometry");s.replaceChildren();const text=(x,y,t,size=10,fill="#8ea2b8",anchor="start",weight=500)=>s.append(svgEl("text",{x,y,fill,"font-size":size,"font-family":"ui-monospace,Menlo,monospace","text-anchor":anchor,"font-weight":weight},t));text(22,22,"XY MATERIAL ASSIGNMENT",10,"#58d7df","start",700);text(658,22,"SCHEMATIC / NOT TO SCALE",9,"#8299b1","end",500);const x0=170,y0=48,cell=148;
-s.append(svgEl("rect",{x:x0-5,y:y0-5,width:cell*2+10,height:cell*2+10,rx:3,fill:"#091522",stroke:"#476f8e","stroke-width":1.2}));
-s.append(svgEl("line",{x1:x0+cell,y1:y0,x2:x0+cell,y2:y0+cell*2,stroke:"#37546b","stroke-dasharray":"4 5"}));s.append(svgEl("line",{x1:x0,y1:y0+cell,x2:x0+cell*2,y2:y0+cell,stroke:"#37546b","stroke-dasharray":"4 5"}));
-const pos=[[0,0],[1,0],[0,1],[1,1]];
-pos.forEach(([cx,cy],i)=>{const x=x0+cx*cell,y=y0+cy*cell,u=d.sig[i]==="U",color=u?"#7ba8ff":"#f5b95f",fill=u?"#102d49":"#33271c";const g=svgEl("g",{style:"cursor:pointer"});g.append(svgEl("rect",{x:x+4,y:y+4,width:cell-8,height:cell-8,rx:4,fill,stroke:color,"stroke-width":1.6}));g.append(svgEl("text",{x:x+15,y:y+22,fill:"#b9cce0","font-size":10,"font-family":"ui-monospace,monospace"},["P00","P10","P01","P11"][i]));g.append(svgEl("text",{x:x+cell/2,y:y+cell/2+3,fill:"#f2f6fc","font-size":24,"font-weight":750,"text-anchor":"middle","font-family":"Inter, sans-serif"},u?"UO₂":"MOX"));g.append(svgEl("text",{x:x+cell/2,y:y+cell-17,fill:color,"font-size":8,"font-weight":700,"text-anchor":"middle","font-family":"ui-monospace,monospace"},u?"URANIUM OXIDE":"MIXED OXIDE"));g.addEventListener("click",()=>{byId("signature").textContent=d.sig+" · selected "+["P00","P10","P01","P11"][i]});s.append(g)});
-text(100,y0+cell/2,"ROW 0",9,"#8299b1","end");text(100,y0+cell+cell/2,"ROW 1",9,"#8299b1","end");text(x0+cell/2,y0+cell*2+24,"COLUMN 0",9,"#8299b1","middle");text(x0+cell+cell/2,y0+cell*2+24,"COLUMN 1",9,"#8299b1","middle");text(22,377,"FOUR CATEGORICAL ASSEMBLY POSITIONS · NO PIN-RESOLVED MODEL",9,"#8299b1","start",600)}
-function render(){const d=DATA.find(x=>x.id===byId("pick").value)||DATA[0];draw(d);byId("mKeff").textContent=d.keff.toFixed(6);byId("mStd").textContent="± "+d.std.toFixed(6)+" reported std. dev.";byId("mFlux").textContent=d.flux.toFixed(3);byId("mFission").textContent=d.fission.toFixed(5);byId("candidateId").textContent=d.id;byId("signature").textContent=d.sig;byId("canonical").textContent=d.canonical?"Yes":"No";byId("canonPill").textContent=d.canonical?"REFERENCE":"CANDIDATE";byId("seed").textContent=d.seed;byId("batches").textContent=d.batches+" / "+d.inactive;byId("particles").textContent=d.particles.toLocaleString();byId("mCount").textContent=d.sig.split("").filter(c=>c==="M").length+" / 4";byId("uCount").textContent=d.sig.split("").filter(c=>c==="U").length+" / 4";byId("hash0").textContent=d.hash0;byId("hash1").textContent=d.hash1;document.querySelectorAll("#rows tr").forEach(tr=>tr.classList.toggle("selected",tr.dataset.id===d.id));document.querySelectorAll("#layoutGallery button").forEach(b=>b.classList.toggle("active",b.dataset.id===d.id))}
-DATA.forEach(d=>{const o=document.createElement("option");o.value=d.id;o.textContent=d.id+" · "+d.sig;byId("pick").append(o);const tr=document.createElement("tr");tr.dataset.id=d.id;tr.innerHTML="<td>"+d.id+"</td><td>"+d.sig+"</td><td class='num'>"+d.keff.toFixed(6)+"</td><td class='num'>"+d.flux.toFixed(3)+"</td><td class='num'>"+d.fission.toFixed(5)+"</td>";tr.addEventListener("click",()=>{byId("pick").value=d.id;render()});byId("rows").append(tr)});
-byId("nLayouts").textContent=String(DATA.length).padStart(2,"0");
+with st.expander("Methodology, provenance and interpretation"):
+    st.markdown(f"""
+**Data source:** `{CSV.relative_to(ROOT)}`  
+**CSV SHA-256:** `{csv_hash}`  
+**Records displayed:** {len(df)} valid four-position candidates.
 
-DATA.forEach(d=>{const b=document.createElement("button");b.type="button";b.className="layout-option";b.dataset.id=d.id;b.innerHTML="<span><span class='sig'>"+d.sig+"</span><br><span class='label'>"+d.id+"</span></span><span class='label'>k-eff "+d.keff.toFixed(4)+"</span>";b.addEventListener("click",()=>{byId("pick").value=d.id;render()});byId("layoutGallery").append(b)});
-byId("pick").value=__DEFAULT__;byId("nLayouts").textContent=DATA.length.toString().padStart(2,"0");byId("recordCount").textContent=DATA.length+" RECORDS";byId("pick").addEventListener("change",render);byId("reset").addEventListener("click",()=>{byId("pick").value=__DEFAULT__;render()});byId("toResults").addEventListener("click",()=>byId("results").scrollIntoView({behavior:"smooth"}));render();
-if(window.Plotly){const sorted=[...DATA].sort((a,b)=>a.id.localeCompare(b.id));Plotly.newPlot("plot",[{type:"bar",x:sorted.map(d=>d.id),y:sorted.map(d=>d.keff),error_y:{type:"data",array:sorted.map(d=>d.std),visible:true,color:"#c0d0dc"},marker:{color:sorted.map(d=>d.canonical?"#58d7df":"#7ba8ff")},customdata:sorted.map(d=>[d.sig,d.flux,d.fission]),hovertemplate:"%{x}<br>Layout %{customdata[0]}<br>k-effective %{y:.6f}<br>Reported σ shown as error bar<extra></extra>"}],{paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{color:"#bdccdc",size:10},margin:{l:60,r:12,t:12,b:70},xaxis:{gridcolor:"#26364a",linecolor:"#34495e",tickangle:-20},yaxis:{title:"Recorded k-effective mean",gridcolor:"#26364a",linecolor:"#34495e"},showlegend:false},{responsive:true,displaylogo:false})}else{byId("plot").textContent="Plotly could not load; the evidence table remains available."}
-</script></body></html>
-"""
-html = html.replace("__DATA__", payload).replace("__DEFAULT__", json.dumps(default_id))
-components.html(html, height=1700, scrolling=True)
+- Layout signatures are categorical labels; this page maps the four stored characters to four schematic cells.
+- k-effective values, standard deviations, relative SD, and aggregate scores are read from the recorded CSV; the UI does not rerun OpenMC.
+- Aggregate flux and fission scores are not spatial fields and are not interpreted as absolute physical units here.
+- The reported standard deviation is plotted as supplied; it is not relabelled as a confidence interval.
+- The shared MGXS hash can indicate that the input file did not change during the recorded runs, but cannot prove model validation.
+- Candidate differences should not be treated as a validated physical ranking without documented model setup, convergence checks, uncertainty treatment, and independent validation.
+""")
+st.caption("CB-PFR · Scientific workstation · CSV-backed exploratory evidence · Not a validated reactor design or safety analysis.")
