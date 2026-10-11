@@ -10,8 +10,11 @@ def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def canonical_xml(path: Path) -> str:
+def canonical_xml(path: Path, *, normalize_cross_sections_path: bool = False) -> str:
     root = ET.parse(path).getroot()
+    if normalize_cross_sections_path:
+        for node in root.findall("cross_sections"):
+            node.text = "<cross-sections-path>"
     for element in root.iter():
         element.attrib = dict(sorted(element.attrib.items()))
         if element.text is not None and not element.text.strip():
@@ -30,7 +33,7 @@ def compare_file(name: str, production_root: Path, candidate_root: Path) -> dict
     diff = list(difflib.unified_diff(a.splitlines(), b.splitlines(),
                                      fromfile=f"production/{name}", tofile=f"candidate/{name}",
                                      lineterm=""))
-    return {
+    result = {
         "file": name,
         "status": "IDENTICAL_AFTER_ATTRIBUTE_ORDER_NORMALIZATION" if a == b else "DIFFERENT",
         "production_byte_sha256": sha(left),
@@ -41,6 +44,15 @@ def compare_file(name: str, production_root: Path, candidate_root: Path) -> dict
         "diff_lines": diff[:300],
         "diff_truncated": len(diff) > 300,
     }
+    if name == "materials.xml":
+        left_def = canonical_xml(left, normalize_cross_sections_path=True)
+        right_def = canonical_xml(right, normalize_cross_sections_path=True)
+        result["material_definitions_equal_ignoring_cross_sections_path"] = left_def == right_def
+        result["production_cross_sections_path"] = ET.parse(left).getroot().findtext("cross_sections")
+        result["candidate_cross_sections_path"] = ET.parse(right).getroot().findtext("cross_sections")
+        result["material_definition_sha256_production"] = hashlib.sha256(left_def.encode()).hexdigest()
+        result["material_definition_sha256_candidate"] = hashlib.sha256(right_def.encode()).hexdigest()
+    return result
 
 
 def main() -> int:
@@ -58,9 +70,21 @@ def main() -> int:
     names = ("geometry.xml", "materials.xml", "settings.xml", "tallies.xml", "plots.xml")
     results = [compare_file(name, a.production_root, a.candidate_root) for name in names]
     model_files = [r for r in results if r["file"] in ("geometry.xml", "materials.xml", "tallies.xml")]
+    by_name = {r["file"]: r for r in results}
+    model_definitions_match = (
+        by_name["geometry.xml"].get("canonical_xml_equal") is True
+        and by_name["materials.xml"].get("material_definitions_equal_ignoring_cross_sections_path") is True
+        and by_name["tallies.xml"].get("canonical_xml_equal") is True
+    )
+    production_mgxs_exists = (a.production_root / "mgxs.h5").is_file()
+    candidate_mgxs_exists = (a.candidate_root / "mgxs.h5").is_file()
     report = {
         "schema_version": "1.0",
         "status": "INPUTS_DIFFER" if any(r["status"] in ("DIFFERENT", "MISSING") for r in model_files) else "MODEL_XML_MATCH",
+        "model_definitions_match_ignoring_cross_sections_path": model_definitions_match,
+        "production_mgxs_file_available_for_direct_hash": production_mgxs_exists,
+        "candidate_mgxs_file_available_for_direct_hash": candidate_mgxs_exists,
+        "full_nuclear_data_identity_verified": False,
         "production_root": str(a.production_root),
         "candidate_root": str(a.candidate_root),
         "comparison_method": "XML attribute-order normalization; child order and all element values are preserved",
