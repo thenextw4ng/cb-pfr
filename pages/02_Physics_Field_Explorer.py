@@ -14,13 +14,13 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 STATEPOINT_ARCHIVE = ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip"
-STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "result_summary.json"
+STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
 PRODUCTION_MEMBER = "c5g7-run/2d/statepoint.20000.h5"
 
 
 def _decode_h5_text(value):
     if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace").rstrip("\\x00")
+        return value.decode("utf-8", errors="replace").rstrip("\x00")
     if hasattr(value, "item"):
         try:
             return _decode_h5_text(value.item())
@@ -96,7 +96,7 @@ def _load_bundled_statepoint():
     expected_hash = None
     if STATEPOINT_BASELINE.is_file():
         baseline = json.loads(STATEPOINT_BASELINE.read_text(encoding="utf-8"))
-        expected_hash = baseline.get("statepoint_sha256")
+        expected_hash = baseline.get("statepoint_file_sha256")
     actual_hash = hashlib.sha256(data).hexdigest()
     return data, actual_hash, expected_hash
 
@@ -114,17 +114,17 @@ render_workspace_sidebar("Physics Fields", df)
 render_page_intro(
     "PHYSICS FIELD EXPLORER / C5G7 2×2 STUDY",
     "Physics Field Explorer",
-    "Inspect the recorded aggregate evidence and identify which physical fields are actually available. Spatial maps remain gated until source tally arrays, units, and mesh metadata are present.",
+    "Compare recorded aggregate evidence with the archived OpenMC mesh tally. Spatial maps use the actual 51 × 51 statepoint bins; mesh indices are not mapped to materials or assembly positions.",
 )
 
 a, b, c, d = st.columns(4)
 a.metric("Layout records", len(df))
 b.metric("Aggregate flux scores", int(df["aggregate_flux_score"].notna().sum()))
 c.metric("Aggregate fission scores", int(df["aggregate_fission_score"].notna().sum()))
-d.metric("Spatial field arrays", "Unavailable")
+d.metric("Verified mesh bins", "2,601")
 
 st.markdown(
-    '<div class="evidence-note"><b>Scientific boundary</b> · The current CSV contains aggregate flux and fission scores only. It does not provide mesh dimensions, cell-wise tally arrays, field units, normalization, or spatial uncertainty. A neutron-flux or power heatmap would be fabricated, so this view deliberately does not synthesize one.</div>',
+    '<div class="evidence-note"><b>Scientific boundary</b> · The candidate CSV contains aggregate scores only, but the separately archived production statepoint contains a 51 × 51 mesh tally with flux, fission, nu-fission, and standard deviations. The maps below show those recorded tally bins—not absolute power, material identity, or a validated assembly map.</div>',
     unsafe_allow_html=True,
 )
 st.write("")
