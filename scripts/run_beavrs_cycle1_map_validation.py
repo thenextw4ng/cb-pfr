@@ -22,7 +22,7 @@ from pathlib import Path
 PITCH_CM = 21.50364
 FUEL_BOTTOM_CM = 36.748
 FUEL_TOP_CM = 402.508
-MESH_N = 17
+MESH_N = 15
 MEASUREMENT_REL = Path("measurements/detector_signals/cycle_1/0/radial_measurements_full.csv")
 SUMMARY_REL = Path("measurements/detector_signals/cycle_1/0/summary.csv")
 TALLY_NAME = "beavrs_cycle1_day0_assembly_fission_rate"
@@ -65,13 +65,15 @@ def build_assembly_map(core_template: list[list[str]]) -> dict[str, tuple[int, i
             if not match:
                 continue
             label = f"{match.group(1)}{int(match.group(2))}"
-            # The 17x17 mesh covers template rows/columns 1..17. OpenMC mesh
-            # y indices increase from the lower boundary; the lattice template
-            # is stored from top to bottom.
-            if not (1 <= row_index <= 17 and 1 <= col_index <= 17):
+            # BEAVRS has a 15x15 assembly lattice embedded in a 19x19
+            # template with two padding rows/columns on each side. Assembly
+            # tokens occupy template rows/columns 2..16 (zero-based).
+            # OpenMC mesh y indices increase from the lower boundary, while
+            # the lattice template is stored from top to bottom.
+            if not (2 <= row_index <= 16 and 2 <= col_index <= 16):
                 continue
-            ix = col_index  # 1-based; col_index 1 maps to first mesh bin
-            iy = 18 - row_index  # row 1 -> bin 17; row 17 -> bin 1
+            ix = col_index - 1  # template column 2 -> mesh bin 1
+            iy = 17 - row_index  # template row 2 -> mesh bin 15; row 16 -> bin 1
             if label in result:
                 raise ValueError(f"duplicate assembly label {label}")
             result[label] = (ix, iy)
@@ -107,8 +109,8 @@ def prepare(args: argparse.Namespace) -> None:
 
     mesh = openmc.RegularMesh()
     mesh.dimension = (MESH_N, MESH_N, 1)
-    mesh.lower_left = (-8.5 * PITCH_CM, -8.5 * PITCH_CM, FUEL_BOTTOM_CM)
-    mesh.upper_right = (8.5 * PITCH_CM, 8.5 * PITCH_CM, FUEL_TOP_CM)
+    mesh.lower_left = (-7.5 * PITCH_CM, -7.5 * PITCH_CM, FUEL_BOTTOM_CM)
+    mesh.upper_right = (7.5 * PITCH_CM, 7.5 * PITCH_CM, FUEL_TOP_CM)
     tally = openmc.Tally(name=TALLY_NAME)
     tally.filters = [openmc.MeshFilter(mesh)]
     tally.scores = ["fission"]
@@ -149,8 +151,8 @@ def prepare(args: argparse.Namespace) -> None:
             "fuel_axial_range_cm": [FUEL_BOTTOM_CM, FUEL_TOP_CM],
             "mesh": {
                 "dimension": [MESH_N, MESH_N, 1],
-                "lower_left_cm": [-8.5 * PITCH_CM, -8.5 * PITCH_CM, FUEL_BOTTOM_CM],
-                "upper_right_cm": [8.5 * PITCH_CM, 8.5 * PITCH_CM, FUEL_TOP_CM],
+                "lower_left_cm": [-7.5 * PITCH_CM, -7.5 * PITCH_CM, FUEL_BOTTOM_CM],
+                "upper_right_cm": [7.5 * PITCH_CM, 7.5 * PITCH_CM, FUEL_TOP_CM],
                 "score": "fission reaction rate",
             },
             "batches": args.batches,
@@ -286,13 +288,13 @@ def main() -> None:
     parser.add_argument("--mode", choices=("prepare", "analyze"), required=True)
     parser.add_argument("--output", default="beavrs-run")
     parser.add_argument("--beavrs-root", default=".")
-    parser.add_argument("--batches", type=int, default=250)
-    parser.add_argument("--inactive", type=int, default=30)
-    parser.add_argument("--particles", type=int, default=2000)
+    parser.add_argument("--batches", type=int, default=500)
+    parser.add_argument("--inactive", type=int, default=50)
+    parser.add_argument("--particles", type=int, default=3000)
     parser.add_argument("--seed", type=int, default=20261011)
     args = parser.parse_args()
     if args.batches <= 0 or args.particles <= 0 or args.inactive < 0 or args.inactive >= args.batches:
-        parser.error("require batches > particles > 0 and 0 <= inactive < batches")
+        parser.error("require batches > 0, particles > 0, and 0 <= inactive < batches")
     if args.mode == "prepare":
         prepare(args)
     else:
