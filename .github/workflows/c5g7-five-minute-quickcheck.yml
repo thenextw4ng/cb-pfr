@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - research/c5g7-five-minute-quickcheck-20261011
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
