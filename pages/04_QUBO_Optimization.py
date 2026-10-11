@@ -21,7 +21,7 @@ def header(title, subtitle, status="EVIDENCE-LINKED"):
 
 header("QUBO / Optimization","Inspect the separate four-variable material-count constraint and its exact feasible design space","EXACT COMBINATORICS · NOT PHYSICAL VALIDATION")
 st.markdown("### Formulation")
-st.latex(r"E(y)=A(\\sum_{i=1}^{4}y_i-2)^2, \\quad y_i\\in\\{0,1\\}")
+st.latex(r"E(y)=A(\sum_{i=1}^{4}y_i-2)^2, \quad y_i\in\{0,1\}")
 st.write("Here 1 = MOX and 0 = UO₂. The penalty enforces exactly two MOX and two UO₂ assemblies across four positions. This is a separate C5G7 design formulation; it is not a mapping of the legacy fresh / once-burned / twice-burned QUBO.")
 A=st.slider("Constraint penalty A",min_value=0.5,max_value=10.0,value=1.0,step=0.5)
 rows=[]
