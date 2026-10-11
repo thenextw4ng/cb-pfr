@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "workflow_run_id": 38097472734,
+  "workflow_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38097472734",
+  "artifact_id": 11686976371,
+  "artifact_name": "c5g7-layout-repeatability-smoke",
+  "artifact_sha256": "8d7c0bdf4bee54ca429fe1a2fef78c5da3abbc173628b313aa257df88d2c99bd",
+  "artifact_size_bytes": 8010201,
+  "artifact_expires_at_utc": "2027-01-09T00:09:37Z",
+  "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "openmc_version": "0.16.0",
+  "rounds": 3,
+  "candidates_per_round": 6,
+  "runs": 18,
+  "settings": {"batches":100,"inactive":10,"particles_per_batch":1000,"threads":1,"seed_bases":[620000,630000,640000]},
+  "raw_hdf5_audit": {"checks_per_round":112,"checks_total":336,"passed":336,"failed":0},
+  "repeatability_metrics": {"spearman_rank_correlations":[0.8857142857142857,0.9428571428571428,0.9428571428571428],"rank_range_zero_candidates":["c5g7-2x2-MUUM","c5g7-2x2-UMMU"],"between_run_sd_exceeds_pooled_within_run_sd_candidates":5},
+  "mgxs_semantic_comparison": {
+    "original_smoke_byte_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+    "repeatability_smoke_byte_sha256": "eab47265b45a9b350e5c8d28e60c2042fe32f84efe91d2636b731697ae0f8e64",
+    "canonical_semantic_sha256": "f6cb1ce367ab1113e72a2a1ebe2f313e95cce73c7fa5b95797256c956aa4871d",
+    "dataset_count": 63,
+    "hdf5_object_count": 95,
+    "attributes_identical": true,
+    "dataset_shapes_dtypes_and_values_identical": true,
+    "interpretation": "Byte-level serialization differs but the compared MGXS dataset/attribute trees are identical. The production baseline records the original byte hash, but its raw MGXS file is not included in the committed evidence ZIP."
+  },
+  "interpretation_limit": "Exploratory repeatability evidence only; not benchmark-grade convergence, a validated physical ranking, or reactor-safety evidence."
+}
