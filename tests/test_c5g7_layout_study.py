@@ -108,8 +108,6 @@ class C5G7LayoutStudyTests(unittest.TestCase):
 
     def test_patch_builder_preserves_all_five_reflector_cells_for_every_layout(self):
         import itertools
-        import re
-
         positions = ("p00", "p01", "p10", "p11")
         for mox_positions in itertools.combinations(positions, 2):
             layout = {p: ("MOX" if p in mox_positions else "UO2") for p in positions}
@@ -129,9 +127,13 @@ class C5G7LayoutStudyTests(unittest.TestCase):
                 )
                 patch_builder(builder, layout, batches=40, inactive=5, particles=200)
                 text = builder.read_text()
-                match = re.search(r"lattices\\['Core'\\]\\.universes\\s*=\\s*(\\[\\[.*?\\]\\])", text, re.S)
-                self.assertIsNotNone(match, text)
-                compact = "".join(match.group(1).split())
+                assignment = next(
+                    (line for line in text.splitlines()
+                     if line.startswith("lattices['Core'].universes = ")),
+                    None,
+                )
+                self.assertIsNotNone(assignment, text)
+                compact = "".join(assignment.split("=", 1)[1].split())
                 symbol = {"UO2": "u", "MOX": "m"}
                 expected = (
                     f"[[{symbol[layout['p00']]},{symbol[layout['p01']]},w],"
