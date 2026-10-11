@@ -88,5 +88,16 @@
       "Independent review of the physical meaning and limitations of the mapping."
     ],
     "fallback": "Keep the four-variable UO2/MOX placement QUBO as a separate, clearly named study; leave the legacy mapping blocked until evidence exists."
+  },
+  "c5g7_specific_candidate_selection_qubo": {
+    "status": "IMPLEMENTED_BUT_REQUIRES_USER_SPECIFIED_KEFF_BAND",
+    "script": "scripts/build_c5g7_layout_selection_qubo.py",
+    "variable_definition": "y_k in {0,1}, one variable per evaluated 2x2 UO2/MOX layout",
+    "objective": "minimize sum_k [mean(F_k) + risk_weight * SD_between_seeds(F_k)] * y_k",
+    "constraint_penalty": "A * (sum_k y_k - 1)^2",
+    "infeasible_candidate_penalty": "P * sum_k (1 - feasible_k) * y_k",
+    "feasibility_rule": "mean(k_eff) +/- uncertainty_multiplier * between-seed SD(k_eff) must lie entirely inside user-specified [k_eff_min, k_eff_max]",
+    "no_legacy_mapping": "This is a new C5G7-specific formulation; it does not map legacy fresh/once_burned/twice_burned variables to UO2/MOX.",
+    "no_winner_claim": true
   }
 }
