@@ -109,8 +109,8 @@ def prepare(args: argparse.Namespace) -> None:
 
     mesh = openmc.RegularMesh()
     mesh.dimension = (MESH_N, MESH_N, 1)
-    mesh.lower_left = (-8 * PITCH_CM, -8 * PITCH_CM, FUEL_BOTTOM_CM)
-    mesh.upper_right = (8 * PITCH_CM, 8 * PITCH_CM, FUEL_TOP_CM)
+    mesh.lower_left = (-8.5 * PITCH_CM, -8.5 * PITCH_CM, FUEL_BOTTOM_CM)
+    mesh.upper_right = (8.5 * PITCH_CM, 8.5 * PITCH_CM, FUEL_TOP_CM)
     tally = openmc.Tally(name=TALLY_NAME)
     tally.filters = [openmc.MeshFilter(mesh)]
     tally.scores = ["fission"]
@@ -151,8 +151,8 @@ def prepare(args: argparse.Namespace) -> None:
             "fuel_axial_range_cm": [FUEL_BOTTOM_CM, FUEL_TOP_CM],
             "mesh": {
                 "dimension": [MESH_N, MESH_N, 1],
-                "lower_left_cm": [-8 * PITCH_CM, -8 * PITCH_CM, FUEL_BOTTOM_CM],
-                "upper_right_cm": [8 * PITCH_CM, 8 * PITCH_CM, FUEL_TOP_CM],
+                "lower_left_cm": [-8.5 * PITCH_CM, -8.5 * PITCH_CM, FUEL_BOTTOM_CM],
+                "upper_right_cm": [8.5 * PITCH_CM, 8.5 * PITCH_CM, FUEL_TOP_CM],
                 "score": "fission reaction rate",
             },
             "batches": args.batches,
@@ -195,7 +195,9 @@ def analyze(args: argparse.Namespace) -> None:
         mesh_filter = next(f for f in tally.filters if isinstance(f, openmc.MeshFilter))
         filter_bins = [tuple(int(i) for i in b) for b in mesh_filter.bins]
         raw_mean = tally.mean[:, 0, 0]
+        raw_sd = tally.std_dev[:, 0, 0]
         values: dict[str, float] = {}
+        tally_sds: dict[str, float] = {}
         for label in measurements:
             ix, iy = assembly_map[label]
             try:
@@ -206,6 +208,7 @@ def analyze(args: argparse.Namespace) -> None:
             if not math.isfinite(value) or value <= 0:
                 raise ValueError(f"invalid calculated fission rate for {label}: {value}")
             values[label] = value
+            tally_sds[label] = float(raw_sd[flat_index])
         mean = sum(values.values()) / len(values)
         calculated = {label: value / mean for label, value in values.items()}
         residuals = {label: calculated[label] - measurements[label] for label in measurements}
@@ -225,6 +228,7 @@ def analyze(args: argparse.Namespace) -> None:
         keff = float(sp.keff.nominal_value)
         keff_sd = float(sp.keff.std_dev)
         statepoint_batches = int(sp.n_batches)
+        relative_tally_sd = {label: 100.0 * tally_sds[label] / values[label] for label in values}
 
     rows = []
     for label in sorted(measurements):
@@ -234,6 +238,9 @@ def analyze(args: argparse.Namespace) -> None:
             "calculated_normalized": calculated[label],
             "residual_calculated_minus_measured": residuals[label],
             "absolute_relative_error_percent": 100.0 * abs(residuals[label]) / measurements[label],
+            "calculated_raw_fission_rate": values[label],
+            "calculated_raw_fission_rate_sd": tally_sds[label],
+            "raw_tally_relative_statistical_sd_percent": relative_tally_sd[label],
         })
     with (output / "beavrs_cycle1_day0_map_comparison.csv").open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
@@ -255,11 +262,14 @@ def analyze(args: argparse.Namespace) -> None:
             "normalized_map_mae": mae,
             "mean_absolute_relative_error_percent": mape,
             "pearson_correlation": correlation,
+            "mean_raw_tally_relative_statistical_sd_percent": sum(relative_tally_sd.values()) / len(relative_tally_sd),
+            "max_raw_tally_relative_statistical_sd_percent": max(relative_tally_sd.values()),
         },
         "limitations": [
             "BEAVRS upstream model uses bank E withdrawn 228 steps; Cycle 1 day-0 measurements report 230.",
             "The measurement map has been normalized; this is a shape comparison, not absolute power validation.",
-            "This run does not propagate measurement uncertainty or model-form uncertainty.",
+            "Measurement uncertainty and model-form uncertainty are not propagated.",
+            "Normalization-induced covariance between detector bins is not propagated; reported tally SDs are raw-bin relative Monte Carlo uncertainties.",
             "No acceptance threshold has been established by the benchmark authors for this exact model setup.",
             "This validates neither the legacy burnup-state QUBO mapping nor CB-PFR ranking effectiveness.",
             "QUBO formulation does not by itself establish quantum-device execution or quantum advantage.",
