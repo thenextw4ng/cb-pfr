@@ -6,8 +6,17 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="CB-PFR · C5G7 Geometry", page_icon="⚛", layout="wide")
+with st.sidebar:
+    st.markdown("## ⚛ CB·PFR")
+    st.caption("COMPUTATIONAL REACTOR LAB")
+    st.markdown("---")
+    st.page_link("pages/01_C5G7_Layout_Explorer.py", label="01 · C5G7 Layout", icon="🧩")
+    st.page_link("pages/02_Physics_Field_Explorer.py", label="02 · Physics Field", icon="🌐")
+    st.page_link("pages/03_Monte_Carlo_Reliability.py", label="03 · Monte Carlo", icon="🎲")
+    st.page_link("pages/04_QUBO_Optimization.py", label="04 · QUBO Lab", icon="⚙️")
+    st.page_link("pages/05_Provenance_Validation.py", label="05 · Provenance", icon="🔎")
 st.markdown("""<style>
-[data-testid="stSidebar"],[data-testid="stHeader"],[data-testid="stToolbar"],footer{display:none!important}
+[data-testid="stHeader"],[data-testid="stToolbar"],footer{display:none!important}
 [data-testid="stAppViewContainer"]>.main{margin-left:0!important}
 [data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important}
 iframe{display:block}
@@ -47,8 +56,8 @@ html = r"""
 <style>
 :root{color-scheme:dark;--bg:#080e17;--surface:#0d1724;--surface2:#111f2e;--line:#26364a;--text:#e7eef7;--muted:#8ea2b8;--cyan:#58d7df;--blue:#7ba8ff;--orange:#f5b95f;--green:#54d6a0}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:13px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,select{font:inherit}button{cursor:pointer}
-.shell{min-height:100vh;display:grid;grid-template-columns:224px minmax(0,1fr);background:radial-gradient(ellipse at 65% -20%,#173047 0,#080e17 52%)}
-.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:23px 14px 16px;background:#0b1420;border-right:1px solid var(--line)}
+.shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr);background:radial-gradient(ellipse at 65% -20%,#173047 0,#080e17 52%)}
+.sidebar{display:none!important}
 .brand{display:flex;align-items:center;gap:10px;padding:0 9px 27px}.atom{width:31px;height:31px;color:var(--cyan)}.brand-name{font-weight:800;font-size:20px;letter-spacing:.04em;line-height:1}.brand-sub{font-size:8px;letter-spacing:.13em;color:var(--muted);margin-top:5px}
 .overline{font-size:9px;letter-spacing:.16em;font-weight:700;color:#71879f;padding:0 10px 10px}.nav{display:grid;gap:4px}.nav button{border:1px solid transparent;background:transparent;color:#a7b8cb;text-align:left;border-radius:7px;padding:10px 10px;display:flex;gap:10px;align-items:center;font-size:12px}.nav button.active{background:#122c3a;border-color:#214653;color:#f2fbff}.nav .num{font:10px ui-monospace,monospace;color:#69849b}.nav button.active .num{color:var(--cyan)}.side-bottom{margin-top:auto;border-top:1px solid var(--line);padding:15px 9px 0;color:var(--muted);font-size:10px}.live{color:var(--green);letter-spacing:.08em;font-size:9px;font-weight:700;margin-bottom:10px}.live:before{content:"";display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;margin-right:7px}.side-bottom b{color:#c5d4e4;font-weight:600}
 main{min-width:0}.topbar{height:55px;display:flex;justify-content:space-between;align-items:center;padding:0 29px;border-bottom:1px solid var(--line);background:rgba(8,15,24,.72)}.crumb{font-size:10px;letter-spacing:.12em;color:#8499ae}.crumb b{color:#e4edf8;font-weight:600}.env{border:1px solid #2b4659;border-radius:5px;padding:5px 9px;color:#9eb4c9;font-size:9px;letter-spacing:.08em}
