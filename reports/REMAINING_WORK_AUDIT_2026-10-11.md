@@ -16,6 +16,7 @@ This is the current handoff after consolidating the conversation archives, audit
 - Added reproducible OpenMC statepoint/tally audit, archive-integrity, settings/log provenance, run inventory, tally summary, and plot utilities.
 - OpenMC 0.16.0 read all four archived statepoints successfully. The production (k_\mathrm{eff}) mean and standard deviation matched the transcribed summary. The tally arrays and six mesh-index plots are available from the audit workflow artifact.
 - Added a separate raw-HDF5 statepoint parser to CI. It reads `c5g7-run/2d/statepoint.20000.h5` directly from the committed ZIP and passed 10/10 metadata, eigenvalue, mesh-dimension, and score checks on Python 3.10, 3.11, and 3.12: [raw-HDF5 audit run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38096943383). Statepoint SHA-256: `0d76dc1a14a2b74a388c01883f01e5c3095480d53eee885910ca2a0c57e6b882`.
+- Ran six low-budget C5G7 2×2 assembly-placement smoke tests in OpenMC 0.16.0 (100 batches, 10 inactive, 1,000 particles/batch; explicit seeds 620000–620005). All six completed; the shared MGXS hash was unchanged. Candidate CSV, pairwise summary, run manifest, and scientific limitations are committed under `results/c5g7_layout_smoke_2026-10-10/` and `reports/c5g7_smoke_run_2026-10-10.md`; full statepoints/logs remain in the [workflow artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38085586809). These are smoke tests only, not benchmark-grade ranking or same-layout repeatability evidence.
 - Full software CI passed on Python 3.10, 3.11 and 3.12 on the integration branch: [CI run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084756074). The post-merge `main` CI is running/should be checked before the next release.
 - The OpenMC audit workflow passed on the integration branch: [audit run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084756095).
 
@@ -26,13 +27,14 @@ This is the current handoff after consolidating the conversation archives, audit
 | CB-PFR ranking software | Implemented; automated tests pass | Software functionality, not reactor validity |
 | ReactorQ Studio dashboard | Integrated | Synthetic demo plus OpenMC readiness checks; it does not launch a transport calculation |
 | C5G7 six-layout design-space generator | Integrated and tested | Enumerates 6 two-UO2/two-MOX permutations; not itself physical evidence |
-| C5G7 transport-case preparation/runner | Six isolated cases prepared successfully against pinned upstream commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450` | [Preparation artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084994157); no transport simulation was run |
+| C5G7 transport-case preparation/runner | Six isolated cases prepared and six low-budget smoke runs completed against pinned upstream commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450` | [Preparation artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084994157); [smoke-run artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38085586809). Not benchmark-grade. |
 | Synthetic benchmark and archived trial data | Present; documented as synthetic | Supports conclusions only under its declared synthetic data-generating process |
 | Production C5G7 statepoint scalar | Independently read via OpenMC 0.16.0 and separately checked from raw HDF5; 10/10 metadata/scalar/tally checks pass | Verifies extraction and consistency, not benchmark acceptance |
 | Production mesh and aggregate tallies | Exported and summarized; six plots generated | Descriptive scores and Monte Carlo uncertainty only |
 | Three recovered stage34 statepoints | Read successfully, but **not demonstrated independent repetitions** | Colocated settings files are byte-identical, have no explicit seed, and outputs are nearly identical |
 | Separate settings files with seeds 481730–481732 | Present, but matching statepoints are absent in those seeded directories | Cannot pair seeded inputs to recovered outputs |
-| Six candidates physically evaluated and ranked | Not established | No verified candidate IDs/configuration hashes matched to statepoints |
+| Six-layout smoke results | Completed, one low-budget run per layout | Explicit IDs/seeds and hashes recorded; descriptive results only, no robust ranking or same-layout repeatability |
+| Six candidates benchmark-grade evaluated and ranked | Not established | Common high-fidelity budget, repeated independent seeds, and predeclared objective/acceptance protocol still missing |
 | Legacy abstract QUBO mapped to C5G7 materials/depletion states | Blocked | No defensible mapping documented |
 | CB-PFR physical validation | Not established | Cannot be inferred from successful statepoint parsing or software CI |
 | Independent external replication | Not established | GitHub Actions is a reproducible audit workflow, not third-party replication |
@@ -45,16 +47,16 @@ Details: [Stage 3–4 statepoint provenance audit](stage34_statepoint_provenance
 
 ## Remaining scientific work
 
-1. Review the six prepared input cases from [the C5G7 preparation workflow artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084994157), including the canonical arrangement and per-case input hashes. The source revision is pinned in `config/benchmarks/c5g7_2x2_design_space.json`.
+1. Review the six smoke-run input cases and hashes from [the smoke workflow artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38085586809), with special attention to the canonical production-vs-smoke materials XML difference. The source revision is pinned in `config/benchmarks/c5g7_2x2_design_space.json`.
 2. Ensure a compatible OpenMC executable, MGXS/cross-section data, and all input files are present in the actual run environment. The committed HDF5 archive does not bundle the full cross-section library.
 3. Define stable candidate IDs and save each candidate's exact material layout, settings, model/material/geometry hashes, random seed, log, summary, and statepoint together.
-4. Run the six intended candidates with a predeclared common computational budget. For repeatability, run genuinely independent seeds and verify the seed is paired with the statepoint it generated.
+4. Rerun the six intended candidates with a predeclared benchmark-grade common computational budget. For repeatability, run multiple genuinely independent seeds per layout and verify each seed is paired with the statepoint it generated.
 5. Predeclare benchmark reference values and acceptance tolerances from the primary C5G7 specification. Distinguish code/model verification from comparing noncanonical design variants.
 6. Do not map `fresh / once_burned / twice_burned` to UO2/MOX enrichment categories. Either provide a source-backed depletion/material map or present the six-layout assembly-placement problem as a separate research formulation.
 7. Only after candidate identity and physics mapping are resolved, compute physical rankings, sensitivity analyses, and reliability metrics, then update the manuscript from the verified results.
 
 ## Release language
 
-Safe: “CB-PFR is an open research prototype with a reproducible synthetic benchmark, an independently audited C5G7/OpenMC baseline statepoint, and a separate C5G7 assembly-placement preparation pipeline. Candidate-level physical evaluation and the legacy-QUBO-to-C5G7 mapping remain unresolved.”
+Safe: “CB-PFR is an open research prototype with a reproducible synthetic benchmark, an independently audited C5G7/OpenMC baseline statepoint, and six exploratory low-budget C5G7 assembly-placement smoke runs. Benchmark-grade candidate evaluation and the legacy-QUBO-to-C5G7 mapping remain unresolved.”
 
 Unsafe without new evidence: “physically validated optimizer,” “validated reactor design,” “six candidates successfully compared,” “independent three-seed confirmation,” or any reactor-safety claim.
