@@ -2,8 +2,26 @@ name: C5G7 layout preparation audit
 
 on:
   push:
+    paths:
+      - ".github/workflows/c5g7-layout-prepare.yml"
+      - "scripts/prepare_c5g7_reference.py"
+      - "scripts/enumerate_c5g7_layouts.py"
+      - "scripts/run_c5g7_layout_study.py"
+      - "scripts/analyze_c5g7_smoke_results.py"
+      - "config/benchmarks/c5g7_2x2_design_space.json"
   pull_request:
+    paths:
+      - ".github/workflows/c5g7-layout-prepare.yml"
+      - "scripts/prepare_c5g7_reference.py"
+      - "scripts/enumerate_c5g7_layouts.py"
+      - "scripts/run_c5g7_layout_study.py"
+      - "scripts/analyze_c5g7_smoke_results.py"
+      - "config/benchmarks/c5g7_2x2_design_space.json"
   workflow_dispatch:
+
+concurrency:
+  group: c5g7-layout-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   prepare-layouts:
