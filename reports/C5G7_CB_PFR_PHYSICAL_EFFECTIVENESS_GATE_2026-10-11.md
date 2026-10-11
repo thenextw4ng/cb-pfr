@@ -43,6 +43,22 @@ Not yet. In the archived integration smoke, all six candidates passed illustrati
 
 The integration smoke does not demonstrate that CB-PFR outperforms point-estimate ranking, QUBO-only selection, a uniform-margin baseline, or a random selector on physical outcomes. In particular, because every candidate passed the illustrative screen, this run does not test whether CB-PFR correctly rejects physically infeasible candidates.
 
+
+### Same-pool ranking sanity check
+
+Under the integration smoke's illustrative settings, all six layouts pass the conservative screen, so the feasibility indicator and aggregate constraint violation do not separate them. With the configured risk weight of 1.0, the ranking score is mean peaking proxy plus between-seed SD:
+
+| Layout | Point estimate (mean peaking) | Risk-adjusted descriptive score | Rank by point estimate | Rank by risk-adjusted score |
+|---|---:|---:|---:|---:|
+| MUMU | 1.296265 | 1.318870 | 1 | 1 |
+| MUUM | 1.310279 | 1.332618 | 2 | 2 |
+| MMUU | 1.327285 | 1.339150 | 3 | 3 |
+| UUMM | 1.825391 | 1.849809 | 4 | 4 |
+| UMUM | 1.855918 | 1.902814 | 5 | 5 |
+| UMMU | 1.886113 | 1.915108 | 6 | 6 |
+
+The risk adjustment does not change the winner or ranking order in this tiny smoke dataset. Thus this dataset provides **no observed evidence of a CB-PFR selection advantage over point-estimate ranking**. The one-hot QUBO in the smoke is constructed from the declared CB-PFR candidate scores, so agreement between that QUBO and CB-PFR is an implementation-consistency check, not an independent solver-baseline comparison. Uniform-margin ranking also cannot meaningfully distinguish candidates when the same margin is applied and all candidates pass. A proper treatment-effect study remains required.
+
 ## Required work to close the gate
 
 1. **Canonical model verification:** raise the independent-run budget until the predeclared (k_\mathrm{eff}) uncertainty screen is met; verify model identity, source configuration, energy-group structure, material assignments, and benchmark-compatible spatial results.
