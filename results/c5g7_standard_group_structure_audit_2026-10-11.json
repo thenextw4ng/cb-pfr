@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS_CORRECTED_GROUP_STRUCTURE_CONFIRMED",
+  "upstream_source_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "standard_c5g7_energy_group_boundaries_eV": [
+    0.00001,
+    0.0635,
+    10,
+    100,
+    1000,
+    500000,
+    1000000,
+    20000000
+  ],
+  "production_historical": {
+    "byte_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+    "full_semantic_sha256": "fb4bb5adaaf6ccbc79a364fb37e7e3e1c2a0af9f8955e74d7649143760307d10",
+    "group_boundaries_eV": [
+      0.00001,
+      0.0005179474679231213,
+      0.026826957952797246,
+      1.389495494373136,
+      71.96856730011514,
+      3727.593720314938,
+      193069.77288832457,
+      10000000
+    ],
+    "standard_group_structure_match": false
+  },
+  "corrected_canonical": {
+    "byte_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129",
+    "full_semantic_sha256": "b30d63f071db922325f5ae0ee4e4f21edab6ca0ad2b3945eb88d2cec14716539",
+    "group_boundaries_eV": [
+      0.00001,
+      0.0635,
+      10,
+      100,
+      1000,
+      500000,
+      1000000,
+      20000000
+    ],
+    "standard_group_structure_match": true
+  },
+  "dataset_content_sha256": "c054ced2866ce997a617d47c541cc62a25cedd4621bf732a1b9ba44857b14db8",
+  "dataset_count": 63,
+  "dataset_shapes_dtypes_and_values_identical": true,
+  "full_semantic_equal": false,
+  "interpretation": "The cross-section dataset payloads are identical but the historical production energy-group boundaries are nonstandard. The corrected MGXS carries the standard C5G7 seven-group boundaries. This establishes the corrected input group structure, not benchmark acceptance; corrected transport runs and primary-specification review remain required.",
+  "workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38102796630"
+}
