@@ -31,9 +31,9 @@
         "source": "OECD/NEA C5G7 benchmark report; see reports/physical_simulator_validation.md"
       },
       "project_screening_limits": {
-        "absolute_difference_pcm_max": 100.0,
-        "combined_standard_uncertainty_z_max": 2.0,
-        "per_run_reported_keff_sd_pcm_max": 10.0,
+        "absolute_difference_pcm_max": 100,
+        "combined_standard_uncertainty_z_max": 2,
+        "per_run_reported_keff_sd_pcm_max": 10,
         "minimum_independent_seeds": 3
       },
       "warning": "These are provisional project screening gates, not official benchmark acceptance tolerances. G1 cannot pass while G0 is blocked."
@@ -48,8 +48,8 @@
         "Preserve spatial indexing, units, normalization, and reference-data provenance."
       ],
       "project_screening_limits": {
-        "rms_relative_error_percent_max": 2.0,
-        "max_absolute_relative_error_percent_max": 5.0
+        "rms_relative_error_percent_max": 2,
+        "max_absolute_relative_error_percent_max": 5
       },
       "warning": "Limits are provisional project screens until the selected primary benchmark's prescribed comparison metric is transcribed and reviewed."
     },
@@ -81,7 +81,14 @@
         "Use the same candidate design space for exact enumeration and transport scoring.",
         "Do not call highest/lowest k_eff safer or better without a separately justified objective."
       ],
-      "status": "BLOCKED_PENDING_OBJECTIVE_REVIEW"
+      "status": "BLOCKED_PENDING_OBJECTIVE_REVIEW",
+      "recommended_default": {
+        "validation_phase_objective": "Minimize discrepancy between the canonical UMMU case and the official C5G7 reference quantities; this is benchmark verification, not candidate design optimization.",
+        "six_layout_phase": "Report all six material-placement variants descriptively. Do not select a winner by highest or lowest k_eff without a separate physical design objective.",
+        "future_design_objective_template": "After a justified k_eff acceptance band is declared and assembly-level tally normalization is validated, a separate exploratory objective may minimize assembly-integrated fission-rate peaking F_fission = max_a(R_a)/mean_a(R_a), where R_a is the integrated fission-rate tally for fuel assembly a.",
+        "status": "template_only_not_applied",
+        "reason_not_applied": "The current tally/reference mapping and intended design target have not yet been approved; the existing 51x51 mesh scores are not automatically absolute power."
+      }
     }
   ],
   "explicit_nonclaims": [
