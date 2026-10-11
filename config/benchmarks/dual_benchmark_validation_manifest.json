@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "validation_program_id": "CBPFR-ReactorQ-dual-benchmark-2026-10",
+  "title": "C5G7 computational benchmark + KRITZ-2 experimental benchmark",
+  "strategy": "complementary_benchmarks_not_a_merged_physical_model",
+  "overall_status": "IN_PROGRESS_NO_EXPERIMENTAL_VALIDATION_CLAIM",
+  "benchmark_roles": {
+    "C5G7": {
+      "role": "computational_transport_benchmark_and_candidate_study",
+      "use_for": [
+        "verify C5G7 model identity and standard seven-group structure",
+        "evaluate six UO2/MOX placement layouts only after model gates pass",
+        "check candidate ranking and uncertainty handling within the C5G7 design space"
+      ],
+      "primary_reference": "https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation",
+      "current_evidence": "corrected-group 18-run smoke study exists; canonical high-budget confirmation and independent specification review remain required",
+      "known_blocker": "no defensible mapping from legacy fresh/once_burned/twice_burned QUBO labels to C5G7 UO2/MOX compositions"
+    },
+    "KRITZ2": {
+      "role": "independent_experimental_physics_validation",
+      "preferred_case": "KRITZ-2:19 MOX, cold and hot; use UO2 cases as additional cross-check if feasible",
+      "primary_reference": "https://www.oecd-nea.org/upload/docs/application/pdf/2020-01/nsc-doc2005-24.pdf",
+      "evaluated_cases": [
+        {
+          "case": "2:1-cold",
+          "fuel": "UO2",
+          "temperature_C": 19.7,
+          "participant_mean_keff": 0.99463,
+          "participant_spread": 0.0033
+        },
+        {
+          "case": "2:1-hot",
+          "fuel": "UO2",
+          "temperature_C": 248.5,
+          "participant_mean_keff": 0.9929,
+          "participant_spread": 0.00346
+        },
+        {
+          "case": "2:13-cold",
+          "fuel": "UO2",
+          "temperature_C": 22.1,
+          "participant_mean_keff": 0.99736,
+          "participant_spread": 0.00204
+        },
+        {
+          "case": "2:13-hot",
+          "fuel": "UO2",
+          "temperature_C": 243,
+          "participant_mean_keff": 0.99605,
+          "participant_spread": 0.0028
+        },
+        {
+          "case": "2:19-cold",
+          "fuel": "MOX",
+          "temperature_C": 21.1,
+          "participant_mean_keff": 0.99908,
+          "participant_spread": null
+        },
+        {
+          "case": "2:19-hot",
+          "fuel": "MOX",
+          "temperature_C": 235.9,
+          "participant_mean_keff": 0.99822,
+          "participant_spread": null
+        }
+      ],
+      "required_model": "finite experimental core model consistent with the OECD/NEA benchmark specification, including actual rod array, water height/leakage, boron, temperatures, densities, and material compositions",
+      "invalid_shortcut": "do not compare an infinite-lattice pin-cell k-infinity result directly with the experimental finite-core k-effective / participant-mean values",
+      "current_status": "reference data identified; full-core model not yet independently verified or executed in this repository"
+    }
+  },
+  "gates": [
+    {
+      "id": "A1",
+      "name": "C5G7 model identity",
+      "status": "PARTIAL",
+      "pass_condition": "standard energy group boundaries, source materials/geometry, and tally definitions independently reviewed"
+    },
+    {
+      "id": "A2",
+      "name": "C5G7 canonical convergence",
+      "status": "PENDING",
+      "pass_condition": "three independent high-budget seeds run on corrected model; raw statepoints audited; benchmark comparison reproducible"
+    },
+    {
+      "id": "B1",
+      "name": "KRITZ-2 full-core model",
+      "status": "BLOCKED_PENDING_IMPLEMENTATION",
+      "pass_condition": "finite-core geometry/materials/operating conditions reproduced from official specification and model audit passes"
+    },
+    {
+      "id": "B2",
+      "name": "KRITZ-2 experimental comparison",
+      "status": "NOT_RUN",
+      "pass_condition": "OpenMC results from the matching full-core model compared against evaluated experimental values with uncertainty treatment and residuals reported"
+    },
+    {
+      "id": "C1",
+      "name": "Cross-benchmark interpretation",
+      "status": "NOT_RUN",
+      "pass_condition": "report distinct C5G7 computational-verification and KRITZ experimental-validation conclusions; no transfer of KRITZ validation to unmatched C5G7 configurations"
+    },
+    {
+      "id": "C2",
+      "name": "QUBO/CB-PFR physical claim",
+      "status": "BLOCKED",
+      "pass_condition": "design mapping, objective, constraints, uncertainty propagation, and candidate scoring all have auditable evidence"
+    }
+  ],
+  "explicit_nonclaims": [
+    "C5G7 and KRITZ-2 are not one interchangeable geometry or dataset.",
+    "KRITZ-2 does not include interspersed UO2/MOX rod arrangements for validating the six 2x2 C5G7 layouts directly.",
+    "A pin-cell calculation is not a finite-core experimental validation.",
+    "A matching keff alone does not validate pin power or the QUBO-to-physics mapping.",
+    "No physical validation is declared passed until the matching model is executed and independently audited."
+  ]
+}
