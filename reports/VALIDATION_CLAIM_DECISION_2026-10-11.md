@@ -2,17 +2,19 @@
 
 ## Decision
 
-**Do not label CB-PFR as experimentally or physically validated.** The strongest claim supported by the current repository is that CB-PFR is an implemented uncertainty-aware post-optimization ranking method with a reproducible synthetic benchmark and passing automated software CI. The repository also contains exploratory OpenMC/C5G7 execution and evidence-integrity checks. These are not proof that CB-PFR improves physical reactor outcomes.
+**Do not yet label CB-PFR as experimentally or physically validated.** The strongest claims currently supported are: (1) CB-PFR is implemented as an uncertainty-aware post-optimization ranking method; (2) its 1,000-trial synthetic benchmark is reproducible under the declared protocol; (3) the software CI passes; and (4) the CB-PFR + one-hot QUBO selection pipeline has passed a smoke integration test using archived corrected-group C5G7 OpenMC results.
 
-This is a decision on claim wording, not a declaration that the research project has failed.
+A pinned BEAVRS full-core OpenMC workflow has now run successfully once, but that first map comparison is **superseded** because the mesh covered 16 assembly pitches with 17 bins. Its low correlation is not valid evidence about the corrected model. The mesh extent has been fixed, raw tally statistical uncertainty is now reported, and a higher-budget run plus independent artifact-integrity audit is in progress.
 
 ## What was checked
 
-1. The repository's KRITZ-2 evaluator, scripts/evaluate_kritz2_reference.py, compares a user-supplied k-effective estimate and standard deviation with published participant-solution means. It does not execute OpenMC, reconstruct the experimental core, or establish validation. Its output correctly remains NOT_ESTABLISHED.
-2. The OECD/NEA KRITZ-2 benchmark concerns critical configurations made from regular lattices of either UO2 or MOX rods in light water, at room and elevated temperature. It does not include interspersed UO2/MOX configurations that would directly validate the project's six 2×2 C5G7 placement candidates.
-3. A publicly available OpenMC model located during this review is explicitly an infinite-lattice reflective pin-cell model, not a finite experimental-core model. Its k-infinity result must not be compared as though it were the experimental finite-core k-effective. The model is useful as a lattice-physics exercise only.
-4. The repository's C5G7 runs and HDF5 audits establish that selected simulations ran and that their artifacts pass specified integrity checks. They do not, by themselves, establish convergence-grade benchmark agreement, validated candidate ranking, or a defensible mapping from legacy fresh / once_burned / twice_burned QUBO labels to C5G7 materials.
-5. The 1,000-trial synthetic benchmark is evidence about the method under its declared synthetic data-generating process only. It is not nuclear experimental evidence.
+1. The BEAVRS workflow pins the public upstream model source at commit `1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22`, installs OpenMC 0.15.3, downloads the official ENDF/B-VII.1 HDF5 data library, generates a full 3-D model, and compares a 58-position Cycle 1 day-0 normalized detector map with a mesh-integrated assembly fission-rate tally.
+2. The first successful OpenMC transport used 250 batches, 30 inactive batches, and 2,000 particles per batch. It returned (k_\mathrm{eff}=0.998612\pm0.001239), normalized-map RMSE 0.37981, and Pearson correlation −0.21228. The tally mesh was mis-sized (17 bins across 16 assembly pitches), so the result is explicitly superseded and must not be used as validation evidence.
+3. The corrected runner now uses lateral mesh bounds of ±8.5 assembly pitches, reports raw per-bin tally standard deviations, and the updated workflow defaults to 500 batches, 50 inactive batches, and 3,000 particles per batch. It also runs an independent artifact-integrity audit. The corrected runs are pending review: [mesh-correction run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116769919) and [higher-budget run with audit](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116778762).
+4. The separate C5G7 selection smoke workflow consumed 18 corrected-group OpenMC statepoints (six layouts × three seeds), checked unique statepoint hashes and common MGXS identity, and ran the CB-PFR + exact one-hot QUBO selector. Under explicitly illustrative limits, all six candidates passed the screen and MUMU was selected after enumerating all 64 binary selector states. This verifies pipeline consistency only; the limits are not benchmark-authoritative and the runs are exploratory smoke budget. [Workflow and artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116610735).
+5. The synthetic 1,000-trial benchmark is evidence about the method under its declared synthetic data-generating process only. It is not nuclear experimental evidence.
+6. No defensible mapping has been established from the legacy fresh / once_burned / twice_burned QUBO labels to physical fuel configurations. The explicit 2×2 C5G7 UO₂/MOX placement study is a separate reformulation, not a retroactive validation of the legacy QUBO.
+7. QUBO formulation and exact classical enumeration do not prove quantum-device execution or quantum advantage.
 
 ## Claim matrix
 
@@ -20,43 +22,38 @@ This is a decision on claim wording, not a declaration that the research project
 |---|---|---|
 | “CB-PFR is an implemented uncertainty-aware post-optimization ranking method.” | Supported | Code and tests are in the repository. |
 | “The released 1,000-trial synthetic benchmark reports a selected latent-feasibility rate of 0.976 for CB-PFR under its specified protocol.” | Supported with scope caveat | Reproducible synthetic evidence; not a universal superiority claim. |
-| “The software test suite passes on Python 3.10, 3.11, and 3.12.” | Supported for the recorded CI run | This is software CI, not physical validation. |
-| “OpenMC/C5G7 execution and evidence-integrity audits have been performed.” | Supported with scope caveat | Some runs are smoke/exploratory and do not constitute benchmark-grade validation. |
-| “CB-PFR is experimentally validated against KRITZ-2.” | **Not supported** | No matching, audited finite-core OpenMC calculation and acceptance analysis is recorded. |
-| “CB-PFR physically improves nuclear-fuel loading optimization.” | **Not supported** | The QUBO-to-physical mapping, objective, and candidate-level validation are not established. |
-| “The six 2×2 C5G7 layouts are validated by KRITZ-2.” | **Not supported** | They are different benchmark configurations; KRITZ-2 does not test the mixed UO2/MOX placement layouts. |
+| “The software test suite passes on Python 3.10, 3.11, and 3.12.” | Supported for recorded CI runs | This is software CI, not physical validation. |
+| “CB-PFR and one-hot QUBO ran on an archived C5G7 OpenMC smoke dataset.” | Supported with scope caveat | Integration smoke passed under illustrative limits; not a benchmark-grade or safety result. |
+| “A BEAVRS full-core OpenMC workflow has been executed.” | Supported | The first run completed, but its map result was superseded due to a mesh-extent defect. Corrected runs are in progress. |
+| “The model is experimentally validated against BEAVRS.” | **Not yet supported** | Corrected comparison, uncertainty treatment, model-mismatch review, acceptance criteria, and artifact audit are not yet complete. |
+| “CB-PFR physically improves nuclear-fuel loading optimization.” | **Not supported** | A defensible candidate-to-physics mapping, justified objective/constraints, benchmark-grade evaluations, and baseline comparison are not established. |
+| “Quantum hardware was used / quantum advantage was demonstrated.” | **Not supported** | No real device/annealer run or fair quantum-vs-classical comparison is archived. |
 
 ## Exact wording recommended for paper, profile, and presentation
 
-> I developed CB-PFR, an uncertainty-aware post-optimization candidate-ranking method for QUBO-generated candidate pools. Its implementation is accompanied by automated tests and a reproducible 1,000-trial synthetic benchmark. OpenMC/C5G7 work is currently exploratory computational evidence; experimental nuclear-physics validation and a defensible mapping from the legacy QUBO state labels to physical fuel configurations remain unestablished.
+> I developed CB-PFR, an uncertainty-aware post-optimization candidate-ranking method for QUBO-generated candidate pools. Its implementation is accompanied by automated tests and a reproducible 1,000-trial synthetic benchmark. A separate C5G7 UO₂/MOX layout-selection prototype has passed a software integration smoke test on archived OpenMC runs. A pinned BEAVRS full-core model is being compared with public experimental detector-map data; corrected experimental comparison and physical effectiveness of CB-PFR remain under audit.
 
 Short version:
 
-> **Method/software validated on its synthetic benchmark; nuclear-physics validation not yet established.**
+> **Method/software and synthetic benchmark reproducible; nuclear experimental validation and physical ranking effectiveness not yet established.**
 
-Do not shorten this to “physically validated,” “validated against KRITZ-2,” or “proven to improve reactor loading.”
+Do not shorten this to “physically validated” or “proven to improve reactor loading” until the corrected BEAVRS comparison and the separate candidate-effectiveness test pass their scientific gates.
 
 ## What would actually close the physical-validation gate
 
-A physical-validation claim can only be promoted after all of the following evidence is added:
+1. A successful corrected BEAVRS run with raw statepoint, input XML hashes, nuclear-data provenance, 58-position comparison CSV, tally statistical uncertainties, and independent artifact-integrity audit.
+2. Resolve or quantify the known model-to-measurement mismatch: the day-0 summary reports bank E at 230 steps withdrawn while the upstream builder supports 228, and the model temperature differs by about 0.625 K from the reported inlet temperature.
+3. Match the detector measurement operator more closely or explicitly justify the fission-rate proxy; account for measurement uncertainty and normalization-induced covariance.
+4. Predeclare a benchmark-justified acceptance rule and independently review the input-to-result chain. A favorable correlation alone is not sufficient.
+5. Separately, define a defensible physical candidate pool and compare CB-PFR against QUBO-only and other baselines using common compute budgets, repeated physical evaluations, and uncertainty propagation.
+6. If claiming quantum execution or advantage, archive actual device/annealer runs and fair classical baselines. Otherwise describe the work as QUBO-based or quantum-compatible, not as demonstrated quantum advantage.
 
-1. A frozen, source-cited KRITZ-2 configuration and a model whose geometry, isotopics, temperatures, moderator density/boron, water level/leakage, and boundary treatment match that configuration.
-2. A runnable OpenMC input and the exact nuclear-data library/version, plus recorded software versions, seeds, particle/batch/inactive settings, logs, and statepoint hashes.
-3. A source-convergence and statistical-precision assessment, with independent seeds where practical.
-4. A comparison against the correct benchmark observable, with residuals in pcm and a defensible treatment of calculation and reference uncertainty. Participant-to-participant spread must not be relabeled as experimental measurement uncertainty.
-5. A predeclared acceptance criterion and independent audit of the input-to-result chain.
-6. Separately, a defensible QUBO-to-physical configuration mapping and candidate-level experiment/benchmark protocol before claiming CB-PFR physical effectiveness.
-
-Passing KRITZ-2 alone would validate only the matched KRITZ-2 model path. It would not validate the unrelated C5G7 layout study or prove CB-PFR improves reactor optimization.
+A successful BEAVRS model comparison would validate only the matched model/observable path. It would not automatically validate the legacy QUBO mapping or prove CB-PFR improves reactor optimization.
 
 ## Sources
 
-- OECD Nuclear Energy Agency, *Benchmark on the KRITZ-2 LEU and MOX Critical Experiments — Final Report*, NEA/NSC/DOC(2005)24: https://oecd-nea.org/jcms/pl_18320/benchmark-on-the-kritz-2-leu-and-mox-critical-experiments-final-report
-- Official report PDF: https://www.oecd-nea.org/upload/docs/application/pdf/2019-12/nsc-doc2005-24.pdf
-- Public OpenMC KRITZ-2 model inspected: https://github.com/jtramm/input_examples_openmc/blob/4e9d1a45375c07103deddf3f408c6ebcc2395bb7/fission/kritz2/model.py (the model identifies itself as an infinite-lattice pin-cell model).
-- Project comparison utility: scripts/evaluate_kritz2_reference.py
-- Project benchmark gate: config/benchmarks/dual_benchmark_validation_manifest.json
-
-## Final status
-
-**Claim wording repaired; physical validation remains NOT ESTABLISHED.** No simulated value has been fabricated, no illustrative evaluator input is treated as a result, and no smoke run is promoted to experimental validation.
+- BEAVRS benchmark and public model: https://github.com/mit-crpg/BEAVRS
+- BEAVRS Cycle 1 experimental comparison protocol: [reports/BEAVRS_CYCLE1_EXPERIMENTAL_COMPARISON_PROTOCOL.md](BEAVRS_CYCLE1_EXPERIMENTAL_COMPARISON_PROTOCOL.md)
+- Corrected BEAVRS workflow: https://github.com/thenextw4ng/cb-pfr/actions/workflows/beavrs-cycle1-map-validation.yml
+- C5G7 CB-PFR/QUBO smoke report: [reports/c5g7_cbpfr_selection_smoke_2026-10-11.md](c5g7_cbpfr_selection_smoke_2026-10-11.md)
+- C5G7 selection workflow: https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-cbpfr-selection-smoke.yml
