@@ -53,7 +53,10 @@
     "production_mgxs_semantic_sha256": "fb4bb5adaaf6ccbc79a364fb37e7e3e1c2a0af9f8955e74d7649143760307d10",
     "production_mgxs_dataset_content_sha256": "c054ced2866ce997a617d47c541cc62a25cedd4621bf732a1b9ba44857b14db8",
     "mgxs_endpoint_normalization_added": true,
-    "mgxs_endpoint_normalization_verification": "pending_fresh_repeatability_workflow"
+    "mgxs_endpoint_normalization_verification": "PASS_normalized_18_run_workflow_38100905238",
+    "normalized_repeatability_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+    "normalized_repeatability_run_count": 18,
+    "normalized_repeatability_raw_hdf5_audits_all_passed": true
   },
   "mapping_contract": {
     "required_position_map": null,
