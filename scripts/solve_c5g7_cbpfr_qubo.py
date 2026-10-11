@@ -10,6 +10,7 @@ checked against an exact enumeration reference of the six-variable selector.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import itertools
 import json
 import math
@@ -55,6 +56,12 @@ def solve_report(report: dict[str, Any], *, backend: str, num_reads: int = 100) 
     expected_id = report.get("selected_candidate_id")
     if reference["candidate_id"] != expected_id:
         raise ValueError("reported selected candidate does not match exact QUBO minimizer")
+    feasible_ids = {
+        item["candidate_id"] for item in report.get("candidates", [])
+        if item.get("conservatively_feasible") is True
+    }
+    if expected_id not in feasible_ids:
+        raise ValueError("exact QUBO minimizer is not marked conservatively feasible in the input report")
     if isinstance(num_reads, bool) or not isinstance(num_reads, int) or num_reads < 1:
         raise ValueError("num_reads must be a positive integer")
 
@@ -117,14 +124,13 @@ def solve_report(report: dict[str, Any], *, backend: str, num_reads: int = 100) 
             "recomputed_energy_with_offset": full_energy,
             "num_occurrences": int(row.num_occurrences),
             "one_hot_valid": sum(bits) == 1,
-            "candidate_passed_cbpfr_screen": candidate_id in {
-                item["candidate_id"] for item in report.get("candidates", [])
-                if item.get("conservatively_feasible") is True
-            } if candidate_id else False,
+            "candidate_passed_cbpfr_screen": candidate_id in feasible_ids if candidate_id else False,
         })
     if not rows:
         raise ValueError("sampler returned no samples")
-    rows.sort(key=lambda item: (not item["one_hot_valid"], item["sampler_energy_without_offset"]))
+    # Preserve the sampler's actual lowest-energy sample; do not silently
+    # promote a higher-energy feasible sample over an invalid ground sample.
+    rows.sort(key=lambda item: item["sampler_energy_without_offset"])
     best = rows[0]
     exact_match = best["candidate_id"] == reference["candidate_id"] and best["one_hot_valid"]
     accepted = exact_match and best["candidate_passed_cbpfr_screen"]
@@ -169,9 +175,7 @@ def main() -> int:
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         parser.error(str(exc))
     result["input_selection_report"] = str(args.selection_report)
-    result["input_selection_report_sha256"] = __import__("hashlib").sha256(
-        args.selection_report.read_bytes()
-    ).hexdigest()
+    result["input_selection_report_sha256"] = hashlib.sha256(args.selection_report.read_bytes()).hexdigest()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({
