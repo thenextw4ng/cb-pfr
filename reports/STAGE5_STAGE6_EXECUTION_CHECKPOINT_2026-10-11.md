@@ -2,9 +2,9 @@
 
 ## Stage 5: CB-PFR + layout-QUBO selection
 
-Status: implemented, but a real-data selection is blocked. The selector requires six layouts, at least three unique seeds per layout, unique statepoint hashes, a common MGXS hash, corrected C5G7 group boundaries, identical run settings, adequate run budgets, and user-approved physical criteria. The available 18-run study is smoke-budget evidence only. No design-specific acceptable k_eff interval has been approved, so no physical winner is declared.
+Status: selection software is implemented, but a real-data selection is blocked. The selector requires six layouts, at least three unique seeds per layout, unique statepoint hashes, a common MGXS hash, corrected C5G7 group boundaries, identical run settings, adequate run budgets, and user-approved physical criteria. The available 18-run study is smoke-budget evidence only. No design-specific acceptable (k_{eff}) interval has been approved, so no physical winner is declared.
 
-The canonical high-budget run 38103032861 is still running its three UMMU transport cases and raw-HDF5 audits; aggregation and artifact preservation are pending.
+Canonical high-budget workflow 38103032861 was cancelled after two independent UMMU cases completed 7,000 batches each. Their statepoints and raw-HDF5 audits were preserved in artifact 11691113062; both raw audits passed 22 checks. The third seed did not complete, the aggregate gate was skipped, and both completed logs contain repeated entropy-box warnings. The source-convergence diagnostic remains `DIAGNOSTIC_REVIEW_REQUIRED`. See `reports/C5G7_CANONICAL_HIGH_BUDGET_PARTIAL_RUN_REVIEW_2026-10-11.md`. Do not claim a completed three-seed run or convergence PASS.
 
 ## Stage 6: legacy QUBO-to-physics mapping
 
