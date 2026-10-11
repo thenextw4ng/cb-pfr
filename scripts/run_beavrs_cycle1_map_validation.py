@@ -143,6 +143,10 @@ def prepare(args: argparse.Namespace) -> None:
     mesh.upper_right = (7.5 * PITCH_CM, 7.5 * PITCH_CM, FUEL_TOP_CM)
     tally = openmc.Tally(name=TALLY_NAME)
     tally.filters = [openmc.MeshFilter(mesh)]
+    # BEAVRS radial maps are derived from in-core U-235 fission-chamber signals.
+    # Score U235 fission rather than total fission across all nuclides to make
+    # the calculated proxy closer to the measured observable.
+    tally.nuclides = ["U235"]
     tally.scores = ["fission"]
     # OpenMC 0.15.3 serializes meshes referenced by MeshFilter directly in tallies.xml;
     # the upstream BEAVRS helper's legacy Tallies.add_mesh call is not available.
@@ -178,6 +182,7 @@ def prepare(args: argparse.Namespace) -> None:
         "instrumented_positions_source": str(beavrs_root / MEASUREMENT_RAW_REL),
         "instrumented_positions_source_sha256": sha256_file(beavrs_root / MEASUREMENT_RAW_REL),
         "measurement_processing": "Use tilt-corrected full-core map values only at the 58 labels present in the raw instrumented-detector map; renormalize those 58 values to mean 1.",
+        "observable_alignment": "U235 fission-chamber-derived radial measurements are compared to assembly-mesh U235 fission reaction rate integrated over the active fuel height; this is a closer proxy than total fission but not an exact detector-response simulation.",
         "measured_summary": str(beavrs_root / SUMMARY_REL),
         "measured_detector_count": len(measurements),
         "measurement_normalization": "mean over 58 reported normalized detector values = 1",
@@ -196,7 +201,8 @@ def prepare(args: argparse.Namespace) -> None:
                 "dimension": [MESH_N, MESH_N, 1],
                 "lower_left_cm": [-7.5 * PITCH_CM, -7.5 * PITCH_CM, FUEL_BOTTOM_CM],
                 "upper_right_cm": [7.5 * PITCH_CM, 7.5 * PITCH_CM, FUEL_TOP_CM],
-                "score": "fission reaction rate",
+                "nuclides": ["U235"],
+                "score": "U235 fission reaction rate",
             },
             "batches": args.batches,
             "inactive_batches": args.inactive,
@@ -311,6 +317,7 @@ def analyze(args: argparse.Namespace) -> None:
         "limitations": [
             "Shutdown bank SE is explicitly set to 230 steps to match the Cycle 1 day-0 record, overriding upstream default 228 while retaining its axial step width; geometry and sensitivity review remain necessary.",
             "The tilt-corrected measurement map is a derived reference; uncertainty from tilt correction must be considered. The comparison is normalized shape, not absolute power validation.",
+            "The tally scores U235 fission as a closer proxy to the U235 fission-chamber-derived measurement, but does not model the exact detector response or 61 axial measurement positions.",
             "Measurement uncertainty and model-form uncertainty are not propagated.",
             "Normalization-induced covariance between detector bins is not propagated; reported tally SDs are raw-bin relative Monte Carlo uncertainties.",
             "No acceptance threshold has been established by the benchmark authors for this exact model setup.",
