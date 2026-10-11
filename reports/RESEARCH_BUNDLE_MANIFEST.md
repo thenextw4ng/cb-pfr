@@ -51,7 +51,7 @@ A separate GitHub Actions run completed all six explicitly reformulated 2×2 UO2
 - Per-candidate hashes: `results/c5g7_layout_smoke_2026-10-10/run_manifest.json`
 - Scientific interpretation: `reports/c5g7_smoke_run_2026-10-10.md`
 - Common settings: 100 batches, 10 inactive, 1,000 particles/batch, 1 thread; seeds 620000–620005.
-- All six runs completed, shared the same MGXS SHA-256, and had unchanged pre/post MGXS hashes.
+- All six runs completed, shared the same MGXS SHA-256, and had unchanged pre/post MGXS hashes. The raw-HDF5 audit passed 112/112 checks; the compact result is `results/c5g7_layout_smoke_2026-10-10/raw_hdf5_audit_summary.json`.
 - Observed k_eff range: 1.13832935–1.20398521; reported relative SDs were about 0.22–0.26%.
 
 These are smoke tests, not benchmark-grade results. One run per layout does not establish same-layout repeatability, the physical objective is not yet preregistered, and exact model/material correspondence to the primary benchmark remains under review. Do not infer an optimal or safe layout from the descriptive k_eff order.
