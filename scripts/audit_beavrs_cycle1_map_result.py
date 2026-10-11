@@ -106,10 +106,10 @@ def audit_run(run_dir: Path) -> dict:
         denom = math.sqrt(sum((a - obs_mean) ** 2 for a in obs) * sum((b - pred_mean) ** 2 for b in pred))
         corr = cov / denom if denom > 0 else float("nan")
         reported = result.get("metrics", {})
-        checks["reported_rmse_recomputed"] = math.isfinite(rmse) and abs(rmse - float(reported.get("normalized_map_rmse", float("nan"))) < 1e-9
-        checks["reported_mae_recomputed"] = math.isfinite(mae) and abs(mae - float(reported.get("normalized_map_mae", float("nan"))) < 1e-9
-        checks["reported_mape_recomputed"] = math.isfinite(mape) and abs(mape - float(reported.get("mean_absolute_relative_error_percent", float("nan"))) < 1e-7
-        checks["reported_correlation_recomputed"] = math.isfinite(corr) and abs(corr - float(reported.get("pearson_correlation", float("nan"))) < 1e-8
+        checks["reported_rmse_recomputed"] = math.isfinite(rmse) and abs(rmse - float(reported.get("normalized_map_rmse", float("nan")))) < 1e-9
+        checks["reported_mae_recomputed"] = math.isfinite(mae) and abs(mae - float(reported.get("normalized_map_mae", float("nan")))) < 1e-9
+        checks["reported_mape_recomputed"] = math.isfinite(mape) and abs(mape - float(reported.get("mean_absolute_relative_error_percent", float("nan")))) < 1e-7
+        checks["reported_correlation_recomputed"] = math.isfinite(corr) and abs(corr - float(reported.get("pearson_correlation", float("nan")))) < 1e-8
     else:
         checks.update({
             "reported_rmse_recomputed": False,
