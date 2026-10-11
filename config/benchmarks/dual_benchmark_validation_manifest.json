@@ -3,7 +3,7 @@
   "validation_program_id": "CBPFR-ReactorQ-dual-benchmark-2026-10",
   "title": "C5G7 computational benchmark + BEAVRS experimental benchmark",
   "strategy": "separate_complementary_benchmarks_with_BEAVRS_as_selected_experimental_pathway",
-  "overall_status": "IN_PROGRESS_BEAVRS_MESH_CORRECTION_RERUNS_ACTIVE",
+  "overall_status": "IN_PROGRESS_BEAVRS_TILT_CORRECTED_MAP_AND_SE_MATCH_RERUN",
   "benchmark_roles": {
     "C5G7": {
       "role": "computational_transport_benchmark_and_candidate_study",
@@ -72,16 +72,17 @@
       "role": "selected_experimental_benchmark_for_initial_full_core_model_comparison",
       "primary_reference": "https://github.com/mit-crpg/BEAVRS",
       "pinned_upstream_commit": "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22",
-      "selected_case": "Cycle 1 day 0 normalized radial detector map",
-      "measured_data": "measurements/detector_signals/cycle_1/0/radial_measurements_full.csv",
+      "selected_case": "Cycle 1 day 0 tilt-corrected radial detector map, restricted to 58 raw instrumented labels",
+      "measured_data": "measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv",
       "model_workflow": "https://github.com/thenextw4ng/cb-pfr/blob/main/.github/workflows/beavrs-cycle1-map-validation.yml",
       "runner": "scripts/run_beavrs_cycle1_map_validation.py",
-      "status": "first transport completed but is superseded because the mesh covered only 16 pitches; corrected ±8.5-pitch mesh is being rerun, with raw tally SDs and independent artifact audit enabled in the higher-budget workflow",
+      "status": "previous raw-map runs completed but are superseded due poor agreement and non-tilt-corrected observable; current run uses tilt-corrected data, SE=230 override, corrected assembly-pitch mesh, tally statistical SDs, and independent artifact-integrity audit",
       "known_mismatches": [
-        "Cycle 1 day-0 measured RCCE bank E withdrawal is 230 steps; upstream model default is 228 steps.",
-        "Calculated volume-integrated assembly fission rate is compared with normalized detector signals; this is a shape comparison, not exact detector-response modeling.",
-        "Measurement uncertainty is not yet propagated in the runner."
-      ]
+        "Upstream model temperature is 566.483 K versus reported inlet temperature 565.858 K (about 0.625 K difference).",
+        "SE=230 overrides upstream default 228 and exceeds generic helper's 228-step guard; geometry/sensitivity review is required.",
+        "Detector response is approximated by volume-integrated assembly fission rate; normalization covariance and per-position measurement uncertainty are not propagated."
+      ],
+      "instrumented_labels_source": "measurements/detector_signals/cycle_1/0/radial_measurements_full.csv"
     }
   },
   "gates": [
@@ -100,19 +101,19 @@
     {
       "id": "B1",
       "name": "BEAVRS full-core model preparation",
-      "status": "MODEL_GENERATED_AND_RUN_ONCE; FIRST_MESH_SUPERSEDED",
+      "status": "MODEL_GENERATED_AND_RUN; MODEL_ADAPTATIONS_RECORDED",
       "pass_condition": "pinned source, nuclear data provenance, model geometry/settings, and measured state match audited"
     },
     {
       "id": "B2",
       "name": "BEAVRS experimental map comparison",
-      "status": "CORRECTED_MESH_RERUN_IN_PROGRESS",
+      "status": "TILT_CORRECTED_MAP_RERUN_IN_PROGRESS",
       "pass_condition": "successful OpenMC transport, 58 detector bins mapped, residuals reproduced from uploaded raw statepoint"
     },
     {
       "id": "B3",
       "name": "BEAVRS uncertainty and model-mismatch review",
-      "status": "PENDING_CORRECTED_RUN_AND_AUDIT",
+      "status": "PENDING_CURRENT_RUN_AND_AUDIT",
       "pass_condition": "resolve bank-E mismatch or quantify its effect; include measurement and tally uncertainty and justified acceptance criteria"
     },
     {
