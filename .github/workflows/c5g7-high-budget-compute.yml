@@ -1,0 +1,174 @@
+name: C5G7 high-budget OpenMC batch
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/step05-scientific-integration
+    paths:
+      - .github/workflows/c5g7-high-budget-compute.yml
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cbpfr-c5g7-high-budget
+  cancel-in-progress: false
+
+jobs:
+  transport:
+    name: OpenMC seed round ${{ matrix.seed_base }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        seed_base: [620000, 630000, 640000]
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Check out CB-PFR
+        uses: actions/checkout@v4
+
+      - name: Install pinned OpenMC runtime
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: openmc
+          cache-environment: true
+          create-args: >-
+            python=3.11
+            openmc=0.16.0
+            numpy
+            h5py
+            git
+
+      - name: Record runtime and planned compute budget
+        run: |
+          python --version
+          openmc --version
+          python - <<'PY'
+          print({
+              "layouts": 6,
+              "independent_seed_rounds": 3,
+              "batches_per_run": 5000,
+              "inactive_batches_per_run": 500,
+              "particles_per_batch": 5000,
+              "threads_per_run": 2,
+              "run_count": 18,
+              "nominal_particle_histories": 18 * 5000 * 5000,
+              "active_particle_histories_after_inactive": 18 * (5000 - 500) * 5000,
+          })
+          PY
+
+      - name: Prepare pinned C5G7 source and six-layout design
+        run: |
+          python scripts/prepare_c5g7_reference.py --destination "$RUNNER_TEMP/benchmarks"
+          python scripts/enumerate_c5g7_layouts.py --output "$RUNNER_TEMP/c5g7-design.json"
+
+      - name: Run all six layouts at the high-budget project profile
+        run: |
+          python scripts/run_c5g7_layout_study.py \
+            --source-root "$RUNNER_TEMP/benchmarks" \
+            --design-space "$RUNNER_TEMP/c5g7-design.json" \
+            --output "$RUNNER_TEMP/c5g7-study-${{ matrix.seed_base }}" \
+            --mode run \
+            --batches 5000 \
+            --inactive 500 \
+            --particles 5000 \
+            --threads 2 \
+            --seed-base ${{ matrix.seed_base }}
+
+      - name: Upload full raw study and statepoints
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-study-${{ matrix.seed_base }}
+          path: ${{ runner.temp }}/c5g7-study-${{ matrix.seed_base }}
+          if-no-files-found: warn
+          retention-days: 90
+          compression-level: 1
+
+  aggregate:
+    name: Audit and preserve full repeated-run evidence
+    runs-on: ubuntu-latest
+    needs: transport
+    if: always() && needs.transport.result == 'success'
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out CB-PFR
+        uses: actions/checkout@v4
+
+      - name: Install analysis runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install numpy h5py
+
+      - name: Download all three seed-round artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-study-*
+          path: artifacts
+          merge-multiple: false
+
+      - name: Verify all seed rounds are present
+        run: |
+          mapfile -t summaries < <(find artifacts -name STUDY_SUMMARY.json -type f | sort)
+          printf 'Found %s study summaries\n' "${#summaries[@]}"
+          test "${#summaries[@]}" -eq 3
+          for summary in "${summaries[@]}"; do
+            python -c 'import json,sys; x=json.load(open(sys.argv[1])); print(sys.argv[1], x.get("status"), len(x.get("cases", [])))' "$summary"
+          done
+
+      - name: Export and re-validate raw OpenMC evidence
+        run: |
+          mkdir -p results/c5g7_high_budget_2026-10-12
+          mapfile -t summaries < <(find artifacts -name STUDY_SUMMARY.json -type f | sort)
+          python scripts/export_c5g7_run_level_evidence.py \
+            --study-summary "${summaries[@]}" \
+            --out-csv results/c5g7_high_budget_2026-10-12/run_level_results.csv \
+            --audit-out results/c5g7_high_budget_2026-10-12/export_audit.json
+
+      - name: Compute repeated-run intervals and fail-closed selection audit
+        run: |
+          python scripts/audit_c5g7_corrected_objective.py \
+            --runs-csv results/c5g7_high_budget_2026-10-12/run_level_results.csv \
+            --out results/c5g7_high_budget_2026-10-12/objective_audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("results/c5g7_high_budget_2026-10-12")
+          export = json.loads((root / "export_audit.json").read_text())
+          objective = json.loads((root / "objective_audit.json").read_text())
+          assert export["run_count"] == 18, export
+          assert export["study_count"] == 3, export
+          assert objective["run_count"] == 18, objective
+          assert objective["layout_count"] == 6, objective
+          assert objective["status"] == "EVIDENCE_INTEGRITY_PASS_DESIGN_SELECTION_BLOCKED", objective
+          assert objective["decision"]["winner_selected"] is False, objective
+          print(json.dumps({
+              "run_count": export["run_count"],
+              "replicates_per_layout": export["replicates_per_layout"],
+              "export_status": export["status"],
+              "objective_status": objective["status"],
+              "winner_selected": False,
+              "physical_validation_certified": False,
+          }, indent=2))
+          PY
+
+      - name: Upload combined raw data, statepoints, and analysis bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-c5g7-high-budget-complete-2026-10-12
+          path: |
+            artifacts/
+            results/c5g7_high_budget_2026-10-12/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 1
