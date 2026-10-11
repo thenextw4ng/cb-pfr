@@ -121,15 +121,16 @@
     {
       "id": "C1",
       "name": "QUBO-to-physical candidate mapping",
-      "status": "BLOCKED",
-      "pass_condition": "explicit candidate variables and constraints correspond to a physically defined candidate space"
+      "status": "PASS_FOR_REFORMULATED_C5G7_2X2; LEGACY_MAPPING_UNSUPPORTED",
+      "pass_condition": "explicit candidate variables and constraints correspond to a physically defined candidate space",
+      "note": "The six enumerated 2x2 UO2/MOX layouts have explicit candidate IDs and one-to-one physical layout definitions. This does not map the legacy fresh/once_burned/twice_burned QUBO labels to BEAVRS or C5G7."
     },
     {
       "id": "C2",
       "name": "CB-PFR physical effectiveness",
       "status": "PARTIAL_SOFTWARE_INTEGRATION_SMOKE_ONLY",
       "pass_condition": "compare CB-PFR and baselines on the same physically evaluated candidate pool and common budget",
-      "note": "18-run corrected-group C5G7 smoke dataset passed the CB-PFR + exact one-hot QUBO integration workflow under illustrative, non-authoritative limits; physical effectiveness remains unestablished."
+      "note": "The 18-run corrected-group C5G7 smoke dataset passed the CB-PFR + exact one-hot QUBO integration workflow under illustrative, non-authoritative limits; benchmark-grade physical effectiveness remains unestablished."
     },
     {
       "id": "Q1",
