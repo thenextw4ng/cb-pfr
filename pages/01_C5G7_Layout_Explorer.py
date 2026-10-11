@@ -67,10 +67,10 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 <div class="grid">
 <aside class="sidebar"><div class="sec">VISUALIZATION WORKSPACE</div><div class="menu"><button class="active">▦ &nbsp; Geometry Explorer</button><button data-jump="results">⌁ &nbsp; Physics Field Explorer</button><button data-jump="results">◫ &nbsp; Monte Carlo Results</button><button data-jump="qubo">◇ &nbsp; QUBO / Optimization</button><button data-jump="prov">♧ &nbsp; Provenance &amp; Validation</button></div><div style="height:18px"></div><div class="sec">SIMULATION DATA</div><div class="tree"><b>C5G7 layout study</b><div class="muted">Assembly placements</div><div class="muted">Candidate summary CSV</div><div class="muted">MGXS identity hashes</div><b>Recorded results</b><div class="muted">k-effective summary</div><div class="muted">Aggregate flux scores</div><div class="muted">Aggregate fission scores</div><b>Candidate layouts</b><div id="treeCandidates"></div></div><div style="height:12px"></div><div class="sec">SYSTEM STATUS</div><div class="state"><span>Evidence CSV</span><span class="ok">● Loaded</span></div><div class="state"><span>Layout parser</span><span class="ok">● Ready</span></div><div class="state"><span>Full-core geometry</span><span class="warn">○ Not supplied</span></div></aside>
 <main class="main">
-<section class="panel"><div class="head"><div><div class="eyebrow">Geometry workspace</div><h2>Reactor Layout Explorer</h2></div><div class="tools"><span class="badge">2×2 DESIGN STUDY</span><select id="pick" aria-label="Select candidate"></select></div></div><div class="tabs"><button class="active" data-tab="layout">Placement</button><button data-tab="materials">Material key</button><button data-tab="comparison">Comparison</button></div><div class="viewport"><svg id="geometry" class="geometry" viewBox="0 0 600 400" role="img" aria-label="Four-position material placement schematic"></svg><div class="legend"><div class="legend-title">Material legend</div><div class="leg"><i class="swatch" style="background:#ff5638"></i>UO₂ assembly</div><div class="leg"><i class="swatch" style="background:#a36aff"></i>MOX assembly</div><div class="leg"><i class="swatch" style="background:#2787ee"></i>Reference outline</div><div class="caption" style="line-height:1.5;margin-top:12px">Grid is a visual aid only; cell-level physics geometry is not supplied.</div></div><div class="footnote">SCHEMATIC · FOUR ASSEMBLY POSITIONS · NOT A FULL-CORE MESH</div></div></section>
+<section class="panel"><div class="head"><div><div class="eyebrow">Geometry workspace</div><h2>Reactor Layout Explorer</h2></div><div class="tools"><span class="badge">2×2 DESIGN STUDY</span><select id="pick" aria-label="Select candidate"></select></div></div><div class="tabs"><button class="active" data-tab="layout">Placement</button><button data-tab="materials">Material key</button><button data-tab="3d">3D viewport</button><button data-tab="comparison">Comparison</button></div><div class="viewport"><div id="threeViewport" style="display:none;position:relative;min-height:360px;width:100%;grid-column:1/-1;background:radial-gradient(ellipse at 50% 45%,#0b2947 0,#041426 75%);"><div id="threeStatus" style="position:absolute;left:12px;top:10px;z-index:2;color:#8fb0d2;font-size:10px">3D SCHEMATIC · ROTATE / ZOOM · NOT TO SCALE</div><div id="threeCanvas" style="width:100%;height:400px"></div></div><svg id="geometry" class="geometry" viewBox="0 0 600 400" role="img" aria-label="Four-position material placement schematic"></svg><div class="legend"><div class="legend-title">Material legend</div><div class="leg"><i class="swatch" style="background:#ff5638"></i>UO₂ assembly</div><div class="leg"><i class="swatch" style="background:#a36aff"></i>MOX assembly</div><div class="leg"><i class="swatch" style="background:#2787ee"></i>Reference outline</div><div class="caption" style="line-height:1.5;margin-top:12px">Grid is a visual aid only; cell-level physics geometry is not supplied.</div></div><div class="footnote">SCHEMATIC · FOUR ASSEMBLY POSITIONS · NOT A FULL-CORE MESH</div></div></section>
 <div class="lower"><section class="mini" id="results"><div class="head"><h2>Simulation results</h2><span class="badge">RECORDED CSV</span></div><div class="body"><div class="metrics"><div class="metric"><div class="label">k-effective · mean</div><div class="value" id="keff">—</div><div class="caption" id="std">reported std. dev.</div></div><div class="metric"><div class="label">Aggregate flux score</div><div class="value" id="flux">—</div><div class="caption">repository score</div></div><div class="metric"><div class="label">Aggregate fission score</div><div class="value" id="fission">—</div><div class="caption">repository score</div></div></div><div style="margin-top:12px" class="label">RUN CONFIGURATION</div><div class="row"><span>Seed</span><span id="seed">—</span></div><div class="row"><span>Batches / inactive</span><span id="batches">—</span></div><div class="row"><span>Particles / batch</span><span id="particles">—</span></div></div></section>
 <section class="mini" id="prov"><div class="head"><h2>Material composition</h2><span class="badge">LAYOUT-BASED</span></div><div class="body"><div class="composition"><svg id="donut" class="donut" viewBox="0 0 120 120"></svg><div class="comp-list"><div class="comp-row"><i class="swatch" style="background:#ff5638"></i><span>UO₂ positions</span><strong id="uCount">—</strong></div><div class="comp-row"><i class="swatch" style="background:#a36aff"></i><span>MOX positions</span><strong id="mCount">—</strong></div><div class="comp-row"><i class="swatch" style="background:#2787ee"></i><span>Canonical reference</span><strong id="canonical">—</strong></div></div></div><div class="caption" style="line-height:1.5;margin-top:12px">Composition describes the four-position design vector, not material volume fractions.</div></div></section></div>
-<section class="mini" id="qubo"><div class="head"><h2>Candidate comparison</h2><span class="badge">DESCRIPTIVE · NOT A WINNER RANKING</span></div><div class="tablewrap"><table><thead><tr><th>Candidate</th><th>Layout</th><th>k-effective mean</th><th>Reported std. dev.</th><th>Flux score</th><th>Fission score</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section class="mini" id="qubo"><div class="head"><h2>Candidate comparison</h2><span class="badge">DESCRIPTIVE · NOT A WINNER RANKING</span></div><div id="plotlyChart" style="height:300px;padding:8px 10px" aria-label="Plotly chart of recorded candidate k-effective results"><div style="padding:20px;color:#8fb0d2;font-size:11px">Loading interactive comparison chart…</div></div><div class="tablewrap"><table><thead><tr><th>Candidate</th><th>Layout</th><th>k-effective mean</th><th>Reported std. dev.</th><th>Flux score</th><th>Fission score</th></tr></thead><tbody id="rows"></tbody></table></div></section>
 </main>
 <aside class="right"><div class="info"><div class="info-title">GEOMETRY INFORMATION</div><div class="row"><span>Model</span><span>C5G7 layout study</span></div><div class="row"><span>Representation</span><span>2×2 positions</span></div><div class="row"><span>Material types</span><span>2</span></div><div class="row"><span>Layout records</span><span id="nLayouts">—</span></div></div><div class="info"><div class="info-title">SELECTED CANDIDATE</div><div class="row"><span>Candidate ID</span><span id="candidateId">—</span></div><div class="row"><span>Signature</span><span id="signature">—</span></div><div class="row"><span>Seed</span><span id="seed2">—</span></div><div class="row"><span>Canonical</span><span id="canonical2">—</span></div></div><div class="info"><div class="info-title">LAYERS</div><div class="layers"><label><input type="checkbox" data-layer="labels" checked> Position labels</label><label><input type="checkbox" data-layer="pins" checked> Grid overlay</label><label><input type="checkbox" data-layer="outline" checked> Outer outline</label></div><div class="caption" style="line-height:1.5;margin-top:10px">These controls affect the schematic only.</div></div><div class="info"><div class="info-title">MGXS PROVENANCE</div><div class="row"><span>Hash before</span><span id="hash0">—</span></div><div class="row"><span>Hash after</span><span id="hash1">—</span></div><div class="caption" style="line-height:1.5">Hash equality is an integrity check, not physical validation.</div></div></aside>
 </div><div class="bottom"><span><i class="dot"></i> Evidence CSV loaded</span><span>CB-PFR</span><span id="footCandidate">Candidate: —</span><span id="footKeff">k-effective: —</span><span style="margin-left:auto">Research prototype · not benchmark-grade</span></div></div>
@@ -120,9 +120,62 @@ document.querySelectorAll("[data-pick]").forEach(n=>n.addEventListener("click",(
 document.querySelectorAll("#rows tr").forEach(n=>n.addEventListener("click",()=>{byId("pick").value=n.dataset.id;render();}));
 document.querySelectorAll("[data-layer]").forEach(n=>n.addEventListener("change",()=>{layers[n.dataset.layer]=n.checked;render();}));
 document.querySelectorAll("[data-jump]").forEach(n=>n.addEventListener("click",()=>byId(n.dataset.jump).scrollIntoView({behavior:"smooth",block:"nearest"})));
-document.querySelectorAll("[data-tab]").forEach(n=>n.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===n));if(n.dataset.tab==="comparison")byId("qubo").scrollIntoView({behavior:"smooth",block:"nearest"});else if(n.dataset.tab==="materials")byId("prov").scrollIntoView({behavior:"smooth",block:"nearest"});else window.scrollTo({top:0,behavior:"smooth"});}));
-byId("nLayouts").textContent=DATA.length;render();
-</script></body></html>
+document.querySelectorAll("[data-tab]").forEach(n=>n.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===n));const is3d=n.dataset.tab==="3d";byId("threeViewport").style.display=is3d?"block":"none";byId("geometry").style.display=is3d?"none":"block";if(is3d){initThree();byId("threeViewport").scrollIntoView({behavior:"smooth",block:"nearest"});}else if(n.dataset.tab==="comparison")byId("qubo").scrollIntoView({behavior:"smooth",block:"nearest"});else if(n.dataset.tab==="materials")byId("prov").scrollIntoView({behavior:"smooth",block:"nearest"});else window.scrollTo({top:0,behavior:"smooth"});}));
+byId("nLayouts").textContent=DATA.length;render();renderPlotly();
+</script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+function renderPlotly(){
+ const host=byId("plotlyChart");
+ if(!window.Plotly){host.innerHTML='<div style="padding:20px;color:#ffd07b;font-size:11px">Plotly CDN tidak dapat dimuat. Grafik interaktif memerlukan koneksi internet.</div>';return;}
+ const sorted=[...DATA].sort((a,b)=>a.id.localeCompare(b.id));
+ const names=sorted.map(d=>d.id.replace("c5g7-2x2-",""));
+ const trace={type:"bar",x:names,y:sorted.map(d=>d.keff),error_y:{type:"data",array:sorted.map(d=>d.std),visible:true,color:"#b8d9f5",thickness:1.2,width:3},marker:{color:sorted.map(d=>d.canonical?"#42caff":"#e4a04b")},customdata:sorted.map(d=>[d.sig,d.flux,d.fission]),hovertemplate:"Candidate %{x}<br>Layout %{customdata[0]}<br>k-effective %{y:.6f}<br>Reported std. dev. shown as error bar<br>Flux score %{customdata[1]:.3f}<br>Fission score %{customdata[2]:.5f}<extra></extra>"};
+ Plotly.newPlot(host,[trace],{paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{color:"#b9d0e8",family:"Inter, sans-serif",size:10},margin:{l:65,r:20,t:18,b:55},xaxis:{title:"Candidate",gridcolor:"#183752",linecolor:"#315775"},yaxis:{title:"Recorded k-effective mean",gridcolor:"#183752",linecolor:"#315775",zerolinecolor:"#315775"},showlegend:false,hoverlabel:{bgcolor:"#071a2e",bordercolor:"#35c8ff",font:{color:"#e5f1ff"}}},{responsive:true,displaylogo:false});
+}
+</script>
+<script type="module">
+let threeStarted=false;
+window.initThree=async function(){
+ if(threeStarted)return;threeStarted=true;
+ const host=document.getElementById("threeCanvas"),status=document.getElementById("threeStatus");
+ try{
+  const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
+  const {OrbitControls}=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js");
+  const scene=new THREE.Scene();scene.background=new THREE.Color("#041426");
+  const camera=new THREE.PerspectiveCamera(42,host.clientWidth/400,0.1,1000);camera.position.set(5.8,6.5,8.2);
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(host.clientWidth,400);renderer.outputColorSpace=THREE.SRGBColorSpace;host.replaceChildren(renderer.domElement);
+  const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,0.2,0);
+  scene.add(new THREE.AmbientLight(0xc5ddff,2.1));const key=new THREE.DirectionalLight(0xffffff,2.6);key.position.set(4,8,5);scene.add(key);
+  const grid=new THREE.GridHelper(7,14,0x28618a,0x163653);grid.position.y=-0.03;scene.add(grid);
+  const axes=new THREE.AxesHelper(2.2);axes.position.set(-3.25,0,-3.25);scene.add(axes);
+  const group=new THREE.Group();scene.add(group);
+  function rebuild(){
+   while(group.children.length){const obj=group.children.pop();obj.geometry?.dispose();if(obj.material){if(Array.isArray(obj.material))obj.material.forEach(m=>m.dispose());else obj.material.dispose();}}
+   const d=DATA.find(x=>x.id===byId("pick").value)||DATA[0];
+   const positions=[[-1,0.6,-1],[1,0.6,-1],[-1,0.6,1],[1,0.6,1]];
+   positions.forEach(([x,y,z],i)=>{
+    const u=d.sig[i]==="U",color=u?0x238fd0:0xd58a3c;
+    const geo=new THREE.BoxGeometry(1.72,1.1,1.72);
+    const mat=new THREE.MeshStandardMaterial({color,metalness:0.18,roughness:0.48,transparent:true,opacity:0.92});
+    const mesh=new THREE.Mesh(geo,mat);mesh.position.set(x,y,z);mesh.userData={label:["P00","P10","P01","P11"][i],material:u?"UO₂":"MOX"};group.add(mesh);
+    const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0xb8d9f5,transparent:true,opacity:0.7}));edges.position.copy(mesh.position);group.add(edges);
+   });
+   status.textContent="3D CATEGORICAL SCHEMATIC · "+d.id+" · "+d.sig+" · NOT A PIN-RESOLVED MODEL";
+  }
+  const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
+  renderer.domElement.addEventListener("pointerdown",event=>{
+   const rect=renderer.domElement.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);
+   const hits=raycaster.intersectObjects(group.children.filter(o=>o.isMesh),false);
+   if(hits.length){const m=hits[0].object;status.textContent=m.userData.label+" · "+m.userData.material+" · "+(DATA.find(x=>x.id===byId("pick").value)||DATA[0]).id;}
+  });
+  function resize(){const w=host.clientWidth||600;camera.aspect=w/400;camera.updateProjectionMatrix();renderer.setSize(w,400);}
+  window.addEventListener("resize",resize);byId("pick").addEventListener("change",rebuild);
+  const animate=()=>{requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);};rebuild();animate();
+ }catch(err){status.textContent="3D viewport unavailable: WebGL/CDN load failed. 2D schematic remains available.";console.error(err);}
+}
+</script>
+</body></html>
 """
 html = html.replace("__DATA__", payload).replace("__DEFAULT__", json.dumps(default_id))
 components.html(html, height=1120, scrolling=True)
