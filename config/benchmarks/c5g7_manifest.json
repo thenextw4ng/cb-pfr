@@ -35,7 +35,17 @@
       "pin-power distribution or other specified power-related reference quantities"
     ],
     "boundary_conditions": "Must be transcribed from the selected benchmark exercise and checked against the primary specification; not inferred from this manifest.",
-    "material_compositions": "Must be transcribed exactly from the primary specification or its official electronic appendix; not generated from the abstract QUBO labels."
+    "material_compositions": "Must be transcribed exactly from the primary specification or its official electronic appendix; not generated from the abstract QUBO labels.",
+    "standard_energy_group_boundaries_eV": [
+      0.00001,
+      0.0635,
+      10,
+      100,
+      1000,
+      500000,
+      1000000,
+      20000000
+    ]
   },
   "implementation_status": {
     "model_inputs_bundled": false,
@@ -43,7 +53,7 @@
     "reference_values_transcribed_and_reviewed": false,
     "openmc_baseline_run_verified": false,
     "candidate_mapping_status": "blocked",
-    "reason": "The production statepoint scalar was independently read with OpenMC 0.16.0 and matched the recorded mean/standard deviation. Canonical geometry, tally, and plot XML match the pinned upstream regeneration; material XML definitions match after normalizing the local cross_sections path. The archived production MGXS and regenerated canonical MGXS are byte-identical (SHA-256 170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216), with all 63 datasets and all metadata matching. A separate earlier smoke workflow exposed a one-ULP group-boundary drift from np.logspace(-5, 7, 8); the preparation adapter now normalizes the first and last endpoints explicitly, and a fresh repeatability workflow is validating this deterministic-generation fix. The legacy fresh/once_burned/twice_burned labels still have no defensible mapping to C5G7 UO2/MOX enrichment or depletion compositions.",
+    "reason": "Critical correction 2026-10-11: historical materials.py used np.logspace(-5, 7, 8), which is not the standard OECD/NEA C5G7 energy-group structure. Production and previous smoke MGXS files were byte-identical to that upstream output, but identity does not establish benchmark correctness. Their scalar comparison with 1.18655 is withdrawn as benchmark evidence. The corrected runner replaces the nonstandard edges with [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV and audits the generated MGXS group-structure attribute before transport. A fresh corrected run and primary-specification review are required. Legacy fresh/once_burned/twice_burned labels still have no defensible mapping to C5G7 UO2/MOX compositions.",
     "statepoint_scalar_read_verified": true,
     "model_xml_comparison": "partial_match_except_local_cross_sections_path",
     "production_mgxs_file_available": true,
@@ -56,7 +66,20 @@
     "mgxs_endpoint_normalization_verification": "PASS_normalized_18_run_workflow_38100905238",
     "normalized_repeatability_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
     "normalized_repeatability_run_count": 18,
-    "normalized_repeatability_raw_hdf5_audits_all_passed": true
+    "normalized_repeatability_raw_hdf5_audits_all_passed": true,
+    "production_group_structure_matches_standard_c5g7": false,
+    "corrected_runner_enforces_standard_group_structure": true,
+    "corrected_runner_group_boundaries_eV": [
+      0.00001,
+      0.0635,
+      10,
+      100,
+      1000,
+      500000,
+      1000000,
+      20000000
+    ],
+    "production_mgxs_byte_identity_is_not_benchmark_validation": true
   },
   "mapping_contract": {
     "required_position_map": null,
