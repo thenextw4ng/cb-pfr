@@ -5,7 +5,7 @@ import streamlit as st
 
 from cbpfr.dashboard_ui import (
     CYAN, GREEN, ORANGE, RED, apply_workstation_style, base_layout,
-    load_smoke, render_header,
+    load_smoke, render_header, render_workspace_sidebar,
 )
 
 st.set_page_config(page_title="CB-PFR · Provenance & Validation", page_icon="⚛", layout="wide")
@@ -13,6 +13,7 @@ apply_workstation_style()
 render_header("Provenance", "FAIL-CLOSED SCIENTIFIC AUDIT")
 
 df = load_smoke().sort_values("candidate_id").reset_index(drop=True)
+render_workspace_sidebar("Provenance & Validation", df)
 hash_equal = (
     df["mgxs_sha256_before_transport"].astype(str)
     == df["mgxs_sha256_after_transport"].astype(str)
