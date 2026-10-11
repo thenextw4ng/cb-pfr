@@ -35,7 +35,7 @@ These transforms are diagnostic hypotheses, not candidate corrections. The best 
 
 ## Geometry-plot diagnostic workflow
 
-A plot-only GitHub Actions workflow has been added at `.github/workflows/beavrs-coordinate-audit.yml`. It freezes the same BEAVRS source revision, exports the coordinate crosswalk, renders the upstream OpenMC geometry plots, and uploads the artifacts **without running neutron transport**. Its purpose is to make coordinate review possible before spending compute on another physics run. The workflow and its resulting plots still require review against the published detector-layout schematic; a successful plot render is not a physical-validation pass.
+A plot-only GitHub Actions workflow has been added at `.github/workflows/beavrs-coordinate-audit.yml`. It freezes the same BEAVRS source revision, exports the coordinate crosswalk, renders the upstream OpenMC geometry plots, overlays all 193 assembly labels and marks the 58 instrumented positions in red, and uploads the artifacts **without running neutron transport**. Its purpose is to make coordinate review possible before spending compute on another physics run. The workflow and its resulting plots still require review against the published detector-layout schematic; a successful plot render is not a physical-validation pass.
 
 ## Required gate before rerunning transport
 
