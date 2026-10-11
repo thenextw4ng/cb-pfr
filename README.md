@@ -190,3 +190,10 @@ Use [CITATION.cff](CITATION.cff) for repository metadata and cite the working pa
 
 Code: MIT.  
 Paper/documentation: CC BY 4.0.
+
+
+## Usmanov 2024 optimization benchmark and quantum-claim gate
+
+The repository now records the seven published core-size instances from Usmanov et al. (2024) in `config/benchmarks/usmanov_2024_core_instances.csv` and provides a repeated-trial TTS analyzer in `scripts/analyze_solver_benchmark.py`. The reproduction protocol and claim boundary are documented in [reports/USMANOV_2024_REPRODUCTION_AND_QUANTUM_CLAIM_GATE.md](reports/USMANOV_2024_REPRODUCTION_AND_QUANTUM_CLAIM_GATE.md).
+
+This is benchmark infrastructure, not a completed independent reproduction. The published paper's aggregate figure is not raw per-trial quantum-device data. No new D-Wave job or quantum-advantage result is claimed. Run-level results must be collected on the same instances and success criterion, with setup/embedding and end-to-end costs reported separately. The paper itself reports that practical advantage had not yet been reached.
