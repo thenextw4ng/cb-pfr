@@ -1,5 +1,7 @@
 # Assembly-integrated fission-rate proxy: six-layout smoke study
 
+**Historical smoke evidence only:** these tallies were produced using nonstandard log-spaced energy-group boundaries inherited from the upstream builder. Do not use them for standard C5G7 benchmark acceptance or physical candidate ranking.
+
 **Status: completed exploratory smoke analysis; not benchmark-grade and not a safety assessment.**
 
 - Workflow: https://github.com/thenextw4ng/cb-pfr/actions/runs/38100954596
