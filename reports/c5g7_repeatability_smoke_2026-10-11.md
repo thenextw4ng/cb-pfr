@@ -1,5 +1,7 @@
 # C5G7 repeated-seed smoke reliability analysis
 
+**Historical smoke evidence only:** a later model-identity audit found that the upstream builder's log-spaced energy-group boundaries differ from the standard C5G7 seven-group structure. These 18 runs remain useful for pipeline and seed-provenance testing but are not benchmark-valid physics results. The previous endpoint-only normalization did not correct the interior boundaries.
+
 ## Status
 
 **Completed: 18 OpenMC runs across six layouts and three explicit seed rounds.** Every round completed all six cases, and every raw-HDF5 audit passed. The run was performed with OpenMC 0.16.0 against upstream commit ba41bee54320ada0b4ac39a0dd2ca3c1d090a450.
