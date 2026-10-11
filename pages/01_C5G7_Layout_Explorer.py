@@ -6,6 +6,12 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="CB-PFR · C5G7 Geometry", page_icon="⚛", layout="wide")
+st.markdown("""<style>
+[data-testid="stSidebar"],[data-testid="stHeader"],[data-testid="stToolbar"],footer{display:none!important}
+[data-testid="stAppViewContainer"]>.main{margin-left:0!important}
+[data-testid="stMainBlockContainer"]{padding:0!important;max-width:100%!important}
+iframe{display:block}
+</style>""", unsafe_allow_html=True)
 ROOT = Path(__file__).resolve().parents[1]
 CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
 if not CSV.exists():
