@@ -15,13 +15,6 @@ on:
         description: "Particles per batch"
         required: true
         default: "3000"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/beavrs-cycle1-map-validation.yml"
-      - "scripts/run_beavrs_cycle1_map_validation.py"
-      - "tests/test_beavrs_cycle1_map_validation.py"
-
 permissions:
   contents: read
 
