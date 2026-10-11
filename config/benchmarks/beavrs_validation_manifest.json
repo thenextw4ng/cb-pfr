@@ -4,7 +4,7 @@
   "benchmark": "BEAVRS",
   "upstream_repository": "https://github.com/mit-crpg/BEAVRS",
   "upstream_branch": "master",
-  "upstream_commit": "UNFROZEN_PENDING_PINNED_SOURCE_CHECKOUT",
+  "upstream_commit": "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22",
   "model_generator": "models/openmc/make_beavrs.py",
   "experimental_data_sources": [
     "measurements/assem_mass_loading.csv",
@@ -78,5 +78,7 @@
     "Validating the BEAVRS model does not automatically validate CB-PFR candidate ranking.",
     "QUBO formulation alone does not establish quantum hardware execution or quantum advantage."
   ],
-  "protocol_report": "reports/BEAVRS_VALIDATION_EXECUTION_PLAN_2026-10-11.md"
+  "protocol_report": "reports/BEAVRS_VALIDATION_EXECUTION_PLAN_2026-10-11.md",
+  "upstream_commit_url": "https://github.com/mit-crpg/BEAVRS/commit/1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22",
+  "source_freeze_status": "COMMIT_IDENTIFIED; checkout and artifact hashing still required"
 }
