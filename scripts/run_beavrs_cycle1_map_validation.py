@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import os
@@ -28,6 +29,14 @@ MEASUREMENT_REL = Path("measurements/detector_signals/cycle_1/0/radial_measureme
 SUMMARY_REL = Path("measurements/detector_signals/cycle_1/0/summary.csv")
 TALLY_NAME = "beavrs_cycle1_day0_assembly_fission_rate"
 MODEL_COMMIT = "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22"
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def load_measurements(path: Path) -> dict[str, float]:
@@ -110,6 +119,11 @@ def prepare(args: argparse.Namespace) -> None:
     builder.model = builder.build_openmc_model()
     builder.model.settings.seed = args.seed
     builder.model.export_to_xml()
+    input_xml_sha256 = {
+        name: sha256_file(output / name)
+        for name in ("geometry.xml", "materials.xml", "settings.xml", "tallies.xml", "plots.xml", "model.xml")
+        if (output / name).is_file()
+    }
 
     assembly_map = build_assembly_map(Core.core_lattice_template)
     measurements = load_measurements(beavrs_root / MEASUREMENT_REL)
@@ -145,6 +159,7 @@ def prepare(args: argparse.Namespace) -> None:
             "seed": args.seed,
             "nuclear_data": os.environ.get("OPENMC_CROSS_SECTIONS", "UNSET"),
         },
+        "model_input_sha256": input_xml_sha256,
         "comparison_scope": "exploratory normalized radial-shape comparison; not uncertainty-weighted acceptance",
         "status": "PREPARED_NOT_RUN",
     }
@@ -229,7 +244,7 @@ def analyze(args: argparse.Namespace) -> None:
         "benchmark": "BEAVRS Cycle 1 day 0",
         "upstream_commit": MODEL_COMMIT,
         "statepoint": statepoint_path.name,
-        "statepoint_sha256": __import__("hashlib").sha256(statepoint_path.read_bytes()).hexdigest(),
+        "statepoint_sha256": sha256_file(statepoint_path),
         "batches_completed": statepoint_batches,
         "keff": {"mean": keff, "standard_deviation": keff_sd},
         "detector_count": n,
