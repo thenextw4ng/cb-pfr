@@ -220,6 +220,8 @@ def assess_cbpfr_limits(
     Each metric config requires name, value_attribute, uncertainty_attribute, scale, and
     optional lower/upper/z/weight. This routine does not invent acceptance limits.
     """
+    if not metrics:
+        raise ExternalDataError("at least one explicitly configured physical metric limit is required")
     assessments = []
     for candidate_id in EXPECTED_CANDIDATES:
         row = results.get(candidate_id)
