@@ -115,15 +115,16 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             layout = {p: ("MOX" if p in mox_positions else "UO2") for p in positions}
             with tempfile.TemporaryDirectory() as case_dir:
                 builder = Path(case_dir) / "build-xml-2d.py"
+                nl = chr(10)
                 builder.write_text(
-                    CANONICAL_ASSIGNMENT + "\\n"
-                    "batches = 20000\\n"
-                    "inactive = 500\\n"
-                    "particles = 10000\\n"
-                    "settings_file.particles = particles\\n"
-                    "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\\n"
-                    "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\\n"
-                    "settings_file.entropy_dimension = [51, 51, 1]\\n",
+                    CANONICAL_ASSIGNMENT + nl
+                    + "batches = 20000" + nl
+                    + "inactive = 500" + nl
+                    + "particles = 10000" + nl
+                    + "settings_file.particles = particles" + nl
+                    + "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]" + nl
+                    + "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]" + nl
+                    + "settings_file.entropy_dimension = [51, 51, 1]" + nl,
                     encoding="utf-8",
                 )
                 patch_builder(builder, layout, batches=40, inactive=5, particles=200)
