@@ -215,11 +215,11 @@ def main() -> int:
         statepoint_hashes = [r.get("statepoint_sha256") for r in results]
         mgxs_hashes = {r.get("mgxs_sha256") for r in results}
         aggregate_checks = [
-            {"name": "six_unique_candidate_ids", "status": "PASS" if len(set(ids)) == args.expected_candidates else "FAIL",
+            {"name": "unique_candidate_ids", "status": "PASS" if len(set(ids)) == args.expected_candidates else "FAIL",
              "actual": ids, "expected": f"{args.expected_candidates} unique IDs"},
-            {"name": "six_unique_seeds", "status": "PASS" if len(set(seeds)) == args.expected_candidates else "FAIL",
+            {"name": "unique_seeds", "status": "PASS" if len(set(seeds)) == args.expected_candidates else "FAIL",
              "actual": seeds, "expected": f"{args.expected_candidates} unique seeds"},
-            {"name": "six_unique_statepoint_hashes", "status": "PASS" if len(set(statepoint_hashes)) == args.expected_candidates else "FAIL",
+            {"name": "unique_statepoint_hashes", "status": "PASS" if len(set(statepoint_hashes)) == args.expected_candidates else "FAIL",
              "actual": statepoint_hashes, "expected": f"{args.expected_candidates} unique statepoint hashes"},
             {"name": "shared_mgxs_hash", "status": "PASS" if len(mgxs_hashes) == 1 and None not in mgxs_hashes else "FAIL",
              "actual": sorted(str(v) for v in mgxs_hashes), "expected": "one non-empty common MGXS hash"},
