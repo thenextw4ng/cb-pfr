@@ -1,6 +1,6 @@
 # OpenMC source-convergence diagnostic
 
-The C5G7 upstream builder defines a 51×51 Shannon-entropy mesh, so its statepoint contains both batch-wise (k)-generation estimates and source entropy. The audit tool `scripts/audit_c5g7_source_convergence.py` exports those traces and summarizes first/last quarter means, half-window differences, and descriptive OLS slopes.
+The upstream builder attempted to set entropy-mesh attributes that OpenMC 0.16.0 ignores. The corrected runner replaces those lines with a real `openmc.RegularMesh` assigned to `settings.entropy_mesh`, using 51×51×1 bins. The corrected statepoint should then contain both batch-wise (k)-generation estimates and source entropy. The audit tool `scripts/audit_c5g7_source_convergence.py` exports those traces and summarizes first/last quarter means, half-window differences, and descriptive OLS slopes.
 
 Run it in an environment with OpenMC installed:
 
