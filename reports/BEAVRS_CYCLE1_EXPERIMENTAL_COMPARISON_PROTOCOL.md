@@ -10,7 +10,7 @@
 - Experimental observable: Cycle 1 day-0 tilt-corrected radial map at `measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv`, restricted to the 58 instrumented labels identified by `radial_measurements_full.csv`
 - Experimental state summary: `measurements/detector_signals/cycle_1/0/summary.csv`
 - Runner: `scripts/run_beavrs_cycle1_map_validation.py`
-- Coordinate crosswalk export: `beavrs_coordinate_crosswalk.csv` (176 assembly rows; 58 instrumented detector rows; SHA-256 recorded in the run manifest)
+- Coordinate crosswalk export: `beavrs_coordinate_crosswalk.csv` (193 assembly rows; 58 instrumented detector rows; SHA-256 recorded in the run manifest)
 - Workflow: `.github/workflows/beavrs-cycle1-map-validation.yml`
 - Workflow accepts configurable batch, inactive-batch, and particles-per-batch settings; default is 500 batches, 50 inactive, 3,000 particles/batch.
 - Nuclear data: OpenMC official ENDF/B-VII.1 HDF5 library, archive URL pinned in the workflow; the workflow records archive and `cross_sections.xml` SHA-256 hashes.
