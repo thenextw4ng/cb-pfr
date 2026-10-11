@@ -1,6 +1,11 @@
 name: C5G7 canonical high-budget numerical screen
 
 on:
+  push:
+    branches:
+      - research/c5g7-corrected-canonical-run-20261011
+    paths:
+      - ".github/workflows/c5g7-canonical-convergence.yml"
   workflow_dispatch:
     inputs:
       batches:
@@ -62,6 +67,10 @@ jobs:
               --expected-candidates 1
             CASE_DIR="$ROUND/c5g7-2x2-UMMU"
             STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+            python scripts/audit_c5g7_source_convergence.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --out-json "$ROUND/analysis/source_convergence.json" \
+              --out-csv "$ROUND/analysis/source_convergence.csv"
             python scripts/analyze_c5g7_assembly_fission.py \
               --statepoint "$CASE_DIR/$STATEPOINT_REL" \
               --candidate-id c5g7-2x2-UMMU --layout-signature UMMU \
