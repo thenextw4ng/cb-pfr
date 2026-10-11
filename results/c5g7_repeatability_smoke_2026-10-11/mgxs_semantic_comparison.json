@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS",
+  "dataset_content_equal": true,
+  "full_semantic_equal": false,
+  "comparison_method": "scripts/fingerprint_hdf5_semantics.py --require-datasets-identical",
+  "artifacts": [
+    {
+      "label": "initial six-layout smoke run",
+      "workflow_run_id": 38085586809,
+      "file": "c5g7-2x2-UMMU/model/2d/mgxs.h5",
+      "byte_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+      "full_semantic_sha256": "fb4bb5adaaf6ccbc79a364fb37e7e3e1c2a0af9f8955e74d7649143760307d10"
+    },
+    {
+      "label": "three-round repeatability smoke run",
+      "workflow_run_id": 38097472734,
+      "file": "round_620000/c5g7-2x2-UMMU/model/2d/mgxs.h5",
+      "byte_sha256": "eab47265b45a9b350e5c8d28e60c2042fe32f84efe91d2636b731697ae0f8e64",
+      "full_semantic_sha256": "a227ddaf6feff233fd2de1a16b8020a428cb4cc2dd8cec9215606c5b54e7c517"
+    }
+  ],
+  "dataset_content_sha256": "c054ced2866ce997a617d47c541cc62a25cedd4621bf732a1b9ba44857b14db8",
+  "counts": {
+    "datasets": 63,
+    "groups": 33,
+    "total_hdf5_objects_including_root": 96,
+    "attributes": 45,
+    "dataset_differences": 0,
+    "attribute_differences": 1
+  },
+  "attribute_differences": [
+    {
+      "path": ".",
+      "attribute": "group structure",
+      "left_first_energy_boundary": 0.00001,
+      "right_first_energy_boundary": 0.000009999999999999999,
+      "absolute_difference": 1.6940658945086007e-21,
+      "relative_difference": 1.6940658945086004e-16
+    }
+  ],
+  "interpretation": "All 63 dataset payloads match exactly, including shape, dtype, and values. The HDF5 files are not fully semantically identical because one root metadata attribute differs by one floating-point step. The production baseline manifest records the initial byte hash, but the raw production MGXS file is not included in the committed evidence ZIP."
+}
