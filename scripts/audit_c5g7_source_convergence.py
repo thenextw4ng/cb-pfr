@@ -110,6 +110,7 @@ def main() -> int:
             h = [float(v) for v in sp.entropy] if sp.entropy is not None else []
             report = analyze_traces(k, h, int(sp.n_inactive), int(sp.n_batches))
         args.out_json.parent.mkdir(parents=True, exist_ok=True)
+        args.out_csv.parent.mkdir(parents=True, exist_ok=True)
         args.out_json.write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
         with args.out_csv.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
