@@ -22,10 +22,9 @@ MODEL_RELATIVE = Path("c5g7/openmc")
 BUILDER_RELATIVE = Path("2d/build-xml-2d.py")
 CANONICAL_ASSIGNMENT = "lattices['Core'].universes = [[u, m, w], [m, u, w], [w, w, w]]"
 MGXS_GROUPS_ANCHOR = "groups = openmc.mgxs.EnergyGroups(np.logspace(-5, 7, 8))"
-MGXS_GROUPS_REPLACEMENT = """energy_boundaries = np.logspace(-5, 7, 8)
-# Normalize endpoints to avoid one-ULP drift across NumPy builds.
-energy_boundaries[0] = 1.0e-5
-energy_boundaries[-1] = 1.0e7
+C5G7_GROUP_BOUNDARIES = (1.0e-5, 0.0635, 10.0, 100.0, 1000.0, 500000.0, 1000000.0, 20000000.0)
+MGXS_GROUPS_REPLACEMENT = """energy_boundaries = np.array([1.0e-5, 0.0635, 10.0, 100.0, 1000.0, 500000.0, 1000000.0, 20000000.0], dtype=float)
+# OECD/NEA C5G7 standard seven-group energy boundaries (eV).
 groups = openmc.mgxs.EnergyGroups(energy_boundaries)"""
 POSITION_ORDER = ("p00", "p01", "p10", "p11")
 
@@ -81,7 +80,7 @@ def validate_design_space(path: Path) -> dict:
 
 
 def patch_mgxs_energy_boundaries(materials_file: Path) -> None:
-    """Normalize exact C5G7 energy-group endpoints before generating mgxs.h5."""
+    """Replace nonstandard upstream log-spaced edges with official C5G7 7-group boundaries."""
     source = materials_file.read_text(encoding="utf-8")
     if source.count(MGXS_GROUPS_ANCHOR) != 1:
         raise ValueError("upstream energy-group construction differs from audited template; refusing to patch")
@@ -89,6 +88,20 @@ def patch_mgxs_energy_boundaries(materials_file: Path) -> None:
         source.replace(MGXS_GROUPS_ANCHOR, MGXS_GROUPS_REPLACEMENT),
         encoding="utf-8",
     )
+
+
+def audit_mgxs_group_structure(mgxs_file: Path) -> tuple[float, ...]:
+    """Fail closed unless generated MGXS has the standard C5G7 energy boundaries."""
+    import h5py
+    with h5py.File(mgxs_file, "r") as handle:
+        if "group structure" not in handle.attrs:
+            raise ValueError("MGXS file lacks root group structure attribute")
+        actual = tuple(float(value) for value in handle.attrs["group structure"])
+    if len(actual) != len(C5G7_GROUP_BOUNDARIES) or any(
+        value != expected for value, expected in zip(actual, C5G7_GROUP_BOUNDARIES)
+    ):
+        raise ValueError(f"generated MGXS energy-group boundaries are not standard C5G7: expected {C5G7_GROUP_BOUNDARIES}, got {actual}")
+    return actual
 
 
 def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int, seed: int = 620000) -> None:
@@ -143,6 +156,7 @@ def run_case(case_dir: Path, threads: int) -> dict:
     ]
     records = []
     pre_transport_hashes = None
+    mgxs_group_structure = None
     for command in commands:
         started = datetime.now(timezone.utc).isoformat()
         try:
@@ -164,6 +178,12 @@ def run_case(case_dir: Path, threads: int) -> dict:
         if proc.returncode != 0:
             return {"status": "failed", "commands": records, "failure": f"command exited {proc.returncode}"}
         if command[1] == "build-xml-2d.py":
+            try:
+                mgxs_group_structure = audit_mgxs_group_structure(workdir / "mgxs.h5")
+            except (OSError, ValueError, KeyError) as exc:
+                return {"status": "failed", "commands": records,
+                        "failure": f"MGXS group-structure audit failed: {exc}",
+                        "mgxs_group_structure_audit": "FAIL"}
             # Freeze hashes after XML generation but before transport execution.
             pre_transport_hashes = file_manifest(case_dir)
 
@@ -176,6 +196,8 @@ def run_case(case_dir: Path, threads: int) -> dict:
     }
     mgxs_path = "model/2d/mgxs.h5"
     provenance = {
+        "mgxs_energy_group_boundaries": list(mgxs_group_structure or ()),
+        "mgxs_group_structure_audit": "PASS" if mgxs_group_structure else "FAIL",
         "pre_transport_hashes": pre_transport_hashes,
         "post_transport_hashes": post_transport_hashes,
         "mutated_preexisting_files": mutated,
@@ -270,7 +292,7 @@ def main() -> int:
         "mode": args.mode,
         "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed_policy": "seed_base + stable candidate order index"},
         "profile_warning": "Default settings are smoke-test settings only; do not compare to benchmark reference or claim converged physics without a separate convergence study.",
-        "mgxs_generation_policy": "The copied upstream materials.py is patched to set the first and last energy-group boundaries explicitly to 1e-5 and 1e7 before regenerating mgxs.h5, preventing one-ULP endpoint drift across NumPy builds.",
+        "mgxs_generation_policy": "The copied upstream materials.py is patched to replace nonstandard log-spaced boundaries with the OECD/NEA C5G7 standard seven-group boundaries [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV; the generated MGXS group-structure attribute is audited before transport.",
         "cases": [],
         "nonclaims": [
             "This is a new C5G7 assembly-placement design study, not a mapping of the legacy burnup-state QUBO.",
