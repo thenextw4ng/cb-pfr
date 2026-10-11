@@ -1,0 +1,16 @@
+# OpenMC source-convergence diagnostic
+
+The C5G7 upstream builder defines a 51×51 Shannon-entropy mesh, so its statepoint contains both batch-wise (k)-generation estimates and source entropy. The audit tool `scripts/audit_c5g7_source_convergence.py` exports those traces and summarizes first/last quarter means, half-window differences, and descriptive OLS slopes.
+
+Run it in an environment with OpenMC installed:
+
+```bash
+python scripts/audit_c5g7_source_convergence.py \
+  --statepoint /path/to/statepoint.7000.h5 \
+  --out-json analysis/source_convergence.json \
+  --out-csv analysis/source_convergence.csv
+```
+
+The tool intentionally returns `DIAGNOSTIC_REVIEW_REQUIRED`, not a convergence pass. There is no universal C5G7 entropy-slope cutoff that can be applied without justification. Inspect the complete traces, predeclare any project threshold, and increase inactive batches or histories if source stability is unresolved. A converged source is necessary but not sufficient for benchmark acceptance.
+
+OpenMC documentation: [statepoint file format](https://docs.openmc.org/en/latest/io_formats/statepoint.html) and [Shannon entropy settings](https://docs.openmc.org/en/stable/usersguide/settings.html).
