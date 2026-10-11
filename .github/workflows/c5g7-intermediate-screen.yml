@@ -75,9 +75,9 @@ jobs:
       - name: Run three independent seed rounds for all six layouts
         shell: bash -el {0}
         env:
-          BATCHES: ${{ inputs.batches }}
-          INACTIVE: ${{ inputs.inactive }}
-          PARTICLES: ${{ inputs.particles }}
+          BATCHES: ${{ inputs.batches || '2000' }}
+          INACTIVE: ${{ inputs.inactive || '100' }}
+          PARTICLES: ${{ inputs.particles || '5000' }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/c5g7-intermediate
