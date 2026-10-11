@@ -21,6 +21,12 @@ SOURCE_REPO = "https://github.com/mit-crpg/benchmarks.git"
 MODEL_RELATIVE = Path("c5g7/openmc")
 BUILDER_RELATIVE = Path("2d/build-xml-2d.py")
 CANONICAL_ASSIGNMENT = "lattices['Core'].universes = [[u, m, w], [m, u, w], [w, w, w]]"
+MGXS_GROUPS_ANCHOR = "groups = openmc.mgxs.EnergyGroups(np.logspace(-5, 7, 8))"
+MGXS_GROUPS_REPLACEMENT = """energy_boundaries = np.logspace(-5, 7, 8)
+# Normalize endpoints to avoid one-ULP drift across NumPy builds.
+energy_boundaries[0] = 1.0e-5
+energy_boundaries[-1] = 1.0e7
+groups = openmc.mgxs.EnergyGroups(energy_boundaries)"""
 POSITION_ORDER = ("p00", "p01", "p10", "p11")
 
 
@@ -72,6 +78,17 @@ def validate_design_space(path: Path) -> dict:
     if len(seen) != 6 or baseline_count != 1:
         raise ValueError("design space must have six unique layouts and exactly one canonical baseline")
     return data
+
+
+def patch_mgxs_energy_boundaries(materials_file: Path) -> None:
+    """Normalize exact C5G7 energy-group endpoints before generating mgxs.h5."""
+    source = materials_file.read_text(encoding="utf-8")
+    if source.count(MGXS_GROUPS_ANCHOR) != 1:
+        raise ValueError("upstream energy-group construction differs from audited template; refusing to patch")
+    materials_file.write_text(
+        source.replace(MGXS_GROUPS_ANCHOR, MGXS_GROUPS_REPLACEMENT),
+        encoding="utf-8",
+    )
 
 
 def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int, seed: int = 620000) -> None:
@@ -252,6 +269,7 @@ def main() -> int:
         "mode": args.mode,
         "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed_policy": "seed_base + stable candidate order index"},
         "profile_warning": "Default settings are smoke-test settings only; do not compare to benchmark reference or claim converged physics without a separate convergence study.",
+        "mgxs_generation_policy": "The copied upstream materials.py is patched to set the first and last energy-group boundaries explicitly to 1e-5 and 1e7 before regenerating mgxs.h5, preventing one-ULP endpoint drift across NumPy builds.",
         "cases": [],
         "nonclaims": [
             "This is a new C5G7 assembly-placement design study, not a mapping of the legacy burnup-state QUBO.",
@@ -266,6 +284,7 @@ def main() -> int:
         case_dir.mkdir()
         model_copy = case_dir / "model"
         shutil.copytree(upstream_model, model_copy)
+        patch_mgxs_energy_boundaries(model_copy / "materials.py")
         builder = model_copy / BUILDER_RELATIVE
         patch_builder(builder, candidate["fuel_assembly_layout"], args.batches, args.inactive, args.particles, seed=seed)
         case = {
