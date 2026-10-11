@@ -25,6 +25,7 @@ These scripts are supported by the current repository and should be used accordi
 - `run_c5g7_layout_study.py` — prepare isolated cases or optionally run them when the required OpenMC environment and data are available. Defaults are smoke-test settings, not benchmark-grade settings.
 - `analyze_c5g7_repeatability.py` — aggregate three independent seed rounds across the six layouts; report between-run variability separately from within-run Monte Carlo SD and compute descriptive ranking stability.
 - `audit_c5g7_validation_gates.py` — check repeated-run CSV integrity, common computational settings, seed/statepoint uniqueness, per-layout repeatability, and provisional scalar-reference screens; benchmark acceptance stays blocked without model-identity and spatial-tally review.
+- `compare_c5g7_input_provenance.py` — compare archived production and regenerated canonical XML inputs, preserving exact hashes and attribute-normalized diffs for geometry, materials, settings, tallies, and plots.
 
 ## Important limits
 
