@@ -30,6 +30,13 @@ TALLY_NAME = "beavrs_cycle1_day0_assembly_fission_rate"
 MODEL_COMMIT = "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22"
 
 
+def fahrenheit_to_kelvin(value_f: float) -> float:
+    """Convert a reported Fahrenheit temperature to kelvin."""
+    if not math.isfinite(value_f):
+        raise ValueError("temperature must be finite")
+    return (value_f - 32.0) * (5.0 / 9.0) + 273.15
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -107,6 +114,12 @@ def prepare(args: argparse.Namespace) -> None:
             "OpenMC and the pinned upstream BEAVRS Python package must be installed"
         ) from exc
 
+    # Match the benchmark-reported Cycle 1 day-0 inlet temperature rather than
+    # the upstream model default. This affects the model temperature setting and
+    # is recorded explicitly in the run manifest.
+    import beavrs.constants as beavrs_constants
+    beavrs_constants.operating_temperature = args.temperature_k
+
     beavrs_root = Path(args.beavrs_root).resolve()
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -171,7 +184,9 @@ def prepare(args: argparse.Namespace) -> None:
         "model": {
             "dimension": "full 3-D full-core upstream BEAVRS geometry",
             "boron_ppm": 975.25,
-            "temperature_K": 566.483,
+            "temperature_K": args.temperature_k,
+            "temperature_source": "Cycle 1 day-0 summary inlet temperature converted from 558.875 F",
+            "upstream_default_temperature_K": 566.483,
             "RCCA_steps_withdrawn": rcca,
             "measured_SE_steps_withdrawn": 230,
             "upstream_default_SE_steps_withdrawn": 228,
@@ -320,7 +335,10 @@ def main() -> None:
     parser.add_argument("--inactive", type=int, default=50)
     parser.add_argument("--particles", type=int, default=3000)
     parser.add_argument("--seed", type=int, default=20261011)
+    parser.add_argument("--temperature-k", type=float, default=fahrenheit_to_kelvin(558.875))
     args = parser.parse_args()
+    if not math.isfinite(args.temperature_k) or args.temperature_k <= 0:
+        parser.error("temperature-k must be finite and positive")
     if args.batches <= 0 or args.particles <= 0 or args.inactive < 0 or args.inactive >= args.batches:
         parser.error("require batches > 0, particles > 0, and 0 <= inactive < batches")
     if args.mode == "prepare":
