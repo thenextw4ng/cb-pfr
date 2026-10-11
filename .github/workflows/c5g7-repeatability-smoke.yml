@@ -7,6 +7,9 @@ on:
       - "scripts/analyze_c5g7_repeatability.py"
       - "scripts/run_c5g7_layout_study.py"
       - "scripts/audit_c5g7_smoke_statepoints.py"
+      - "scripts/audit_c5g7_evidence.py"
+      - "scripts/analyze_c5g7_fission_objective_repeatability.py"
+      - "scripts/analyze_c5g7_assembly_fission.py"
       - "scripts/prepare_c5g7_reference.py"
       - "config/benchmarks/c5g7_2x2_design_space.json"
   pull_request:
@@ -15,6 +18,7 @@ on:
       - "scripts/analyze_c5g7_repeatability.py"
       - "scripts/run_c5g7_layout_study.py"
       - "scripts/audit_c5g7_smoke_statepoints.py"
+      - "scripts/audit_c5g7_evidence.py"
       - "scripts/prepare_c5g7_reference.py"
       - "config/benchmarks/c5g7_2x2_design_space.json"
   workflow_dispatch:
@@ -26,7 +30,7 @@ concurrency:
 jobs:
   repeated-smoke-runs:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Install OpenMC 0.16.0
@@ -65,6 +69,11 @@ jobs:
             python scripts/audit_c5g7_smoke_statepoints.py \
               --study-summary "/tmp/c5g7-repeatability/round_${seed_base}/STUDY_SUMMARY.json" \
               --out "/tmp/c5g7-repeatability/round_${seed_base}/analysis/raw_hdf5_audit.json"
+            python scripts/audit_c5g7_evidence.py \
+              --study-summary "/tmp/c5g7-repeatability/round_${seed_base}/STUDY_SUMMARY.json" \
+              --design-space config/benchmarks/c5g7_2x2_design_space.json \
+              --raw-audit "/tmp/c5g7-repeatability/round_${seed_base}/analysis/raw_hdf5_audit.json" \
+              --out "/tmp/c5g7-repeatability/round_${seed_base}/analysis/evidence_integrity_audit.json"
           done
       - name: Analyze repeated-run variability and rank stability
         shell: bash -el {0}
@@ -74,6 +83,13 @@ jobs:
             --outdir /tmp/c5g7-repeatability/analysis
           cat /tmp/c5g7-repeatability/analysis/REPEATABILITY_ANALYSIS.md
           cat /tmp/c5g7-repeatability/analysis/repeatability_analysis.json
+      - name: Analyze fission-peaking objective and between-seed variability
+        shell: bash -el {0}
+        run: |
+          python scripts/analyze_c5g7_fission_objective_repeatability.py \
+            --study-root /tmp/c5g7-repeatability \
+            --outdir /tmp/c5g7-repeatability/fission-objective-analysis
+          cat /tmp/c5g7-repeatability/fission-objective-analysis/FISSION_OBJECTIVE_REPEATABILITY.md
       - name: Preserve all repeated-run statepoints and analysis
         if: always()
         uses: actions/upload-artifact@v4
