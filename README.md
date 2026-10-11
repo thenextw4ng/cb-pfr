@@ -199,3 +199,12 @@ The repository now records the seven published core-size instances from Usmanov 
 This is benchmark infrastructure, not a completed independent reproduction. The published paper's aggregate figure is not raw per-trial quantum-device data. No new D-Wave job or quantum-advantage result is claimed. Run-level results must be collected on the same instances and success criterion, with setup/embedding and end-to-end costs reported separately. The paper itself reports that practical advantage had not yet been reached.
 
 An optional [D-Wave QPU runner](scripts/run_dwave_qubo_benchmark.py) now accepts a frozen QUBO JSON, records repeated sampler calls and their returned samples, and writes audit metadata. It requires an independently configured `DWAVE_API_TOKEN` and the optional `dwave-system` package; this repository has **not** submitted a QPU job. Its energy-threshold success flag is not a physical-feasibility claim. See the [Usmanov reproduction and quantum-claim gate](reports/USMANOV_2024_REPRODUCTION_AND_QUANTUM_CLAIM_GATE.md).
+
+
+## External QUBO benchmark comparison (public recorded data)
+
+A public external comparison has been transcribed by family, with a pinned upstream source revision and explicit evidence limitations:
+- [External benchmark evidence report](reports/PUBLIC_QUBO_BENCHMARK_EXTERNAL_EVIDENCE.md)
+- [Machine-readable aggregate CSV](config/benchmarks/public_qubo_benchmark_summary.csv)
+
+The upstream summary covers 1,912 QUBO instances: the classical reference has a lower objective on 1,280 matched cases, equal objective on 576, and 56 cases lack a D-Wave result. This is **source-reported aggregate evidence, not an independent rerun**, not a nuclear fuel-management dataset, and not evidence that CB-PFR improves QPU outputs. No QPU job was submitted by this repository.
