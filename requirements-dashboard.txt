@@ -1,4 +1,6 @@
+# Install CB-PFR package and all dashboard runtime dependencies.
+-e .
 streamlit>=1.36,<2
 pandas>=2.0,<3
-
+plotly>=5.22,<7
 h5py>=3.10,<4
