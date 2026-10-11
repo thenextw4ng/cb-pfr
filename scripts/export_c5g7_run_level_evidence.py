@@ -27,6 +27,7 @@ EXPECTED = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
 POSITIONS = ("p00", "p01", "p10", "p11")
 GROUP_EDGES = (1.0e-5, 0.0635, 10.0, 100.0, 1000.0, 500000.0, 1000000.0, 20000000.0)
 GROUP_EDGES_CSV = "1e-05;0.0635;10.0;100.0;1000.0;500000.0;1000000.0;20000000.0"
+PINNED_UPSTREAM_COMMIT = "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450"
 CSV_FIELDS = (
     "round", "candidate_id", "layout_signature", "seed", "keff_mean",
     "keff_std_dev", "fission_rate_peaking_factor", "statepoint_sha256",
@@ -67,6 +68,8 @@ def export_run_level_evidence(
     study_audits = []
     shared_settings = None
     shared_mgxs = None
+    shared_builder_hash = None
+    shared_design_hash = None
     used_seeds: set[int] = set()
     used_statepoint_hashes: set[str] = set()
     layout_counts: dict[str, int] = {signature: 0 for signature in EXPECTED}
@@ -83,6 +86,20 @@ def export_run_level_evidence(
             summary.get("study_id") == "C5G7-2x2-two-UO2-two-MOX-layout-enumeration",
             f"{summary_path}: unexpected C5G7 design study ID",
         )
+        _require(summary.get("upstream_commit") == PINNED_UPSTREAM_COMMIT,
+                 f"{summary_path}: upstream source commit is not the audited pinned revision")
+        builder_hash = summary.get("upstream_model_builder_sha256")
+        design_hash = summary.get("design_space_sha256")
+        _require(isinstance(builder_hash, str) and len(builder_hash) == 64,
+                 f"{summary_path}: missing upstream model builder SHA-256")
+        _require(isinstance(design_hash, str) and len(design_hash) == 64,
+                 f"{summary_path}: missing design-space SHA-256")
+        if shared_builder_hash is None:
+            shared_builder_hash = builder_hash
+        _require(builder_hash == shared_builder_hash, f"{summary_path}: upstream model builder hash differs across rounds")
+        if shared_design_hash is None:
+            shared_design_hash = design_hash
+        _require(design_hash == shared_design_hash, f"{summary_path}: design-space hash differs across rounds")
         settings = summary.get("settings") or {}
         required_settings = ("batches", "inactive", "particles", "threads")
         _require(all(key in settings for key in required_settings), f"{summary_path}: missing run settings")
@@ -101,11 +118,17 @@ def export_run_level_evidence(
         this_study_hashes = []
         for case in cases:
             candidate_id = case.get("candidate_id")
-            signature = case.get("layout", None)
+            signature = case.get("layout")
             _require(case.get("status") == "completed", f"{summary_path}: {candidate_id} case is not completed")
-            _require(candidate_id == f"c5g7-2x2-{''.join('M' if signature.get(p) == 'MOX' else 'U' for p in POSITIONS)}",
-                     f"{summary_path}: candidate ID does not match material layout for {candidate_id}")
+            _require(isinstance(signature, dict) and set(signature) == set(POSITIONS),
+                     f"{summary_path}: {candidate_id} must define exactly four fuel positions")
+            _require(all(value in ("UO2", "MOX") for value in signature.values()),
+                     f"{summary_path}: {candidate_id} contains an unknown fuel material")
+            _require(sorted(signature.values()) == ["MOX", "MOX", "UO2", "UO2"],
+                     f"{summary_path}: {candidate_id} must contain exactly two MOX and two UO2")
             layout_signature = "".join("M" if signature[p] == "MOX" else "U" for p in POSITIONS)
+            _require(candidate_id == f"c5g7-2x2-{layout_signature}",
+                     f"{summary_path}: candidate ID does not match material layout for {candidate_id}")
             _require(layout_signature in EXPECTED, f"{summary_path}: unknown layout signature {layout_signature}")
             _require(layout_signature not in seen_signatures, f"{summary_path}: duplicate layout {layout_signature}")
             seen_signatures.add(layout_signature)
@@ -200,6 +223,9 @@ def export_run_level_evidence(
         "unique_seeds": len(used_seeds) == len(rows),
         "unique_statepoint_hashes": len(used_statepoint_hashes) == len(rows),
         "single_mgxs_sha256": shared_mgxs,
+        "upstream_commit": PINNED_UPSTREAM_COMMIT,
+        "upstream_model_builder_sha256": shared_builder_hash,
+        "design_space_sha256": shared_design_hash,
         "common_compute_settings": shared_settings,
         "group_boundaries_eV": list(GROUP_EDGES),
         "study_summaries": study_audits,
