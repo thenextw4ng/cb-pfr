@@ -17,7 +17,7 @@
 
 ## Observable and comparison method
 
-The BEAVRS day-0 measured map contains 58 instrumented assembly positions. The model runner constructs the full 3-D BEAVRS geometry using the frozen upstream builder, adds a 17×17×1 regular-mesh tally for the fission reaction rate over the active fuel height, with lateral bounds of ±8.5 assembly pitches so each mesh bin aligns to one assembly pitch, extracts the tally bins corresponding to those 58 detector positions, and normalizes the calculated values and measured values separately to mean 1. It then reports:
+The BEAVRS day-0 measured map contains 58 instrumented assembly positions. The model runner constructs the full 3-D BEAVRS geometry using the frozen upstream builder, adds a 15×15×1 regular-mesh tally for the U-235 fission reaction rate over the active fuel height, with lateral bounds of ±7.5 assembly pitches so each mesh bin aligns to one assembly pitch, extracts the tally bins corresponding to those 58 detector positions, and normalizes the calculated values and measured values separately to mean 1. It then reports:
 
 - normalized-map RMSE and MAE;
 - mean absolute relative error;
@@ -100,3 +100,14 @@ The BEAVRS specification describes the 58-position radial maps as derived from i
 The runner has now been changed to score `U235` fission specifically in the assembly mesh, while retaining the active-fuel-height integration. This is a closer observable match, but still **not an exact detector-response model**: the calculation does not explicitly reproduce the chamber, the 61 axial detector positions, detector response/gain processing, or the full measurement-uncertainty covariance. A fresh transport run is needed; previous total-fission metrics must not be presented as results from the U-235 tally configuration.
 
 Sources: BEAVRS v2.0.1 specification, Section 3.2 (radial map construction and U-235 fission tally guidance); BEAVRS measurement documentation and uncertainty analysis. See [BEAVRS repository](https://github.com/mit-crpg/BEAVRS), [benchmark specification PDF](https://bamboo.xjtu.edu.cn/images/48970167_beavrs_2.0.1_spec.pdf), and [BEAVRS uncertainty paper](https://doi.org/10.1016/j.pnucene.2020.103488).
+
+
+## Coordinate-registration audit — 11 October 2026
+
+The archived U-235 run was inspected beyond its aggregate metrics. The generated mesh is 15×15 with bounds ±7.5 assembly pitches, matching one assembly pitch per bin. The pinned OpenMC 0.15.3 RectLattice documentation states that universe arrays are top-down views and that increasing the array's y index corresponds to decreasing physical y. The current source-level map (template row 2 → mesh y-bin 15, template row 16 → mesh y-bin 1, and template column to mesh x-bin) is consistent with that documented array convention. This source-level consistency does **not** prove the measurement labels and physical axes have been registered to the same orientation.
+
+A diagnostic of the archived tally grid evaluated the current mapping and alternative rotations/reflections without changing the submitted result. The current mapping reproduces Pearson correlation 0.0324. Some alternate coordinate transforms produce different correlations (the largest exploratory value was about 0.36), but none is accepted as a correction: choosing a transform because it improves the metric would be post-hoc tuning. This is evidence that coordinate registration deserves an independent check against the benchmark's detector-layout schematic and a plot/export of the actual generated OpenMC geometry before spending compute on another full transport run.
+
+The next run should be gated on an independent, documented coordinate crosswalk from each detector label to (a) the BEAVRS assembly label, (b) the physical x-y assembly center in the generated geometry, and (c) the exact mesh bin. The crosswalk should be reviewed without looking at the resulting correlations, then tested with a synthetic asymmetric map whose expected orientation is known. Only after that audit should a new high-budget transport be launched. The current U-235 run remains NOT_ESTABLISHED for physical validation.
+
+The earlier 17×17 / ±8.5-pitch wording in this report was stale and described a prior, superseded mesh configuration; the actual corrected runner and archived run use 15×15 / ±7.5 pitches.
