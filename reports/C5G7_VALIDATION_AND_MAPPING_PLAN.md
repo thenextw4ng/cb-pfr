@@ -55,7 +55,7 @@ The six layout results must not be optimized by simply choosing the highest or l
 
 ## 3. Objective and acceptance decision
 
-The default objective for the current phase is **benchmark fidelity of the canonical UMMU case**, not optimization across all six variants. The six noncanonical arrangements are a design-variant study and are not official reference cases. Their (k_\mathrm{eff}) values are therefore descriptive, not values that should be pushed automatically upward or downward.
+The default objective for the current phase is **benchmark fidelity of the canonical UMMU case**, not optimization across all six variants. The six noncanonical arrangements are a design-variant study and are not official reference cases. Their \(k_\mathrm{eff}\) values are therefore descriptive, not values that should be pushed automatically upward or downward.
 
 For a future assembly-placement experiment, a candidate objective template is the assembly-integrated fission-rate peaking factor
 
@@ -63,9 +63,9 @@ For a future assembly-placement experiment, a candidate objective template is th
 F_{\mathrm{fission}}=\frac{\max_a R_a}{\frac{1}{N_f}\sum_{a=1}^{N_f}R_a},
 \]
 
-where (R_a) is the integrated fission-rate tally in fuel assembly (a), and (N_f) is the number of fuel assemblies. This is a **fission-rate proxy**, not absolute power. It may be used only after the 51×51 mesh is mapped and integrated by assembly, tally normalization is documented, and a physically justified (k_\mathrm{eff}) acceptance band and hard constraints are predeclared. Until then, do not produce a single "best layout" claim.
+where \(R_a\) is the integrated fission-rate tally in fuel assembly \(a\), and \(N_f\) is the number of fuel assemblies. This is a **fission-rate proxy**, not absolute power. It may be used only after the 51×51 mesh is mapped and integrated by assembly, tally normalization is documented, and a physically justified \(k_\mathrm{eff}\) acceptance band and hard constraints are predeclared. Until then, do not produce a single "best layout" claim.
 
-The current project screens are explicitly provisional: canonical scalar difference at most 100 pcm, within two combined standard uncertainties, at least three independent seeds, and per-run reported (k_\mathrm{eff}) SD at most 10 pcm. These are project gates, not official OECD/NEA acceptance criteria. Spatial response needs a reference-compatible tally and a reviewed RMS/maximum-error threshold. The machine-readable protocol is `config/benchmarks/c5g7_validation_protocol.json`.
+The current project screens are explicitly provisional: canonical scalar difference at most 100 pcm, within two combined standard uncertainties, at least three independent seeds, and per-run reported \(k_\mathrm{eff}\) SD at most 10 pcm. These are project gates, not official OECD/NEA acceptance criteria. Spatial response needs a reference-compatible tally and a reviewed RMS/maximum-error threshold. The machine-readable protocol is `config/benchmarks/c5g7_validation_protocol.json`.
 
 ## 4. Current status
 
