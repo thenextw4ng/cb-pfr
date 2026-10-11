@@ -94,7 +94,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
 
     def test_design_space_rejects_candidate_id_layout_mismatch(self):
         data = json.loads(self.design.read_text())
-        data["candidate_layouts"][0]["candidate_id"] = "c5g7-2x2-UMMU"
+        data["candidate_layouts"][0]["candidate_id"] = "c5g7-2x2-MMUU"
         self.design.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, "candidate ID/layout signature mismatch"):
             validate_design_space(self.design)
