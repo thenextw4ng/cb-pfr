@@ -44,7 +44,7 @@ def load_rows(path: Path) -> list[dict]:
 def main() -> int:
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--input",type=Path,required=True); p.add_argument("--out",type=Path,required=True)
-    p.add_argument("--sqa-reads",type=int,default=200); p.add_argument("--sqa-sweeps",type=int,default=200)
+    p.add_argument("--sqa-reads",type=int,default=200); p.add_argument("--sqa-sweeps",type=int,default=200); p.add_argument("--sqa-seed",type=int,default=20261011)
     a=p.parse_args()
     if a.sqa_reads<1 or a.sqa_sweeps<1: raise ValueError("SQA reads/sweeps must be positive")
     rows=load_rows(a.input); groups=defaultdict(list)
@@ -101,7 +101,7 @@ def main() -> int:
     if len(exact_bits)!=1 or sum(exact_bits[0])!=1: raise RuntimeError("No unique exact one-hot minimizer")
     exact_winner=order[exact_bits[0].index(1)]
     sampler=PathIntegralAnnealingSampler()
-    sampleset=sampler.sample_qubo(q,num_reads=a.sqa_reads,num_sweeps=a.sqa_sweeps)
+    sampleset=sampler.sample_qubo(q,num_reads=a.sqa_reads,num_sweeps=a.sqa_sweeps,seed=a.sqa_seed)
     rec=sampleset.record; total=int(sum(int(n) for n in rec.num_occurrences))
     best_energy=float(sampleset.first.energy); best_bits=[int(sampleset.first.sample[i]) for i in range(len(order))]
     sqa_winner=order[best_bits.index(1)] if sum(best_bits)==1 else None
@@ -122,7 +122,7 @@ def main() -> int:
       "qubo_exact":{"variables":len(order),"binary_states_enumerated":len(energies),"exact_minimum_energy":exact_energy,
         "exact_minimizer_layout":exact_winner,"unique_one_hot_minimizer":True},
       "classical_sqa":{"sampler":"dwave.samplers.PathIntegralAnnealingSampler","not_quantum_hardware":True,
-        "reads_requested":a.sqa_reads,"sweeps_per_read":a.sqa_sweeps,"reads_returned":total,"best_energy":best_energy,
+        "reads_requested":a.sqa_reads,"sweeps_per_read":a.sqa_sweeps,"seed":a.sqa_seed,"reads_returned":total,"best_energy":best_energy,
         "best_sample_one_hot":sum(best_bits)==1,"best_sample_layout":sqa_winner,"exact_ground_state_hits":hits,
         "empirical_ground_state_hit_rate":hits/total if total else None,"one_hot_sample_count":onehot,
         "one_hot_sample_rate":onehot/total if total else None,"exact_energy_match":math.isclose(best_energy,exact_energy,abs_tol=1e-8)},
