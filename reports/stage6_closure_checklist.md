@@ -7,7 +7,7 @@ Legend: PASS = verified by an artifact; BLOCKED = needs further evidence; NOT ST
 - [x] Identify public C5G7 benchmark specification and OpenMC implementation reference.
 - [x] Record corrected seven-group edge array in the proposed mapping contract.
 - [x] Record current reported MGXS hash as a traceability lead (not as proof of correctness).
-- [ ] PASS/BLOCKED: run the exhaustive four-position combinatorial audit and save its machine-readable output.
+- [x] Exhaustively enumerate all 16 four-position binary assignments; exactly six satisfy two UO2 and two MOX. Machine-readable result: reports/stage6_four_position_constraint_audit.json. The same script logic ran locally with exit code 0; GitHub Actions has not yet executed this script.
 - [ ] BLOCKED: compare generated materials.xml nuclide densities/material IDs line by line with the selected benchmark material definitions.
 - [ ] BLOCKED: verify each candidate string and position order against generated geometry/lattice XML and candidate manifest.
 - [ ] BLOCKED: re-audit group edges and MGXS hash on the canonical high-budget artifact.
