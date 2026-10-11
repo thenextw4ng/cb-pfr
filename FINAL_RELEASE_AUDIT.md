@@ -73,3 +73,12 @@ The paper checksum identifies the exact publication artifact prepared for the se
 Appropriate description: **open research prototype with synthetic benchmark evidence and an explicit unresolved physical-validation boundary**.
 
 Do not describe CB-PFR as physically validated, reactor-safe, peer-reviewed, or universally superior unless new evidence supports those claims.
+
+
+## Follow-up evidence audit — 2026-10-11
+
+The five-minute corrected-group C5G7 quick-check completed at [Actions run 38112118549](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112118549), commit `1907b2babb250923a73e06f67a51842d561d20e3`. It ran one new OpenMC 0.16.0 transport case and passed 22/22 raw-HDF5 checks. The actual output was (k_{eff}=1.1728029349321403pm0.019472323678449033), with assembly-integrated fission-rate peaking factor 1.942932842839654. Settings were 20 total batches, 5 inactive, 100 particles per batch; this is low-statistics execution evidence only.
+
+The published reference in Song et al. (2020), Table 1, reports (k_{eff}=1.18655pm9.5) pcm and maximum normalized **pin** power 2.498. The local 1.94293 metric is a ratio of assembly-integrated fission tallies and is not comparable to maximum pin power. The numerical (k_{eff}) screen is recorded in `results/benchmark_comparison.csv`; model-identity review and convergence remain blocked. See `docs/IMPLEMENTATION_AUDIT.md`, `docs/C5G7_MODEL_AUDIT.md`, and `docs/INDEPENDENT_VALIDATION.md`.
+
+A new independent-replicate aggregator and metric-aware reference comparator have been added with automated tests. The aggregator is a code path, not a completed multi-seed uncertainty result; the quick-check still contains only one statepoint. Experimental physical validation remains **not established**.
