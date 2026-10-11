@@ -25,6 +25,7 @@ permissions:
   contents: read
 
 # Corrected-run invariant: the runner rejects MGXS unless all eight official C5G7 group boundaries match.
+# Source entropy is recorded through Settings.entropy_mesh, not deprecated arbitrary attributes.
 jobs:
   canonical-screen:
     runs-on: ubuntu-latest
