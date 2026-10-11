@@ -8,3 +8,6 @@
 - Recorded the low-statistics quick-check comparison and explicit validation limitations.
 - Added model audit, execution, uncertainty, validation evidence, architecture, limitations, and reproducibility documentation.
 - Preserved prior outputs and the original baseline CSV; no historical evidence was overwritten.
+
+
+- Recorded successful 18-run corrected-group C5G7 repeatability smoke run (six layouts, three seeds each) with unique statepoint hashes and all group/spatial mapping audits passing; retained its compact provenance and uncertainty summary.

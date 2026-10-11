@@ -32,3 +32,8 @@ python scripts/compare_c5g7_reference.py \
 ```
 
 This records a numerical (k_{eff}) screen and explicitly blocks the non-comparable power metric. Do not overwrite the committed comparison; use a new output path for each new run.
+
+
+## Corrected-group repeatability re-execution
+
+The [completed run 38112597526](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526) ran 18 OpenMC cases (six layouts × three seeds), with 100 batches, 10 inactive, and 1,000 particles per batch. All group-structure and raw-HDF5 spatial mapping audits passed. Summary values and artifact provenance are in `results/c5g7_repeatability_reexecution_2026-10-11.json`. This is smoke-budget repeatability evidence, not benchmark acceptance.
