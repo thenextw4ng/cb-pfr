@@ -1,4 +1,6 @@
-# Normalized MGXS repeatability smoke study
+# Historical normalized MGXS repeatability smoke study
+
+**Superseded for benchmark interpretation:** these runs used the upstream log-spaced energy-group boundaries, not the standard OECD/NEA C5G7 group structure. Byte-identical MGXS hashes and passing raw-HDF5 audits do not correct this model-identity error. Use these runs only as historical pipeline/repeatability evidence, not standard C5G7 physical validation.
 
 Workflow: https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238
 Artifact with raw statepoints and per-run files: https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238/artifacts/11687737079
