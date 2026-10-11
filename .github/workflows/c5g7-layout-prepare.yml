@@ -8,6 +8,7 @@ on:
       - "scripts/enumerate_c5g7_layouts.py"
       - "scripts/run_c5g7_layout_study.py"
       - "scripts/analyze_c5g7_smoke_results.py"
+      - "scripts/audit_c5g7_smoke_statepoints.py"
       - "config/benchmarks/c5g7_2x2_design_space.json"
   pull_request:
     paths:
@@ -16,6 +17,7 @@ on:
       - "scripts/enumerate_c5g7_layouts.py"
       - "scripts/run_c5g7_layout_study.py"
       - "scripts/analyze_c5g7_smoke_results.py"
+      - "scripts/audit_c5g7_smoke_statepoints.py"
       - "config/benchmarks/c5g7_2x2_design_space.json"
   workflow_dispatch:
 
