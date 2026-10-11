@@ -82,7 +82,7 @@ jobs:
         run: |
           python scripts/audit_c5g7_spatial_mapping.py \
             --study-root /tmp/c5g7-repeatability \
-            --out /tmp/c5g7-repeatability/analysis/spatial_mapping_audit.json
+            --out /tmp/c5g7-repeatability/spatial_mapping_audit.json
           cat /tmp/c5g7-repeatability/analysis/spatial_mapping_audit.json
       - name: Analyze repeated-run variability and rank stability
         shell: bash -el {0}
