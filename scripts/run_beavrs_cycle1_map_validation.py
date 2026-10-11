@@ -294,7 +294,7 @@ def analyze(args: argparse.Namespace) -> None:
             "max_raw_tally_relative_statistical_sd_percent": max(relative_tally_sd.values()),
         },
         "limitations": [
-            "BEAVRS upstream model uses bank E withdrawn 228 steps; Cycle 1 day-0 measurements report 230.",
+            "Shutdown bank SE is explicitly set to 230 steps to match the Cycle 1 day-0 record, overriding upstream default 228 while retaining its axial step width; geometry and sensitivity review remain necessary.",
             "The tilt-corrected measurement map is a derived reference; uncertainty from tilt correction must be considered. The comparison is normalized shape, not absolute power validation.",
             "Measurement uncertainty and model-form uncertainty are not propagated.",
             "Normalization-induced covariance between detector bins is not propagated; reported tally SDs are raw-bin relative Monte Carlo uncertainties.",
