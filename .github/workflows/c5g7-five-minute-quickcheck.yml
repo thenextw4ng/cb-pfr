@@ -1,0 +1,59 @@
+name: C5G7 five-minute quick-check (not physical validation)
+
+on:
+  push:
+    branches:
+      - research/c5g7-five-minute-quickcheck-20261011
+
+permissions:
+  contents: read
+
+jobs:
+  quick-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-quick-check
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream C5G7 source
+        shell: bash -el {0}
+        run: timeout 75s python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run one tiny canonical transport case
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          OUT=/tmp/c5g7-five-minute-quickcheck
+          mkdir -p "$OUT"
+          timeout 120s python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$OUT" \
+            --mode run --candidate-ids c5g7-2x2-UMMU \
+            --batches 20 --inactive 5 --particles 100 \
+            --threads 1 --seed-base 811011
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary "$OUT/STUDY_SUMMARY.json" \
+            --out "$OUT/raw_hdf5_audit.json" \
+            --expected-candidates 1
+          CASE_DIR="$OUT/c5g7-2x2-UMMU"
+          STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+          python scripts/analyze_c5g7_assembly_fission.py \
+            --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+            --candidate-id c5g7-2x2-UMMU --layout-signature UMMU \
+            --out "$OUT/assembly_fission.json"
+      - name: Preserve quick-check evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-five-minute-quickcheck
+          path: /tmp/c5g7-five-minute-quickcheck/
+          if-no-files-found: ignore
