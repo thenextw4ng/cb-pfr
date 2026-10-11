@@ -78,6 +78,30 @@ def build_qubo(
 ) -> dict:
     if not candidates:
         raise ValueError("no candidates supplied")
+    ids = [candidate.get("candidate_id") for candidate in candidates]
+    layouts = [candidate.get("layout_signature") for candidate in candidates]
+    if any(not isinstance(value, str) or not value.strip() for value in ids + layouts):
+        raise ValueError("candidate_id and layout_signature must be nonempty strings")
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate candidate_id")
+    if len(layouts) != len(set(layouts)):
+        raise ValueError("duplicate layout_signature: each candidate must represent a unique layout")
+    required_metrics = (
+        "mean_keff", "between_seed_sd_keff",
+        "mean_fission_rate_peaking_factor", "between_seed_sd_fission_peaking_factor",
+    )
+    for candidate in candidates:
+        cid = candidate["candidate_id"]
+        if int(candidate.get("n_runs", 0)) < 3:
+            raise ValueError(f"{cid}: at least three independent runs are required before candidate-selection QUBO construction")
+        for key in required_metrics:
+            value = candidate.get(key)
+            if not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"{cid}: non-finite or missing {key}")
+        if candidate["mean_keff"] <= 0 or candidate["mean_fission_rate_peaking_factor"] <= 0:
+            raise ValueError(f"{cid}: mean keff and fission-peaking factor must be positive")
+        if candidate["between_seed_sd_keff"] < 0 or candidate["between_seed_sd_fission_peaking_factor"] < 0:
+            raise ValueError(f"{cid}: standard deviations must be nonnegative")
     if not math.isfinite(keff_min) or not math.isfinite(keff_max) or not (0 < keff_min < keff_max):
         raise ValueError("require finite bounds with 0 < keff_min < keff_max")
     if (not math.isfinite(uncertainty_multiplier) or not math.isfinite(risk_weight)
