@@ -1,15 +1,16 @@
 import unittest
-from scripts.analyze_c5g7_canonical_convergence import evaluate_runs
+from scripts.analyze_c5g7_canonical_convergence import C5G7_GROUP_BOUNDARIES, evaluate_runs
 
 
-def run(seed, keff=1.18655, sd=0.00005, mgxs="170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216"):
+def run(seed, keff=1.18655, sd=0.00005, mgxs="corrected-c5g7-mgxs-hash", edges=C5G7_GROUP_BOUNDARIES):
     return {
         "round": f"seed_{seed}", "candidate_id": "c5g7-2x2-UMMU",
         "layout_signature": "UMMU", "seed": seed,
         "batches": 7000, "inactive": 100, "particles_per_batch": 10000, "threads": 1,
         "keff_mean": keff, "keff_std_dev": sd,
         "statepoint_sha256": f"statepoint-{seed}", "settings_sha256": f"settings-{seed}",
-        "mgxs_sha256": mgxs, "raw_hdf5_audit": "PASS",
+        "mgxs_sha256": mgxs, "mgxs_energy_group_boundaries": list(edges),
+        "mgxs_group_structure_audit": "PASS", "raw_hdf5_audit": "PASS",
     }
 
 
@@ -27,10 +28,17 @@ class CanonicalConvergenceTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL_OR_INCOMPLETE_NUMERICAL_SCREEN")
         self.assertFalse(result["metrics"]["numerical_screen_pass"])
 
-    def test_wrong_mgxs_fails_data_identity(self):
-        rows = [run(720000), run(730000), run(740000, mgxs="wrong")]
+    def test_inconsistent_mgxs_hashes_fail_data_identity(self):
+        rows = [run(720000), run(730000), run(740000, mgxs="different")]
         result = evaluate_runs(rows)
         self.assertEqual(result["status"], "FAIL_DATA_INTEGRITY_OR_MODEL_IDENTITY")
+
+    def test_nonstandard_energy_group_structure_fails_closed(self):
+        wrong_edges = (1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0, 1e3, 1e7)
+        rows = [run(720000), run(730000), run(740000, edges=wrong_edges)]
+        result = evaluate_runs(rows)
+        self.assertEqual(result["status"], "FAIL_DATA_INTEGRITY_OR_MODEL_IDENTITY")
+        self.assertFalse(result["global_checks"]["standard_c5g7_energy_group_structure"])
 
     def test_duplicate_seeds_fail_data_integrity(self):
         rows = [run(720000), run(720000), run(740000)]
