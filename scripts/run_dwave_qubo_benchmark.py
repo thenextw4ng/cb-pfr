@@ -111,7 +111,6 @@ def run(problem_path: Path, output_csv: Path, metadata_path: Path, *, num_reads:
             "one_time_setup_s": f"{setup_s:.12g}",
             "anneal_time_s": "" if anneal_s == "" else f"{anneal_s:.12g}",
             "objective_value": f"{best_energy:.16g}",
-            "feasible": int(success),
         })
         trial_metadata.append({
             "trial_id": trial,
