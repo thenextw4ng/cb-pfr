@@ -40,7 +40,7 @@ def _close(actual: Any, expected: Any, *, abs_tol: float = 1e-12) -> bool:
     )
 
 
-def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
+def audit_candidate(root: Path, case: dict[str, Any], expected_settings: dict[str, Any]) -> dict[str, Any]:
     try:
         import h5py
     except ImportError as exc:
@@ -48,7 +48,9 @@ def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
 
     candidate_id = case.get("candidate_id")
     case_dir = root / str(candidate_id)
-    statepoint = case_dir / "model/2d/statepoint.100.h5"
+    physical_hint = case.get("physical_results") or {}
+    statepoint_rel = physical_hint.get("statepoint")
+    statepoint = case_dir / statepoint_rel if isinstance(statepoint_rel, str) and statepoint_rel else case_dir / "model/2d/statepoint.100.h5"
     settings_path = case_dir / "model/2d/settings.xml"
     result_path = case_dir / "CASE_RESULT.json"
     checks: list[dict[str, Any]] = []
@@ -120,18 +122,20 @@ def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
         physical.get("status"), "completed")
     add("settings_seed_matches_manifest", settings_values["seed"] == str(case.get("seed")),
         settings_values["seed"], str(case.get("seed")))
-    add("settings_profile", settings_values == {
-        "run_mode": "eigenvalue", "energy_mode": "multi-group", "batches": "100",
-        "inactive": "10", "particles": "1000", "seed": str(case.get("seed"))
-    }, settings_values, {
-        "run_mode": "eigenvalue", "energy_mode": "multi-group", "batches": "100",
-        "inactive": "10", "particles": "1000", "seed": str(case.get("seed"))
-    })
+    expected_profile = {
+        "run_mode": "eigenvalue",
+        "energy_mode": "multi-group",
+        "batches": str(expected_settings.get("batches")),
+        "inactive": str(expected_settings.get("inactive")),
+        "particles": str(expected_settings.get("particles")),
+        "seed": str(case.get("seed")),
+    }
+    add("settings_profile", settings_values == expected_profile, settings_values, expected_profile)
 
     expected_hashes = case.get("output_hashes_after_run") or {}
     add("statepoint_hash_matches_run_manifest",
-        expected_hashes.get("model/2d/statepoint.100.h5") == statepoint_hash,
-        statepoint_hash, expected_hashes.get("model/2d/statepoint.100.h5"))
+        expected_hashes.get(str(Path(statepoint_rel))) == statepoint_hash,
+        statepoint_hash, expected_hashes.get(str(Path(statepoint_rel))))
     add("settings_hash_matches_run_manifest",
         expected_hashes.get("model/2d/settings.xml") == settings_hash,
         settings_hash, expected_hashes.get("model/2d/settings.xml"))
@@ -149,8 +153,13 @@ def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
     add("keff_std_dev_matches_openmc_api",
         _close(k_sd, physical.get("keff_std_dev")),
         k_sd, physical.get("keff_std_dev"))
-    for key, expected in (("n_batches", 100), ("n_inactive", 10),
-                          ("n_particles", 1000), ("n_realizations", 90)):
+    expected_metadata = {
+        "n_batches": int(expected_settings["batches"]),
+        "n_inactive": int(expected_settings["inactive"]),
+        "n_particles": int(expected_settings["particles"]),
+        "n_realizations": int(expected_settings["batches"]) - int(expected_settings["inactive"]),
+    }
+    for key, expected in expected_metadata.items():
         add(f"metadata:{key}", metadata[key] == expected, metadata[key], expected)
     add("metadata:run_mode", metadata["run_mode"] == "eigenvalue", metadata["run_mode"], "eigenvalue")
     add("metadata:energy_mode", metadata["energy_mode"] == "multi-group", metadata["energy_mode"], "multi-group")
@@ -197,7 +206,7 @@ def main() -> int:
         cases = study.get("cases")
         if not isinstance(cases, list) or len(cases) != 6:
             raise ValueError("expected exactly six candidate cases in STUDY_SUMMARY.json")
-        results = [audit_candidate(root, case) for case in cases]
+        results = [audit_candidate(root, case, study.get("settings", {})) for case in cases]
         ids = [r.get("candidate_id") for r in results]
         seeds = [r.get("seed") for r in results]
         statepoint_hashes = [r.get("statepoint_sha256") for r in results]
