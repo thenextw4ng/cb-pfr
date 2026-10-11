@@ -28,9 +28,13 @@ The BEAVRS day-0 measured map contains 58 instrumented assembly positions. The m
 
 This is a shape comparison of normalized detector measurements and calculated assembly fission rates. It is not absolute-power validation. The benchmark's detector signal and the model's volume-integrated fission-rate tally are related observables but not identical measurement operators; the result must be interpreted as a first comparison, not an exact detector-response calculation.
 
+## Pre-run source-mapping audit
+
+A source-level audit against the pinned upstream `Core.core_lattice_template` mapped all **58/58** nonblank measurement labels in the selected CSV to unique assembly positions inside the declared 17×17 mesh. The runner unit tests cover one-based mesh indexing, reversed lattice/mesh y orientation, duplicate labels, and normalization. This confirms label coverage only; it does not replace a coordinate-level audit of the generated OpenMC geometry and statepoint mesh.
+
 ## Known model-to-measurement mismatch
 
-The Cycle 1 day-0 summary reports average boron 975.25 ppm, inlet coolant temperature 558.875°F, and control-bank withdrawals A/B/C/D/E = 228/228/228/213/230 steps. The upstream model builder's supported default uses nominal 975 ppm, temperature 566.483 K, and bank E at 228 steps withdrawn (its generic RCCA input range is 0–228). The runner uses 975.25 ppm and the closest supported temperature, but records the two-step bank-E mismatch rather than extrapolating the upstream geometry.
+The Cycle 1 day-0 summary reports average boron 975.25 ppm, inlet coolant temperature 558.875°F (565.858 K), and control-bank withdrawals A/B/C/D/E = 228/228/228/213/230 steps. The upstream model builder's supported default uses nominal 975 ppm, temperature 566.483 K (a difference of about 0.625 K), and bank E at 228 steps withdrawn (its generic RCCA input range is 0–228). The runner uses 975.25 ppm and the upstream model temperature, but records the two-step bank-E mismatch rather than extrapolating the upstream geometry.
 
 Because of this mismatch, and because the initial comparison does not yet propagate the measurement uncertainty or fully model the detector response, **even a favorable numerical result is preliminary evidence, not a complete experimental-validation certificate**.
 
