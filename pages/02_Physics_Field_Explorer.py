@@ -107,7 +107,7 @@ from cbpfr.dashboard_ui import (
 
 st.set_page_config(page_title="CB-PFR · Physics Field Explorer", page_icon="⚛", layout="wide")
 apply_workstation_style()
-render_header("Physics fields", "SPATIAL TALLY ARRAYS REQUIRED")
+render_header("Physics fields", "STATEPOINT-BASED MESH TALLIES")
 df = load_smoke().sort_values("candidate_id").reset_index(drop=True)
 render_workspace_sidebar("Physics Fields", df)
 
@@ -284,7 +284,7 @@ try:
             "score": score_name,
             "mean": mean_values,
             "std_dev": sd_values,
-            "relative_sd_percent": np.where(mean_values > 0, 100.0 * sd_values / mean_values, np.nan),
+            "relative_sd_percent": rel_grid.reshape(-1),
         }).to_csv(index=False).encode("utf-8"),
         file_name=f"cbpfr_mesh_{score_name.replace('-', '_')}.csv",
         mime="text/csv",
