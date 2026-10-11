@@ -230,7 +230,7 @@ jobs:
               "winner_selected": False,
           }
           destination = Path("results/c5g7_high_budget_2026-10-12/budget_comparison.json")
-          destination.write_text(json.dumps(output, indent=2, sort_keys=True, allow_nan=False) + "\\n", encoding="utf-8")
+          destination.write_text(json.dumps(output, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
           print(json.dumps({"status": output["status"], "candidate_count": len(rows), "convergence_certified": False}, indent=2))
           PY
 
