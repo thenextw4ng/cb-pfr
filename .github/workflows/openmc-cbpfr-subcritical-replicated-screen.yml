@@ -1,0 +1,45 @@
+name: OpenMC CB-PFR subcriticality replicated screen
+on:
+  push:
+    branches: [research/openmc-cbpfr-low-cost-smoke]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  replicated-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: openmc
+          create-args: >-
+            python=3.11
+            numpy
+            openmc
+          cache-environment: true
+      - name: Verify OpenMC
+        shell: bash -el {0}
+        run: |
+          python -c "import openmc, numpy; print('OpenMC', openmc.__version__)"
+          openmc --version
+      - name: Run replicated equal-budget screen
+        shell: bash -el {0}
+        env:
+          OPENMC_BATCHES: "20"
+          OPENMC_INACTIVE: "6"
+          OPENMC_PARTICLES: "500"
+          OPENMC_THREADS: "2"
+          OPENMC_SEEDS: "20261021,20261022,20261023,20261024,20261025"
+          KEFF_THRESHOLD: "1.0"
+          CBPFR_Z: "1.96"
+          UNIFORM_MARGIN: "0.02"
+        run: python scripts/run_openmc_cbpfr_subcritical_replicated_screen.py
+      - name: Upload raw runs and held-out policy comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openmc-cbpfr-subcriticality-replicated-screen
+          path: results/openmc_cbpfr_subcritical_replicated_screen_2026-10-11/
+          if-no-files-found: warn
