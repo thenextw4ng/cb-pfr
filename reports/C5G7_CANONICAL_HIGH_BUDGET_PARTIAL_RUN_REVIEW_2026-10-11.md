@@ -62,6 +62,8 @@ These are code-level corrections, **not proof that the entropy-mesh fix works in
 - Both completed cases have distinct statepoint hashes and matching seed/settings manifests.
 - Both raw-HDF5 audits passed 22 checks with zero failures.
 - Both use the same non-empty MGXS hash and the same run profile.
+- I independently inspected the archived MGXS HDF5 attributes; both files contain the exact group edges `[1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000]` eV and share the same SHA-256.
+- The generated 3×3 core lattice maps the UMMU fuel positions to UO₂/MOX/MOX/UO₂ and retains the five reflector cells in the right column and bottom row.
 - Both generated a four-assembly fission-rate proxy and descriptive convergence traces.
 
 ### Not established
