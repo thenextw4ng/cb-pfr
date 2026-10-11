@@ -30,7 +30,9 @@ The between-run sample SD exceeded the pooled within-run reported Monte Carlo SD
 
 The earlier six-layout smoke artifact recorded MGXS byte SHA-256 170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216. The repeated-run artifact records eab47265b45a9b350e5c8d28e60c2042fe32f84efe91d2636b731697ae0f8e64.
 
-A structural comparison of those two HDF5 files found the same 63 datasets, the same dataset values/shapes/dtypes, and the same attributes across 95 HDF5 objects. Their canonical semantic fingerprint was identical: f6cb1ce367ab1113e72a2a1ebe2f313e95cce73c7fa5b95797256c956aa4871d. This indicates a byte-level HDF5 serialization difference rather than a difference in the stored MGXS content. The production baseline manifest records the first byte hash; the raw production MGXS file itself is not included in the evidence ZIP, so a fresh direct hash of that local file is still unavailable.
+A content-aware comparison using `scripts/fingerprint_hdf5_semantics.py` found identical payloads for all 63 datasets: the same shapes, dtypes, and values, with dataset-content SHA-256 `c054ced2866ce997a617d47c541cc62a25cedd4621bf732a1b9ba44857b14db8`. The HDF5 files are **not fully semantically identical**, however: the root `group structure` attribute's first energy boundary differs by one representable floating-point step, from 1e-5 to 9.999999999999999e-06 (absolute difference 1.6940658945086007e-21; relative difference 1.6940658945086004e-16). No dataset payload differs, but this metadata discrepancy should be standardized before claiming exact provenance. The production baseline manifest records the first byte hash; the raw production MGXS file itself is not included in the evidence ZIP, so a fresh direct hash of that local file is still unavailable.
+
+Reproduce the comparison after downloading the original smoke artifact (run 38085586809) and repeatability artifact (run 38097472734): `python scripts/fingerprint_hdf5_semantics.py --files original/mgxs.h5 repeated/mgxs.h5 --require-datasets-identical`.
 
 ## Interpretation limits
 

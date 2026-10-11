@@ -13,6 +13,7 @@ These scripts are supported by the current repository and should be used accordi
 - `audit_evidence_archive.py` — verify ZIP CRCs and compute SHA-256 hashes for archive members.
 - `audit_openmc_statepoint.py` — use the OpenMC Python API to export statepoint metadata and tally means/standard deviations.
 - `audit_openmc_hdf5_archive.py` — read the production HDF5 statepoint directly from the committed ZIP and compare its metadata, eigenvalue, mesh dimensions, and tally scores with the recorded baseline summary.
+- `fingerprint_hdf5_semantics.py` — compare HDF5 byte hashes separately from canonical dataset-payload and full metadata fingerprints; useful when regenerated MGXS files have different byte serialization or tiny metadata differences.
 - `compare_openmc_baseline.py` — fail-closed comparison between an API-derived audit JSON and the recorded summary.
 - `inventory_openmc_runs.py` — inventory statepoints, logs, XMLs, manifests, and SHA-256 hashes.
 - `run_stage34.py` and `run_stage34_fixed.py` — historical stage34 runners; recovered outputs must not be treated as independent runs unless seed/settings/statepoint provenance matches.

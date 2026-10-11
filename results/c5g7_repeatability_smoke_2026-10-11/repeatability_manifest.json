@@ -18,12 +18,16 @@
   "mgxs_semantic_comparison": {
     "original_smoke_byte_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
     "repeatability_smoke_byte_sha256": "eab47265b45a9b350e5c8d28e60c2042fe32f84efe91d2636b731697ae0f8e64",
-    "canonical_semantic_sha256": "f6cb1ce367ab1113e72a2a1ebe2f313e95cce73c7fa5b95797256c956aa4871d",
+    "dataset_content_sha256": "c054ced2866ce997a617d47c541cc62a25cedd4621bf732a1b9ba44857b14db8",
+    "original_full_semantic_sha256": "fb4bb5adaaf6ccbc79a364fb37e7e3e1c2a0af9f8955e74d7649143760307d10",
+    "repeatability_full_semantic_sha256": "a227ddaf6feff233fd2de1a16b8020a428cb4cc2dd8cec9215606c5b54e7c517",
     "dataset_count": 63,
-    "hdf5_object_count": 95,
-    "attributes_identical": true,
+    "hdf5_object_count": 96,
+    "attribute_count": 45,
     "dataset_shapes_dtypes_and_values_identical": true,
-    "interpretation": "Byte-level serialization differs but the compared MGXS dataset/attribute trees are identical. The production baseline records the original byte hash, but its raw MGXS file is not included in the committed evidence ZIP."
+    "full_semantic_identity": false,
+    "root_attribute_difference": {"path": ".", "attribute": "group structure", "original_first_value": 1e-5, "repeatability_first_value": 9.999999999999999e-6, "absolute_difference": 1.6940658945086007e-21, "relative_difference": 1.6940658945086004e-16},
+    "interpretation": "All 63 dataset payloads match, but the root energy-group metadata differs by one floating-point step. The production baseline records the original byte hash; raw production MGXS bytes are not included in the evidence ZIP."
   },
   "interpretation_limit": "Exploratory repeatability evidence only; not benchmark-grade convergence, a validated physical ranking, or reactor-safety evidence."
 }
