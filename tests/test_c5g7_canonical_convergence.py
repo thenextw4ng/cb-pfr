@@ -10,7 +10,9 @@ def run(seed, keff=1.18655, sd=0.00005, mgxs="corrected-c5g7-mgxs-hash", edges=C
         "keff_mean": keff, "keff_std_dev": sd,
         "statepoint_sha256": f"statepoint-{seed}", "settings_sha256": f"settings-{seed}",
         "mgxs_sha256": mgxs, "mgxs_energy_group_boundaries": list(edges),
-        "mgxs_group_structure_audit": "PASS", "raw_hdf5_audit": "PASS",
+        "mgxs_group_structure_audit": "PASS",
+        "source_convergence": {"status": "DIAGNOSTIC_REVIEW_REQUIRED", "entropy": {"active_mean": 2.0}},
+        "raw_hdf5_audit": "PASS",
     }
 
 
