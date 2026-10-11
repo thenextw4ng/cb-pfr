@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: c5g7-repeatability-${{ github.ref }}
+  group: c5g7-repeatability-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
