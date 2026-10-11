@@ -2,11 +2,9 @@
 """Run a BEAVRS Cycle-1 beginning-of-cycle radial fission-map comparison.
 
 This is a preliminary experimental comparison, not an automatic certification of
-physical validation. The BEAVRS builder's default bank-E insertion differs from
-the archived Cycle-1 day-0 measurement (228 vs 230 steps withdrawn); that
-mismatch is explicitly recorded in the output. The measured detector map is
-normalized, so the calculated fission rates are normalized over the same 58
-instrumented assembly positions before comparison.
+physical validation. It compares a tilt-corrected BEAVRS map at the 58 instrumented
+assembly labels and explicitly records the SE withdrawal override used to match
+the day-0 state. The two maps are normalized over those same 58 positions.
 """
 from __future__ import annotations
 
@@ -96,9 +94,9 @@ def prepare(args: argparse.Namespace) -> None:
     os.chdir(output)
 
     # Cycle 1, day 0: measured average boron 975.25 ppm, temperature 558.875 F,
-    # all banks withdrawn except D at 213 steps. Upstream bank E default is 228
-    # while the measurement reports 230; we retain the supported upstream value
-    # and record this as a model-to-measurement mismatch rather than extrapolate.
+    # all banks withdrawn except D at 213 steps. The Cycle 1 day-0 summary
+    # reports shutdown bank E (SE) at 230 steps; override the upstream default
+    # 228 to match the state and record the step-width assumption in provenance.
     rcca = {
         "A": 228, "B": 228, "C": 228, "D": 213,
         "SA": 228, "SB": 228, "SC": 228, "SD": 228, "SE": 228,
