@@ -139,7 +139,14 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
                     unsafe_allow_html=True,
                 )
             else:
-                st.page_link(path, label=label)
+                # AppTest can execute an individual page as its own entrypoint,
+                # where Streamlit has no registered multipage navigation tree.
+                # Keep the module index visible without triggering a broken link.
+                st.markdown(
+                    f'<div style="border:1px solid {LINE};background:{PANEL};border-radius:6px;'
+                    f'padding:9px 10px;margin:5px 0;color:{MUTED};font-size:.77rem">{label}</div>',
+                    unsafe_allow_html=True,
+                )
         st.markdown("---")
         st.markdown('<div class="workspace-kicker">System status</div>', unsafe_allow_html=True)
         st.markdown('<div class="status-line"><span class="status-dot"></span> OpenMC results <b style="margin-left:auto">SMOKE</b></div>', unsafe_allow_html=True)
