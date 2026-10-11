@@ -93,8 +93,8 @@ def audit_study(study_path: Path, design_path: Path, raw_audit_path: Path) -> di
         if not passed:
             errors.append(name)
 
-    for err in validate_design(design):
-        errors.append("design:" + err)
+    design_errors = validate_design(design)
+    check("design_contract_valid", not design_errors, design_errors, "six valid layouts and fixed reflector contract")
     check("design_sha256_matches_study", study.get("design_space_sha256") == sha256(design_path),
           study.get("design_space_sha256"), sha256(design_path))
     check("study_mode_is_run", study.get("mode") == "run", study.get("mode"), "run")
