@@ -98,7 +98,7 @@ def analyze_statepoint(statepoint: Path, candidate_id: str, layout_signature: st
             "statepoint": str(statepoint),
             "keff_mean": float(sp.keff.nominal_value),
             "keff_std_dev": float(sp.keff.std_dev),
-            "mesh_dimension": list(mesh.dimension),
+            "mesh_dimension": [int(v) for v in mesh.dimension],
             "mesh_lower_left": [float(v) for v in mesh.lower_left],
             "mesh_upper_right": [float(v) for v in mesh.upper_right],
             "score": "fission",
