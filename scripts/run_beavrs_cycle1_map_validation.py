@@ -81,6 +81,7 @@ def prepare(args: argparse.Namespace) -> None:
             "OpenMC and the pinned upstream BEAVRS Python package must be installed"
         ) from exc
 
+    beavrs_root = Path(args.beavrs_root).resolve()
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     os.chdir(output)
@@ -111,7 +112,7 @@ def prepare(args: argparse.Namespace) -> None:
     builder.model.export_to_xml()
 
     assembly_map = build_assembly_map(Core.core_lattice_template)
-    measurements = load_measurements(Path(args.beavrs_root) / MEASUREMENT_REL)
+    measurements = load_measurements(beavrs_root / MEASUREMENT_REL)
     missing = sorted(set(measurements) - set(assembly_map))
     if missing:
         raise ValueError(f"measurement labels not present in assembly map: {missing}")
@@ -119,8 +120,8 @@ def prepare(args: argparse.Namespace) -> None:
         "benchmark": "BEAVRS Cycle 1 day 0 radial detector map",
         "upstream_repository": "https://github.com/mit-crpg/BEAVRS",
         "upstream_commit": MODEL_COMMIT,
-        "measured_data": str(Path(args.beavrs_root) / MEASUREMENT_REL),
-        "measured_summary": str(Path(args.beavrs_root) / SUMMARY_REL),
+        "measured_data": str(beavrs_root / MEASUREMENT_REL),
+        "measured_summary": str(beavrs_root / SUMMARY_REL),
         "measured_detector_count": len(measurements),
         "measurement_normalization": "mean over 58 reported normalized detector values = 1",
         "model": {
