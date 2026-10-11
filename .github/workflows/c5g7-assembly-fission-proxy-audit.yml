@@ -1,0 +1,99 @@
+name: C5G7 assembly fission-rate proxy smoke audit
+
+on:
+  push:
+    paths:
+      - ".github/workflows/c5g7-assembly-fission-proxy-audit.yml"
+      - "scripts/analyze_c5g7_assembly_fission.py"
+  pull_request:
+    paths:
+      - ".github/workflows/c5g7-assembly-fission-proxy-audit.yml"
+      - "scripts/analyze_c5g7_assembly_fission.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fission-proxy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-fission-proxy
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Prepare and run six low-budget layout cases
+        shell: bash -el {0}
+        run: |
+          python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output /tmp/c5g7-fission-proxy \
+            --mode run --batches 100 --inactive 10 --particles 1000 --threads 1 --seed-base 650000
+      - name: Analyze assembly-integrated fission-rate proxy
+        shell: bash -el {0}
+        run: |
+          python - <<'PY'
+          import csv, json, subprocess, sys
+          from pathlib import Path
+          root = Path("/tmp/c5g7-fission-proxy")
+          positions = ("p00", "p01", "p10", "p11")
+          rows = []
+          for case_dir in sorted(root.glob("c5g7-2x2-*")):
+              case = json.loads((case_dir / "CASE_RESULT.json").read_text())
+              layout = case["layout"]
+              signature = "".join("M" if layout[p] == "MOX" else "U" for p in positions)
+              statepoint = case_dir / case["physical_results"]["statepoint"]
+              out = case_dir / "analysis" / "assembly_fission.json"
+              subprocess.run([
+                  sys.executable, "scripts/analyze_c5g7_assembly_fission.py",
+                  "--statepoint", str(statepoint),
+                  "--candidate-id", case["candidate_id"],
+                  "--layout-signature", signature,
+                  "--out", str(out),
+              ], check=True)
+              data = json.loads(out.read_text())
+              rows.append({
+                  "candidate_id": data["candidate_id"],
+                  "layout_signature": data["layout_signature"],
+                  "keff_mean": data["keff_mean"],
+                  "keff_std_dev": data["keff_std_dev"],
+                  "fission_rate_peaking_factor": data["fission_rate_peaking_factor"],
+                  "p00_fission_rate": data["assembly_integrated_fission_rate"]["p00"],
+                  "p01_fission_rate": data["assembly_integrated_fission_rate"]["p01"],
+                  "p10_fission_rate": data["assembly_integrated_fission_rate"]["p10"],
+                  "p11_fission_rate": data["assembly_integrated_fission_rate"]["p11"],
+                  "uncertainty_status": data["uncertainty_status"],
+                  "status": "exploratory_smoke_only",
+              })
+          if len(rows) != 6:
+              raise SystemExit(f"expected six candidate metrics, found {len(rows)}")
+          rows.sort(key=lambda row: row["candidate_id"])
+          with (root / "assembly_fission_summary.csv").open("w", newline="") as handle:
+              writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+              writer.writeheader()
+              writer.writerows(rows)
+          (root / "assembly_fission_summary.json").write_text(json.dumps({
+              "schema_version": "1.0",
+              "status": "exploratory_smoke_only",
+              "candidate_count": len(rows),
+              "objective_metric": "normalized assembly-integrated fission-rate peaking factor",
+              "uncertainty_note": "Mesh-bin covariance is not propagated; this is not absolute power or a safety metric.",
+              "results": rows,
+          }, indent=2) + "\n")
+          print((root / "assembly_fission_summary.csv").read_text())
+          PY
+      - name: Preserve all assembly fission proxy results and statepoints
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-assembly-fission-proxy-smoke
+          path: /tmp/c5g7-fission-proxy/
+          if-no-files-found: error
