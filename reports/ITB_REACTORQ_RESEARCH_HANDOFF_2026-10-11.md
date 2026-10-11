@@ -28,7 +28,7 @@ This package is a reproducible research prototype for a QUBO-constrained UO₂/M
 
 ## Blocking findings and limits
 
-1. Both completed high-budget logs emitted 7,000 warnings each: **Fission source site(s) outside of entropy box.** The generated 2-D geometry is axially unbounded while the adapter had restricted the entropy mesh to z = [-1, 1]. The likely cause has been identified; the adapter has been corrected to use a wide single z bin, and a regression test was added. The tests pass, but **the corrected mesh still needs a targeted transport smoke run** before saying the warning is resolved. The existing high-budget runs cannot retroactively validate the correction.
+1. Both completed high-budget logs emitted 7,000 warnings each: **Fission source site(s) outside of entropy box.** The generated 2-D geometry is axially unbounded while the adapter had restricted the entropy mesh to z = [-1, 1]. The likely cause was identified; the adapter was corrected to use a wide single z bin, and the regression test passed. A targeted low-budget workflow then completed all 18 cases across six layouts and three seed rounds; all 18 logs had zero entropy-box warnings, the spatial-mapping audit passed all 18 cases, each raw-HDF5 round audit passed 112 checks, and each evidence-integrity audit passed 23 checks ([run 38110780563](https://github.com/thenextw4ng/cb-pfr/actions/runs/38110780563), artifact ID 11690758521, SHA-256 eee7d38c359c7d8d8d92dd8193280890a6f587c826d626bee4db7a9ed75f7551). This validates the fix operationally at smoke budget only. The earlier high-budget runs' entropy diagnostics remain review-required, and the smoke results do not establish benchmark-grade convergence.
 2. The source-convergence diagnostics on the two preserved high-budget runs remain **DIAGNOSTIC_REVIEW_REQUIRED**. The entropy trace is not an acceptance-quality source-convergence check for those runs.
 3. The fission-peaking proxy is max(assembly-integrated fission rate) / mean(assembly-integrated fission rate). It is not absolute power or a safety metric; uncertainty for correlated mesh bins is not propagated.
 4. No approved, predeclared design-specific (k_{eff}) acceptance interval and objective uncertainty budget is available. Do not select a physical winner from the current dataset.
@@ -41,7 +41,7 @@ This package is a reproducible research prototype for a QUBO-constrained UO₂/M
 - Entropy-mesh axial extent correction: commit **6acce23615d4f5186343281d1f9b5e7a6db27979**.
 - Regression test for the corrected mesh bounds: commit **a60c3d5e33bab9786d533c971b650f1ea008cd66**.
 - Intermediate-budget 18-run transport workflow made manual-dispatch-only to avoid accidental expensive runs on source edits: commit **ef5837ba3648c946ac6214316b6d8c1741dba045**.
-- Python test matrix passed on all three supported Python versions. A low-budget three-seed/six-layout smoke workflow is running to check the new mesh behavior; until its artifact is inspected, do not mark the entropy correction as transport-validated.
+- Python test matrix passed on all three supported Python versions. The low-budget three-seed/six-layout smoke workflow and its archived artifact have been inspected; the corrected mesh produced zero entropy-box warnings. This is smoke-level validation of the fix, not a source-convergence pass for the earlier high-budget cases.
 
 ## What to show ITB
 
