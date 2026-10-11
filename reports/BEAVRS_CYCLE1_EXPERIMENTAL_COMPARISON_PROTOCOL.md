@@ -31,7 +31,7 @@ This is a shape comparison of normalized detector measurements and calculated as
 
 ## Pre-run source-mapping audit
 
-A source-level audit against the pinned upstream `Core.core_lattice_template` mapped all **58/58** nonblank raw detector labels to unique assembly positions inside the declared 17×17 mesh. A second source-level check found all **58/58** labels in the 176-position tilt-corrected map; only those measured detector positions are used for comparison. The runner unit tests cover one-based mesh indexing, reversed lattice/mesh y orientation, duplicate labels, and normalization. This confirms label coverage only; it does not replace a coordinate-level audit of the generated OpenMC geometry and statepoint mesh.
+A source-level audit against the pinned upstream `Core.core_lattice_template` mapped all **58/58** nonblank raw detector labels to unique assembly positions inside the declared 15×15 mesh. A second source-level check found all **58/58** labels in the 176-position tilt-corrected map; only those measured detector positions are used for comparison. The runner unit tests cover one-based mesh indexing, reversed lattice/mesh y orientation, duplicate labels, and normalization. This confirms label coverage only; it does not replace a coordinate-level audit of the generated OpenMC geometry and statepoint mesh.
 
 ## State-matching assumptions that require review
 
