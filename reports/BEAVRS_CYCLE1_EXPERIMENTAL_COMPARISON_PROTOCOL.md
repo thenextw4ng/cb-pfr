@@ -23,10 +23,11 @@ The BEAVRS day-0 measured map contains 58 instrumented assembly positions. The m
 - mean absolute relative error;
 - Pearson correlation;
 - (k_{eff}) and its Monte Carlo standard deviation;
+- per-detector raw tally standard deviation and relative Monte Carlo statistical uncertainty (before normalization);
 - per-assembly measured/calculated values and residuals;
 - statepoint SHA-256 and run settings.
 
-This is a shape comparison of normalized detector measurements and calculated assembly fission rates. It is not absolute-power validation. The benchmark's detector signal and the model's volume-integrated fission-rate tally are related observables but not identical measurement operators; the result must be interpreted as a first comparison, not an exact detector-response calculation.
+This is a shape comparison of normalized detector measurements and calculated assembly fission rates. It is not absolute-power validation. The benchmark's detector signal and the model's volume-integrated fission-rate tally are related observables but not identical measurement operators; the result must be interpreted as a first comparison, not an exact detector-response calculation. Normalization-induced covariance between bins and experimental measurement uncertainty are not propagated by the runner.
 
 ## Pre-run source-mapping audit
 
@@ -60,3 +61,8 @@ Appropriate before the run and audit: “A reproducible OpenMC-to-BEAVRS experim
 Appropriate only after successful run and artifact review: “An initial BEAVRS Cycle 1 detector-map comparison was performed using the pinned OpenMC model and public measurement data.”
 
 Not supported by this workflow alone: “CB-PFR is fully physically validated,” “CB-PFR improves reactor fuel loading,” or “quantum advantage was demonstrated.”
+
+
+## First-run correction record
+
+The first completed OpenMC run exposed a mesh-extent error: 17 mesh bins were placed across only 16 assembly pitches. That result is superseded and must not be used as validation evidence. The runner now uses ±8.5 assembly pitches, reports raw tally statistical uncertainty, and the workflow uses a higher default budget (500 batches, 50 inactive, 3,000 particles/batch) plus an independent artifact-integrity audit. The corrected run must complete and its output must be reviewed before any experimental-comparison claim is made.
