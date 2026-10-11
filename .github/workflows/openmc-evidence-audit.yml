@@ -2,8 +2,28 @@ name: OpenMC evidence audit
 
 on:
   push:
+    paths:
+      - ".github/workflows/openmc-evidence-audit.yml"
+      - "OpenMC_HDF5_Evidence_2026-10-11.zip"
+      - "evidence/openmc_local_baseline_2026-10-11/**"
+      - "scripts/audit_openmc_statepoint.py"
+      - "scripts/summarize_openmc_run_audits.py"
+      - "scripts/inventory_openmc_runs.py"
+      - "scripts/audit_evidence_archive.py"
   pull_request:
+    paths:
+      - ".github/workflows/openmc-evidence-audit.yml"
+      - "OpenMC_HDF5_Evidence_2026-10-11.zip"
+      - "evidence/openmc_local_baseline_2026-10-11/**"
+      - "scripts/audit_openmc_statepoint.py"
+      - "scripts/summarize_openmc_run_audits.py"
+      - "scripts/inventory_openmc_runs.py"
+      - "scripts/audit_evidence_archive.py"
   workflow_dispatch:
+
+concurrency:
+  group: openmc-evidence-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   audit-statepoint:
