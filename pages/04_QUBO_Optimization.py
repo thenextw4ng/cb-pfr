@@ -6,7 +6,7 @@ import streamlit as st
 
 from cbpfr.dashboard_ui import (
     CYAN, ORANGE, apply_workstation_style, base_layout, layout_figure,
-    render_header,
+    load_smoke, render_header, render_workspace_sidebar,
 )
 
 st.set_page_config(page_title="CB-PFR · QUBO Optimization", page_icon="⚛", layout="wide")
@@ -16,6 +16,7 @@ render_header("QUBO", "EXACT COMBINATORICS · NOT PHYSICAL VALIDATION")
 st.markdown('<div class="section-kicker">Constraint formulation</div>', unsafe_allow_html=True)
 st.title("QUBO / Optimization")
 st.caption("Explore the exact feasible design space for a four-position, two-material count constraint.")
+render_workspace_sidebar("QUBO / Optimization", load_smoke())
 
 st.latex(r"E(y)=A\left(\sum_{i=1}^{4} y_i-2\right)^2,\qquad y_i\in\{0,1\}")
 st.write("Here 1 = MOX and 0 = UO₂. The penalty is zero exactly when two of the four positions are MOX and two are UO₂. It enforces feasibility only; it does not encode physical performance.")
