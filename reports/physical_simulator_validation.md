@@ -24,7 +24,7 @@ The executed model is identified in the local manifest as a 2-D, seven-group C5G
 | Mesh tally dimension | 51 × 51 × 1 |
 | Mesh tally scores | flux, fission, nu-fission |
 
-**Provenance limitation:** these values were transcribed from the researcher's terminal output. The raw evidence ZIP is committed to the evidence branch and its ZIP integrity/statepoint-file presence pass CI, but the HDF5 values have not yet been independently recomputed in the current integration environment. Treat this table as a recorded baseline until the statepoint audit and semantic cross-check are run.
+**Provenance status:** these values were initially transcribed from the researcher's terminal output, then independently read through OpenMC 0.16.0; the API-derived mean and standard deviation matched the recorded summary. A separate raw-HDF5 audit of the committed ZIP also passed 10/10 checks across Python 3.10, 3.11, and 3.12. The audited statepoint member is `c5g7-run/2d/statepoint.20000.h5`, SHA-256 `0d76dc1a14a2b74a388c01883f01e5c3095480d53eee885910ca2a0c57e6b882`. This verifies extraction and consistency of the recorded metadata, not the correctness of geometry, nuclear data, or benchmark correspondence.
 
 ## Scalar comparison with the standard 2-D C5G7 reference
 
@@ -42,15 +42,15 @@ An earlier draft of this report listed approximately 1.16562 as a high-history r
 
 ## What remains unverified
 
-1. The raw statepoint.20000.h5 must be read using the OpenMC API and compared with the transcribed values using scripts/audit_openmc_statepoint.py and scripts/compare_openmc_baseline.py.
-2. The exact geometry, boundary conditions, material definitions, MGXS source and hashes must be compared with the benchmark specification.
+1. The production statepoint's scalar/settings/tally metadata have passed the OpenMC API audit and a separate raw-HDF5 comparison. The remaining benchmark-verification task is to compare exact geometry, boundary conditions, material definitions, MGXS source and hashes with the primary benchmark specification.
+2. The model/data correspondence and benchmark acceptance tolerance must be reviewed before interpreting the scalar match as benchmark verification.
 3. The archived run_01–run_03 stage34 outputs must be linked to exact candidate IDs and configuration/input hashes before they can support a candidate comparison.
 4. The abstract QUBO categories (fresh, once_burned, twice_burned) still have no defensible mapping to C5G7 UO2/MOX material or depletion states.
 5. Candidate-level comparisons require a reviewed physical mapping, a predeclared common computational budget, repeated runs where appropriate, and uncertainty analysis for both Monte Carlo noise and between-run variation.
 
 ## Conclusion
 
-The recorded production scalar is consistent in scale with the published 2-D C5G7 reference, but its HDF5 values still require independent recomputation and the exact model/nuclear-data correspondence must be checked. No six-candidate physical comparison or physical CB-PFR validation is established.
+The recorded production scalar is consistent in scale with the published 2-D C5G7 reference, and its extraction has now been independently cross-checked from the committed HDF5 bytes. Exact model/nuclear-data correspondence and full benchmark acceptance remain unverified. No six-candidate physical comparison or physical CB-PFR validation is established.
 
 ## References
 
