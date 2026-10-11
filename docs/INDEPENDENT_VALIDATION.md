@@ -38,3 +38,12 @@ The article also reports assembly-power quantities for a different grouping/norm
 - **Acceptance criteria:** no official pass/fail threshold has been inferred from project-provisional screening limits.
 
 Required next evidence: a high-budget corrected-group canonical run with independent seeds, primary-specification review/sign-off, documented source and nuclear-data provenance, convergence assessment, and a reference comparison of matched observables with appropriate uncertainty treatment.
+
+
+## Three-seed corrected-group smoke comparison
+
+A later corrected-group run used three independent seeds for the canonical UMMU layout. The mean (k_{eff}) was (1.1861026314460645); between-seed sample SD was (0.0038633985032438967), giving a standard error of the mean (0.0022305341658346613) for (n=3). Compared with the published (1.18655pm0.000095), the mean difference is (-0.0004473686), relative difference (-0.03770\%). If the between-seed standard error and reference uncertainty are treated as independent, the combined standard uncertainty is (0.0022325563), and the difference is (-0.2004) combined standard uncertainties.
+
+This is a stronger descriptive screen than the five-minute run, but still not benchmark acceptance: only three smoke-budget seeds were used; the standard error is based on between-seed variability, not a calibrated uncertainty model; and independent review of complete geometry/material/boundary-condition correspondence remains pending. No arbitrary acceptance threshold is applied.
+
+The mean assembly-integrated fission-rate peaking proxy was (1.8861132), between-seed SD (0.0289952), standard error (0.0167404). The reference value 2.498 is maximum normalized pin power and remains non-comparable to this assembly-integrated metric.

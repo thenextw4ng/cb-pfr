@@ -82,3 +82,8 @@ The five-minute corrected-group C5G7 quick-check completed at [Actions run 38112
 The published reference in Song et al. (2020), Table 1, reports (k_{eff}=1.18655pm9.5) pcm and maximum normalized **pin** power 2.498. The local 1.94293 metric is a ratio of assembly-integrated fission tallies and is not comparable to maximum pin power. The numerical (k_{eff}) screen is recorded in `results/benchmark_comparison.csv`; model-identity review and convergence remain blocked. See `docs/IMPLEMENTATION_AUDIT.md`, `docs/C5G7_MODEL_AUDIT.md`, and `docs/INDEPENDENT_VALIDATION.md`.
 
 A new independent-replicate aggregator and metric-aware reference comparator have been added with automated tests. The aggregator is a code path, not a completed multi-seed uncertainty result; the quick-check still contains only one statepoint. Experimental physical validation remains **not established**.
+
+
+## Follow-up: successful 18-run corrected-group smoke study
+
+[GitHub Actions run 38112597526](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526) completed successfully with 18 transport runs (six layouts × three independent seeds), standard seven-group boundaries, and common MGXS hash. The canonical UMMU three-run mean was (k_{eff}=1.18610263), between-seed SD (0.00386340), and assembly fission peaking mean (1.886113), between-seed SD (0.028995). The comparison against the published (k_{eff}) reference is recorded as a smoke-budget numerical screen only. The run does not pass the benchmark-identity gate, does not establish a pin/assembly-power comparison, and does not validate experimentally. The burnup-state QUBO mapping remains blocked.

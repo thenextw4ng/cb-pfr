@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "status": "EXPLORATORY_DESCRIPTIVE_ONLY",
+  "workflow_run_id": 38112597526,
+  "workflow_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526",
+  "code_commit": "5c9eb406591b5fe9f665aa55ca9b245e953696d2",
+  "upstream_source_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "artifact_id": 11692595645,
+  "artifact_sha256": "60a08ec9907a7344e40c1d9e7800800de9dd71d83ecb7e072b8106775ed567bc",
+  "run_count": 18,
+  "round_count": 3,
+  "candidate_count": 6,
+  "settings": {
+    "batches": 100,
+    "inactive_batches": 10,
+    "particles_per_batch": 1000,
+    "threads": 1,
+    "seed_bases": [
+      620000,
+      630000,
+      640000
+    ]
+  },
+  "standard_c5g7_group_boundaries_eV": [
+    0.00001,
+    0.0635,
+    10,
+    100,
+    1000,
+    500000,
+    1000000,
+    20000000
+  ],
+  "all_group_structure_audits_passed": true,
+  "all_statepoint_hashes_unique": true,
+  "all_mgxs_hashes_identical": true,
+  "all_spatial_mapping_checks_passed": true,
+  "shared_mgxs_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129",
+  "acceptance_status": "BLOCKED_NO_DESIGN_SPECIFIC_KEFF_BAND_OR_BENCHMARK_GRADE_CONVERGENCE",
+  "no_winner_claim": true,
+  "candidates": [
+    {
+      "candidate_id": "c5g7-2x2-MMUU",
+      "layout_signature": "MMUU",
+      "n_runs": 3,
+      "mean_keff": 1.1454130569114875,
+      "between_seed_sd_keff": 0.003036352193914861,
+      "mean_fission_rate_peaking_factor": 1.3272850417020003,
+      "between_seed_sd_fission_peaking_factor": 0.011865123047094004,
+      "se_fission_peaking_factor": 0.006850331985207756,
+      "cv_percent": 0.8939393328714949
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUMU",
+      "layout_signature": "MUMU",
+      "n_runs": 3,
+      "mean_keff": 1.1448249163331103,
+      "between_seed_sd_keff": 0.0021695821714275026,
+      "mean_fission_rate_peaking_factor": 1.2962653682223053,
+      "between_seed_sd_fission_peaking_factor": 0.02260486258494142,
+      "se_fission_peaking_factor": 0.01305092349841043,
+      "cv_percent": 1.743845291179974
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUUM",
+      "layout_signature": "MUUM",
+      "n_runs": 3,
+      "mean_keff": 1.1584736093264791,
+      "between_seed_sd_keff": 0.002096321755473159,
+      "mean_fission_rate_peaking_factor": 1.3102793555983867,
+      "between_seed_sd_fission_peaking_factor": 0.022338286801375146,
+      "se_fission_peaking_factor": 0.012897015898009005,
+      "cv_percent": 1.7048491763173323
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMMU",
+      "layout_signature": "UMMU",
+      "n_runs": 3,
+      "mean_keff": 1.1861026314460645,
+      "between_seed_sd_keff": 0.0038633985032438967,
+      "se_keff": 0.0022305341658346613,
+      "mean_fission_rate_peaking_factor": 1.8861131573187928,
+      "between_seed_sd_fission_peaking_factor": 0.028995186254547157,
+      "se_fission_peaking_factor": 0.01674037858926614,
+      "cv_percent": 1.537298339817814
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMUM",
+      "layout_signature": "UMUM",
+      "n_runs": 3,
+      "mean_keff": 1.2078940562672258,
+      "between_seed_sd_keff": 0.002188144744909618,
+      "mean_fission_rate_peaking_factor": 1.8559181595340715,
+      "between_seed_sd_fission_peaking_factor": 0.04689556713919628,
+      "se_fission_peaking_factor": 0.02707516831161514,
+      "cv_percent": 2.526812235673658
+    },
+    {
+      "candidate_id": "c5g7-2x2-UUMM",
+      "layout_signature": "UUMM",
+      "n_runs": 3,
+      "mean_keff": 1.2051152251417094,
+      "between_seed_sd_keff": 0.0020118667482282512,
+      "mean_fission_rate_peaking_factor": 1.8253905639219432,
+      "between_seed_sd_fission_peaking_factor": 0.024418569099862848,
+      "se_fission_peaking_factor": 0.014098067443031295,
+      "cv_percent": 1.3377175045431553
+    }
+  ],
+  "limitations": [
+    "Smoke settings are not benchmark-grade convergence settings.",
+    "Three seeds per layout give descriptive variability, not calibrated confidence intervals.",
+    "No design-specific acceptable keff band has been approved.",
+    "Assembly fission peaking is not absolute power or a safety metric.",
+    "Legacy burnup-state QUBO to C5G7 UO2/MOX mapping remains NO_DEFENSIBLE_MAPPING_FOUND."
+  ]
+}

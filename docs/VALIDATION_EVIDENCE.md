@@ -9,7 +9,7 @@
 | Published C5G7 reference exists | Song et al. 2020, Table 1; OECD/NEA specification | PASS for source identification | Review exact case/model correspondence |
 | (k_{eff}) matches reference within an accepted tolerance | Low-stat run differs by -0.013747; uncertainty is large; model identity gate blocked | BLOCKED | Corrected high-budget multi-seed run and signed model audit |
 | Local assembly fission peaking matches published pin power | Observables differ | BLOCKED | Extract comparable reference assembly/pin data and align mapping/normalization |
-| Correlated mesh-bin uncertainty is propagated | New independent-replicate aggregation path | NOT RUN for multi-seed physical data | Run at least three unique seeds and aggregate |
+| Between-seed variability for nonlinear peaking factor is estimated | Run 38112597526: 18 runs, 3 seeds/layout; UMMU mean 1.886113, SD 0.028995, SE 0.016740 | PASS (descriptive smoke estimate only) | Increase budget/replicates; do not treat this as a calibrated confidence interval or model uncertainty |
 | Legacy burnup QUBO maps to C5G7 material states | Existing mapping audit says `NO_DEFENSIBLE_MAPPING_FOUND` | BLOCKED | Document and independently review physically meaningful state/material mapping |
 | Experimental physical validation achieved | No suitable direct physical experiment data identified | BLOCKED | Identify a relevant experiment with provenance and measurement uncertainty |
 | UI-ready research API exists | `docs/api.md`, `app.py`, CB-PFR Python modules | PASS for research prototype only | Stabilize versioned run/result schema before production UI |

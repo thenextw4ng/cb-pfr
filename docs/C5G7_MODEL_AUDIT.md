@@ -44,3 +44,10 @@ where (R_a) is the sum of fission-score mesh means in each 17x17 fuel-assembly b
 ## Status
 
 **Execution:** PASS. **Raw statepoint audit:** PASS. **Model identity:** BLOCKED pending primary-specification review. **Benchmark convergence/acceptance:** NOT ESTABLISHED. **Physical experiment validation:** NOT ESTABLISHED.
+
+
+## Follow-up three-seed execution evidence
+
+The independent workflow [38112597526](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526) completed 18 corrected-group runs: six layout signatures and three independent seeds per layout, all with common settings (100 batches, 10 inactive, 1,000 particles per batch). All 18 group-structure audits passed, all statepoint hashes were unique, and the raw-HDF5 spatial-mapping audit passed for all 18 cases. The shared MGXS hash was `a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129`.
+
+For UMMU, mean (k_{eff}=1.1861026314), between-seed SD (0.0038633985); mean assembly fission peaking (1.8861131573), between-seed SD (0.0289951863). This remains a low-budget smoke study; no layout winner is declared and benchmark acceptance is blocked pending full model-identity review and a justified convergence protocol.

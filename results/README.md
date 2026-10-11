@@ -17,3 +17,8 @@ Results are immutable evidence snapshots. Write new runs to new paths; do not ov
 3. **Benchmark numerical comparison:** a metric-aware difference is recorded with uncertainty and model-identity caveats.
 4. **Benchmark reproduction:** requires verified model identity, appropriate compute budget, convergence and comparable observables.
 5. **Experimental physical validation:** requires suitable experimental measurements and uncertainty/provenance; not established by the current repository.
+
+
+## Re-executed corrected-group study
+
+The completed [18-run repeatability workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526) reran six layouts with three independent seeds each. All group-structure audits passed, statepoint hashes were unique, and the independent raw-HDF5 spatial-mapping audit passed all 18 cases. The compact summary is `c5g7_repeatability_reexecution_2026-10-11.json`; the complete run artifact is linked from the workflow page.

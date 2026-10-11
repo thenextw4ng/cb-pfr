@@ -48,3 +48,10 @@ This repository is a research prototype containing an abstract categorical QUBO,
 ## Non-destructive policy
 
 Historical result archives and the previous successful run are retained. New outputs must use fresh paths. Numerical mismatches are recorded as evidence and not edited away. Green CI is not a validation certificate.
+
+
+## Follow-up: three-seed corrected-group smoke run
+
+A second real OpenMC workflow, [run 38112597526](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526), completed successfully after the audit commit. It ran 18 cases (six layouts × three seed rounds), with 100 batches, 10 inactive batches, and 1,000 particles per batch. All standard C5G7 group-structure audits passed, statepoint hashes were unique, the generated lattice matched the layout signatures, and all runs shared corrected MGXS SHA-256 `a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129`. The artifact digest is `sha256:60a08ec9907a7344e40c1d9e7800800de9dd71d83ecb7e072b8106775ed567bc`.
+
+For canonical UMMU, the three-run mean was (k_{eff}=1.18610263), between-seed SD (0.00386340), and derived assembly peaking mean (1.886113) with between-seed SD (0.028995). These are descriptive smoke-budget estimates, not calibrated confidence intervals. The run still reports `EXPLORATORY_DESCRIPTIVE_ONLY`; it does not resolve model identity or the missing burnup-QUBO material mapping.

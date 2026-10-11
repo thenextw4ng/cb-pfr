@@ -38,3 +38,10 @@ The covariance term cannot be omitted by assumption when numerator and denominat
 ## Invalid data and reproducibility
 
 Nonfinite values, negative uncertainty, nonpositive assembly rates, missing provenance, duplicate seeds, duplicate statepoint hashes, or mixed candidate identities must fail closed. The output is not overwritten; create a new output path for each analysis. Record code commit, OpenMC version, input hashes, statepoint hashes, and the complete seed list.
+
+
+## Observed three-seed smoke results
+
+Workflow [38112597526](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526) produced 18 statepoints (six layouts × three independent seeds). For canonical UMMU, the per-run peaking values were 1.87393448, 1.91921140, and 1.86519360; mean (1.88611316), sample SD (0.02899519), and standard error (0.01674038). The three-run (k_{eff}) mean was (1.18610263), sample SD (0.00386340), standard error (0.00223053).
+
+All six layouts have three seed replicates, but these are still smoke settings (100 batches, 10 inactive, 1,000 particles per batch). The between-seed standard error is descriptive; three replicates do not establish a calibrated confidence interval, and it does not include model/nuclear-data uncertainty.

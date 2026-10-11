@@ -26,3 +26,8 @@ For each independent replicate, retain a distinct seed, statepoint hash, candida
 OpenMC reports batch-statistics estimates for tallies. Mesh bins from the same statepoint must not be treated as independent replicates. For the nonlinear assembly peaking ratio, calculate the ratio within each independent statepoint and estimate between-seed variability across replicate ratios. Report that variability separately from each run's within-run uncertainty and from model/nuclear-data uncertainty.
 
 See [OpenMC's statepoint format](https://docs.openmc.org/en/stable/io_formats/statepoint.html) and [tally statistics documentation](https://docs.openmc.org/en/stable/methods/tallies.html).
+
+
+## Completed three-seed smoke run
+
+[Run 38112597526](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112597526) completed 18 transport cases (six layouts, three seed rounds). Settings were 100 batches, 10 inactive, 1,000 particles per batch, one thread. The artifact includes run-level results, input/run manifests, raw-HDF5 audit, spatial mapping audit, and fission-objective repeatability analysis. It is a repeatability smoke run, not a benchmark-grade converged study. The compact summary is retained in `results/c5g7_repeatability_reexecution_2026-10-11.json`; full files are available in the linked Actions artifact.
