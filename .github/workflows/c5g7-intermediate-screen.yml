@@ -1,6 +1,9 @@
 name: C5G7 intermediate-budget repeatability screen
 
 on:
+  push:
+    paths:
+      - ".github/workflows/c5g7-intermediate-screen.yml"
   workflow_dispatch:
     inputs:
       batches:
@@ -45,9 +48,9 @@ jobs:
           print(f"Budget: batches={batches}, inactive={inactive}, particles/batch={particles}")
           PY
         env:
-          BATCHES: ${{ inputs.batches }}
-          INACTIVE: ${{ inputs.inactive }}
-          PARTICLES: ${{ inputs.particles }}
+          BATCHES: ${{ inputs.batches || '2000' }}
+          INACTIVE: ${{ inputs.inactive || '100' }}
+          PARTICLES: ${{ inputs.particles || '5000' }}
       - name: Install OpenMC 0.16.0
         uses: mamba-org/setup-micromamba@v2
         with:
@@ -101,6 +104,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: c5g7-intermediate-repeatability-${{ inputs.batches }}-${{ inputs.particles }}
+          name: c5g7-intermediate-repeatability-${{ inputs.batches || '2000' }}-${{ inputs.particles || '5000' }}
           path: /tmp/c5g7-intermediate/
           if-no-files-found: error
