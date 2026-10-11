@@ -1,0 +1,16 @@
+candidate_i,candidate_j,delta_keff_i_minus_j,combined_reported_sd,absolute_delta_over_combined_sd,interpretation
+c5g7-2x2-MUMU,c5g7-2x2-UMUM,-0.06565586759966946,0.0039012377796909603,16.829496510430708,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MUMU,c5g7-2x2-UUMM,-0.06480328661995038,0.004062617141936705,15.951118295399546,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MMUU,c5g7-2x2-UMUM,-0.055875780483645165,0.0037217537324588856,15.013293328983698,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MMUU,c5g7-2x2-UUMM,-0.05502319950392609,0.00389058513251433,14.142654030132169,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MUUM,c5g7-2x2-UMUM,-0.047676974152422336,0.003943490012852544,12.090045618737335,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-UMMU,c5g7-2x2-MUMU,0.04984992841703373,0.004128935392582219,12.073312773697289,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MUUM,c5g7-2x2-UUMM,-0.04682439317270326,0.004103207929137598,11.41165497370851,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-UMMU,c5g7-2x2-MMUU,0.040069841301009435,0.00395978561383084,10.119194625348522,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-UMMU,c5g7-2x2-MUUM,0.031871034969786605,0.004168880514466418,7.6449864320147904,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MUMU,c5g7-2x2-MUUM,-0.017978893447247124,0.003980959740339298,4.516220866306671,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-UMMU,c5g7-2x2-UMUM,-0.01580593918263573,0.004092820604837636,3.8618695292809586,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-UMMU,c5g7-2x2-UUMM,-0.014953358202916656,0.004246926221592908,3.5209837474661976,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MMUU,c5g7-2x2-MUMU,0.009780087116024294,0.003761432947402654,2.6000960944359366,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-MMUU,c5g7-2x2-MUUM,-0.00819880633122283,0.0038052378487534676,2.1546107384348185,descriptive standardized difference; not a formal significance test or benchmark acceptance
+c5g7-2x2-UMUM,c5g7-2x2-UUMM,0.0008525809797190753,0.004025907483937598,0.21177361455043475,descriptive standardized difference; not a formal significance test or benchmark acceptance

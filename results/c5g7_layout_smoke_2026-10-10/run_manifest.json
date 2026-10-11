@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "study_id": "C5G7-2x2-two-UO2-two-MOX-layout-enumeration",
+  "study_status": "all_runs_completed_needs_independent_validation",
+  "upstream_repository": "https://github.com/mit-crpg/benchmarks.git",
+  "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "openmc_version": "0.16.0",
+  "workflow_run_id": 38085586809,
+  "workflow_artifact": {
+    "name": "c5g7-layout-study-prepared-and-smoke",
+    "sha256": "e984b99748cc1b25f441ef9229b4cd3e8bbf2c638507c1a40857780ea256a2cd",
+    "size_bytes": 2950651,
+    "expires_at_utc": "2027-01-08T20:54:40Z"
+  },
+  "settings": {
+    "batches": 100,
+    "inactive": 10,
+    "particles": 1000,
+    "seed_base": 620000,
+    "seed_policy": "seed_base + stable candidate order index",
+    "threads": 1
+  },
+  "mgxs_sha256_unique": ["170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216"],
+  "all_mgxs_hashes_unchanged": true,
+  "mutated_preexisting_file_count_sum": 0,
+  "candidate_count": 6,
+  "candidates": [
+    {"candidate_id":"c5g7-2x2-UMMU","layout_signature":"UMMU","layout":{"p00":"UO2","p01":"MOX","p10":"MOX","p11":"UO2"},"canonical_reference":true,"status":"completed","seed":620000,"keff_mean":1.1881792736872105,"keff_std_dev":0.003047919927246576,"keff_relative_sd_percent":0.2565202065668202,"mgxs_sha256":"170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216","sha256":{"geometry_xml":"f71a6c422b2f1d4d8342334824007a20f1471141f5330d0d1ca0b51e9dfe5f33","materials_xml":"c6fc4abb0dfae07e7c753083f85c0f3e9b3f93b9f7c521399d2136029ffc0562","settings_xml":"4cd338d6c1a773d316fd0a3c6835d33424b47e168a22d24e15b50bd52b7bc9f0","tallies_xml":"bf760a5aa30301c456ca14cd3f444b4675f6fb1e6e04b8339b4a39d4b4bbef9e","statepoint_100_h5":"29c532201ac52abcbc8fb2ddaf4eaa40870e726e19416dfb59657c5e588ea1a3","summary_h5":"a35787f3de48aa9185455875ee5dd463a267cdca0a4c8640a35653e040ac27ff","openmc_log":"e7954db4d8f23426eee8daa66f94b9bd009336d5414de80c17e102ec36cf4421"}},
+    {"candidate_id":"c5g7-2x2-MMUU","layout_signature":"MMUU","layout":{"p00":"MOX","p01":"MOX","p10":"UO2","p11":"UO2"},"canonical_reference":false,"status":"completed","seed":620001,"keff_mean":1.1481094323862011,"keff_std_dev":0.002527861986856661,"keff_relative_sd_percent":0.2201760490376616,"mgxs_sha256":"170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216","sha256":{"geometry_xml":"66f26679887c5d93e0d7ade8a52ac76af5d0da031042db2e0972d880d5fdffaa","materials_xml":"253d8950d4bb5d4bf42fc68ef986c331ac7b8937b823f9d4e44dab83bbc3dfa0","settings_xml":"22044bf7b8a480e96967ab5497d58e01504add7f5f6b03eca01ca07801e764cf","tallies_xml":"bf760a5aa30301c456ca14cd3f444b4675f6fb1e6e04b8339b4a39d4b4bbef9e","statepoint_100_h5":"0ffffcd3a62cb37316b4ad8071cfa967dbdd34474b828960da39521599a9b0e7","summary_h5":"6a6cabd01e579f77d78fb58f58f31846e28c345c07f4faddac77966f3e110177","openmc_log":"76522514ce0eb12fb3efc577b8697023f61fa96d2723ae849162d282c8c1424f"}},
+    {"candidate_id":"c5g7-2x2-MUMU","layout_signature":"MUMU","layout":{"p00":"MOX","p01":"UO2","p10":"MOX","p11":"UO2"},"canonical_reference":false,"status":"completed","seed":620002,"keff_mean":1.1383293452701768,"keff_std_dev":0.002785370997409737,"keff_relative_sd_percent":0.24468937825270973,"mgxs_sha256":"170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216","sha256":{"geometry_xml":"bdeddfe5152cc43bdb1805331e0690a0b374757f5862366ce1dc1f3d46866133","materials_xml":"dfa3ec94536a67a32236615ff5c1f526efbd4b59b0b21ebbfba81659ead4bf3a","settings_xml":"addad7f92624688cba96565aa836927e71dc19a9da038fc3e3b3e8de009d88e6","tallies_xml":"bf760a5aa30301c456ca14cd3f444b4675f6fb1e6e04b8339b4a39d4b4bbef9e","statepoint_100_h5":"5eae4835dee1caea11e4f0ed1dc20fed0c3f7c8376906feb589ba86e4a69d465","summary_h5":"9eb2623b75c70a5f304c9841ba0b93ccf0c2787b30dbe577148874c0e1285534","openmc_log":"a95d19af7ff060fab20c24f8cdeeed7a892a64d1a2f7906622921da9f20352ff"}},
+    {"candidate_id":"c5g7-2x2-MUUM","layout_signature":"MUUM","layout":{"p00":"MOX","p01":"UO2","p10":"UO2","p11":"MOX"},"canonical_reference":false,"status":"completed","seed":620003,"keff_mean":1.156308238717424,"keff_std_dev":0.002844248382436213,"keff_relative_sd_percent":0.24597665978675815,"mgxs_sha256":"170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216","sha256":{"geometry_xml":"0b869b7cddab57f16c8a5645f71493b590b9519d6d181c9dff3e42482bdbe83c","materials_xml":"205dacfd98e70e3d847780bb54a63dc1ff11e57b4cb073f6c3ac963f500b1714","settings_xml":"9b17e231749150c4c9b028b93e8107369026ab917218d94d8548616ce5bbd7a3","tallies_xml":"bf760a5aa30301c456ca14cd3f444b4675f6fb1e6e04b8339b4a39d4b4bbef9e","statepoint_100_h5":"280fbb69a8b45b2574495ff52038c8fe3f0c110c010b97f81d51ceca4857d46d","summary_h5":"3aff572383134f571754d1a675859ed1db76850f908981edf3578f195a5e9f2f","openmc_log":"fd400c31d454f4eb2c7340a5dbc0ee4fcf9aae763e06a75e2e4fa028f62408bc"}},
+    {"candidate_id":"c5g7-2x2-UMUM","layout_signature":"UMUM","layout":{"p00":"UO2","p01":"MOX","p10":"UO2","p11":"MOX"},"canonical_reference":false,"status":"completed","seed":620004,"keff_mean":1.2039852128698463,"keff_std_dev":0.002731549856853567,"keff_relative_sd_percent":0.2268756981111573,"mgxs_sha256":"170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216","sha256":{"geometry_xml":"c5e7b6db010d21ec872c2a675a1a5d9ef28fdb5fc1c31f5f9a39fcae45444923","materials_xml":"4869753b3a24745e14a96eeebd8d1b6eb224ee724680410371755851743d94f7","settings_xml":"02219f6928087402756989843567deeddf73c6496f8f97510dcc2d2a1b415ae3","tallies_xml":"bf760a5aa30301c456ca14cd3f444b4675f6fb1e6e04b8339b4a39d4b4bbef9e","statepoint_100_h5":"9fef517eb316857c7cba52589215adca3c69ecbc1d385a2c899786508653661c","summary_h5":"a3c8f77a37ebc899d7427b43432a62bb37b684dc35d8e14fab19f1eca417ea2f","openmc_log":"426b45e3c9e2f2d9412e40f0b2f9ab08996e81c6e827355fdb7df38fcf9af0db"}},
+    {"candidate_id":"c5g7-2x2-UUMM","layout_signature":"UUMM","layout":{"p00":"UO2","p01":"UO2","p10":"MOX","p11":"MOX"},"canonical_reference":false,"status":"completed","seed":620005,"keff_mean":1.2031326318901272,"keff_std_dev":0.0029574594585127694,"keff_relative_sd_percent":0.2458132528469938,"mgxs_sha256":"170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216","sha256":{"geometry_xml":"762c0ba7d0ea1db09bca05feb76d3f190424e1eed876a485fa872d912d1b6c55","materials_xml":"a661cf22f29c5340fd5c5bb9721d9bacc44f53d0e767adc562504587b9971b28","settings_xml":"314532bffea562d0123ddf4944a0ce31a2610a324d42e55d87d8f04c2d20e141","tallies_xml":"bf760a5aa30301c456ca14cd3f444b4675f6fb1e6e04b8339b4a39d4b4bbef9e","statepoint_100_h5":"89a13d66be7249f47507057b36c089eb836c2fc06d4024a2cd7951e3c126979e","summary_h5":"7247bedab3b1e77a9cde0786719fec34dbd7ec5d791f19b24312a1bbda21c647","openmc_log":"939333f852c3b97441ee188ea18c43cebcba41ec215c06f0dcc91efdfba4edc8"}}
+  ],
+  "production_baseline_comparison": {
+    "production_keff_mean": 1.186394144702191,
+    "production_keff_std_dev": 5.6113408647969484e-05,
+    "canonical_candidate": "c5g7-2x2-UMMU",
+    "canonical_smoke_keff_mean": 1.1881792736872105,
+    "canonical_smoke_keff_std_dev": 0.003047919927246576,
+    "delta_smoke_minus_production": 0.0017851289850194796,
+    "combined_reported_sd": 0.003048436418483559,
+    "absolute_delta_over_combined_sd": 0.5855883935107592,
+    "interpretation": "Descriptive consistency signal only; materials XML and settings differ, and benchmark correspondence has not been fully reviewed."
+  }
+}
