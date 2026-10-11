@@ -44,6 +44,11 @@ def apply_workstation_style():
         div[data-testid="stDataFrame"], div[data-testid="stTable"] {{ border: 1px solid {LINE}; border-radius: 7px; overflow: hidden; }}
         div[data-testid="stPageLink"] a {{ border: 1px solid {LINE}; background: {PANEL}; border-radius: 6px; padding: 9px 11px; transition: border-color .15s ease, background .15s ease; }}
         div[data-testid="stPageLink"] a:hover {{ border-color: {CYAN}; background: #123242; color: {CYAN}; }}
+        div[data-testid="stPageLink"] a {{ min-height: 40px; align-items: center; }}
+        div[data-testid="stPlotlyChart"] {{ border: 1px solid {LINE}; border-radius: 7px; overflow: hidden; background: {PANEL}; }}
+        div[data-testid="stDataFrame"] {{ background: {PANEL}; }}
+        .stMarkdown a {{ color: {CYAN}; }}
+        [data-testid="stSidebar"] div[data-testid="stPageLink"] a {{ font-size: .82rem; }}
         button[kind="primary"] {{ background: {BLUE}; border: 1px solid {CYAN}; border-radius: 6px; }}
         button {{ border-radius: 6px !important; }}
         .cbpfr-brand {{ border-bottom: 1px solid {LINE}; padding: 0 0 15px; margin-bottom: 12px; }}
@@ -156,7 +161,7 @@ def load_smoke() -> pd.DataFrame:
     required = {
         "candidate_id", "layout_signature", "canonical_reference", "seed", "batches",
         "inactive", "particles_per_batch", "keff_mean", "keff_std_dev",
-        "aggregate_flux_score", "aggregate_fission_score", "mgxs_sha256_before_transport",
+        "aggregate_flux_score", "aggregate_fission_score", "keff_relative_sd_percent", "mgxs_sha256_before_transport",
         "mgxs_sha256_after_transport",
     }
     missing = sorted(required - set(df.columns))
@@ -173,7 +178,7 @@ def base_layout(fig: go.Figure, height: int = 340, **kwargs) -> go.Figure:
         height=height,
         paper_bgcolor=BG,
         plot_bgcolor=PANEL,
-        font={"family": "Inter, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
+        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
         margin={"l": 56, "r": 22, "t": 28, "b": 55},
         xaxis={"gridcolor": LINE, "linecolor": LINE, "zerolinecolor": LINE, "ticks": "outside", "tickcolor": LINE},
         yaxis={"gridcolor": LINE, "linecolor": LINE, "zerolinecolor": LINE, "ticks": "outside", "tickcolor": LINE},
@@ -205,7 +210,7 @@ def layout_figure(signature: str, height: int = 330) -> go.Figure:
     ))
     fig.update_layout(
         height=height, paper_bgcolor=BG, plot_bgcolor=PANEL,
-        font={"family": "Inter, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
+        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
         margin={"l": 52, "r": 18, "t": 24, "b": 45},
         xaxis={"side": "top", "fixedrange": True},
         yaxis={"autorange": "reversed", "fixedrange": True},
