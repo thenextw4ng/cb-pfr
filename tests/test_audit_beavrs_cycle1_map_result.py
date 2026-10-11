@@ -32,7 +32,7 @@ class BeavrsResultAuditTests(unittest.TestCase):
                 "is_instrumented_detector",
             ])
             writer.writeheader()
-            for i in range(176):
+            for i in range(193):
                 label = labels[i] if i < len(labels) else f"X{i + 1}"
                 writer.writerow({
                     "assembly": label,
@@ -51,7 +51,7 @@ class BeavrsResultAuditTests(unittest.TestCase):
             "coordinate_crosswalk": {
                 "file": crosswalk_path.name,
                 "sha256": sha256_file(crosswalk_path),
-                "assembly_rows": 176,
+                "assembly_rows": 193,
                 "instrumented_detector_rows": 58,
             },
         }

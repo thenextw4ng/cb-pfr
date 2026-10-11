@@ -70,9 +70,9 @@ def audit_run(run_dir: Path) -> dict:
             bool(crosswalk_info.get("sha256"))
             and sha256_file(crosswalk_path) == crosswalk_info.get("sha256")
         )
-        checks["coordinate_crosswalk_has_176_unique_assemblies"] = (
-            len(crosswalk_rows) == 176
-            and len(set(crosswalk_labels)) == 176
+        checks["coordinate_crosswalk_has_193_unique_assemblies"] = (
+            len(crosswalk_rows) == 193
+            and len(set(crosswalk_labels)) == 193
             and all(crosswalk_labels)
         )
         checks["coordinate_crosswalk_has_58_instrumented_labels"] = (
@@ -87,7 +87,7 @@ def audit_run(run_dir: Path) -> dict:
     else:
         checks.update({
             "coordinate_crosswalk_sha256_matches": False,
-            "coordinate_crosswalk_has_176_unique_assemblies": False,
+            "coordinate_crosswalk_has_193_unique_assemblies": False,
             "coordinate_crosswalk_has_58_instrumented_labels": False,
             "coordinate_crosswalk_bins_are_valid": False,
             "coordinate_crosswalk_counts_match_manifest": False,
