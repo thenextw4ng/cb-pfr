@@ -40,6 +40,59 @@ def audit_run(run_dir: Path) -> dict:
     checks["explicit_nonvalidation_claim"] = result.get("physical_validation_claim") == "NOT_ESTABLISHED"
     checks["exactly_58_unique_measurements"] = len(measured) == EXPECTED_DETECTORS and len(set(measured)) == EXPECTED_DETECTORS
     checks["all_measurements_have_mesh_bins"] = set(measured).issubset(assembly_map)
+
+    crosswalk_info = manifest.get("coordinate_crosswalk", {})
+    crosswalk_path = run_dir / str(crosswalk_info.get("file", "beavrs_coordinate_crosswalk.csv"))
+    checks["coordinate_crosswalk_exists"] = crosswalk_path.is_file()
+    crosswalk_rows: list[dict[str, str]] = []
+    if crosswalk_path.is_file():
+        with crosswalk_path.open(newline="", encoding="utf-8-sig") as handle:
+            crosswalk_rows = list(csv.DictReader(handle))
+        crosswalk_labels = [row.get("assembly", "") for row in crosswalk_rows]
+        instrumented_labels = {
+            row.get("assembly", "") for row in crosswalk_rows
+            if row.get("is_instrumented_detector", "").strip().lower() == "true"
+        }
+        valid_bins = True
+        for row in crosswalk_rows:
+            try:
+                ix = int(row["mesh_x_index_1based"])
+                iy = int(row["mesh_y_index_1based"])
+                x_cm = float(row["mesh_center_x_cm"])
+                y_cm = float(row["mesh_center_y_cm"])
+            except (KeyError, TypeError, ValueError):
+                valid_bins = False
+                break
+            if not (1 <= ix <= 15 and 1 <= iy <= 15 and math.isfinite(x_cm) and math.isfinite(y_cm)):
+                valid_bins = False
+                break
+        checks["coordinate_crosswalk_sha256_matches"] = (
+            bool(crosswalk_info.get("sha256"))
+            and sha256_file(crosswalk_path) == crosswalk_info.get("sha256")
+        )
+        checks["coordinate_crosswalk_has_176_unique_assemblies"] = (
+            len(crosswalk_rows) == 176
+            and len(set(crosswalk_labels)) == 176
+            and all(crosswalk_labels)
+        )
+        checks["coordinate_crosswalk_has_58_instrumented_labels"] = (
+            len(instrumented_labels) == EXPECTED_DETECTORS
+            and instrumented_labels == set(measured)
+        )
+        checks["coordinate_crosswalk_bins_are_valid"] = valid_bins
+        checks["coordinate_crosswalk_counts_match_manifest"] = (
+            crosswalk_info.get("assembly_rows") == len(crosswalk_rows)
+            and crosswalk_info.get("instrumented_detector_rows") == len(instrumented_labels)
+        )
+    else:
+        checks.update({
+            "coordinate_crosswalk_sha256_matches": False,
+            "coordinate_crosswalk_has_176_unique_assemblies": False,
+            "coordinate_crosswalk_has_58_instrumented_labels": False,
+            "coordinate_crosswalk_bins_are_valid": False,
+            "coordinate_crosswalk_counts_match_manifest": False,
+        })
+
     checks["all_model_input_hashes_present"] = bool(manifest.get("model_input_sha256"))
     for name, expected_hash in manifest.get("model_input_sha256", {}).items():
         path = run_dir / name
