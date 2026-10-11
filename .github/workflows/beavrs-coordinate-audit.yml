@@ -67,7 +67,7 @@ jobs:
           p = Path("/tmp/beavrs-coordinate-audit/beavrs_coordinate_crosswalk.csv")
           with p.open(newline="") as f:
               rows = list(csv.DictReader(f))
-          assert len(rows) == 176, f"expected 176 assembly rows, got {len(rows)}"
+          assert len(rows) == 193, f"expected 193 assembly rows, got {len(rows)}"
           instrumented = [r for r in rows if r["is_instrumented_detector"].lower() == "true"]
           assert len(instrumented) == 58, f"expected 58 instrumented rows, got {len(instrumented)}"
           print(f"Crosswalk counts: assemblies={len(rows)}, instrumented={len(instrumented)}")
