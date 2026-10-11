@@ -9,13 +9,18 @@ def fixture_rows():
     for round_index, seed_base in enumerate((720000, 730000, 740000)):
         for index, sig in enumerate(signatures):
             fpeak = 1.30 + 0.04 * index + 0.001 * round_index
+            keff = 1.1860 + index * 0.00005 + round_index * 0.000001
+            keff_sd = 0.00002
             rows.append({
+                "keff": keff,
+                "keff_sd": keff_sd,
+                "fpeak": fpeak,
                 "round": f"round_{seed_base}",
                 "candidate_id": f"c5g7-2x2-{sig}",
                 "layout_signature": sig,
                 "seed": str(seed_base + index),
-                "keff_mean": str(1.1860 + index * 0.00005 + round_index * 0.000001),
-                "keff_std_dev": "0.00002",
+                "keff_mean": str(keff),
+                "keff_std_dev": str(keff_sd),
                 "fission_rate_peaking_factor": str(fpeak),
                 "statepoint_sha256": f"statepoint-{seed_base}-{sig}",
                 "mgxs_sha256": "a" * 64,
