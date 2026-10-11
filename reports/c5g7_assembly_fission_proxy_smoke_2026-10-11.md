@@ -13,13 +13,13 @@
 
 The mesh tally was divided into the four 17×17 blocks corresponding to the fuel assemblies in the 51×51 mesh. The score integrated was `fission`. The reported peaking factor is
 
-[
+\[
 F_{\mathrm{fission}}=\frac{\max_a R_a}{\frac{1}{4}\sum_{a=1}^{4}R_a},
 ]
 
-where (R_a) is the integrated fission-rate tally in assembly (a). Lower values mean a more uniform assembly-integrated fission-rate distribution for this particular metric; they do **not** establish a better or safer reactor configuration.
+where \(R_a\) is the integrated fission-rate tally in assembly \(a\). Lower values mean a more uniform assembly-integrated fission-rate distribution for this particular metric; they do **not** establish a better or safer reactor configuration.
 
-| Layout | (k_\mathrm{eff}) | Reported SD | (F_\mathrm{fission}) |
+| Layout | \(k_\mathrm{eff}\) | Reported SD | \(F_\mathrm{fission}\) |
 |---|---:|---:|---:|
 | MMUU | 1.14929 | 0.00212 | 1.2800 |
 | MUMU | 1.14026 | 0.00295 | 1.2807 |
@@ -28,7 +28,7 @@ where (R_a) is the integrated fission-rate tally in assembly (a). Lower values m
 | UMMU (canonical) | 1.18223 | 0.00259 | 1.8322 |
 | UMUM | 1.20583 | 0.00226 | 1.8485 |
 
-These values are descriptive smoke outputs only. The reported (k_\mathrm{eff}) uncertainty is large at this budget, and only one seed was used for each layout. The mesh-bin covariance is not propagated into uncertainty for (F_\mathrm{fission}), so this report does not assign confidence intervals to the peaking-factor differences.
+These values are descriptive smoke outputs only. The reported \(k_\mathrm{eff}\) uncertainty is large at this budget, and only one seed was used for each layout. The mesh-bin covariance is not propagated into uncertainty for \(F_\mathrm{fission}\), so this report does not assign confidence intervals to the peaking-factor differences.
 
 ## Interpretation and next gate
 
