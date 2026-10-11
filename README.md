@@ -51,6 +51,10 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 
 The [claim-to-evidence matrix](reports/EUREKA_CLAIM_EVIDENCE_MATRIX_2026-10-11.md) maps every physical, QUBO, CB-PFR, and quantum claim to required artifacts and states which claims are currently supported, pending, or not established.
 
+## CB-PFR/QUBO integration smoke on C5G7 data
+
+The [C5G7 selection integration report](reports/c5g7_cbpfr_selection_smoke_2026-10-11.md) records a successful code-path test on the archived 18-run corrected-group smoke dataset. The one-hot QUBO enumerated 64 states and selected MUMU under explicitly illustrative screening limits. This is a software integration smoke result only; it is not a benchmark-grade physical winner or evidence of quantum advantage. [Workflow run and artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116610735).
+
 ## BEAVRS experimental comparison workflow
 
 A reproducible full-core BEAVRS Cycle 1 day-0 radial detector-map comparison runner and GitHub Actions workflow are now included:
