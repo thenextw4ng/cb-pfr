@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "created_date": "2026-10-11",
+  "project": "CB-PFR",
+  "benchmark_plan_status": "PRE_REGISTERED_PROTOCOL_ONLY",
+  "primary_question": "Does uncertainty-aware post-optimization ranking improve reference-evaluated feasibility under equal candidate pools and evaluation budgets?",
+  "methods": [
+    "qubo_only",
+    "point_estimate",
+    "cb_pfr",
+    "uniform_margin"
+  ],
+  "primary_endpoint": "fraction_of_independent_pools_where_selected_candidate_passes_predeclared_reference_feasibility",
+  "secondary_endpoints": [
+    "reference_violation",
+    "regret_to_best_reference_candidate",
+    "false_feasible_rate",
+    "no_feasible_selection_rate",
+    "evaluation_cost",
+    "rank_stability"
+  ],
+  "pairing_unit": "candidate_pool_and_seed_block",
+  "uncertainty_reporting": "paired_effect_sizes_and_95_percent_intervals",
+  "synthetic_evidence_is_physical_validation": false,
+  "c5g7_current_evidence_status": "EXPLORATORY_SMOKE_ONLY",
+  "c5g7_confirmatory_run_gate": "NO_GO_UNTIL_MAPPING_CONVERGENCE_AND_AUTHORITATIVE_OBJECTIVE_ARE_FROZEN",
+  "beavrs_physical_validation_status": "NOT_ESTABLISHED",
+  "acceptance_limits_source": "MUST_BE_AUTHORITATIVE_AND_PREDECLARED",
+  "confirmation_seeds": "TO_BE_FROZEN_BEFORE_CONFIRMATORY_RUNS",
+  "notes": "Do not use current illustrative thresholds as reactor acceptance criteria. Do not tune model, mapping, or risk parameters on confirmatory data."
+}
