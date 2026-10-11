@@ -1,18 +1,19 @@
-# Results
+# Results and evidence
 
-This directory contains the aggregate results, audit metadata, and archived trial-level output for the CB-PFR synthetic benchmark.
+Results are immutable evidence snapshots. Write new runs to new paths; do not overwrite historical statepoints or comparison tables.
 
-## Available in this repository
+## Key artifacts
 
-- `main_results.csv`: four-method aggregate summary.
-- `recorded_results_audit.json`: statistical audit metadata for the preserved recorded outputs.
-- `per_seed_results.csv`: archival trial-level table with 4,000 method/trial rows (1,000 trials × 4 methods).
-- A fresh run writes trial-level selections, aggregate tables, coverage information, and a protocol snapshot to the output directory specified by the user.
+- `main_results.csv`, `per_seed_results.csv`: frozen synthetic CB-PFR experiment; synthetic-only evidence.
+- `c5g7_repeatability_normalized_2026-10-11/`: prior low-budget multi-seed run records; see associated audit scripts and reports before using as benchmark evidence.
+- `c5g7_corrected_group_repeatability_smoke_2026-10-11/`: corrected group-structure smoke data, not a converged validation run.
+- `benchmark_comparison.csv`: (k_{eff}) numerical screen against the published C5G7 reference and an explicitly blocked assembly-power comparison. It is not an acceptance report.
+- `c5g7_layout_smoke_2026-10-10/`: historical smoke outputs; preserve for provenance.
 
-## Reproduction versus archival artifacts
+## Evidence classes
 
-The released source and configuration include a 1,000-trial synthetic benchmark runner. The preserved archival CSV is available for inspection and independent row-level comparison. A fresh run generates new outputs; exact agreement should only be claimed after checking the environment, protocol, seeds, and row-level comparison.
-
-## Interpretation
-
-All results are conditional on the declared synthetic data-generating process. They are software/protocol evidence, not physical validation, reactor-safety evidence, or proof of universal superiority.
+1. **Synthetic reproduction:** software reproducibility under the synthetic data-generating process.
+2. **Transport execution:** OpenMC created a statepoint and the raw-HDF5 audit passed.
+3. **Benchmark numerical comparison:** a metric-aware difference is recorded with uncertainty and model-identity caveats.
+4. **Benchmark reproduction:** requires verified model identity, appropriate compute budget, convergence and comparable observables.
+5. **Experimental physical validation:** requires suitable experimental measurements and uncertainty/provenance; not established by the current repository.

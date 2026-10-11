@@ -1,48 +1,34 @@
 # Reproducibility
 
-## Status
+## Software and synthetic experiments
 
-The released source and configuration include a 1,000-trial synthetic benchmark runner. The archived trial-level output is also checked into the repository as `results/per_seed_results.csv`.
+Install with `python -m pip install -e .`. Run unit tests with `python -m unittest discover -s tests -v`. The repository's CI workflow also compiles Python sources, runs the existing test suite and examples, audits archived evidence, and reproduces the frozen synthetic benchmark.
 
-The archive contains 4,000 method/trial rows (1,000 trials × 4 methods). The benchmark has already been **independently re-executed** from the released source and frozen configuration. All substantive trial-level fields in the regenerated output matched the archival CSV, and the four aggregate selected-feasibility rates matched exactly. This is an independent computational rerun, not an external third-party replication.
+## OpenMC quick-check
 
-## Protocol
+See [OPENMC_EXECUTION.md](OPENMC_EXECUTION.md) and the pinned [quick-check workflow](../.github/workflows/c5g7-five-minute-quickcheck.yml). The recorded run used OpenMC 0.16.0, MIT-CRPG source commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450`, seed base 811011, 20 total batches, 5 inactive batches, 100 particles per batch, and one thread. The uploaded artifact is linked from [Actions run 38112118549](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112118549).
 
-- 1,000 trials
-- 12 candidates per trial
-- seed = 20261005 + trial_index
-- four methods receive the identical synthetic observation pool
-- known synthetic normal observation model
-- 0.98 upper feasibility limit
-- candidate-specific standard errors of 0.004 or 0.010
-- uniform comparison margin 0.008
+Use a fresh output directory; scripts intentionally refuse to overwrite prior results. Keep each run's configuration, commit SHA, seed, input SHA-256, statepoint SHA-256, OpenMC version, and raw audit together. A run is not reproducible from the scalar result alone.
 
-## Aggregate reference rates
+## Independent seed aggregation
 
-- QUBO-only: 0.857
-- point estimate: 0.933
-- CB-PFR: 0.976
-- uniform margin: 0.966
+Run the assembly analysis once per distinct seed/statepoint, then:
 
-These are conditional synthetic benchmark rates, not physical outcomes.
+```bash
+python scripts/aggregate_c5g7_fission_replicates.py \
+  --inputs results/seed-1/assembly_fission.json results/seed-2/assembly_fission.json results/seed-3/assembly_fission.json \
+  --out results/replicate_aggregation.json
+```
 
-## Clean run
+Each report must include a distinct integer `seed` and unique 64-character `statepoint_sha256`. The aggregator computes between-seed sample SD and standard error for the per-run peaking factor and assembly totals. It refuses a single run, duplicate seeds/hashes, missing provenance, mixed candidates, or invalid values.
 
-    python -m venv .venv
-    . .venv/bin/activate
-    pip install -e .
-    python scripts/run_reduced_synthetic_calibration.py --results-dir results/reproduced_run
+## Reference comparison
 
-Use a new, empty output directory. The runner refuses to overwrite a nonempty results directory. It writes trial-level selections, aggregate tables, coverage information, and a protocol snapshot.
+```bash
+python scripts/compare_c5g7_reference.py \
+  --simulation-json results/seed-1/assembly_fission.json \
+  --reference-csv examples/c5g7_published_reference_baseline.csv \
+  --out results/new_benchmark_comparison.csv
+```
 
-## Archival audit
-
-The archived file `results/per_seed_results.csv` records the original trial-level results. Its SHA-256 is:
-
-`f7fb629fa182778645c41dcbc20f063599b41e09d428ea8204d4af10855e2133`
-
-The released audit script recomputes the aggregate rates and paired comparisons from the recorded trial-level data. The independent computational rerun additionally regenerates the benchmark from source/configuration and checks substantive row-level equality against the archive.
-
-## What this does not prove
-
-A successful rerun verifies the software protocol under the declared synthetic data-generating process. It does not calibrate uncertainty for MC/DC/OpenMC, establish physical relevance, demonstrate universal superiority, or establish safety. The MC/DC C5G7 run is execution evidence only; no defensible mapping from the abstract QUBO labels to that benchmark has been established.
+This records a numerical (k_{eff}) screen and explicitly blocks the non-comparable power metric. Do not overwrite the committed comparison; use a new output path for each new run.

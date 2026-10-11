@@ -9,6 +9,7 @@ array is top-down in y; see the linked geometry documentation in the report.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Sequence
@@ -68,6 +69,23 @@ def summarize_assembly_rates(mesh_mean: Sequence[Sequence[float]], layout_signat
     }
 
 
+def _statepoint_provenance(statepoint: Path) -> dict:
+    """Read run identifiers directly from the HDF5 statepoint, not from filenames."""
+    try:
+        import h5py
+    except ImportError as exc:
+        raise RuntimeError("h5py is required to read statepoint provenance") from exc
+    fields = ("seed", "n_batches", "n_inactive", "n_particles", "current_batch")
+    with h5py.File(statepoint, "r") as handle:
+        missing = [field for field in fields if field not in handle]
+        if missing:
+            raise AssemblyTallyError(f"statepoint lacks required provenance datasets: {missing}")
+        metadata = {field: int(handle[field][()]) for field in fields}
+    digest = hashlib.sha256(statepoint.read_bytes()).hexdigest()
+    metadata["statepoint_sha256"] = digest
+    return metadata
+
+
 def analyze_statepoint(statepoint: Path, candidate_id: str, layout_signature: str) -> dict:
     try:
         import openmc
@@ -92,8 +110,9 @@ def analyze_statepoint(statepoint: Path, candidate_id: str, layout_signature: st
         values = values.reshape((51, 51, 1, -1, len(tally.scores)))
         mesh_mean = values[:, :, 0, 0, score_index]
         result = summarize_assembly_rates(mesh_mean, layout_signature)
+        result.update(_statepoint_provenance(statepoint))
         result.update({
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "candidate_id": candidate_id,
             "statepoint": str(statepoint),
             "keff_mean": float(sp.keff.nominal_value),

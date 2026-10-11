@@ -33,6 +33,10 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 
 **Statistical guardrail:** an arbitrary z multiplier is not automatically a confidence interval. The implementation records uncertainty provenance and defaults to operational-heuristic bounds.
 
+## Latest C5G7 evidence status — 2026-10-11
+
+A fresh OpenMC 0.16.0 transport smoke run completed in [GitHub Actions run 38112118549](https://github.com/thenextw4ng/cb-pfr/actions/runs/38112118549). The raw-HDF5 audit passed 22/22 checks, but the run used only 15 active batches at 100 particles per batch and reported $k_{eff}=1.1728029\pm0.0194723$. This is execution evidence, not benchmark acceptance. The local assembly-integrated fission-rate peaking factor 1.94293 is not comparable to the published maximum normalized pin power 2.498. Model identity review, high-statistics convergence, multi-seed uncertainty, and experimental validation remain open. See [implementation audit](docs/IMPLEMENTATION_AUDIT.md), [model audit](docs/C5G7_MODEL_AUDIT.md), [independent comparison](docs/INDEPENDENT_VALIDATION.md), and [validation evidence matrix](docs/VALIDATION_EVIDENCE.md).
+
 ## Evidence status
 
 | Evidence | Status |
