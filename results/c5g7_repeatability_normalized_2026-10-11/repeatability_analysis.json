@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS",
+  "workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238",
+  "artifact_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238/artifacts/11687737079",
+  "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "round_count": 3,
+  "candidate_count": 6,
+  "run_count": 18,
+  "unique_seed_count": 18,
+  "unique_statepoint_count": 18,
+  "shared_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+  "settings_profile": [
+    100,
+    10,
+    1000,
+    1
+  ],
+  "raw_hdf5_audits_all_passed": true,
+  "candidate_summary": [
+    {
+      "candidate_id": "c5g7-2x2-MMUU",
+      "layout_signature": "MMUU",
+      "n_runs": 3,
+      "seeds": "620001;630001;640001",
+      "mean_keff": 1.1435001555124604,
+      "between_run_sample_sd": 0.004631114024910744,
+      "pooled_within_run_reported_sd": 0.0023997707468564507,
+      "between_to_within_sd_ratio": 1.929815183795041,
+      "relative_between_run_sd_percent": 0.4049946126011069,
+      "mean_descriptive_rank": 1.3333333333333333,
+      "min_rank": 1,
+      "max_rank": 2,
+      "rank_range": 1
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUMU",
+      "layout_signature": "MUMU",
+      "n_runs": 3,
+      "seeds": "620002;630002;640002",
+      "mean_keff": 1.1418999475340548,
+      "between_run_sample_sd": 0.0036875375230696395,
+      "pooled_within_run_reported_sd": 0.0026689335442816463,
+      "between_to_within_sd_ratio": 1.381652057605711,
+      "relative_between_run_sd_percent": 0.3229300019702178,
+      "mean_descriptive_rank": 1.6666666666666667,
+      "min_rank": 1,
+      "max_rank": 2,
+      "rank_range": 1
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUUM",
+      "layout_signature": "MUUM",
+      "n_runs": 3,
+      "seeds": "620003;630003;640003",
+      "mean_keff": 1.1551839875753285,
+      "between_run_sample_sd": 0.0016742812242373742,
+      "pooled_within_run_reported_sd": 0.0026597542396447566,
+      "between_to_within_sd_ratio": 0.6294871906890899,
+      "relative_between_run_sd_percent": 0.14493632548972601,
+      "mean_descriptive_rank": 3,
+      "min_rank": 3,
+      "max_rank": 3,
+      "rank_range": 0
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMMU",
+      "layout_signature": "UMMU",
+      "n_runs": 3,
+      "seeds": "620000;630000;640000",
+      "mean_keff": 1.189445028513826,
+      "between_run_sample_sd": 0.00411598806941666,
+      "pooled_within_run_reported_sd": 0.002583611647410167,
+      "between_to_within_sd_ratio": 1.5931140709721445,
+      "relative_between_run_sd_percent": 0.3460427317569654,
+      "mean_descriptive_rank": 4,
+      "min_rank": 4,
+      "max_rank": 4,
+      "rank_range": 0
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMUM",
+      "layout_signature": "UMUM",
+      "n_runs": 3,
+      "seeds": "620004;630004;640004",
+      "mean_keff": 1.2052628299642747,
+      "between_run_sample_sd": 0.003545646849836848,
+      "pooled_within_run_reported_sd": 0.002461217069027423,
+      "between_to_within_sd_ratio": 1.4406071266350957,
+      "relative_between_run_sd_percent": 0.2941803863595416,
+      "mean_descriptive_rank": 5.666666666666667,
+      "min_rank": 5,
+      "max_rank": 6,
+      "rank_range": 1
+    },
+    {
+      "candidate_id": "c5g7-2x2-UUMM",
+      "layout_signature": "UUMM",
+      "n_runs": 3,
+      "seeds": "620005;630005;640005",
+      "mean_keff": 1.205564263553004,
+      "between_run_sample_sd": 0.0031562354584161486,
+      "pooled_within_run_reported_sd": 0.00289252738114678,
+      "between_to_within_sd_ratio": 1.091168740177947,
+      "relative_between_run_sd_percent": 0.2618056584652056,
+      "mean_descriptive_rank": 5.333333333333333,
+      "min_rank": 5,
+      "max_rank": 6,
+      "rank_range": 1
+    }
+  ],
+  "round_rank_correlations": [
+    {
+      "round_i": "round_620000",
+      "round_j": "round_630000",
+      "spearman_rho": 0.8857142857142857
+    },
+    {
+      "round_i": "round_620000",
+      "round_j": "round_640000",
+      "spearman_rho": 0.9428571428571428
+    },
+    {
+      "round_i": "round_630000",
+      "round_j": "round_640000",
+      "spearman_rho": 0.9428571428571428
+    }
+  ],
+  "limits": [
+    "Three repetitions are too few for strong calibration.",
+    "All runs use smoke settings, not benchmark-grade convergence settings.",
+    "Rank is by k_eff only; it is descriptive and not an optimization objective.",
+    "Monte Carlo uncertainty does not capture model bias or nuclear-data uncertainty.",
+    "No QUBO-to-material mapping or reactor-safety claim follows."
+  ]
+}
