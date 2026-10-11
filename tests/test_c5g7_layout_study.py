@@ -140,7 +140,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
                     f"[{symbol[layout['p10']]},{symbol[layout['p11']]},w],[w,w,w]]"
                 )
                 self.assertEqual(compact, expected)
-                self.assertEqual(compact.count(",w]"), 2)
+                self.assertEqual(compact.count(",w]"), 3)
                 self.assertEqual(compact.count("[w,w,w]"), 1)
 
     def test_patch_uses_standard_c5g7_energy_group_boundaries(self):
