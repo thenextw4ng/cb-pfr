@@ -104,6 +104,14 @@ jobs:
             --outdir /tmp/c5g7-intermediate/analysis
           cat /tmp/c5g7-intermediate/analysis/REPEATABILITY_ANALYSIS.md
           cat /tmp/c5g7-intermediate/analysis/repeatability_analysis.json
+      - name: Export run-level objective data for the CB-PFR/QUBO gate
+        if: success()
+        shell: bash -el {0}
+        run: |
+          python scripts/analyze_c5g7_fission_objective_repeatability.py \
+            --study-root /tmp/c5g7-intermediate \
+            --outdir /tmp/c5g7-intermediate/analysis/objective
+          cat /tmp/c5g7-intermediate/analysis/objective/fission_objective_repeatability.json
       - name: Preserve statepoints and analysis even if a gate fails
         if: always()
         uses: actions/upload-artifact@v4
