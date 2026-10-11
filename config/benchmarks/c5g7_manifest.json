@@ -43,10 +43,10 @@
     "reference_values_transcribed_and_reviewed": false,
     "openmc_baseline_run_verified": false,
     "candidate_mapping_status": "blocked",
-    "reason": "The production statepoint scalar was independently read with OpenMC 0.16.0 and matched the recorded mean/standard deviation. Canonical geometry, tally, and plot XML match the pinned upstream regeneration; material XML definitions match after normalizing the local cross_sections path. The production MGXS file itself is absent from the evidence archive, so exact production nuclear-data identity remains unverified. The legacy fresh/once_burned/twice_burned labels still have no defensible mapping to C5G7 UO2/MOX enrichment or depletion compositions.",
+    "reason": "The production statepoint scalar was independently read with OpenMC 0.16.0 and matched the recorded mean/standard deviation. Canonical geometry, tally, and plot XML match the pinned upstream regeneration; material XML definitions match after normalizing the local cross_sections path. The production MGXS file is present in the evidence archive and is being compared directly with the regenerated library. The legacy fresh/once_burned/twice_burned labels still have no defensible mapping to C5G7 UO2/MOX enrichment or depletion compositions.",
     "statepoint_scalar_read_verified": true,
     "model_xml_comparison": "partial_match_except_local_cross_sections_path",
-    "production_mgxs_file_available": false,
+    "production_mgxs_file_available": true,
     "production_mgxs_hash_verified": false
   },
   "mapping_contract": {
