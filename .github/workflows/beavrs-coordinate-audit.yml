@@ -1,0 +1,92 @@
+name: BEAVRS coordinate-registration geometry diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/beavrs-coordinate-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  render-coordinate-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BEAVRS_COMMIT: "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22"
+      OMP_NUM_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned OpenMC runtime
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: beavrs-coordinate-audit
+          create-args: >-
+            python=3.11
+            openmc=0.15.3
+          cache-environment: true
+
+      - name: Freeze BEAVRS source and install model generator
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          git clone https://github.com/mit-crpg/BEAVRS.git /tmp/BEAVRS
+          git -C /tmp/BEAVRS checkout "$BEAVRS_COMMIT"
+          test "$(git -C /tmp/BEAVRS rev-parse HEAD)" = "$BEAVRS_COMMIT"
+          (
+            cd /tmp/BEAVRS/models/openmc
+            python setup.py install
+          )
+          mkdir -p /tmp/beavrs-coordinate-audit
+          {
+            echo "BEAVRS_COMMIT=$BEAVRS_COMMIT"
+            echo "OPENMC_VERSION=$(python -c 'import openmc; print(openmc.__version__)')"
+            echo "PYTHON_VERSION=$(python --version)"
+            echo "PURPOSE=geometry plot and source-derived coordinate crosswalk only; no transport run"
+          } | tee /tmp/beavrs-coordinate-audit/source_provenance.txt
+
+      - name: Export model XML and coordinate crosswalk without transport
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/run_beavrs_cycle1_map_validation.py \
+            --mode prepare \
+            --beavrs-root /tmp/BEAVRS \
+            --output /tmp/beavrs-coordinate-audit \
+            --batches 1 \
+            --inactive 0 \
+            --particles 1000 \
+            --seed 20261011
+          test -s /tmp/beavrs-coordinate-audit/beavrs_coordinate_crosswalk.csv
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+          p = Path("/tmp/beavrs-coordinate-audit/beavrs_coordinate_crosswalk.csv")
+          with p.open(newline="") as f:
+              rows = list(csv.DictReader(f))
+          assert len(rows) == 176, f"expected 176 assembly rows, got {len(rows)}"
+          instrumented = [r for r in rows if r["is_instrumented_detector"].lower() == "true"]
+          assert len(instrumented) == 58, f"expected 58 instrumented rows, got {len(instrumented)}"
+          print(f"Crosswalk counts: assemblies={len(rows)}, instrumented={len(instrumented)}")
+          PY
+
+      - name: Render pinned upstream geometry plots (no neutron transport)
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          cd /tmp/beavrs-coordinate-audit
+          openmc -p 2>&1 | tee geometry_plot.log
+          find . -maxdepth 1 -type f \( -name '*.png' -o -name '*.ppm' \) -print
+          test -s radial_mats_midplane.png
+
+      - name: Upload coordinate audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beavrs-coordinate-registration-audit-${{ github.run_id }}
+          path: /tmp/beavrs-coordinate-audit/
+          if-no-files-found: warn
+          retention-days: 30
