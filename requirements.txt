@@ -1,2 +1,6 @@
-# CB-PFR core package intentionally uses Python standard-library modules only.
-# Optional research environments may add numpy/pandas/scipy as needed for future benchmarks.
+# Install the local CB-PFR package so imports from src/cbpfr resolve.
+-e .
+
+# Dashboard runtime dependencies
+streamlit>=1.36,<2
+pandas>=2.0,<3
