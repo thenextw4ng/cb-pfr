@@ -218,3 +218,8 @@ The upstream summary covers 1,912 QUBO instances: the classical reference has a 
 - [Validation claim decision](reports/VALIDATION_CLAIM_DECISION_2026-10-11.md) — supported and unsupported claims.
 
 These reports intentionally separate software/integration evidence from nuclear benchmark validation and physical selection effectiveness.
+
+## Fixed-budget R&S and classical SQA comparison (2026-10-11)
+
+The new [retrospective C5G7 comparison report](reports/C5G7_FIXED_BUDGET_RS_SQA_COMPARISON_2026-10-11.md) and [GitHub Actions run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38121832440) compare CB-PFR with an equal-allocation fixed-budget R&S baseline on the same 18 archived corrected-group OpenMC smoke runs. Both selected MUMU, so incremental CB-PFR selection gain was **not demonstrated**. Exact enumeration checked all 64 selector states; a classical path-integral annealing sampler found the exact minimum in 143/500 reads (28.6%) and returned one-hot samples in 497/500 reads (99.4%). This is **classical simulated quantum annealing, not QPU execution**. The data remain exploratory and do not establish physical validation.
+
