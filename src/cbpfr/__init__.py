@@ -26,6 +26,7 @@ from .solvers import (
     solve_exact,
     solve_with_ocean_sampler,
 )
+from .pipeline import run_solver_to_physics_pipeline
 
 __all__ = [
     "Candidate", "CandidateEvaluation", "CoreSpec", "EvaluationProvenance",
@@ -34,5 +35,6 @@ __all__ = [
     "SolverSolution", "build_usmanov_style_qubo", "bundle_sha256",
     "candidates_from_solver_run", "enumerate_feasible_candidates",
     "model_to_upper_triangular_qubo", "rank_all_methods", "run_ranked_experiment",
-    "selected_is_conservatively_feasible", "solve_exact", "solve_with_ocean_sampler",
+    "run_solver_to_physics_pipeline", "selected_is_conservatively_feasible",
+    "solve_exact", "solve_with_ocean_sampler",
 ]
