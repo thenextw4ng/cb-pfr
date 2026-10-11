@@ -27,6 +27,25 @@ jobs:
         run: |
           python examples/toy_qubo_example.py
           python examples/basic_ranking.py
+      - name: Audit C5G7 repeatability against provisional validation gates
+        run: |
+          python scripts/audit_c5g7_validation_gates.py \
+            --runs-csv results/c5g7_repeatability_normalized_2026-10-11/run_level_results.csv \
+            --out /tmp/c5g7-validation-gates.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("/tmp/c5g7-validation-gates.json").read_text())
+          assert report["run_count"] == 18, report
+          assert report["candidate_count"] == 6, report
+          assert all(report["global_checks"][key] for key in (
+              "common_compute_settings", "unique_seeds", "unique_statepoint_hashes",
+              "single_mgxs_hash", "all_raw_hdf5_audits_pass"
+          )), report
+          assert report["status"] == "FAIL_OR_INCOMPLETE_CANONICAL_KEFF_SCREEN", report
+          assert report["is_official_benchmark_acceptance"] is False, report
+          print("Smoke data integrity passed; low-budget canonical scalar screen correctly remains unpassed.")
+          PY
       - name: Audit committed evidence archives
         run: |
           python -m pip install h5py

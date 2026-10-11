@@ -21,6 +21,12 @@ SOURCE_REPO = "https://github.com/mit-crpg/benchmarks.git"
 MODEL_RELATIVE = Path("c5g7/openmc")
 BUILDER_RELATIVE = Path("2d/build-xml-2d.py")
 CANONICAL_ASSIGNMENT = "lattices['Core'].universes = [[u, m, w], [m, u, w], [w, w, w]]"
+MGXS_GROUPS_ANCHOR = "groups = openmc.mgxs.EnergyGroups(np.logspace(-5, 7, 8))"
+MGXS_GROUPS_REPLACEMENT = """energy_boundaries = np.logspace(-5, 7, 8)
+# Normalize endpoints to avoid one-ULP drift across NumPy builds.
+energy_boundaries[0] = 1.0e-5
+energy_boundaries[-1] = 1.0e7
+groups = openmc.mgxs.EnergyGroups(energy_boundaries)"""
 POSITION_ORDER = ("p00", "p01", "p10", "p11")
 
 
@@ -72,6 +78,17 @@ def validate_design_space(path: Path) -> dict:
     if len(seen) != 6 or baseline_count != 1:
         raise ValueError("design space must have six unique layouts and exactly one canonical baseline")
     return data
+
+
+def patch_mgxs_energy_boundaries(materials_file: Path) -> None:
+    """Normalize exact C5G7 energy-group endpoints before generating mgxs.h5."""
+    source = materials_file.read_text(encoding="utf-8")
+    if source.count(MGXS_GROUPS_ANCHOR) != 1:
+        raise ValueError("upstream energy-group construction differs from audited template; refusing to patch")
+    materials_file.write_text(
+        source.replace(MGXS_GROUPS_ANCHOR, MGXS_GROUPS_REPLACEMENT),
+        encoding="utf-8",
+    )
 
 
 def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int, seed: int = 620000) -> None:
@@ -221,6 +238,7 @@ def main() -> int:
     parser.add_argument("--particles", type=int, default=1000, help="particles per batch; default is a smoke-test profile")
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--seed-base", type=int, default=620000, help="base seed; each candidate gets a deterministic consecutive seed")
+    parser.add_argument("--candidate-ids", nargs="+", help="optional subset of candidate IDs; default runs all six layouts")
     args = parser.parse_args()
     if args.batches < 2 or args.inactive < 0 or args.inactive >= args.batches or args.particles < 1 or args.threads < 1 or args.seed_base < 0:
         parser.error("require batches >= 2, 0 <= inactive < batches, particles >= 1, threads >= 1, and seed-base >= 0")
@@ -252,6 +270,7 @@ def main() -> int:
         "mode": args.mode,
         "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed_policy": "seed_base + stable candidate order index"},
         "profile_warning": "Default settings are smoke-test settings only; do not compare to benchmark reference or claim converged physics without a separate convergence study.",
+        "mgxs_generation_policy": "The copied upstream materials.py is patched to set the first and last energy-group boundaries explicitly to 1e-5 and 1e7 before regenerating mgxs.h5, preventing one-ULP endpoint drift across NumPy builds.",
         "cases": [],
         "nonclaims": [
             "This is a new C5G7 assembly-placement design study, not a mapping of the legacy burnup-state QUBO.",
@@ -259,13 +278,27 @@ def main() -> int:
             "Smoke-test results are not benchmark-grade and must not be presented as converged physical evidence.",
         ],
     }
-    ordered_candidates = sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"]))
-    for candidate_index, candidate in enumerate(ordered_candidates):
-        seed = args.seed_base + candidate_index
+    all_ordered_candidates = sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"]))
+    seed_offsets = {candidate["candidate_id"]: i for i, candidate in enumerate(all_ordered_candidates)}
+    if args.candidate_ids:
+        requested = set(args.candidate_ids)
+        known = {candidate["candidate_id"] for candidate in all_ordered_candidates}
+        unknown = sorted(requested - known)
+        if unknown:
+            parser.error(f"unknown candidate IDs: {unknown}")
+        ordered_candidates = [candidate for candidate in all_ordered_candidates if candidate["candidate_id"] in requested]
+        if not ordered_candidates:
+            parser.error("--candidate-ids must select at least one candidate")
+    else:
+        ordered_candidates = all_ordered_candidates
+    summary["selected_candidate_ids"] = [candidate["candidate_id"] for candidate in ordered_candidates]
+    for candidate in ordered_candidates:
+        seed = args.seed_base + seed_offsets[candidate["candidate_id"]]
         case_dir = output / candidate["candidate_id"]
         case_dir.mkdir()
         model_copy = case_dir / "model"
         shutil.copytree(upstream_model, model_copy)
+        patch_mgxs_energy_boundaries(model_copy / "materials.py")
         builder = model_copy / BUILDER_RELATIVE
         patch_builder(builder, candidate["fuel_assembly_layout"], args.batches, args.inactive, args.particles, seed=seed)
         case = {
@@ -290,7 +323,7 @@ def main() -> int:
                     "candidate_id": other["candidate_id"],
                     "status": "not_run_after_prior_failure",
                     "physical_results": None,
-                } for other in sorted(design["candidate_layouts"], key=lambda c: (not c["is_canonical_reference_arrangement"], c["candidate_id"])) if other["candidate_id"] != candidate["candidate_id"] and other["candidate_id"] not in {c["candidate_id"] for c in summary["cases"]})
+                } for other in ordered_candidates if other["candidate_id"] != candidate["candidate_id"] and other["candidate_id"] not in {c["candidate_id"] for c in summary["cases"]})
                 break
         summary["cases"].append(case)
     else:

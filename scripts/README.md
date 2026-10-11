@@ -22,8 +22,11 @@ These scripts are supported by the current repository and should be used accordi
 
 - `prepare_c5g7_reference.py` — clone and record the exact upstream C5G7 source revision.
 - `enumerate_c5g7_layouts.py` — enumerate the six arrangements with exactly two UO2 and two MOX assemblies in the explicitly reformulated 2×2 design space.
-- `run_c5g7_layout_study.py` — prepare isolated cases or optionally run them when the required OpenMC environment and data are available. Defaults are smoke-test settings, not benchmark-grade settings.
+- `run_c5g7_layout_study.py` — prepare isolated cases or optionally run them when the required OpenMC environment and data are available. Defaults are smoke-test settings, not benchmark-grade settings. The copied upstream `materials.py` is patched to pin the first and last C5G7 energy-group boundaries to exact `1e-5` and `1e7` before regenerating MGXS, preventing one-ULP drift across NumPy builds.
 - `analyze_c5g7_repeatability.py` — aggregate three independent seed rounds across the six layouts; report between-run variability separately from within-run Monte Carlo SD and compute descriptive ranking stability.
+- `audit_c5g7_validation_gates.py` — check repeated-run CSV integrity, common computational settings, seed/statepoint uniqueness, per-layout repeatability, and provisional scalar-reference screens; benchmark acceptance stays blocked without model-identity and spatial-tally review.
+- `compare_c5g7_input_provenance.py` — compare archived production and regenerated canonical XML inputs, preserving exact hashes and attribute-normalized diffs for geometry, materials, settings, tallies, and plots.
+- `analyze_c5g7_assembly_fission.py` — integrate the 51×51 mesh `fission` score into the four 17×17 fuel-assembly blocks and report a normalized fission-rate peaking proxy; it explicitly does not label this as absolute power and does not propagate correlated mesh-bin uncertainty.
 
 ## Important limits
 

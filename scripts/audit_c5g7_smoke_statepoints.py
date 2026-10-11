@@ -40,7 +40,7 @@ def _close(actual: Any, expected: Any, *, abs_tol: float = 1e-12) -> bool:
     )
 
 
-def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
+def audit_candidate(root: Path, case: dict[str, Any], expected_settings: dict[str, Any]) -> dict[str, Any]:
     try:
         import h5py
     except ImportError as exc:
@@ -48,7 +48,9 @@ def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
 
     candidate_id = case.get("candidate_id")
     case_dir = root / str(candidate_id)
-    statepoint = case_dir / "model/2d/statepoint.100.h5"
+    physical_hint = case.get("physical_results") or {}
+    statepoint_rel = physical_hint.get("statepoint")
+    statepoint = case_dir / statepoint_rel if isinstance(statepoint_rel, str) and statepoint_rel else case_dir / "model/2d/statepoint.100.h5"
     settings_path = case_dir / "model/2d/settings.xml"
     result_path = case_dir / "CASE_RESULT.json"
     checks: list[dict[str, Any]] = []
@@ -120,18 +122,20 @@ def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
         physical.get("status"), "completed")
     add("settings_seed_matches_manifest", settings_values["seed"] == str(case.get("seed")),
         settings_values["seed"], str(case.get("seed")))
-    add("settings_profile", settings_values == {
-        "run_mode": "eigenvalue", "energy_mode": "multi-group", "batches": "100",
-        "inactive": "10", "particles": "1000", "seed": str(case.get("seed"))
-    }, settings_values, {
-        "run_mode": "eigenvalue", "energy_mode": "multi-group", "batches": "100",
-        "inactive": "10", "particles": "1000", "seed": str(case.get("seed"))
-    })
+    expected_profile = {
+        "run_mode": "eigenvalue",
+        "energy_mode": "multi-group",
+        "batches": str(expected_settings.get("batches")),
+        "inactive": str(expected_settings.get("inactive")),
+        "particles": str(expected_settings.get("particles")),
+        "seed": str(case.get("seed")),
+    }
+    add("settings_profile", settings_values == expected_profile, settings_values, expected_profile)
 
     expected_hashes = case.get("output_hashes_after_run") or {}
     add("statepoint_hash_matches_run_manifest",
-        expected_hashes.get("model/2d/statepoint.100.h5") == statepoint_hash,
-        statepoint_hash, expected_hashes.get("model/2d/statepoint.100.h5"))
+        expected_hashes.get(str(Path(statepoint_rel))) == statepoint_hash,
+        statepoint_hash, expected_hashes.get(str(Path(statepoint_rel))))
     add("settings_hash_matches_run_manifest",
         expected_hashes.get("model/2d/settings.xml") == settings_hash,
         settings_hash, expected_hashes.get("model/2d/settings.xml"))
@@ -149,8 +153,13 @@ def audit_candidate(root: Path, case: dict[str, Any]) -> dict[str, Any]:
     add("keff_std_dev_matches_openmc_api",
         _close(k_sd, physical.get("keff_std_dev")),
         k_sd, physical.get("keff_std_dev"))
-    for key, expected in (("n_batches", 100), ("n_inactive", 10),
-                          ("n_particles", 1000), ("n_realizations", 90)):
+    expected_metadata = {
+        "n_batches": int(expected_settings["batches"]),
+        "n_inactive": int(expected_settings["inactive"]),
+        "n_particles": int(expected_settings["particles"]),
+        "n_realizations": int(expected_settings["batches"]) - int(expected_settings["inactive"]),
+    }
+    for key, expected in expected_metadata.items():
         add(f"metadata:{key}", metadata[key] == expected, metadata[key], expected)
     add("metadata:run_mode", metadata["run_mode"] == "eigenvalue", metadata["run_mode"], "eigenvalue")
     add("metadata:energy_mode", metadata["energy_mode"] == "multi-group", metadata["energy_mode"], "multi-group")
@@ -188,27 +197,30 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--study-summary", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--expected-candidates", type=int, default=6, help="expected candidate count; default is six-layout smoke study")
     args = parser.parse_args()
+    if args.expected_candidates < 1:
+        parser.error("--expected-candidates must be at least 1")
     if args.out.exists():
         parser.error(f"output already exists: {args.out}")
     try:
         study = json.loads(args.study_summary.read_text(encoding="utf-8"))
         root = args.study_summary.parent
         cases = study.get("cases")
-        if not isinstance(cases, list) or len(cases) != 6:
-            raise ValueError("expected exactly six candidate cases in STUDY_SUMMARY.json")
-        results = [audit_candidate(root, case) for case in cases]
+        if not isinstance(cases, list) or len(cases) != args.expected_candidates:
+            raise ValueError(f"expected exactly {args.expected_candidates} candidate cases in STUDY_SUMMARY.json")
+        results = [audit_candidate(root, case, study.get("settings", {})) for case in cases]
         ids = [r.get("candidate_id") for r in results]
         seeds = [r.get("seed") for r in results]
         statepoint_hashes = [r.get("statepoint_sha256") for r in results]
         mgxs_hashes = {r.get("mgxs_sha256") for r in results}
         aggregate_checks = [
-            {"name": "six_unique_candidate_ids", "status": "PASS" if len(set(ids)) == 6 else "FAIL",
-             "actual": ids, "expected": "six unique IDs"},
-            {"name": "six_unique_seeds", "status": "PASS" if len(set(seeds)) == 6 else "FAIL",
-             "actual": seeds, "expected": "six unique seeds"},
-            {"name": "six_unique_statepoint_hashes", "status": "PASS" if len(set(statepoint_hashes)) == 6 else "FAIL",
-             "actual": statepoint_hashes, "expected": "six unique statepoint hashes"},
+            {"name": "unique_candidate_ids", "status": "PASS" if len(set(ids)) == args.expected_candidates else "FAIL",
+             "actual": ids, "expected": f"{args.expected_candidates} unique IDs"},
+            {"name": "unique_seeds", "status": "PASS" if len(set(seeds)) == args.expected_candidates else "FAIL",
+             "actual": seeds, "expected": f"{args.expected_candidates} unique seeds"},
+            {"name": "unique_statepoint_hashes", "status": "PASS" if len(set(statepoint_hashes)) == args.expected_candidates else "FAIL",
+             "actual": statepoint_hashes, "expected": f"{args.expected_candidates} unique statepoint hashes"},
             {"name": "shared_mgxs_hash", "status": "PASS" if len(mgxs_hashes) == 1 and None not in mgxs_hashes else "FAIL",
              "actual": sorted(str(v) for v in mgxs_hashes), "expected": "one non-empty common MGXS hash"},
         ]

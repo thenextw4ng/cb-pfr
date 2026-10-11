@@ -1,0 +1,97 @@
+name: C5G7 production-input provenance comparison
+
+on:
+  push:
+    paths:
+      - ".github/workflows/c5g7-input-provenance-audit.yml"
+      - "scripts/compare_c5g7_input_provenance.py"
+      - "scripts/run_c5g7_layout_study.py"
+      - "OpenMC_HDF5_Evidence_2026-10-11.zip"
+  pull_request:
+    paths:
+      - ".github/workflows/c5g7-input-provenance-audit.yml"
+      - "scripts/compare_c5g7_input_provenance.py"
+      - "scripts/run_c5g7_layout_study.py"
+      - "OpenMC_HDF5_Evidence_2026-10-11.zip"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare-model-inputs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC and Python
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-input-audit
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Extract archived production inputs safely
+        shell: bash -el {0}
+        run: |
+          python - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import zipfile
+          archive = Path("OpenMC_HDF5_Evidence_2026-10-11.zip")
+          target = Path("/tmp/c5g7-production-evidence")
+          target.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(archive) as zf:
+              bad = zf.testzip()
+              if bad:
+                  raise SystemExit(f"ZIP CRC failure: {bad}")
+              for info in zf.infolist():
+                  member = PurePosixPath(info.filename)
+                  if member.is_absolute() or ".." in member.parts:
+                      raise SystemExit(f"unsafe archive member path: {info.filename}")
+              zf.extractall(target)
+          matches = [p.parent for p in target.rglob("statepoint.20000.h5")]
+          if len(matches) != 1:
+              raise SystemExit(f"expected exactly one production statepoint directory, found {len(matches)}")
+          required = ["geometry.xml", "materials.xml", "settings.xml", "tallies.xml", "plots.xml"]
+          missing = [name for name in required if not (matches[0] / name).is_file()]
+          if missing:
+              raise SystemExit(f"production input XML missing: {missing}")
+          print("Production input directory:", matches[0])
+          PY
+      - name: Stage pinned source and regenerate canonical input XML
+        shell: bash -el {0}
+        run: |
+          python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output /tmp/c5g7-canonical-inputs \
+            --mode prepare --batches 100 --inactive 10 --particles 1000 --threads 1 --seed-base 620000
+          (cd /tmp/c5g7-canonical-inputs/c5g7-2x2-UMMU/model/2d && python build-xml-2d.py)
+          test -f /tmp/c5g7-canonical-inputs/c5g7-2x2-UMMU/model/2d/materials.xml
+      - name: Compare production and regenerated XML inputs
+        shell: bash -el {0}
+        run: |
+          production="$(find /tmp/c5g7-production-evidence -name statepoint.20000.h5 -print -quit)"
+          python scripts/compare_c5g7_input_provenance.py \
+            --production-root "$(dirname "$production")" \
+            --candidate-root /tmp/c5g7-canonical-inputs/c5g7-2x2-UMMU/model/2d \
+            --out /tmp/c5g7-input-provenance-comparison.json
+          cat /tmp/c5g7-input-provenance-comparison.json
+          production="$(find /tmp/c5g7-production-evidence -name statepoint.20000.h5 -print -quit)"
+          python scripts/fingerprint_hdf5_semantics.py \
+            --files "$(dirname "$production")/mgxs.h5" \
+                    /tmp/c5g7-canonical-inputs/c5g7-2x2-UMMU/model/2d/mgxs.h5 \
+            --out /tmp/c5g7-mgxs-semantic-comparison.json \
+            --require-datasets-identical
+          cat /tmp/c5g7-mgxs-semantic-comparison.json
+      - name: Preserve exact XML and MGXS comparisons
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-production-input-provenance-comparison
+          path: |
+            /tmp/c5g7-input-provenance-comparison.json
+            /tmp/c5g7-mgxs-semantic-comparison.json
+          if-no-files-found: warn

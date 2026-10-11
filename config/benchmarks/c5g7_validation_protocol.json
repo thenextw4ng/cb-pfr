@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "CBPFR-C5G7-validation-gates-2026-10-11",
+  "status": "preregistered_project_screening_protocol_not_official_OECD_acceptance",
+  "scope": {
+    "benchmark_case": "2D seven-group C5G7",
+    "canonical_layout_signature": "UMMU",
+    "separate_design_study": "four fuel positions, exactly two UO2 and two MOX",
+    "legacy_qubo_mapping": "explicitly_not_claimed"
+  },
+  "gates": [
+    {
+      "id": "G0-model-identity",
+      "purpose": "Verify exact model correspondence before numerical acceptance.",
+      "requirements": [
+        "Record upstream repository and full commit SHA.",
+        "Diff generated geometry, materials, settings, boundary conditions, and material compositions against the selected primary benchmark case.",
+        "Record multigroup cross-section provenance, source hash, energy group boundaries, and generation procedure.",
+        "Explain and resolve production-versus-smoke materials XML differences.",
+        "Record OpenMC version and all runtime settings."
+      ],
+      "pass_condition": "Independent reviewer signs a machine-readable model-identity manifest.",
+      "status": "BLOCKED"
+    },
+    {
+      "id": "G1-canonical-keff",
+      "purpose": "A screening check for the canonical UMMU arrangement only.",
+      "reference": {
+        "keff": 1.18655,
+        "standard_uncertainty": 0.000095,
+        "source": "OECD/NEA C5G7 benchmark report; see reports/physical_simulator_validation.md"
+      },
+      "project_screening_limits": {
+        "absolute_difference_pcm_max": 100,
+        "combined_standard_uncertainty_z_max": 2,
+        "per_run_reported_keff_sd_pcm_max": 10,
+        "minimum_independent_seeds": 3
+      },
+      "warning": "These are provisional project screening gates, not official benchmark acceptance tolerances. G1 cannot pass while G0 is blocked."
+    },
+    {
+      "id": "G2-tally-reference",
+      "purpose": "Check spatial response against benchmark-compatible reference quantities.",
+      "requirements": [
+        "Identify the exact benchmark tally definition and normalization.",
+        "Compare compatible pin/assembly fission-rate or power distribution, not raw unnormalized flux alone.",
+        "Report RMS relative error and maximum absolute relative error with uncertainty treatment.",
+        "Preserve spatial indexing, units, normalization, and reference-data provenance."
+      ],
+      "project_screening_limits": {
+        "rms_relative_error_percent_max": 2,
+        "max_absolute_relative_error_percent_max": 5
+      },
+      "warning": "Limits are provisional project screens until the selected primary benchmark's prescribed comparison metric is transcribed and reviewed."
+    },
+    {
+      "id": "G3-candidate-repeatability",
+      "purpose": "Compare the six assembly-placement layouts under a common budget.",
+      "requirements": [
+        "Use identical batch/inactive/particle/thread settings across candidates.",
+        "Use at least three unique independent seeds per candidate for the initial screen.",
+        "Verify one unique statepoint hash per run and exact seed-to-statepoint correspondence.",
+        "Use a higher-budget confirmation run for any candidate whose ranking overlaps within combined uncertainty.",
+        "Report within-run Monte Carlo uncertainty separately from between-seed sample standard deviation."
+      ],
+      "initial_screen": {
+        "batches": 2000,
+        "inactive": 100,
+        "particles_per_batch": 5000,
+        "threads": 1,
+        "minimum_seeds_per_candidate": 3
+      },
+      "warning": "The 2000/100/5000 profile is a proposed intermediate screen, not automatically benchmark-grade. Run a pilot and increase budget until convergence criteria are met."
+    },
+    {
+      "id": "G4-optimization-claim",
+      "purpose": "Prevent a descriptive k_eff ranking from being misrepresented as an optimization result.",
+      "requirements": [
+        "Declare the design objective and its physical justification before viewing final candidate rankings.",
+        "Declare hard constraints, uncertainty treatment, and acceptance thresholds before evaluation.",
+        "Use the same candidate design space for exact enumeration and transport scoring.",
+        "Do not call highest/lowest k_eff safer or better without a separately justified objective."
+      ],
+      "status": "BLOCKED_PENDING_OBJECTIVE_REVIEW",
+      "recommended_default": {
+        "validation_phase_objective": "Minimize discrepancy between the canonical UMMU case and the official C5G7 reference quantities; this is benchmark verification, not candidate design optimization.",
+        "six_layout_phase": "Report all six material-placement variants descriptively. Do not select a winner by highest or lowest k_eff without a separate physical design objective.",
+        "future_design_objective_template": "After a justified k_eff acceptance band is declared and assembly-level tally normalization is validated, a separate exploratory objective may minimize assembly-integrated fission-rate peaking F_fission = max_a(R_a)/mean_a(R_a), where R_a is the integrated fission-rate tally for fuel assembly a.",
+        "status": "template_only_not_applied",
+        "reason_not_applied": "The current tally/reference mapping and intended design target have not yet been approved; the existing 51x51 mesh scores are not automatically absolute power."
+      }
+    }
+  ],
+  "explicit_nonclaims": [
+    "Passing these project screens is not reactor-safety certification.",
+    "A numerical match alone does not prove model identity.",
+    "The four-variable UO2/MOX QUBO is a new assembly-placement encoding, not the legacy burnup-state QUBO.",
+    "The proposed intermediate compute profile is not represented as executed or converged."
+  ]
+}

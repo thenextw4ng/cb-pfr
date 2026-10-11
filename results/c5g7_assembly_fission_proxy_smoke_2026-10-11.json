@@ -1,0 +1,138 @@
+{
+  "schema_version": "1.0",
+  "status": "exploratory_smoke_only",
+  "workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100954596",
+  "artifact_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100954596/artifacts/11688080793",
+  "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "settings": {
+    "batches": 100,
+    "inactive": 10,
+    "particles_per_batch": 1000,
+    "threads": 1,
+    "seed_base": 650000,
+    "seed_policy": "seed_base + stable candidate order index"
+  },
+  "mgxs": {
+    "sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+    "byte_identical_to_archived_production": true
+  },
+  "metric_definition": "max(assembly-integrated fission rate) / mean(assembly-integrated fission rate)",
+  "metric_scope": "dimensionless fission-rate proxy; not absolute power or a reactor-safety metric",
+  "uncertainty_note": "One low-budget seed per layout; mesh-bin covariance is not propagated. Do not use this result to claim an optimum.",
+  "results": [
+    {
+      "candidate_id": "c5g7-2x2-MMUU",
+      "layout_signature": "MMUU",
+      "seed": 650001,
+      "keff_mean": 1.1492881486159316,
+      "keff_std_dev": 0.0021150270057723824,
+      "fission_rate_peaking_factor": 1.280032300122174,
+      "assembly_integrated_fission_rate": {
+        "p00": 0.13789522850598657,
+        "p01": 0.07981594567798733,
+        "p10": 0.13845921159350005,
+        "p11": 0.07650373214997108
+      },
+      "statepoint_sha256": "41092dbf1e71a4f533d349e271c3e32c149c455efb28b5f6e8e51ed4641f6a3f",
+      "settings_sha256": "162507a0ad34ed0684566819f3d4032c94ecbfd1d95d5ee5cd4cdf330eb8512a",
+      "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+      "uncertainty_status": "not_propagated_for_correlated_mesh_bins; estimate across independent statepoints instead",
+      "status": "exploratory_smoke_only"
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUMU",
+      "layout_signature": "MUMU",
+      "seed": 650002,
+      "keff_mean": 1.1402566218429337,
+      "keff_std_dev": 0.0029496245037420126,
+      "fission_rate_peaking_factor": 1.2806572927882933,
+      "assembly_integrated_fission_rate": {
+        "p00": 0.13615167571011666,
+        "p01": 0.12441194678659923,
+        "p10": 0.08517746440028685,
+        "p11": 0.0795145266908676
+      },
+      "statepoint_sha256": "2091ce2b390728b55e0b49d72b404fda65a81f736bf0a9b6f1b40b004ffda0f8",
+      "settings_sha256": "c7dadbeb7c67ca3cb4875499cb9f678b9c128644f4a3d77182c6a601167746c3",
+      "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+      "uncertainty_status": "not_propagated_for_correlated_mesh_bins; estimate across independent statepoints instead",
+      "status": "exploratory_smoke_only"
+    },
+    {
+      "candidate_id": "c5g7-2x2-MUUM",
+      "layout_signature": "MUUM",
+      "seed": 650003,
+      "keff_mean": 1.1567659120540748,
+      "keff_std_dev": 0.002574399178898348,
+      "fission_rate_peaking_factor": 1.2991971356241199,
+      "assembly_integrated_fission_rate": {
+        "p00": 0.14183129415537077,
+        "p01": 0.11978665989710664,
+        "p10": 0.11529062020988415,
+        "p11": 0.05976509216236189
+      },
+      "statepoint_sha256": "d5b67a593213d9d1e11575d662fab1acf772af44ac55c0b2bca9c2b0cb1a9628",
+      "settings_sha256": "3c39bf08d821f07c36c8cc60fabcc7502b47eae49cd0535264f9d7bf43f573f5",
+      "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+      "uncertainty_status": "not_propagated_for_correlated_mesh_bins; estimate across independent statepoints instead",
+      "status": "exploratory_smoke_only"
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMMU",
+      "layout_signature": "UMMU",
+      "seed": 650000,
+      "keff_mean": 1.182230834182618,
+      "keff_std_dev": 0.00258696139274484,
+      "fission_rate_peaking_factor": 1.8321702792747971,
+      "assembly_integrated_fission_rate": {
+        "p00": 0.20580882950841006,
+        "p01": 0.09145629868411131,
+        "p10": 0.09031777744320144,
+        "p11": 0.061739587664130416
+      },
+      "statepoint_sha256": "03e93caed08eec776b33d8c01bb82b2f0ef1a85e728862ecc15e7ecb599fe3e9",
+      "settings_sha256": "ec5d1565efc8fa5e6b7e3ed76bd5ddc79e7040fcd11ffaac5d2a575f406ef8ca",
+      "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+      "uncertainty_status": "not_propagated_for_correlated_mesh_bins; estimate across independent statepoints instead",
+      "status": "exploratory_smoke_only"
+    },
+    {
+      "candidate_id": "c5g7-2x2-UMUM",
+      "layout_signature": "UMUM",
+      "seed": 650004,
+      "keff_mean": 1.2058318806719652,
+      "keff_std_dev": 0.0022570265629848125,
+      "fission_rate_peaking_factor": 1.8485296159899955,
+      "assembly_integrated_fission_rate": {
+        "p00": 0.2179405479671325,
+        "p01": 0.08210737766865428,
+        "p10": 0.123418285727025,
+        "p11": 0.048131421873727126
+      },
+      "statepoint_sha256": "ac1d399f9eac3cd9168089119da1ef1d0ad4ddbf5ae49437140f85b373b61031",
+      "settings_sha256": "c6f7e6c78688de10f3bce552c92ea68f26156dba67c4b77865ae0541e96b5769",
+      "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+      "uncertainty_status": "not_propagated_for_correlated_mesh_bins; estimate across independent statepoints instead",
+      "status": "exploratory_smoke_only"
+    },
+    {
+      "candidate_id": "c5g7-2x2-UUMM",
+      "layout_signature": "UUMM",
+      "seed": 650005,
+      "keff_mean": 1.2027671863108989,
+      "keff_std_dev": 0.0028512581065987925,
+      "fission_rate_peaking_factor": 1.8003373450486162,
+      "assembly_integrated_fission_rate": {
+        "p00": 0.20977535407642084,
+        "p01": 0.12681496430353406,
+        "p10": 0.08111087950755098,
+        "p11": 0.04837890571831272
+      },
+      "statepoint_sha256": "771ea75cada2c159cf1663887bb576d1d11d76a2301e40767e54c052f9c75749",
+      "settings_sha256": "cafb3ddcc73630e92bc0aa47cbe480bae9958713c8daf8f33fee85ef285a7988",
+      "mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+      "uncertainty_status": "not_propagated_for_correlated_mesh_bins; estimate across independent statepoints instead",
+      "status": "exploratory_smoke_only"
+    }
+  ]
+}

@@ -60,3 +60,17 @@ Details: [Stage 3–4 statepoint provenance audit](stage34_statepoint_provenance
 Safe: “CB-PFR is an open research prototype with a reproducible synthetic benchmark, an independently audited C5G7/OpenMC baseline statepoint, and an 18-run exploratory C5G7 assembly-placement smoke study with repeated seeds. Benchmark-grade candidate evaluation and the legacy-QUBO-to-C5G7 mapping remain unresolved.”
 
 Unsafe without new evidence: “physically validated optimizer,” “validated reactor design,” “six candidates successfully compared,” “independent three-seed confirmation,” or any reactor-safety claim.
+
+
+## Follow-up implementation: validation gates and explicit design QUBO
+
+The follow-up branch `research-gates-convergence-mapping-20261011` adds executable work for the three outstanding areas:
+
+- `src/cbpfr/c5g7_design_qubo.py`: exact four-variable QUBO for the **separate** 2×2 UO2/MOX placement problem. The constraint `A(sum(y)-2)^2` has exactly six zero-energy assignments. Exhaustive unit tests cover all 16 binary vectors and verify the QUBO expansion.
+- `config/benchmarks/c5g7_validation_protocol.json`: staged gates for model identity, canonical k-effective screening, spatial tally validation, repeated-run evaluation, and predeclared optimization objective. Thresholds are explicitly labelled project screening limits, not official OECD/NEA acceptance criteria.
+- `scripts/audit_c5g7_validation_gates.py`: machine-checks common compute settings, unique seeds and statepoint hashes, MGXS consistency, HDF5 audit status, repeated-run spread, and provisional canonical scalar checks. It fails closed on data-integrity problems and never treats a scalar match as full validation.
+- `reports/C5G7_VALIDATION_AND_MAPPING_PLAN.md`: scientific decision record separating code-ready work from review gates.
+- `reports/c5g7_input_provenance_comparison_2026-10-11.md` and `results/c5g7_input_provenance_comparison_2026-10-11.json`: production and regenerated canonical geometry/tally/plot XML match; material definitions match after normalizing the local path; production and regenerated canonical MGXS files are byte-identical. The one-ULP MGXS metadata discrepancy was traced to the `np.logspace` endpoint and fixed by explicit endpoint normalization; the normalized 18-run rerun now shares the production-identical MGXS hash.
+- `results/c5g7_smoke_validation_gate_audit_2026-10-11.json`: the 18-run smoke dataset passes data-integrity checks but correctly fails the provisional canonical scalar/precision screen.
+
+The intermediate run budget (2,000 batches, 100 inactive, 5,000 particles/batch, three seeds/layout) is currently executing in [the dedicated workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38100178360). It is an intermediate screen, not automatically benchmark-grade or guaranteed to be converged. The old categorical burnup-state QUBO remains unmapped to C5G7 materials. Full validation still requires exact input/material/nuclear-data review and benchmark-compatible spatial reference tallies. See the follow-up pull request for CI results.

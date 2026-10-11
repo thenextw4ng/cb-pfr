@@ -1,0 +1,106 @@
+name: C5G7 intermediate-budget repeatability screen
+
+on:
+  workflow_dispatch:
+    inputs:
+      batches:
+        description: Total batches per OpenMC run (intermediate screen default)
+        required: true
+        default: "2000"
+        type: string
+      inactive:
+        description: Inactive batches per run
+        required: true
+        default: "100"
+        type: string
+      particles:
+        description: Particles per batch
+        required: true
+        default: "5000"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: c5g7-intermediate-screen
+  cancel-in-progress: false
+
+jobs:
+  repeated-candidate-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate requested budget
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          batches = int(os.environ["BATCHES"])
+          inactive = int(os.environ["INACTIVE"])
+          particles = int(os.environ["PARTICLES"])
+          if batches < 2 or inactive < 0 or inactive >= batches or particles < 1:
+              raise SystemExit("Require batches >= 2, 0 <= inactive < batches, particles >= 1")
+          print(f"Budget: batches={batches}, inactive={inactive}, particles/batch={particles}")
+          PY
+        env:
+          BATCHES: ${{ inputs.batches || '2000' }}
+          INACTIVE: ${{ inputs.inactive || '100' }}
+          PARTICLES: ${{ inputs.particles || '5000' }}
+      - name: Install OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-intermediate
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Stage and verify pinned upstream C5G7 source
+        shell: bash -el {0}
+        run: |
+          python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected = json.loads(Path("config/benchmarks/c5g7_2x2_design_space.json").read_text())
+          actual = json.loads(Path("/tmp/mit-crpg-benchmarks/UPSTREAM_PROVENANCE.json").read_text())
+          if actual["source_commit"] != expected["source_model"]["expected_upstream_commit"]:
+              raise SystemExit("upstream source commit changed; review the pin before running")
+          print("Pinned upstream commit verified:", actual["source_commit"])
+          PY
+      - name: Run three independent seed rounds for all six layouts
+        shell: bash -el {0}
+        env:
+          BATCHES: ${{ inputs.batches || '2000' }}
+          INACTIVE: ${{ inputs.inactive || '100' }}
+          PARTICLES: ${{ inputs.particles || '5000' }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c5g7-intermediate
+          for seed_base in 720000 730000 740000; do
+            python scripts/run_c5g7_layout_study.py \
+              --source-root /tmp/mit-crpg-benchmarks \
+              --design-space config/benchmarks/c5g7_2x2_design_space.json \
+              --output "/tmp/c5g7-intermediate/round_${seed_base}" \
+              --mode run --batches "${BATCHES}" --inactive "${INACTIVE}" \
+              --particles "${PARTICLES}" --threads 1 --seed-base "${seed_base}"
+            python scripts/audit_c5g7_smoke_statepoints.py \
+              --study-summary "/tmp/c5g7-intermediate/round_${seed_base}/STUDY_SUMMARY.json" \
+              --out "/tmp/c5g7-intermediate/round_${seed_base}/analysis/raw_hdf5_audit.json"
+          done
+      - name: Analyze independent-run spread and rank stability
+        shell: bash -el {0}
+        run: |
+          python scripts/analyze_c5g7_repeatability.py \
+            --study-root /tmp/c5g7-intermediate \
+            --outdir /tmp/c5g7-intermediate/analysis
+          cat /tmp/c5g7-intermediate/analysis/REPEATABILITY_ANALYSIS.md
+          cat /tmp/c5g7-intermediate/analysis/repeatability_analysis.json
+      - name: Preserve statepoints and analysis even if a gate fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-intermediate-repeatability-${{ inputs.batches || '2000' }}-${{ inputs.particles || '5000' }}
+          path: /tmp/c5g7-intermediate/
+          if-no-files-found: error
