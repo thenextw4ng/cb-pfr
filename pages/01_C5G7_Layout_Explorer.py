@@ -74,6 +74,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 </main>
 <aside class="right"><div class="info"><div class="info-title">GEOMETRY INFORMATION</div><div class="row"><span>Model</span><span>C5G7 layout study</span></div><div class="row"><span>Representation</span><span>2×2 positions</span></div><div class="row"><span>Material types</span><span>2</span></div><div class="row"><span>Layout records</span><span id="nLayouts">—</span></div></div><div class="info"><div class="info-title">SELECTED CANDIDATE</div><div class="row"><span>Candidate ID</span><span id="candidateId">—</span></div><div class="row"><span>Signature</span><span id="signature">—</span></div><div class="row"><span>Seed</span><span id="seed2">—</span></div><div class="row"><span>Canonical</span><span id="canonical2">—</span></div></div><div class="info"><div class="info-title">LAYERS</div><div class="layers"><label><input type="checkbox" data-layer="labels" checked> Position labels</label><label><input type="checkbox" data-layer="pins" checked> Grid overlay</label><label><input type="checkbox" data-layer="outline" checked> Outer outline</label></div><div class="caption" style="line-height:1.5;margin-top:10px">These controls affect the schematic only.</div></div><div class="info"><div class="info-title">MGXS PROVENANCE</div><div class="row"><span>Hash before</span><span id="hash0">—</span></div><div class="row"><span>Hash after</span><span id="hash1">—</span></div><div class="caption" style="line-height:1.5">Hash equality is an integrity check, not physical validation.</div></div></aside>
 </div><div class="bottom"><span><i class="dot"></i> Evidence CSV loaded</span><span>CB-PFR</span><span id="footCandidate">Candidate: —</span><span id="footKeff">k-effective: —</span><span style="margin-left:auto">Research prototype · not benchmark-grade</span></div></div>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
 const DATA=__DATA__, NS="http://www.w3.org/2000/svg", byId=id=>document.getElementById(id);
 const layers={labels:true,pins:true,outline:true};
@@ -123,7 +124,6 @@ document.querySelectorAll("[data-jump]").forEach(n=>n.addEventListener("click",(
 document.querySelectorAll("[data-tab]").forEach(n=>n.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===n));const is3d=n.dataset.tab==="3d";byId("threeViewport").style.display=is3d?"block":"none";byId("geometry").style.display=is3d?"none":"block";if(is3d){initThree();byId("threeViewport").scrollIntoView({behavior:"smooth",block:"nearest"});}else if(n.dataset.tab==="comparison")byId("qubo").scrollIntoView({behavior:"smooth",block:"nearest"});else if(n.dataset.tab==="materials")byId("prov").scrollIntoView({behavior:"smooth",block:"nearest"});else window.scrollTo({top:0,behavior:"smooth"});}));
 byId("nLayouts").textContent=DATA.length;render();renderPlotly();
 </script>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <script>
 function renderPlotly(){
  const host=byId("plotlyChart");
