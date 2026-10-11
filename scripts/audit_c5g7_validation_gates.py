@@ -93,6 +93,7 @@ def audit_rows(rows: list[dict], reference_keff: float = 1.18655,
             and all(r["raw_hdf5_audit"] == "PASS" for r in group)
             and len({r["statepoint_sha256"] for r in group}) == len(group)
         )
+        is_canonical_reference = group[0]["layout_signature"] == "UMMU"
         scalar_screen_pass = (
             complete
             and abs(delta_pcm) <= max_delta_pcm
@@ -102,16 +103,18 @@ def audit_rows(rows: list[dict], reference_keff: float = 1.18655,
         per_candidate.append({
             "candidate_id": cid,
             "layout_signature": group[0]["layout_signature"],
+            "is_canonical_reference_case": is_canonical_reference,
             "replicate_count": len(group),
             "unique_seed_count": len(set(group_seeds)),
             "mean_keff": mean_keff,
             "between_run_sample_sd": between_sd,
             "pooled_within_run_reported_sd": pooled_within,
             "max_single_run_sd_pcm": run_sd_max_pcm,
-            "reference_delta_pcm": delta_pcm,
-            "combined_uncertainty_z": z_score,
+            "reference_delta_pcm_descriptive_only": delta_pcm,
+            "combined_uncertainty_z_descriptive_only": z_score,
             "repeatability_data_complete": complete,
-            "keff_scalar_screen_pass": scalar_screen_pass,
+            "keff_reference_screen_pass": scalar_screen_pass if is_canonical_reference else None,
+            "noncanonical_reference_comparison": "descriptive_only" if not is_canonical_reference else "canonical_screen",
             "ranking_is_descriptive_only": True,
         })
     canonical = next((c for c in per_candidate if c["layout_signature"] == "UMMU"), None)
@@ -121,7 +124,7 @@ def audit_rows(rows: list[dict], reference_keff: float = 1.18655,
     ))
     if not global_pass:
         status = "FAIL_DATA_INTEGRITY_OR_COMMON_SETTINGS"
-    elif canonical is None or not canonical["keff_scalar_screen_pass"]:
+    elif canonical is None or canonical["keff_reference_screen_pass"] is not True:
         status = "FAIL_OR_INCOMPLETE_CANONICAL_KEFF_SCREEN"
     elif not model_identity_reviewed:
         status = "BLOCKED_MODEL_IDENTITY_REVIEW"
