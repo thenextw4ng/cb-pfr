@@ -10,6 +10,7 @@
 - Experimental observable: Cycle 1 day-0 tilt-corrected radial map at `measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv`, restricted to the 58 instrumented labels identified by `radial_measurements_full.csv`
 - Experimental state summary: `measurements/detector_signals/cycle_1/0/summary.csv`
 - Runner: `scripts/run_beavrs_cycle1_map_validation.py`
+- Coordinate crosswalk export: `beavrs_coordinate_crosswalk.csv` (176 assembly rows; 58 instrumented detector rows; SHA-256 recorded in the run manifest)
 - Workflow: `.github/workflows/beavrs-cycle1-map-validation.yml`
 - Workflow accepts configurable batch, inactive-batch, and particles-per-batch settings; default is 500 batches, 50 inactive, 3,000 particles/batch.
 - Nuclear data: OpenMC official ENDF/B-VII.1 HDF5 library, archive URL pinned in the workflow; the workflow records archive and `cross_sections.xml` SHA-256 hashes.
@@ -111,3 +112,8 @@ A diagnostic of the archived tally grid evaluated the current mapping and altern
 The next run should be gated on an independent, documented coordinate crosswalk from each detector label to (a) the BEAVRS assembly label, (b) the physical x-y assembly center in the generated geometry, and (c) the exact mesh bin. The crosswalk should be reviewed without looking at the resulting correlations, then tested with a synthetic asymmetric map whose expected orientation is known. Only after that audit should a new high-budget transport be launched. The current U-235 run remains NOT_ESTABLISHED for physical validation.
 
 The earlier 17×17 / ±8.5-pitch wording in this report was stale and described a prior, superseded mesh configuration; the actual corrected runner and archived run use 15×15 / ±7.5 pitches.
+
+
+### Coordinate crosswalk artifact
+
+The runner now emits beavrs_coordinate_crosswalk.csv, listing the upstream template token, zero-based template row/column, one-based mesh x/y bin, calculated mesh-center coordinates in centimetres, and whether the assembly is one of the 58 instrumented positions. Its SHA-256 and row counts are recorded in the run manifest. This improves traceability and enables an independent review of the source-to-mesh mapping. It is explicitly marked SOURCE_DERIVED_CROSSWALK; GEOMETRY_PLOT_REVIEW_REQUIRED: because the table is derived from the same source template and mapping convention, it is not itself an independent proof of physical orientation. A geometry plot and benchmark detector-layout cross-check remain a precondition for another high-budget transport run.

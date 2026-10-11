@@ -23,9 +23,37 @@ class BeavrsResultAuditTests(unittest.TestCase):
         (root / "source_provenance.txt").write_text(f"BEAVRS_COMMIT={PINNED_BEAVRS_COMMIT}\n")
         (root / "nuclear_data_archive.sha256").write_text("a" * 64 + "  data.tar.xz\n")
         (root / "cross_sections_xml.sha256").write_text("b" * 64 + "  cross_sections.xml\n")
+        crosswalk_path = root / "beavrs_coordinate_crosswalk.csv"
+        with crosswalk_path.open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=[
+                "assembly", "template_token", "template_row_index_0based",
+                "template_column_index_0based", "mesh_x_index_1based",
+                "mesh_y_index_1based", "mesh_center_x_cm", "mesh_center_y_cm",
+                "is_instrumented_detector",
+            ])
+            writer.writeheader()
+            for i in range(176):
+                label = labels[i] if i < len(labels) else f"X{i + 1}"
+                writer.writerow({
+                    "assembly": label,
+                    "template_token": label,
+                    "template_row_index_0based": i // 19,
+                    "template_column_index_0based": i % 19,
+                    "mesh_x_index_1based": i % 15 + 1,
+                    "mesh_y_index_1based": i // 15 % 15 + 1,
+                    "mesh_center_x_cm": (i % 15 - 7) * 21.50364,
+                    "mesh_center_y_cm": (i // 15 % 15 - 7) * 21.50364,
+                    "is_instrumented_detector": label in measured,
+                })
         manifest = {
             "upstream_commit": PINNED_BEAVRS_COMMIT,
             "model_input_sha256": {"geometry.xml": sha256_file(root / "geometry.xml")},
+            "coordinate_crosswalk": {
+                "file": crosswalk_path.name,
+                "sha256": sha256_file(crosswalk_path),
+                "assembly_rows": 176,
+                "instrumented_detector_rows": 58,
+            },
         }
         (root / "beavrs_run_manifest.json").write_text(json.dumps(manifest))
         with (root / "beavrs_cycle1_day0_map_comparison.csv").open("w", newline="") as handle:
