@@ -29,7 +29,7 @@ The implementation is `src/cbpfr/c5g7_design_qubo.py`. Tests exhaust all (2^4=16
 
 ### Selection QUBO after OpenMC scoring
 
-A second, separate QUBO is now implemented for selecting among already-scored C5G7 layouts. It uses one-hot candidate variables (z_k\in\{0,1\}), not the legacy burnup-state variables. Its energy is
+A second, separate QUBO is now implemented for selecting among already-scored C5G7 layouts. It uses one-hot binary candidate variables z_k ∈ {0, 1}, not the legacy burnup-state variables. Its energy is
 
 ```text
 E(z) = sum_k [mean(F_k) + lambda * SD_between_seeds(F_k)] * z_k
@@ -37,7 +37,7 @@ E(z) = sum_k [mean(F_k) + lambda * SD_between_seeds(F_k)] * z_k
        + P * sum_k (1 - feasible_k) * z_k
 ```
 
-Here (F_k) is the assembly-integrated fission-rate peaking proxy, and `feasible_k` is true only when the descriptive interval `mean(k_eff) +/- zeta * SD_between_seeds(k_eff)` lies fully inside a user-specified `[k_eff_min, k_eff_max]` band. The band is required as an explicit command-line input; it is not guessed from the benchmark reference because the six arrangements are design variants, not six official benchmark cases. The script `scripts/build_c5g7_layout_selection_qubo.py` builds upper-triangular QUBO terms and refuses to emit a selectable QUBO if no candidate is feasible.
+Here F_k is the assembly-integrated fission-rate peaking proxy, and `feasible_k` is true only when the descriptive interval `mean(k_eff) +/- zeta * SD_between_seeds(k_eff)` lies fully inside a user-specified `[k_eff_min, k_eff_max]` band. The band is required as an explicit command-line input; it is not guessed from the benchmark reference because the six arrangements are design variants, not six official benchmark cases. The script `scripts/build_c5g7_layout_selection_qubo.py` builds upper-triangular QUBO terms and refuses to emit a selectable QUBO if no candidate is feasible.
 
 This is a **new C5G7-specific reformulation**, not a physical mapping of `fresh / once_burned / twice_burned` to UO2/MOX. It makes the integration executable while keeping the unresolved legacy mapping explicit. The three-seed smoke variability envelope is descriptive, not a calibrated confidence interval, so the generated QUBO is only as defensible as the supplied band and the quality of its candidate estimates.
 
