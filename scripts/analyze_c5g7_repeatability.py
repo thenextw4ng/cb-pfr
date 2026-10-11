@@ -66,7 +66,7 @@ def main():
                 p.error(f"{rd.name}/{cid}: required file missing")
             sp_hash,settings_hash,mgxs_hash=sha(sp),sha(settings),sha(mgxs)
             expected=c.get("output_hashes_after_run") or {}
-            if expected.get("model/2d/statepoint.100.h5")!=sp_hash or expected.get("model/2d/settings.xml")!=settings_hash:
+            if expected.get(statepoint_rel)!=sp_hash or expected.get("model/2d/settings.xml")!=settings_hash:
                 p.error(f"{rd.name}/{cid}: output hash mismatch")
             if mgxs_hash!=phys.get("mgxs_sha256_before_transport") or mgxs_hash!=phys.get("mgxs_sha256_after_transport"):
                 p.error(f"{rd.name}/{cid}: MGXS hash mismatch")
