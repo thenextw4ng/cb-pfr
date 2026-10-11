@@ -8,6 +8,8 @@ on:
       - "scripts/run_c5g7_layout_study.py"
       - "scripts/audit_c5g7_smoke_statepoints.py"
       - "scripts/audit_c5g7_evidence.py"
+      - "scripts/analyze_c5g7_fission_objective_repeatability.py"
+      - "scripts/analyze_c5g7_assembly_fission.py"
       - "scripts/prepare_c5g7_reference.py"
       - "config/benchmarks/c5g7_2x2_design_space.json"
   pull_request:
@@ -81,6 +83,13 @@ jobs:
             --outdir /tmp/c5g7-repeatability/analysis
           cat /tmp/c5g7-repeatability/analysis/REPEATABILITY_ANALYSIS.md
           cat /tmp/c5g7-repeatability/analysis/repeatability_analysis.json
+      - name: Analyze fission-peaking objective and between-seed variability
+        shell: bash -el {0}
+        run: |
+          python scripts/analyze_c5g7_fission_objective_repeatability.py \
+            --study-root /tmp/c5g7-repeatability \
+            --outdir /tmp/c5g7-repeatability/fission-objective-analysis
+          cat /tmp/c5g7-repeatability/fission-objective-analysis/FISSION_OBJECTIVE_REPEATABILITY.md
       - name: Preserve all repeated-run statepoints and analysis
         if: always()
         uses: actions/upload-artifact@v4
