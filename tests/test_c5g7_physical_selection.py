@@ -14,6 +14,7 @@ def fixture_rows():
             rows.append({
                 "keff": keff,
                 "keff_sd": keff_sd,
+                "seed_i": seed_base + index,
                 "fpeak": fpeak,
                 "round": f"round_{seed_base}",
                 "candidate_id": f"c5g7-2x2-{sig}",
