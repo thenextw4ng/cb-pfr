@@ -1,0 +1,74 @@
+{
+  "study_id": "cbpfr_fixed_budget_ranking_selection_exploratory_simple_run_v1",
+  "status": "exploratory_run_completed",
+  "seed": 20261011,
+  "independent_pools": 200,
+  "candidates_per_pool": 12,
+  "feasibility_threshold": 0.98,
+  "cbpfr_z": 1.96,
+  "uniform_margin": 0.008,
+  "methods": [
+    "qubo_only",
+    "point_estimate",
+    "cb_pfr",
+    "uniform_margin"
+  ],
+  "synthetic_only": true,
+  "physical_validation": "NOT_ESTABLISHED",
+  "aggregate": {
+    "qubo_only": {
+      "pools": 200,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.86,
+      "mean_selected_latent_response": 0.96659
+    },
+    "point_estimate": {
+      "pools": 200,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.93,
+      "mean_selected_latent_response": 0.96418
+    },
+    "cb_pfr": {
+      "pools": 200,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.995,
+      "mean_selected_latent_response": 0.95966
+    },
+    "uniform_margin": {
+      "pools": 200,
+      "pool_size": 12,
+      "selected_true_feasibility_rate": 0.96,
+      "mean_selected_latent_response": 0.96138
+    }
+  },
+  "paired_cbpfr_minus_baseline": {
+    "point_estimate": {
+      "paired_feasibility_rate_difference": 0.065,
+      "normal_approx_95pct_interval": [
+        0.030747520355322522,
+        0.09925247964467748
+      ],
+      "cb_pfr_feasible_baseline_infeasible": 13,
+      "cb_pfr_infeasible_baseline_feasible": 0
+    },
+    "uniform_margin": {
+      "paired_feasibility_rate_difference": 0.035,
+      "normal_approx_95pct_interval": [
+        0.00946550859609142,
+        0.06053449140390858
+      ],
+      "cb_pfr_feasible_baseline_infeasible": 7,
+      "cb_pfr_infeasible_baseline_feasible": 0
+    },
+    "qubo_only": {
+      "paired_feasibility_rate_difference": 0.135,
+      "normal_approx_95pct_interval": [
+        0.08752068210114321,
+        0.1824793178988568
+      ],
+      "cb_pfr_feasible_baseline_infeasible": 27,
+      "cb_pfr_infeasible_baseline_feasible": 0
+    }
+  },
+  "interpretation": "Exploratory result under this explicitly constructed toy data-generating process only; not confirmatory evidence, not reactor/transport validation, and not evidence of general superiority. Intervals are simple normal approximations."
+}
