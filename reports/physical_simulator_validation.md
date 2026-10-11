@@ -56,6 +56,12 @@ The [input-provenance comparison report](c5g7_input_provenance_comparison_2026-1
 
 The [six-layout fission-rate proxy report](c5g7_assembly_fission_proxy_smoke_2026-10-11.md) and [CSV results](../results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv) now report assembly-integrated fission tally and a normalized peaking factor for all six layouts. This was one seed per layout at 100 batches / 10 inactive / 1,000 particles per batch. The metric is a fission-rate proxy, not absolute power; mesh-bin covariance is not propagated, and the ranking is not an optimization conclusion. These historical results used nonstandard log-spaced energy-group boundaries and must not be used for standard C5G7 physical ranking. The corrected runner now regenerates MGXS with the standard group boundaries.
 
+## Corrected standard-group smoke reanalysis
+
+A fresh three-round, six-layout smoke study completed after the group-boundary correction. All 18 runs passed the MGXS group-structure audit, used the same corrected MGXS file hash, and produced unique statepoint hashes. The fission-rate shape proxy and between-seed variability are documented in the [corrected repeatability report](c5g7_corrected_group_repeatability_smoke_2026-10-11.md).
+
+This is useful exploratory evidence for the software pipeline and the newly separated C5G7 layout-selection objective. It is not benchmark-grade convergence: the runs used 100 batches, 10 inactive batches, and 1,000 particles per batch. The proxy is not absolute power; no design-specific k_eff acceptance band is established; and the legacy burnup-state QUBO remains unmapped to UO2/MOX material definitions. No candidate is recommended.
+
 ## What remains unverified
 
 1. The historical production statepoint's scalar/settings/tally metadata passed the OpenMC API audit, and the XML comparison confirms geometry/tally/plot equality plus material-definition equality after normalizing the local cross-section path. However, its MGXS uses nonstandard energy-group boundaries. A corrected standard-group transport rerun and boundary-condition/composition review against the primary specification are still required.
