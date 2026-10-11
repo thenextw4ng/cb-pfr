@@ -114,7 +114,9 @@ def prepare(args: argparse.Namespace) -> None:
     tally = openmc.Tally(name=TALLY_NAME)
     tally.filters = [openmc.MeshFilter(mesh)]
     tally.scores = ["fission"]
-    builder.tally_meshes = [mesh]
+    # OpenMC 0.15.3 serializes meshes referenced by MeshFilter directly in tallies.xml;
+    # the upstream BEAVRS helper's legacy Tallies.add_mesh call is not available.
+    builder.tally_meshes = []
     builder.tallies = [tally]
     builder.model = builder.build_openmc_model()
     builder.model.settings.seed = args.seed
