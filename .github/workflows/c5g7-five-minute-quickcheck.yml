@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           OUT=/tmp/c5g7-five-minute-quickcheck
-          mkdir -p "$OUT"
+          # The study runner requires a non-existent output path; do not mkdir it first.
           timeout 120s python scripts/run_c5g7_layout_study.py \
             --source-root /tmp/mit-crpg-benchmarks \
             --design-space config/benchmarks/c5g7_2x2_design_space.json \
