@@ -2,9 +2,9 @@
 
 ## Evidence classification
 
-**Achieved:** software verification plus a recorded C5G7/OpenMC execution baseline.  
-**Limited scalar comparison:** the recorded production baseline is numerically close to the published 2-D C5G7 reference.  
-**Not achieved:** complete benchmark verification, benchmark-grade candidate evaluation, or CB-PFR physical-hypothesis validation.
+**Achieved:** software verification and independent extraction of the recorded production statepoint.  
+**Withdrawn:** the earlier claim that the production scalar is benchmark-consistent. A critical audit found nonstandard log-spaced energy-group boundaries in the historical MGXS.  
+**Not achieved:** standard-C5G7 benchmark verification, corrected high-budget candidate evaluation, or CB-PFR physical-hypothesis validation.
 
 The executed model is identified in the local manifest as a 2-D, seven-group C5G7 eigenvalue run. The official benchmark literature reports a reference eigenvalue of approximately 1.18655 for the 2-D C5G7 problem; see the OECD/NEA-hosted benchmark report and the later summary of the reference result [1, 2].
 
@@ -26,15 +26,13 @@ The executed model is identified in the local manifest as a 2-D, seven-group C5G
 
 **Provenance status:** these values were initially transcribed from the researcher's terminal output, then independently read through OpenMC 0.16.0; the API-derived mean and standard deviation matched the recorded summary. A separate raw-HDF5 audit of the committed ZIP also passed 10/10 checks across Python 3.10, 3.11, and 3.12. The audited statepoint member is `c5g7-run/2d/statepoint.20000.h5`, SHA-256 `0d76dc1a14a2b74a388c01883f01e5c3095480d53eee885910ca2a0c57e6b882`. This verifies extraction and consistency of the recorded metadata, not the correctness of geometry, nuclear data, or benchmark correspondence.
 
-## Scalar comparison with the standard 2-D C5G7 reference
+## Historical scalar comparison — withdrawn as benchmark evidence
 
-Using k_ref = 1.18655, the recorded baseline differs by:
+The recorded production run reported k_eff = 1.1863941447 with standard deviation 5.6113e-05. An earlier comparison to the published value 1.18655 gave a difference near -15.6 pcm. **Do not interpret that agreement as benchmark validation.**
 
-- Absolute difference: -0.0001558553
-- Difference in pcm: approximately -15.6 pcm
-- Relative difference: approximately -0.0131%
+The historical MGXS was generated with np.logspace(-5, 7, 8), whereas the standard C5G7 seven-group boundaries are [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV. The old production and smoke files can be byte-identical to each other while both encode the wrong group boundaries. The scalar difference and combined-uncertainty calculation are therefore withdrawn as a validation argument.
 
-A published reference uncertainty of approximately 9.5 pcm is reported in a later C5G7 benchmark comparison [2]. Combining that uncertainty with the recorded baseline's reported standard deviation gives an approximate combined standard uncertainty of 11.0 pcm; the difference is about 1.4 combined standard deviations. This is a **limited scalar consistency check**, conditional on the production model, nuclear data, and benchmark variant matching the reference assumptions. It is not sufficient to claim full benchmark validation.
+The corrected runner now substitutes the standard boundary list and checks the generated MGXS root group-structure attribute before transport. A new corrected high-budget run must be completed and the model reviewed against the primary specification before any reference comparison is reinstated.
 
 ### Reference-value correction
 
@@ -68,7 +66,7 @@ The [six-layout fission-rate proxy report](c5g7_assembly_fission_proxy_smoke_202
 
 ## Conclusion
 
-The recorded production scalar is consistent in scale with the published 2-D C5G7 reference, and its extraction has now been independently cross-checked from the committed HDF5 bytes. Exact model/nuclear-data correspondence and full benchmark acceptance remain unverified. Six layouts have exploratory smoke results, three-seed repeatability data at low budget, and one-seed assembly fission-rate proxy outputs. No benchmark-grade six-candidate evaluation or physical CB-PFR validation is established.
+The recorded production scalar and archived statepoint bytes have been independently audited, but the historical MGXS energy-group structure is nonstandard and the previous scalar-reference comparison is withdrawn. The corrected runner now enforces the standard seven-group boundary list, but corrected transport results and primary-specification review are still required. Historical six-layout smoke and repeatability results remain pipeline evidence only. No standard-C5G7 benchmark acceptance, benchmark-grade six-candidate evaluation, or physical CB-PFR validation is established.
 
 ## References
 
