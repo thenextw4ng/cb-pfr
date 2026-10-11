@@ -151,7 +151,7 @@ def run_integrated_pipeline(
             },
             "post_physics_selector_formulation": {
                 "formulation_id": "cbpfr-c5g7-post-physics-one-hot-v1",
-                "variable_order": selection.get("qubo", {}).get("variable_order", []),
+                "variable_order": (selection.get("qubo") or {}).get("variable_order", []),
                 "constructed_only_after_physics_screen": True,
             },
         },
