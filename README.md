@@ -70,12 +70,12 @@ A future physical study requires documented geometry, material/depletion states,
 
 ## Evidence archives and local OpenMC baseline
 
-The `openmc-evidence-20261011` branch preserves two separate archives:
+The `main` branch preserves two separate archives:
 
 - `OpenMC_HDF5_Evidence_2026-10-11.zip`: local C5G7/OpenMC HDF5, XML, log, and run metadata supplied for audit.
 - `CBPFR_ReactorQ__Archive_2026-10-11.zip`: 86 historical project artifacts recovered from prior conversations and the ChatGPT Library.
 
-Archive integrity is checked in CI with `scripts/audit_evidence_archive.py`. The OpenMC audit workflow reads all four archived statepoints with OpenMC 0.16.0, checks the production (k_\mathrm{eff}) summary, inventories input hashes/settings, summarizes tally uncertainty, and creates mesh-index plots. This verifies the archived scalar and data extraction, not benchmark validity or candidate-level physical validation.
+Archive integrity is checked in CI with `scripts/audit_evidence_archive.py`. The OpenMC audit workflow reads all four archived statepoints with OpenMC 0.16.0, checks the production keff summary, inventories input hashes/settings, summarizes tally uncertainty, and creates mesh-index plots. A second raw-HDF5 CI check independently reads the production statepoint bytes and passed 10/10 metadata, eigenvalue, mesh-dimension, and score checks on Python 3.10, 3.11, and 3.12 ([workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38096943383)). These checks verify extraction and consistency, not benchmark validity or candidate-level physical validation.
 
 Reports: [production statepoint/tally audit](reports/openmc_statepoint_audit_2026-10-11.md), [Stage 3–4 provenance warning](reports/stage34_statepoint_provenance_audit_2026-10-11.md), and [remaining-work audit](reports/REMAINING_WORK_AUDIT_2026-10-11.md). The [OpenMC evidence workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209709) preserves the machine-derived JSON, CSV, settings audit, and six plots as a downloadable artifact.
 
