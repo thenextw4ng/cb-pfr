@@ -22,7 +22,7 @@
 | c5g7-2x2-UMUM | 1.20526283 | 0.00354565 | 0.00246122 | 1.441 | 1 |
 | c5g7-2x2-UUMM | 1.20556426 | 0.00315624 | 0.00289253 | 1.091 | 1 |
 
-Across the three rounds, the Spearman correlations between the descriptive k_eff rankings were 0.886, 0.943, and 0.943. Four of six layouts retained their exact rank across all rounds; two swapped adjacent positions.
+Across the three rounds, the Spearman correlations between the descriptive k_eff rankings were 0.886, 0.943, and 0.943. Two of six layouts retained their exact rank across all rounds; the other four shifted by one position.
 
 The between-run sample SD exceeded the pooled within-run reported Monte Carlo SD for five of six layouts. With only three low-budget repetitions, this is a **warning signal to investigate**, not proof that OpenMC underestimates uncertainty. The estimates are noisy and do not account for model bias or nuclear-data uncertainty.
 
@@ -48,3 +48,4 @@ Reproduce the comparison after downloading the original smoke artifact (run 3808
 - run_level_results.csv — all 18 runs, seeds, statepoint hashes, settings hashes, and raw-HDF5 audit status.
 - repeatability_analysis.json — machine-readable aggregate analysis.
 - repeatability_manifest.json — workflow artifact identity, settings, and MGXS semantic comparison.
+- mgxs_semantic_comparison.json — dataset-payload equality and the one-step root-attribute difference.
