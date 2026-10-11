@@ -23,7 +23,7 @@ This document is a fail-closed checklist for the CB-PFR / ReactorQ Studio submis
 2. **Physics benchmark model:** selected BEAVRS upstream revision, OpenMC model generator, experimental Cycle 1 day-0 data, nuclear-data provenance. Model runner/workflow committed.
 3. **Experimental comparison:** full-core OpenMC run, fission-map comparison, statepoint hashes, logs, residuals, uncertainty and acceptance-rule review. Running/pending; no successful result is assumed until the workflow is completed and audited.
 4. **QUBO-to-physics mapping:** keep the legacy burnup-state QUBO separate. The explicit 2×2 C5G7 UO2/MOX one-hot design is a separate reformulation and is not interchangeable with BEAVRS.
-5. **CB-PFR physical effectiveness:** use a defensible candidate space, a declared feasible region and objective, repeated physical evaluations, common budgets, uncertainty propagation, and baseline comparisons. Not yet established.
+5. **CB-PFR physical effectiveness:** a software integration smoke now passes on 18 corrected-group C5G7 runs and the exact one-hot QUBO enumerates 64 states. This only checks pipeline consistency under illustrative limits; a defensible candidate space, justified physical constraints, benchmark-grade repeated evaluations, uncertainty propagation, and baseline comparisons are still needed.
 6. **Release and claims audit:** preserve raw artifacts, document limitations, reproduce outputs from a clean checkout, and ensure every abstract/presentation claim maps to evidence. Final audit depends on stages 3–5.
 
 ## Quantum wording
