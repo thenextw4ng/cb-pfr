@@ -55,8 +55,16 @@ def analyze_study(study_root: Path) -> tuple[list[dict], list[dict], dict]:
             if result.get("layout_signature") != signature:
                 raise ValueError(f"{round_dir.name}/{candidate_id}: tally layout signature mismatch")
             output_hashes = case.get("output_hashes_after_run", {})
+            settings = summary.get("settings", {})
+            required_settings = ("batches", "inactive", "particles", "threads")
+            if any(key not in settings for key in required_settings):
+                raise ValueError(f"{round_dir.name}: study settings lack a complete common compute profile")
             run_rows.append({
                 "round": round_dir.name,
+                "batches": int(settings["batches"]),
+                "inactive": int(settings["inactive"]),
+                "particles_per_batch": int(settings["particles"]),
+                "threads": int(settings["threads"]),
                 "candidate_id": candidate_id,
                 "layout_signature": signature,
                 "seed": physical.get("seed", case.get("seed")),
@@ -66,7 +74,7 @@ def analyze_study(study_root: Path) -> tuple[list[dict], list[dict], dict]:
                 **{f"R_{position}": float(result["assembly_integrated_fission_rate"][position]) for position in POSITIONS},
                 "statepoint_sha256": output_hashes.get("model/2d/statepoint.100.h5"),
                 "mgxs_sha256": output_hashes.get("model/2d/mgxs.h5"),
-                "mgxs_group_structure_audit": physical.get("mgxs_group_structure_audit"),
+                "group_structure_audit": physical.get("mgxs_group_structure_audit"),
                 "mgxs_energy_group_boundaries_eV": ";".join(str(v) for v in edges),
                 "uncertainty_note": result["uncertainty_status"],
             })
