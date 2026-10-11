@@ -11,13 +11,13 @@
 - Experimental state summary: `measurements/detector_signals/cycle_1/0/summary.csv`
 - Runner: `scripts/run_beavrs_cycle1_map_validation.py`
 - Workflow: `.github/workflows/beavrs-cycle1-map-validation.yml`
-- Workflow accepts configurable batch, inactive-batch, and particles-per-batch settings; default is 250 batches, 30 inactive, 2,000 particles/batch.
+- Workflow accepts configurable batch, inactive-batch, and particles-per-batch settings; default is 500 batches, 50 inactive, 3,000 particles/batch.
 - Nuclear data: OpenMC official ENDF/B-VII.1 HDF5 library, archive URL pinned in the workflow; the workflow records archive and `cross_sections.xml` SHA-256 hashes.
 - Raw run logs, input files, statepoint and comparison outputs are uploaded as a GitHub Actions artifact.
 
 ## Observable and comparison method
 
-The BEAVRS day-0 measured map contains 58 instrumented assembly positions. The model runner constructs the full 3-D BEAVRS geometry using the frozen upstream builder, adds a 17×17×1 regular-mesh tally for the fission reaction rate over the active fuel height, extracts the tally bins corresponding to those 58 detector positions, and normalizes the calculated values and measured values separately to mean 1. It then reports:
+The BEAVRS day-0 measured map contains 58 instrumented assembly positions. The model runner constructs the full 3-D BEAVRS geometry using the frozen upstream builder, adds a 17×17×1 regular-mesh tally for the fission reaction rate over the active fuel height, with lateral bounds of ±8.5 assembly pitches so each mesh bin aligns to one assembly pitch, extracts the tally bins corresponding to those 58 detector positions, and normalizes the calculated values and measured values separately to mean 1. It then reports:
 
 - normalized-map RMSE and MAE;
 - mean absolute relative error;
@@ -65,4 +65,4 @@ Not supported by this workflow alone: “CB-PFR is fully physically validated,�
 
 ## First-run correction record
 
-The first completed OpenMC run exposed a mesh-extent error: 17 mesh bins were placed across only 16 assembly pitches. Its preliminary comparison returned (k_{eff}=0.998612pm0.001239), normalized-map RMSE 0.37981, and Pearson correlation −0.21228. These metrics are recorded for transparency, but that result is superseded and must not be used as validation evidence because the mesh did not align one-to-one with assembly pitch. The runner now uses ±8.5 assembly pitches, reports raw tally statistical uncertainty, and the workflow uses a higher default budget (500 batches, 50 inactive, 3,000 particles/batch) plus an independent artifact-integrity audit. The corrected run must complete and its output must be reviewed before any experimental-comparison claim is made.
+The first completed OpenMC run exposed a mesh-extent error: 17 mesh bins were placed across only 16 assembly pitches. Its preliminary comparison returned k_eff = 0.998612 ± 0.001239, normalized-map RMSE 0.37981, and Pearson correlation −0.21228. These metrics are recorded for transparency, but that result is superseded and must not be used as validation evidence because the mesh did not align one-to-one with assembly pitch. The runner now uses ±8.5 assembly pitches, reports raw tally statistical uncertainty, and the workflow uses a higher default budget (500 batches, 50 inactive, 3,000 particles/batch) plus an independent artifact-integrity audit. The corrected runs are tracked at [the lower-budget mesh-correction run](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116769919) and [the higher-budget run with independent audit](https://github.com/thenextw4ng/cb-pfr/actions/runs/38116778762). Their output must be reviewed before any experimental-comparison claim is made.
