@@ -1,10 +1,10 @@
-"""CB-PFR research workstation overview; demo and smoke data are clearly bounded."""
+""""CB-PFR research workstation overview; demo and smoke data are clearly bounded."""
 import plotly.graph_objects as go
 import streamlit as st
 
 from cbpfr.dashboard_ui import (
     CYAN, ORANGE, apply_workstation_style, base_layout, candidate_label,
-    layout_figure, load_smoke, render_header,
+    layout_figure, load_smoke, render_header, render_page_intro, render_workspace_sidebar,
 )
 
 st.set_page_config(page_title="CB-PFR · Research Workstation", page_icon="⚛", layout="wide")
@@ -12,9 +12,12 @@ apply_workstation_style()
 render_header("Overview", "C5G7 SMOKE DATA · NOT PHYSICALLY VALIDATED")
 
 df = load_smoke().sort_values("candidate_id").reset_index(drop=True)
-st.markdown('<div class="section-kicker">Research workspace / evidence snapshot</div>', unsafe_allow_html=True)
-st.title("Confidence-Bounded Physical Feasibility Ranking")
-st.caption("A research workstation for candidate layouts, uncertainty-aware inspection, QUBO feasibility, and evidence provenance.")
+render_workspace_sidebar("Overview", df)
+render_page_intro(
+    "RESEARCH WORKSPACE / EVIDENCE SNAPSHOT",
+    "Confidence-Bounded Physical Feasibility Ranking",
+    "A research workstation for candidate layouts, uncertainty-aware inspection, QUBO feasibility, and evidence provenance.",
+)
 
 a, b, c, d = st.columns(4)
 a.metric("Recorded layout candidates", len(df))
@@ -22,11 +25,11 @@ b.metric("Canonical reference rows", int(df["canonical_reference"].sum()))
 c.metric("Distinct recorded seeds", df["seed"].nunique())
 d.metric("Physical validation", "Not established")
 
-st.warning(
-    "Current evidence is an exploratory C5G7 smoke snapshot: one recorded run per layout. "
-    "The dashboard reports observed values but does not claim benchmark-grade ranking, spatial "
-    "field reconstruction, reactor safety, or physical validation."
+st.markdown(
+    '<div class="evidence-note"><b>Evidence boundary</b> · Current data is an exploratory C5G7 smoke snapshot with one recorded run per layout. The dashboard reports observed values only; it does not claim benchmark-grade ranking, spatial field reconstruction, reactor safety, or physical validation.</div>',
+    unsafe_allow_html=True,
 )
+st.write("")
 
 left, right = st.columns([1, 1.45], gap="large")
 with left:
@@ -44,11 +47,11 @@ with right:
         y=df["keff_mean"],
         mode="markers",
         marker={"size": 11, "color": [CYAN if bool(v) else ORANGE for v in df["canonical_reference"]]},
-        error_y={"type": "data", "array": df["keff_std_dev"], "visible": True, "color": "#87abc9", "thickness": 1.4, "width": 4},
+        error_y={"type": "data", "array": df["keff_std_dev"], "visible": True, "color": "#91a9c2", "thickness": 1.4, "width": 4},
         customdata=df[["candidate_id", "layout_signature", "seed"]].to_numpy(),
         hovertemplate="Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>k-effective %{y:.7f}<extra></extra>",
     ))
-    base_layout(fig, height=360)
+    base_layout(fig, height=390)
     fig.update_layout(xaxis_title="Candidate / layout", yaxis_title="k-effective (reported mean)", showlegend=False)
     fig.update_xaxes(tickangle=-20)
     st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
