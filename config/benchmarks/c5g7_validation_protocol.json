@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "protocol_id": "CBPFR-C5G7-validation-gates-2026-10-11",
-  "status": "preregistered_project_screening_protocol_not_official_OECD_acceptance",
+  "status": "CORRECTED_STANDARD_GROUP_STRUCTURE_RUN_REQUIRED",
   "scope": {
     "benchmark_case": "2D seven-group C5G7",
     "canonical_layout_signature": "UMMU",
@@ -17,10 +17,12 @@
         "Diff generated geometry, materials, settings, boundary conditions, and material compositions against the selected primary benchmark case.",
         "Record multigroup cross-section provenance, source hash, energy group boundaries, and generation procedure.",
         "Explain and resolve production-versus-smoke materials XML differences.",
-        "Record OpenMC version and all runtime settings."
+        "Record OpenMC version and all runtime settings.",
+        "Use the official C5G7 seven-group energy boundaries [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV; reject nonstandard log-spaced boundaries.",
+        "Verify the generated MGXS HDF5 root group-structure attribute against the official boundary list before transport."
       ],
       "pass_condition": "Independent reviewer signs a machine-readable model-identity manifest.",
-      "status": "BLOCKED"
+      "status": "BLOCKED_PENDING_STANDARD_GROUP_STRUCTURE_RERUN_AND_PRIMARY_SPECIFICATION_REVIEW"
     },
     {
       "id": "G1-canonical-keff",
