@@ -76,7 +76,7 @@
       "measured_data": "measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv",
       "model_workflow": "https://github.com/thenextw4ng/cb-pfr/blob/main/.github/workflows/beavrs-cycle1-map-validation.yml",
       "runner": "scripts/run_beavrs_cycle1_map_validation.py",
-      "status": "prior 17x17 runs are superseded; final run queued with corrected 15x15 assembly-aligned mesh, tilt-corrected measurements, SE=230 state override, tally statistical SDs, and independent artifact-integrity audit",
+      "status": "first ±8-pitch mesh run was misaligned; subsequent ±8.5-pitch 17x17 runs were assembly-aligned but used raw measurements and SE=228 and showed poor agreement; final run uses core-only 15x15 mesh, tilt-corrected measurements, SE=230, tally statistical SDs, and independent artifact-integrity audit",
       "known_mismatches": [
         "Upstream model temperature is 566.483 K versus reported inlet temperature 565.858 K (about 0.625 K difference).",
         "SE=230 overrides upstream default 228 and exceeds generic helper's 228-step guard; geometry/sensitivity review is required.",
