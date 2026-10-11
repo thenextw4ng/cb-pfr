@@ -15,6 +15,8 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
+PRODUCTION_MGXS_SHA256 = "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216"
+
 REQUIRED = {
     "candidate_id", "layout_signature", "seed", "batches", "inactive",
     "particles_per_batch", "keff_mean", "keff_std_dev", "statepoint_sha256",
@@ -70,6 +72,7 @@ def audit_rows(rows: list[dict], reference_keff: float = 1.18655,
         "unique_seeds": len(seeds) == len(set(seeds)),
         "unique_statepoint_hashes": len(statepoint_hashes) == len(set(statepoint_hashes)),
         "single_mgxs_hash": len(mgxs_hashes) == 1,
+        "mgxs_byte_identical_to_production": mgxs_hashes == {PRODUCTION_MGXS_SHA256},
         "all_raw_hdf5_audits_pass": raw_audits_pass,
     }
     per_candidate = []
