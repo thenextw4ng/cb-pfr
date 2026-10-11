@@ -108,6 +108,8 @@ class C5G7LayoutStudyTests(unittest.TestCase):
 
     def test_patch_builder_preserves_all_five_reflector_cells_for_every_layout(self):
         import itertools
+        import re
+
         positions = ("p00", "p01", "p10", "p11")
         for mox_positions in itertools.combinations(positions, 2):
             layout = {p: ("MOX" if p in mox_positions else "UO2") for p in positions}
@@ -126,13 +128,17 @@ class C5G7LayoutStudyTests(unittest.TestCase):
                 )
                 patch_builder(builder, layout, batches=40, inactive=5, particles=200)
                 text = builder.read_text()
-                import re
-                match = re.search(r"lattices\\['Core'\\]\\.universes\\s*=\\s*(\\[.*?\\])\\s*$", text, re.S)
+                match = re.search(r"lattices\\['Core'\\]\\.universes\\s*=\\s*(\\[\\[.*?\\]\\])", text, re.S)
                 self.assertIsNotNone(match, text)
                 compact = "".join(match.group(1).split())
-                self.assertTrue(compact.endswith("[[w,w,w]]"), compact)
-                self.assertEqual(compact.count(",w]"), 2, compact)
-                self.assertEqual(compact.count("[w,w,w]"), 1, compact)
+                symbol = {"UO2": "u", "MOX": "m"}
+                expected = (
+                    f"[[{symbol[layout['p00']]},{symbol[layout['p01']]},w],"
+                    f"[{symbol[layout['p10']]},{symbol[layout['p11']]},w],[w,w,w]]"
+                )
+                self.assertEqual(compact, expected)
+                self.assertEqual(compact.count(",w]"), 2)
+                self.assertEqual(compact.count("[w,w,w]"), 1)
 
     def test_patch_uses_standard_c5g7_energy_group_boundaries(self):
         patch_mgxs_energy_boundaries(self.materials)
