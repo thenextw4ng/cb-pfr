@@ -1,0 +1,37 @@
+# Eureka! ITB claim-to-evidence matrix — 11 October 2026
+
+This document is a fail-closed checklist for the CB-PFR / ReactorQ Studio submission. A claim is allowed only when the corresponding evidence artifact exists and has been reviewed.
+
+## Claim matrix
+
+| Proposed claim | Minimum supporting evidence | Current disposition |
+|---|---|---|
+| “CB-PFR is an uncertainty-aware post-optimization ranking layer.” | Source code, method definition, tests, paper consistent with implementation | Supported as a methodological/software claim |
+| “CB-PFR improves selection in the declared synthetic benchmark.” | Frozen configuration, 1,000-trial reproducible results, trial-level CSV, comparison protocol | Supported only for the declared synthetic data-generating process; not a physical claim |
+| “The project uses QUBO.” | Explicit Q matrix/offset, candidate encoding, constraints, exact enumeration or solver output | Supported for the explicitly reformulated one-hot C5G7 layout-selection prototype |
+| “The legacy fresh/once-burned/twice-burned QUBO models UO2/MOX physics.” | Defensible state-to-material/composition mapping and independently audited model generation | Not supported; no defensible mapping has been established |
+| “The OpenMC model is experimentally compared against BEAVRS.” | Successful workflow run, pinned model/data provenance, statepoint, 58-bin comparison CSV, independent artifact audit | Workflow and runner committed; actual run and result audit pending |
+| “The model is physically validated.” | Matching experimental state, benchmark-specific uncertainty treatment, justified acceptance criteria, convergence and independent review | Not yet established; the first BEAVRS comparison is explicitly preliminary |
+| “CB-PFR improves a physical reactor candidate ranking.” | Valid candidate-to-physics mapping, multiple physically evaluated candidates, repeated runs, common budget, uncertainty propagation, baseline comparison | Not established |
+| “Quantum hardware was used.” | Archived actual annealer/quantum-device job, problem submitted, returned samples/results, device metadata | Not established by QUBO formulation or classical enumeration |
+| “Quantum advantage was demonstrated.” | Fair comparison to suitable classical baselines over repeated trials and cost/time/quality metrics | Not established |
+| “The author created and implemented CB-PFR.” | Authorship records, dated manuscript/repository history, clear separation of original contribution from standard QUBO/OpenMC components | Can be framed as authorship/development of the proposed CB-PFR method, subject to accurate disclosure |
+
+## Six execution stages
+
+1. **Baseline and reproducibility:** synthetic benchmark, implementation, test suite, source provenance, archival outputs. Mostly present; CI must remain green.
+2. **Physics benchmark model:** selected BEAVRS upstream revision, OpenMC model generator, experimental Cycle 1 day-0 data, nuclear-data provenance. Model runner/workflow committed.
+3. **Experimental comparison:** full-core OpenMC run, fission-map comparison, statepoint hashes, logs, residuals, uncertainty and acceptance-rule review. Running/pending; no successful result is assumed until the workflow is completed and audited.
+4. **QUBO-to-physics mapping:** keep the legacy burnup-state QUBO separate. The explicit 2×2 C5G7 UO2/MOX one-hot design is a separate reformulation and is not interchangeable with BEAVRS.
+5. **CB-PFR physical effectiveness:** use a defensible candidate space, a declared feasible region and objective, repeated physical evaluations, common budgets, uncertainty propagation, and baseline comparisons. Not yet established.
+6. **Release and claims audit:** preserve raw artifacts, document limitations, reproduce outputs from a clean checkout, and ensure every abstract/presentation claim maps to evidence. Final audit depends on stages 3–5.
+
+## Quantum wording
+
+QUBO is a binary quadratic optimization formulation. It can be solved by classical algorithms or submitted to quantum annealing/hardware. If the actual work uses classical exact enumeration or classical solvers, say “QUBO-based formulation” or “quantum-compatible formulation”; do not say that a quantum computer ran the experiment or that quantum advantage was demonstrated.
+
+## Current public-facing wording
+
+> “CB-PFR is a proposed uncertainty-aware post-optimization selection layer. Its implementation and synthetic benchmark are reproducible. A separate C5G7 UO2/MOX layout-selection prototype tests a QUBO encoding, while a pinned BEAVRS/OpenMC workflow is being used to build an initial comparison against public experimental detector-map data. Experimental validation of the model and physical effectiveness of CB-PFR remain subject to execution and independent review.”
+
+This is intentionally more precise than claiming that all physics and quantum requirements are already satisfied.
