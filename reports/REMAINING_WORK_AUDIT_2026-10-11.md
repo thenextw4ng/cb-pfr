@@ -4,6 +4,10 @@
 
 This is the current handoff after consolidating the conversation archives, auditing the actual OpenMC statepoints, repairing CI, and integrating ReactorQ Studio plus the C5G7 layout-study tooling. It separates completed software/evidence work from the scientific work that still cannot be claimed.
 
+## Critical correction — standard C5G7 energy-group structure
+
+A follow-up review on 2026-10-11 found that the upstream `materials.py` used `np.logspace(-5, 7, 8)`, which does not match the standard C5G7 seven-group boundaries `[1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000]` eV. The previous endpoint-only normalization and byte-identical MGXS comparisons did not fix or detect the interior-boundary mismatch. Therefore the historical production/smoke scalar comparison with k_eff=1.18655 is withdrawn as benchmark evidence, and all earlier smoke results are retained only as pipeline/provenance evidence. The corrected runner now replaces the complete boundary list and audits the generated MGXS root attribute before transport. Corrected high-budget runs and primary-specification review are required.
+
 ## Work completed and verified
 
 - Consolidated and indexed 86 historical project artifacts in `CBPFR_ReactorQ__Archive_2026-10-11.zip` and `archive/conversation-artifacts/CONVERSATION_ARTIFACT_MANIFEST.json`.
