@@ -60,9 +60,10 @@
     "workflow_status": "PASS"
   },
   "residual_issue": {
-    "description": "A separate repeated-smoke artifact recorded a different MGXS byte hash; dataset payloads match but one root group-structure energy boundary differs by one floating-point step.",
+    "description": "The original repeated-smoke artifact had a one-ULP root energy-boundary difference caused by np.logspace(-5, 7, 8) during MGXS generation. The preparation adapter now normalizes endpoints explicitly; a fresh 18-run workflow confirms a single MGXS hash identical to production across all runs. The older artifact is retained as historical evidence.",
     "reference": "results/c5g7_repeatability_smoke_2026-10-11/mgxs_semantic_comparison.json",
-    "resolved": false
+    "resolved_for_normalized_workflow": true,
+    "verification": "results/c5g7_repeatability_normalized_2026-10-11/mgxs_identity.json"
   },
   "conclusion": "Production and regenerated canonical XML/MGXS inputs strongly match at the file/data level except for expected absolute cross_sections path and run-budget/seed differences. The official benchmark model-identity gate still requires review against the primary specification and reconciliation of the separate repeatability-artifact MGXS metadata discrepancy. This is not benchmark certification or a reactor-safety claim."
 }
