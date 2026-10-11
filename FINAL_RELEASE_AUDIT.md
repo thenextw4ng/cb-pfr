@@ -17,6 +17,11 @@ This audit describes the repository evidence boundary; it is not a claim of peer
 - Reproducibility, limitations, and physical-mapping documentation.
 - Six low-budget C5G7 assembly-placement smoke runs with candidate IDs, explicit seeds, statepoint/input hashes, and summary CSV/JSON under `results/c5g7_layout_smoke_2026-10-10/`.
 - An 18-run, three-round C5G7 repeatability smoke study with raw-HDF5 audit results, per-run statepoint hashes, between-run variability, and descriptive ranking stability under `results/c5g7_repeatability_smoke_2026-10-11/`.
+- A corrected 18-run normalized-MGXS repeatability study under `results/c5g7_repeatability_normalized_2026-10-11/`; all runs use the production-identical MGXS SHA-256 and all 336 raw-HDF5 checks pass.
+- Production-versus-regenerated canonical input comparison showing geometry/tally/plot XML identity, material-definition identity after normalizing the local cross-section path, and byte-identical MGXS. See `reports/c5g7_input_provenance_comparison_2026-10-11.md`.
+- Six-layout assembly-integrated fission-rate proxy smoke outputs under `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv`; these are normalized fission-rate metrics, not absolute power.
+- Machine-readable fail-closed validation gates and canonical convergence workflow under `scripts/analyze_c5g7_canonical_convergence.py` and `config/benchmarks/c5g7_validation_protocol.json`.
+- PR #19 merged; CI passed on Python 3.10, 3.11, and 3.12 at the merge commit.
 - Software citation metadata in `CITATION.cff` and `.zenodo.json`.
 
 ## Evidence taxonomy
@@ -44,7 +49,7 @@ The seven-position QUBO uses abstract `fresh`, `once_burned`, and `twice_burned`
 
 `NO_DEFENSIBLE_MAPPING_FOUND`
 
-The production statepoint audit and six smoke runs are execution/data-extraction evidence only. They do not establish a validated QUBO-to-physics mapping, benchmark-grade candidate ranking, a validated CB-PFR transport workflow, or reactor-safety evidence.
+The production statepoint audit, normalized repeated-seed smoke study, input-provenance comparison, and fission-rate proxy outputs are execution/data-extraction evidence. A canonical high-budget numerical screen and a six-layout intermediate-budget screen are running in GitHub Actions; their results must be added after completion. None of these artifacts establishes a validated QUBO-to-physics mapping, official benchmark acceptance, benchmark-grade spatial power comparison, a validated CB-PFR transport workflow, or reactor-safety evidence.
 
 ## Artifact identity
 
