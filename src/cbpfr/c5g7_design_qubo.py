@@ -65,8 +65,9 @@ def upper_triangular_qubo(penalty: float = 1.0) -> tuple[tuple[float, ...], ...]
     """Return Q for E(y)=offset + sum_i Qii*y_i + sum_{i<j} Qij*y_i*y_j.
 
     Expansion: A(sum(y)-2)^2 = 4A - 3A*sum(y) + 2A*sum_{i<j}(y_i*y_j).
-    The returned matrix stores only the upper triangle; the constant 4A is
-    returned separately.
+    The returned matrix stores only the upper triangle and excludes the
+    constant offset 4A. Callers evaluating absolute energies must add 4A;
+    the omitted constant does not change the minimizing assignment.
     """
     if penalty <= 0:
         raise C5G7DesignError("penalty must be positive")
