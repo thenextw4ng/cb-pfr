@@ -22,7 +22,7 @@ The BEAVRS day-0 measured map contains 58 instrumented assembly positions. The m
 - normalized-map RMSE and MAE;
 - mean absolute relative error;
 - Pearson correlation;
-- (k_{eff}) and its Monte Carlo standard deviation;
+- k_eff and its Monte Carlo standard deviation;
 - per-detector raw tally standard deviation and relative Monte Carlo statistical uncertainty (before normalization);
 - per-assembly measured/calculated values and residuals;
 - statepoint SHA-256 and run settings.
