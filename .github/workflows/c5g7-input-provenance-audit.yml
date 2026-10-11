@@ -77,10 +77,19 @@ jobs:
             --candidate-root /tmp/c5g7-canonical-inputs/c5g7-2x2-UMMU/model/2d \
             --out /tmp/c5g7-input-provenance-comparison.json
           cat /tmp/c5g7-input-provenance-comparison.json
-      - name: Preserve exact XML comparison and diffs
+          production="$(find /tmp/c5g7-production-evidence -name statepoint.20000.h5 -print -quit)"
+          python scripts/fingerprint_hdf5_semantics.py \
+            --files "$(dirname "$production")/mgxs.h5" \
+                    /tmp/c5g7-canonical-inputs/c5g7-2x2-UMMU/model/2d/mgxs.h5 \
+            --out /tmp/c5g7-mgxs-semantic-comparison.json \
+            --require-datasets-identical
+          cat /tmp/c5g7-mgxs-semantic-comparison.json
+      - name: Preserve exact XML and MGXS comparisons
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: c5g7-production-input-provenance-comparison
-          path: /tmp/c5g7-input-provenance-comparison.json
+          path: |
+            /tmp/c5g7-input-provenance-comparison.json
+            /tmp/c5g7-mgxs-semantic-comparison.json
           if-no-files-found: warn
