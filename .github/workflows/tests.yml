@@ -27,6 +27,19 @@ jobs:
         run: |
           python examples/toy_qubo_example.py
           python examples/basic_ranking.py
+      - name: Audit published C5G7 baseline coverage
+        run: |
+          python scripts/run_c5g7_external_data_bridge.py --input examples/c5g7_published_reference_baseline.csv --output /tmp/c5g7-external-bridge.json
+          python - <<'PY'
+          import json
+          with open("/tmp/c5g7-external-bridge.json", encoding="utf-8") as f:
+              report = json.load(f)
+          assert report["coverage"]["status"] == "incomplete_external_coverage"
+          assert report["coverage"]["observed_candidate_count"] == 1
+          assert report["qubo"] is None
+          assert len(report["coverage"]["missing_candidate_ids"]) == 5
+          print("Published baseline ingested; five missing layouts correctly remain unranked.")
+          PY
       - name: Audit committed evidence archives
         run: |
           python scripts/audit_evidence_archive.py --archive OpenMC_HDF5_Evidence_2026-10-11.zip --out /tmp/openmc-evidence-archive-audit.json --require-statepoint
