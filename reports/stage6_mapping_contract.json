@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "study_id": "reactorq-c5g7-four-position-uox-mox-layout",
+  "status": "PROPOSED_MAPPING_FOR_AUDIT_NOT_PHYSICAL_VALIDATION",
+  "model_scope": {
+    "candidate_positions": ["P1", "P2", "P3", "P4"],
+    "position_order": "P1=top-left, P2=top-right, P3=bottom-left, P4=bottom-right in the four-assembly quarter-core layout; verify against each generated geometry before interpreting results",
+    "state_variables": {"U": "UO2 benchmark material identifier in the generated OpenMC model", "M": "MOX benchmark material identifier in the generated OpenMC model"},
+    "constraint": "Exactly two M and two U across four positions",
+    "explicit_non_claims": [
+      "This abstraction is not the canonical full C5G7 benchmark unless all geometry, materials, boundary conditions, and specifications match the benchmark.",
+      "UO2/MOX labels are material classes, not burnup states.",
+      "No absolute power, safety, or physically optimal layout claim is made."
+    ]
+  },
+  "mapping_contract": {
+    "required_position_map": {
+      "P1": "top-left assembly position; confirm against generated lattice XML and candidate manifest",
+      "P2": "top-right assembly position; confirm against generated lattice XML and candidate manifest",
+      "P3": "bottom-left assembly position; confirm against generated lattice XML and candidate manifest",
+      "P4": "bottom-right assembly position; confirm against generated lattice XML and candidate manifest"
+    },
+    "required_state_to_material_map": {
+      "U": "The exact UO2 material ID and nuclide-density vector loaded by the generated OpenMC model; populate from generated materials.xml and source specification",
+      "M": "The exact selected C5G7 MOX material ID/enrichment and nuclide-density vector loaded by the generated OpenMC model; populate from generated materials.xml and source specification"
+    },
+    "required_material_compositions_source": {
+      "primary": "C5G7 benchmark specification, NEA/NSC/DOC(2001)4; verify exact tables and material definitions against the model actually used",
+      "url": "https://harbor.oecd-nea.org/upload/docs/application/pdf/2020-01/nsc-wpfc-doc2012-16.pdf",
+      "implementation_reference": "https://docs.openmc.org/en/v0.12.2/examples/mg-mode-part-i.html",
+      "status": "SOURCE_IDENTIFIED_VALUES_AND_GENERATED_MATERIALS_STILL_REQUIRE_LINE_BY_LINE_AUDIT"
+    },
+    "required_cross_section_provenance": {
+      "group_edges_eV": [0.00001, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000],
+      "mgxs_sha256_reported_by_corrected_smoke_study": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129",
+      "status": "GROUP_EDGE_AND_HASH_REPORTED; CANONICAL_ARTIFACT_REAUDIT_PENDING",
+      "note": "A matching hash proves file identity, not scientific correctness or agreement with the benchmark tables."
+    },
+    "required_reference_comparison_protocol": {
+      "reference": "Use only a published/reference solution for the same benchmark configuration; if the four-position layout modifies the canonical case, call this a verification/reference comparison, not benchmark validation.",
+      "acceptance_criteria": "Must be predeclared from the applicable reference and uncertainty budget; no study-specific k-effective acceptance band is currently approved.",
+      "required_metrics": ["k-effective with uncertainty", "convergence diagnostics", "group structure and MGXS provenance", "raw statepoint hashes", "geometry/material audit", "defined fission-rate proxy with uncertainty"],
+      "status": "BLOCKED_PENDING_CANONICAL_RESULTS_AND_APPROVED_CRITERIA"
+    },
+    "independent_review": {
+      "approved": false,
+      "reviewer": null,
+      "review_date": null,
+      "evidence_manifest_sha256": null,
+      "status": "NOT_YET_PERFORMED"
+    }
+  },
+  "legacy_burnup_states": {
+    "fresh": "UNMAPPED",
+    "once_burned": "UNMAPPED",
+    "twice_burned": "UNMAPPED",
+    "reason": "These states cannot be equated to UO2/MOX material classes without traceable isotopic compositions and depletion/irradiation history."
+  }
+}
