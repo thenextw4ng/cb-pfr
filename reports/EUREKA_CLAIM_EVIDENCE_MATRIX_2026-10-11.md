@@ -7,7 +7,7 @@ This document is a fail-closed checklist for the CB-PFR / ReactorQ Studio submis
 | Proposed claim | Minimum supporting evidence | Current disposition |
 |---|---|---|
 | “CB-PFR is an uncertainty-aware post-optimization ranking layer.” | Source code, method definition, tests, paper consistent with implementation | Supported as a methodological/software claim |
-| “CB-PFR improves selection in the declared synthetic benchmark.” | Frozen configuration, 1,000-trial reproducible results, trial-level CSV, comparison protocol | Supported only for the declared synthetic data-generating process; not a physical claim |
+| “CB-PFR improves selection in the declared synthetic benchmark.” | Frozen configuration, trial-level records, prespecified comparison protocol, paired uncertainty analysis | Exploratory 1,000-pool benchmark showed a conditional synthetic effect. The 40,000-pool confirmatory test did **not** meet its prespecified ≥2 percentage-point practical-effect threshold (pooled gain +0.4875 pp); do not claim confirmatory synthetic superiority. Not physical evidence. |
 | “The project uses QUBO.” | Explicit Q matrix/offset, candidate encoding, constraints, exact enumeration or solver output | Supported for the explicitly reformulated one-hot C5G7 layout-selection prototype |
 | “The legacy fresh/once-burned/twice-burned QUBO models UO2/MOX physics.” | Defensible state-to-material/composition mapping and independently audited model generation | Not supported; no defensible mapping has been established |
 | “The OpenMC model was compared against BEAVRS Cycle 1 day 0.” | Successful workflow run, pinned model/data provenance, statepoint, 58-bin comparison CSV, independent artifact audit | Supported as an executed comparison; integrity audit passed, but spatial agreement is poor (RMSE 0.33426, correlation −0.0780), so it is not validation evidence |
@@ -32,6 +32,6 @@ QUBO is a binary quadratic optimization formulation. It can be solved by classic
 
 ## Current public-facing wording
 
- > “CB-PFR is a proposed uncertainty-aware post-optimization selection layer. Its implementation and synthetic benchmark are reproducible. A separate C5G7 UO2/MOX layout-selection prototype tests a QUBO encoding. A pinned BEAVRS/OpenMC calculation is consistent with the critical state within Monte Carlo uncertainty, but its spatial detector-map comparison shows poor agreement; full physical validation and CB-PFR physical ranking effectiveness are not established.”
+ > “CB-PFR is a proposed uncertainty-aware post-optimization selection layer with reproducible software and synthetic evaluation. An exploratory synthetic benchmark showed a conditional effect, but a subsequent preregistered confirmation did not meet its prespecified practical-effect threshold. A separate C5G7 UO₂/MOX layout-selection prototype tests a QUBO encoding. The current OpenMC C5G7 runs verify an exploratory integration path only; physical ranking effectiveness, direct burnup-QUBO-to-material mapping, and quantum advantage are not established.”
 
 This is intentionally more precise than claiming that all physics and quantum requirements are already satisfied.
