@@ -1,0 +1,123 @@
+name: BEAVRS Cycle-1 experimental map comparison
+
+on:
+  workflow_dispatch:
+    inputs:
+      batches:
+        description: "Total OpenMC batches"
+        required: true
+        default: "250"
+      inactive:
+        description: "Inactive batches"
+        required: true
+        default: "30"
+      particles:
+        description: "Particles per batch"
+        required: true
+        default: "2000"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/beavrs-cycle1-map-validation.yml"
+      - "scripts/run_beavrs_cycle1_map_validation.py"
+      - "tests/test_beavrs_cycle1_map_validation.py"
+
+permissions:
+  contents: read
+
+jobs:
+  beavrs-cycle1-map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      BATCHES: \${{ inputs.batches || '250' }}
+      INACTIVE: \${{ inputs.inactive || '30' }}
+      PARTICLES: \${{ inputs.particles || '2000' }}
+      SEED: "20261011"
+      OMP_NUM_THREADS: "2"
+      BEAVRS_COMMIT: "1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22"
+      ENDF71_URL: "https://anl.box.com/shared/static/9igk353zpy8fn9ttvtrqgzvw1vtejoz6.xz"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned OpenMC runtime
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: beavrs-validation
+          create-args: >-
+            python=3.11
+            openmc=0.15.3
+          cache-environment: true
+
+      - name: Freeze BEAVRS source and install model generator
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          git clone https://github.com/mit-crpg/BEAVRS.git /tmp/BEAVRS
+          git -C /tmp/BEAVRS checkout "$BEAVRS_COMMIT"
+          test "$(git -C /tmp/BEAVRS rev-parse HEAD)" = "$BEAVRS_COMMIT"
+          (
+            cd /tmp/BEAVRS/models/openmc
+            python setup.py install
+          )
+          mkdir -p /tmp/beavrs-run
+          {
+            echo "BEAVRS_COMMIT=$BEAVRS_COMMIT"
+            echo "OPENMC_VERSION=$(python -c 'import openmc; print(openmc.__version__)')"
+            echo "PYTHON_VERSION=$(python --version)"
+            echo "SOURCE_README=https://github.com/mit-crpg/BEAVRS"
+          } | tee /tmp/beavrs-run/source_provenance.txt
+
+      - name: Download and verify OpenMC ENDF-B/VII.1 data library
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 3 \
+            "$ENDF71_URL" -o /tmp/endf-b-vii.1-hdf5.tar.xz
+          sha256sum /tmp/endf-b-vii.1-hdf5.tar.xz | tee /tmp/beavrs-run/nuclear_data_archive.sha256
+          tar -xJf /tmp/endf-b-vii.1-hdf5.tar.xz -C "$HOME"
+          CROSS_SECTIONS="$(find "$HOME" -type f -name cross_sections.xml -print -quit)"
+          test -n "$CROSS_SECTIONS"
+          test -s "$CROSS_SECTIONS"
+          echo "OPENMC_CROSS_SECTIONS=$CROSS_SECTIONS" >> "$GITHUB_ENV"
+          echo "$CROSS_SECTIONS" | tee /tmp/beavrs-run/nuclear_data_path.txt
+          sha256sum "$CROSS_SECTIONS" | tee /tmp/beavrs-run/cross_sections_xml.sha256
+
+      - name: Generate full 3-D BEAVRS model and detector-map tally
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/run_beavrs_cycle1_map_validation.py \
+            --mode prepare \
+            --beavrs-root /tmp/BEAVRS \
+            --output /tmp/beavrs-run \
+            --batches "$BATCHES" \
+            --inactive "$INACTIVE" \
+            --particles "$PARTICLES" \
+            --seed "$SEED"
+
+      - name: Run OpenMC transport
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          cd /tmp/beavrs-run
+          openmc 2>&1 | tee openmc.log
+
+      - name: Compare 58 calculated assembly fission rates with BEAVRS measurements
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/run_beavrs_cycle1_map_validation.py \
+            --mode analyze --output /tmp/beavrs-run
+          cat /tmp/beavrs-run/beavrs_cycle1_day0_map_comparison.json
+
+      - name: Upload raw run and comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beavrs-cycle1-map-comparison-\${{ github.run_id }}
+          path: |
+            /tmp/beavrs-run/
+          if-no-files-found: warn
+          retention-days: 30
