@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "status": "PASS",
+  "workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238",
+  "normalized_artifact": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238/artifacts/11687737079",
+  "production_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+  "repeated_run_shared_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+  "byte_identical_to_production": true,
+  "all_18_runs_share_same_mgxs_hash": true,
+  "root_group_structure_one_ulp_discrepancy_present": false,
+  "normalization": "Set the first and last energy-group boundaries to exact 1.0e-5 and 1.0e7 in the copied upstream materials.py before importing it to generate mgxs.h5.",
+  "root_cause": "The upstream materials.py constructed the energy-group boundaries with np.logspace(-5, 7, 8), whose first endpoint could be represented as 9.999999999999999e-06 in one environment.",
+  "scope": "This resolves MGXS byte consistency for this normalized repeatability workflow. The runs remain smoke-budget only; it does not certify the benchmark or validate a QUBO-to-material mapping."
+}
