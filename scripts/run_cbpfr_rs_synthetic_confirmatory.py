@@ -75,7 +75,7 @@ def metrics(theta, estimate, reported, method, chosen, declared):
             (selected_true & np.isclose(selected_theta, best_feasible, atol=1e-12))[any_feasible].mean()
         ) if any_feasible.any() else None,
         "mean_regret_given_feasible_pool": float(np.nanmean(regret)) if any_feasible.any() else None,
-        "nominal_95pct_lower_bound_empirical_coverage": float(covered.mean()),
+        "nominal_97_5pct_one_sided_lower_bound_empirical_coverage": float(covered.mean()),
         "fallback_selection_count": int((~declared[row, chosen]).sum())
     }
 
