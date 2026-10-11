@@ -31,7 +31,7 @@ python scripts/compare_c5g7_reference.py \
   --out results/new_benchmark_comparison.csv
 ```
 
-This records a numerical (k_{eff}) screen and explicitly blocks the non-comparable power metric. Do not overwrite the committed comparison; use a new output path for each new run.
+This records a numerical (k_{eff}) screen and explicitly blocks the non-comparable power metric. The same command accepts the aggregate evidence JSON at `results/c5g7_repeatability_reexecution_2026-10-11.json`; use that as `--simulation-json` for the three-seed comparison. For aggregate data, the comparator uses between-seed sample SD divided by sqrt(n) as the standard error of the mean. Do not overwrite the committed comparison; use a new output path for each new run.
 
 
 ## Corrected-group repeatability re-execution
