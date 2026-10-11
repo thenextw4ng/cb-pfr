@@ -104,6 +104,50 @@ def build_assembly_map(core_template: list[list[str]]) -> dict[str, tuple[int, i
     return result
 
 
+def build_coordinate_crosswalk(
+    core_template: list[list[str]], instrumented_labels: set[str] | None = None
+) -> list[dict[str, object]]:
+    """Return a traceable assembly-label → template → mesh-center crosswalk."""
+    instrumented_labels = instrumented_labels or set()
+    assembly_map = build_assembly_map(core_template)
+    rows: list[dict[str, object]] = []
+    for label, (ix, iy) in sorted(assembly_map.items()):
+        token = None
+        source_row = source_col = None
+        for row_index, row in enumerate(core_template):
+            for col_index, candidate in enumerate(row):
+                match = re.fullmatch(r"([A-Z])_+(\d{1,2})", candidate)
+                if match and f"{match.group(1)}{int(match.group(2))}" == label:
+                    token = candidate
+                    source_row, source_col = row_index, col_index
+                    break
+            if token is not None:
+                break
+        if token is None or source_row is None or source_col is None:
+            raise ValueError(f"assembly label {label} has no source-template token")
+        rows.append({
+            "assembly": label,
+            "template_token": token,
+            "template_row_index_0based": source_row,
+            "template_column_index_0based": source_col,
+            "mesh_x_index_1based": ix,
+            "mesh_y_index_1based": iy,
+            "mesh_center_x_cm": (ix - 8) * PITCH_CM,
+            "mesh_center_y_cm": (iy - 8) * PITCH_CM,
+            "is_instrumented_detector": label in instrumented_labels,
+        })
+    return rows
+
+
+def write_coordinate_crosswalk(path: Path, rows: list[dict[str, object]]) -> None:
+    if not rows:
+        raise ValueError("coordinate crosswalk must not be empty")
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def prepare(args: argparse.Namespace) -> None:
     try:
         import openmc
@@ -163,6 +207,11 @@ def prepare(args: argparse.Namespace) -> None:
 
     assembly_map = build_assembly_map(Core.core_lattice_template)
     instrumented_raw = load_measurement_values(beavrs_root / MEASUREMENT_RAW_REL)
+    crosswalk_rows = build_coordinate_crosswalk(
+        Core.core_lattice_template, set(instrumented_raw)
+    )
+    crosswalk_path = output / "beavrs_coordinate_crosswalk.csv"
+    write_coordinate_crosswalk(crosswalk_path, crosswalk_rows)
     if len(instrumented_raw) != 58:
         raise ValueError(f"expected 58 raw instrumented labels, got {len(instrumented_raw)}")
     tilt_corrected_all = load_measurement_values(beavrs_root / MEASUREMENT_REL)
@@ -185,6 +234,16 @@ def prepare(args: argparse.Namespace) -> None:
         "observable_alignment": "U235 fission-chamber-derived radial measurements are compared to assembly-mesh U235 fission reaction rate integrated over the active fuel height; this is a closer proxy than total fission but not an exact detector-response simulation.",
         "measured_summary": str(beavrs_root / SUMMARY_REL),
         "measured_detector_count": len(measurements),
+        "coordinate_crosswalk": {
+            "file": crosswalk_path.name,
+            "sha256": sha256_file(crosswalk_path),
+            "assembly_rows": len(crosswalk_rows),
+            "instrumented_detector_rows": sum(
+                bool(row["is_instrumented_detector"]) for row in crosswalk_rows
+            ),
+            "mesh_center_formula": "x=(mesh_x_index_1based-8)*assembly_pitch_cm; y=(mesh_y_index_1based-8)*assembly_pitch_cm",
+            "status": "SOURCE_DERIVED_CROSSWALK; GEOMETRY_PLOT_REVIEW_REQUIRED",
+        },
         "measurement_normalization": "mean over 58 reported normalized detector values = 1",
         "model": {
             "dimension": "full 3-D full-core upstream BEAVRS geometry",
