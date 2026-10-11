@@ -122,7 +122,42 @@
     "entropy_mesh_fix_commit": "6acce23615d4f5186343281d1f9b5e7a6db27979",
     "entropy_mesh_test_commit": "a60c3d5e33bab9786d533c971b650f1ea008cd66",
     "intermediate_screen_manual_dispatch_only_commit": "ef5837ba3648c946ac6214316b6d8c1741dba045",
-    "status": "Code and tests committed; CI status must be checked, and no new transport run has yet validated the mesh fix."
+    "status": "Entropy mesh fix and regression test committed; Python 3.10/3.11/3.12 CI passed; targeted 18-case smoke transport passed with zero entropy-box warnings. High-budget source-convergence review and physical validation remain open.",
+    "targeted_smoke_validation": {
+      "workflow_run_id": 38110780563,
+      "workflow_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38110780563",
+      "status": "success",
+      "artifact_id": 11690758521,
+      "artifact_name": "c5g7-layout-repeatability-smoke",
+      "artifact_zip_sha256": "eee7d38c359c7d8d8d92dd8193280890a6f587c826d626bee4db7a9ed75f7551",
+      "profile": {
+        "layouts": 6,
+        "seed_rounds": 3,
+        "total_runs": 18,
+        "batches": 100,
+        "inactive": 10,
+        "particles_per_batch": 1000
+      },
+      "entropy_box_warnings_across_18_logs": 0,
+      "spatial_mapping_audit": {
+        "status": "PASS",
+        "cases": 18
+      },
+      "raw_hdf5_audits": {
+        "status": "PASS",
+        "per_round_checks": 112,
+        "per_round_failures": 0,
+        "rounds": 3
+      },
+      "evidence_integrity_audits": {
+        "status": "PASS",
+        "per_round_checks": 23,
+        "per_round_failures": 0,
+        "rounds": 3
+      },
+      "objective_analysis_status": "EXPLORATORY_DESCRIPTIVE_ONLY",
+      "interpretation": "Validates the entropy-mesh fix operationally at smoke budget; does not retroactively validate high-budget convergence or establish physical benchmark validity."
+    }
   },
   "scientific_disposition": "PARTIAL_HIGH_BUDGET_NUMERICAL_EVIDENCE; NOT_A_COMPLETED_THREE_SEED_STUDY; NOT_PHYSICALLY_VALIDATED"
 }
