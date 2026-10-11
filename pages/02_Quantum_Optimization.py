@@ -52,11 +52,11 @@ for vector in itertools.product((0, 1), repeat=len(POSITIONS)):
     states.append({
         "vector": "".join(map(str, vector)),
         "MOX_count": sum(vector),
-        "qubo_energy_without_offset": qubo_energy(vector),
+        "qubo_energy": qubo_energy(vector),
         "feasible": sum(vector) == 2,
         "assignment": json.dumps(assignment_from_vector(vector)) if sum(vector) == 2 else "infeasible",
     })
-df = pd.DataFrame(states).sort_values(["feasible", "qubo_energy_without_offset", "vector"], ascending=[False, True, True])
+df = pd.DataFrame(states).sort_values(["feasible", "qubo_energy", "vector"], ascending=[False, True, True])
 feasible_df = df[df["feasible"]].copy()
 
 m1, m2, m3 = st.columns(3)
@@ -64,7 +64,7 @@ m1.metric("Binary variables", len(POSITIONS))
 m2.metric("Total bitstrings", len(states))
 m3.metric("Feasible layouts", len(feasible_df))
 st.subheader("Feasible candidate pool")
-st.dataframe(feasible_df[["vector", "MOX_count", "qubo_energy_without_offset", "assignment"]], use_container_width=True, hide_index=True)
+st.dataframe(feasible_df[["vector", "MOX_count", "qubo_energy", "assignment"]], use_container_width=True, hide_index=True)
 st.info("All six feasible candidates tie in this QUBO. Selecting one as physically superior from QUBO energy alone would be incorrect.")
 
 st.subheader("Solver backends")
@@ -94,7 +94,7 @@ if dimod_available:
                     "vector": "".join(map(str, vector)),
                     "MOX_count": sum(vector),
                     "sampler_energy_without_offset": float(row.energy),
-                    "recomputed_feasibility_energy": qubo_energy(vector),
+                    "recomputed_full_qubo_energy": qubo_energy(vector),
                     "occurrences": int(row.num_occurrences),
                 })
             st.dataframe(pd.DataFrame(sample_rows), use_container_width=True, hide_index=True)
