@@ -16,19 +16,30 @@
         "minimum_independent_seeds": 3,
         "unique_statepoint_hash_per_seed": true,
         "common_compute_settings": true,
-        "identical_production_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
         "absolute_keff_difference_pcm_max": 100,
         "absolute_combined_uncertainty_z_max": 2,
         "maximum_single_run_keff_standard_deviation_pcm": 10,
         "spatial_reference_comparison_required": true,
-        "model_identity_review_required": true
+        "model_identity_review_required": true,
+        "required_c5g7_energy_group_boundaries_eV": [
+          0.00001,
+          0.0635,
+          10,
+          100,
+          1000,
+          500000,
+          1000000,
+          20000000
+        ],
+        "mgxs_group_structure_audit_required": true
       },
       "uncertainty_rule": "For replicated mean k_eff, use the across-seed sample standard deviation divided by sqrt(n) as the empirical standard error of the mean; combine with the cited reference standard uncertainty in quadrature. Report within-run Monte Carlo standard deviations separately. With only three seeds this remains a provisional screen, not a strong uncertainty calibration.",
-      "status": "NUMERICAL_SCREEN_RUNNING_MODEL_IDENTITY_AND_SPATIAL_REFERENCE_REVIEW_REQUIRED",
+      "status": "CORRECTED_STANDARD_GROUP_STRUCTURE_RUN_REQUIRED_MODEL_IDENTITY_AND_SPATIAL_REFERENCE_REVIEW_REQUIRED",
       "nonclaims": [
         "Passing these internal thresholds is not official OECD/NEA benchmark acceptance.",
         "A close k_eff alone does not validate geometry, material definitions, boundary conditions, or spatial response.",
-        "No reactor safety claim follows."
+        "No reactor safety claim follows.",
+        "Historical production/smoke results using log-spaced energy boundaries are not valid evidence for the standard C5G7 benchmark."
       ]
     },
     "six_layout_design_study": {
@@ -62,7 +73,11 @@
   },
   "legacy_burnup_qubo_mapping": {
     "status": "NO_DEFENSIBLE_MAPPING_FOUND",
-    "states": ["fresh", "once_burned", "twice_burned"],
+    "states": [
+      "fresh",
+      "once_burned",
+      "twice_burned"
+    ],
     "prohibition": "Do not map these labels to UO2/MOX enrichment categories or to arbitrary C5G7 layouts.",
     "required_evidence_before_mapping": [
       "Operational definition and burnup units for each category.",
