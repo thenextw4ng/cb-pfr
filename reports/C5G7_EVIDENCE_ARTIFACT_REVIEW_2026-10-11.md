@@ -36,11 +36,18 @@ These are completed, integrity-audited *exploratory* corrected-group transport r
 
 The historical baseline MGXS used nonstandard log-spaced group boundaries. The project's validation report correctly withdraws the earlier scalar-to-reference agreement as benchmark evidence. The 20,000-batch result is useful archived execution/statepoint evidence, but it must not be presented as a verified standard-C5G7 benchmark until a corrected-group run and model-identity review pass.
 
-## Canonical high-budget run status at review time
+## Canonical high-budget run — partial artifact review
 
-Workflow: https://github.com/thenextw4ng/cb-pfr/actions/runs/38103032861
+Workflow: https://github.com/thenextw4ng/cb-pfr/actions/runs/38103032861  
+Status: **cancelled by user after two completed 7,000-batch cases; third case incomplete.**  
+Artifact: `c5g7-canonical-high-budget-screen-7000-10000` (ID `11691113062`)  
+ZIP SHA-256: `76bccd4c28916d27655c2c53c821645709a520397325714abbdba6cca0efa45e`
 
-At the latest status check during this review, the `canonical-screen` job was still `in_progress`; the step running three independent canonical UMMU cases was still running, numerical aggregation was pending, and no workflow artifact was yet available. This report therefore records no result for that run. Recheck the workflow and inspect its uploaded statepoints/audit before changing the gate status.
+The artifact was preserved by the workflow's `if: always()` upload step. Seeds 720000 and 730000 each completed 7,000 total batches (100 inactive, 6,900 active; 10,000 particles/batch), and each raw-HDF5 audit passed 22 checks with zero failures. Their (k_{eff}) estimates were 1.1864684089 ± 0.0000939356 and 1.1864698949 ± 0.0000946303, respectively. Seed 740000 has no completed statepoint or audit in the artifact. The aggregate-gate step was skipped; this workflow has no aggregate PASS.
+
+Both completed logs contain 7,000 warnings each stating that fission source sites are outside the entropy box. The configured entropy mesh has finite z bounds while the generated 2-D geometry has no finite z boundary; this is a likely explanation requiring verification. Both source-convergence summaries remain `DIAGNOSTIC_REVIEW_REQUIRED`. The two-run (k_{eff}) difference is descriptively small, but two seeds do not establish convergence or a robust between-seed uncertainty. The fission-peaking proxy difference is also descriptive only because correlated mesh-bin uncertainty is not propagated.
+
+The full case-by-case record, statepoint hashes, numerical interpretation, and close-out actions are in [C5G7_CANONICAL_HIGH_BUDGET_PARTIAL_RUN_REVIEW_2026-10-11.md](C5G7_CANONICAL_HIGH_BUDGET_PARTIAL_RUN_REVIEW_2026-10-11.md). Do not label this a completed three-seed study or physical validation.
 
 ## Immediate next actions
 
