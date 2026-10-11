@@ -62,6 +62,8 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             })
         self.design.write_text(json.dumps({
             "design_study_id":"C5G7-2x2-two-UO2-two-MOX-layout-enumeration",
+            "fixed_reflector_positions":["p02","p12","p20","p21","p22"],
+            "constraints":{"reflector_positions_fixed":True},
             "candidate_layouts":candidates,
         }), encoding="utf-8")
 
@@ -82,6 +84,64 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         self.design.write_text(json.dumps(data))
         with self.assertRaisesRegex(ValueError, "exactly six"):
             validate_design_space(self.design)
+
+    def test_design_space_rejects_reflector_position_drift(self):
+        data = json.loads(self.design.read_text())
+        data["fixed_reflector_positions"] = ["p02", "p12", "p20", "p21", "p23"]
+        self.design.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, "fixed_reflector_positions"):
+            validate_design_space(self.design)
+
+    def test_design_space_rejects_candidate_id_layout_mismatch(self):
+        data = json.loads(self.design.read_text())
+        data["candidate_layouts"][0]["candidate_id"] = "c5g7-2x2-MMUU"
+        self.design.write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, "candidate ID/layout signature mismatch"):
+            validate_design_space(self.design)
+
+    def test_patch_builder_rejects_invalid_material_instead_of_silently_mapping_to_mox(self):
+        layout = {"p00":"UO2","p01":"MOX","p10":"burned","p11":"UO2"}
+        original = self.builder.read_text()
+        with self.assertRaisesRegex(ValueError, "fuel materials"):
+            patch_builder(self.builder, layout, batches=40, inactive=5, particles=200)
+        self.assertEqual(self.builder.read_text(), original)
+
+    def test_patch_builder_preserves_all_five_reflector_cells_for_every_layout(self):
+        import itertools
+        positions = ("p00", "p01", "p10", "p11")
+        for mox_positions in itertools.combinations(positions, 2):
+            layout = {p: ("MOX" if p in mox_positions else "UO2") for p in positions}
+            with tempfile.TemporaryDirectory() as case_dir:
+                builder = Path(case_dir) / "build-xml-2d.py"
+                nl = chr(10)
+                builder.write_text(
+                    CANONICAL_ASSIGNMENT + nl
+                    + "batches = 20000" + nl
+                    + "inactive = 500" + nl
+                    + "particles = 10000" + nl
+                    + "settings_file.particles = particles" + nl
+                    + "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]" + nl
+                    + "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]" + nl
+                    + "settings_file.entropy_dimension = [51, 51, 1]" + nl,
+                    encoding="utf-8",
+                )
+                patch_builder(builder, layout, batches=40, inactive=5, particles=200)
+                text = builder.read_text()
+                assignment = next(
+                    (line for line in text.splitlines()
+                     if line.startswith("lattices['Core'].universes = ")),
+                    None,
+                )
+                self.assertIsNotNone(assignment, text)
+                compact = "".join(assignment.split("=", 1)[1].split())
+                symbol = {"UO2": "u", "MOX": "m"}
+                expected = (
+                    f"[[{symbol[layout['p00']]},{symbol[layout['p01']]},w],"
+                    f"[{symbol[layout['p10']]},{symbol[layout['p11']]},w],[w,w,w]]"
+                )
+                self.assertEqual(compact, expected)
+                self.assertEqual(compact.count(",w]"), 3)
+                self.assertEqual(compact.count("[w,w,w]"), 1)
 
     def test_patch_uses_standard_c5g7_energy_group_boundaries(self):
         patch_mgxs_energy_boundaries(self.materials)
