@@ -84,3 +84,26 @@ Not established:
 ## Reproduction
 
 The workflow extracts the archived evidence, audits all four statepoints with `scripts/audit_openmc_statepoint.py`, compares the production eigenvalue summary with `evidence/openmc_local_baseline_2026-10-11/result_summary.json`, inventories artifact hashes and parsed settings, summarizes tally uncertainty, and renders six mesh-index plots. The generated JSON/CSV/PNG outputs are preserved as a downloadable workflow artifact. The stage34 outputs are not treated as independent repetitions because their settings/seed provenance is unresolved.
+
+## Additional raw-HDF5 semantic cross-check
+
+A second, dependency-light audit now reads the production statepoint directly from
+the committed ZIP using h5py, independently of the OpenMC Python API wrapper. The
+check ran in the CI matrix on Python 3.10, 3.11, and 3.12 and passed **10/10
+checks** in each job.
+
+- Workflow run: https://github.com/thenextw4ng/cb-pfr/actions/runs/38096943383
+- ZIP member: `c5g7-run/2d/statepoint.20000.h5`
+- Statepoint SHA-256: `0d76dc1a14a2b74a388c01883f01e5c3095480d53eee885910ca2a0c57e6b882`
+- Statepoint size: 1,158,736 bytes
+- Raw HDF5 k_eff mean: 1.186394144702191
+- Raw HDF5 k_eff standard deviation: 5.6113408647969484e-05
+- Run metadata: 20,000 batches, 500 inactive, 10,000 particles/batch, 19,500 realizations
+- Mesh dimension: 51 × 51 × 1
+- Score set: flux, fission, nu-fission
+
+The raw-file comparison matched all expected scalar/settings/tally checks against
+the transcribed summary. This independently confirms that the archive contains
+the recorded scalar and expected tally metadata. It still does not verify the
+full model against the benchmark specification, match the stage34 runs to
+candidate identities, or establish a defensible QUBO-to-material mapping.
