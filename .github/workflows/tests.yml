@@ -30,6 +30,24 @@ jobs:
       - name: Audit committed evidence archives
         run: |
           python -m pip install h5py
+          python - <<'PY'
+          import h5py
+          import numpy as np
+          for path, edge in [("/tmp/mgxs-a.h5", 1e-5), ("/tmp/mgxs-b.h5", 9.999999999999999e-6)]:
+              with h5py.File(path, "w") as f:
+                  f.attrs["group structure"] = np.array([edge, 1.0, 1.0e7], dtype=float)
+                  f.create_dataset("cross_sections", data=np.array([[1.0, 2.0], [3.0, 4.0]], dtype=float))
+          PY
+          python scripts/fingerprint_hdf5_semantics.py --files /tmp/mgxs-a.h5 /tmp/mgxs-b.h5 --out /tmp/mgxs-semantic-check.json --require-datasets-identical
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("/tmp/mgxs-semantic-check.json").read_text())
+          assert result["dataset_content_equal"] is True, result
+          assert result["full_semantic_equal"] is False, result
+          assert len(result["comparisons"][0]["attribute_differences"]) == 1, result
+          print("HDF5 semantic fingerprint correctly distinguishes dataset equality from metadata differences.")
+          PY
           python scripts/audit_evidence_archive.py --archive OpenMC_HDF5_Evidence_2026-10-11.zip --out /tmp/openmc-evidence-archive-audit.json --require-statepoint
           python scripts/audit_evidence_archive.py --archive CBPFR_ReactorQ__Archive_2026-10-11.zip --out /tmp/conversation-archive-audit.json
           cat /tmp/openmc-evidence-archive-audit.json
