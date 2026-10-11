@@ -15,6 +15,7 @@ This audit describes the repository evidence boundary; it is not a claim of peer
 - Aggregate result table and statistical audit metadata.
 - Archived `results/per_seed_results.csv` with 4,000 method/trial rows.
 - Reproducibility, limitations, and physical-mapping documentation.
+- Six low-budget C5G7 assembly-placement smoke runs with candidate IDs, explicit seeds, statepoint/input hashes, and summary CSV/JSON under `results/c5g7_layout_smoke_2026-10-10/`.
 - Software citation metadata in `CITATION.cff` and `.zenodo.json`.
 
 ## Evidence taxonomy
@@ -22,7 +23,7 @@ This audit describes the repository evidence boundary; it is not a claim of peer
 - **Synthetic software/protocol evidence:** reported 1,000-trial study under a known synthetic normal observation model.
 - **Archived data:** `results/per_seed_results.csv`, retained for inspection and row-level comparison.
 - **Independent computational rerun:** the released source and frozen configuration were executed to regenerate the benchmark; substantive trial-level fields and aggregate rates matched the archival output. This is not an external third-party replication.
-- **Recorded transport execution evidence:** MC/DC C5G7 benchmark run; this is not CB-PFR physical validation.
+- **Recorded transport execution evidence:** the audited production C5G7 statepoint plus six low-budget assembly-placement smoke runs. The smoke runs are exploratory and not benchmark-grade; neither establishes CB-PFR physical validation.
 - **Physical CB-PFR validation:** not established.
 
 ## Recorded synthetic rates
@@ -42,7 +43,7 @@ The seven-position QUBO uses abstract `fresh`, `once_burned`, and `twice_burned`
 
 `NO_DEFENSIBLE_MAPPING_FOUND`
 
-The MC/DC C5G7 report is execution evidence only. It does not establish a validated QUBO-to-physics mapping, a validated CB-PFR transport workflow, or reactor-safety evidence.
+The production statepoint audit and six smoke runs are execution/data-extraction evidence only. They do not establish a validated QUBO-to-physics mapping, benchmark-grade candidate ranking, a validated CB-PFR transport workflow, or reactor-safety evidence.
 
 ## Artifact identity
 
