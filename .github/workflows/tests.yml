@@ -29,10 +29,18 @@ jobs:
           python examples/basic_ranking.py
       - name: Audit committed evidence archives
         run: |
+          python -m pip install h5py
           python scripts/audit_evidence_archive.py --archive OpenMC_HDF5_Evidence_2026-10-11.zip --out /tmp/openmc-evidence-archive-audit.json --require-statepoint
           python scripts/audit_evidence_archive.py --archive CBPFR_ReactorQ__Archive_2026-10-11.zip --out /tmp/conversation-archive-audit.json
           cat /tmp/openmc-evidence-archive-audit.json
           cat /tmp/conversation-archive-audit.json
+      - name: Cross-check raw production statepoint against recorded summary
+        run: |
+          python scripts/audit_openmc_hdf5_archive.py \
+            --archive OpenMC_HDF5_Evidence_2026-10-11.zip \
+            --baseline evidence/openmc_local_baseline_2026-10-11/result_summary.json \
+            --out /tmp/openmc-hdf5-semantic-audit.json
+          cat /tmp/openmc-hdf5-semantic-audit.json
       - name: Reproduce frozen synthetic benchmark
         run: |
           python scripts/run_reduced_synthetic_calibration.py --results-dir /tmp/cbpfr-reproduced
