@@ -52,3 +52,10 @@ The audit is fail-closed on artifact-integrity inconsistencies. Its overall stat
 ## Final rule for manuscript language
 
 Do not claim actual quantum-annealing runs unless the solver execution and raw samples exist. Do not claim flux distribution without an audited flux tally. Do not compare assembly-integrated fission rate to normalized pin power as though they were the same quantity. Do not call the C5G7 study a validated physical mapping of the Usmanov burnup-state QUBO. Do not call synthetic CB-PFR results physical validation. These distinctions preserve the credibility of both manuscripts.
+
+
+## External literature integration added 2026-10-11
+
+A source register and compatibility assessment are now committed at [external benchmark integration](EXTERNAL_EXPERIMENTAL_BENCHMARK_INTEGRATION_2026-10-11.md) and [source register CSV](../data/external_benchmarks/source_register.csv). The register includes OECD/NEA IRPhE, Chiesa et al. (2015) TRIGA Mark II neutron-flux measurements, Borio di Tigliole et al. (2010) TRIGA criticality/flux comparisons, and the OECD/NEA C5G7 computational benchmark. No external numerical values were integrated because the accessible records did not provide the complete machine-readable data and uncertainty provenance required for a defensible quantitative comparison, and the TRIGA system is not physically equivalent to the C5G7 layouts.
+
+A manuscript-ready evidence-aligned text is available in [EUREKA claim-safe text](EUREKA_CLAIM_SAFE_TEXT_2026-10-11.md). This is a bounded replacement wording, not a claim that the originally planned quantum-annealing or experimental-validation runs occurred. The experimental-validation status remains **NOT ESTABLISHED**.
