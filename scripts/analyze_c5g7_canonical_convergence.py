@@ -38,6 +38,11 @@ def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
         "unique_statepoint_hashes": len(hashes) == len(set(hashes)),
         "common_compute_settings": len(settings) == 1,
         "raw_hdf5_audits_pass": audit_pass,
+        "source_entropy_trace_present": all(
+            r.get("source_convergence", {}).get("status") == "DIAGNOSTIC_REVIEW_REQUIRED"
+            and bool(r.get("source_convergence", {}).get("entropy"))
+            for r in rows
+        ),
         "single_mgxs_hash_across_runs": single_mgxs_hash,
         "standard_c5g7_energy_group_structure": standard_group_structure,
     }
@@ -114,10 +119,14 @@ def load_runs(root: Path) -> list[dict]:
     for round_dir in sorted(root.glob("seed_*")):
         summary_path = round_dir / "STUDY_SUMMARY.json"
         audit_path = round_dir / "analysis" / "raw_hdf5_audit.json"
-        if not summary_path.is_file() or not audit_path.is_file():
-            raise ValueError(f"{round_dir.name}: missing STUDY_SUMMARY.json or raw HDF5 audit")
+        source_convergence_path = round_dir / "analysis" / "source_convergence.json"
+        if not summary_path.is_file() or not audit_path.is_file() or not source_convergence_path.is_file():
+            raise ValueError(f"{round_dir.name}: missing study summary, raw HDF5 audit, or source-convergence diagnostics")
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
+        source_convergence = json.loads(source_convergence_path.read_text(encoding="utf-8"))
+        if source_convergence.get("status") != "DIAGNOSTIC_REVIEW_REQUIRED" or not source_convergence.get("entropy"):
+            raise ValueError(f"{round_dir.name}: source entropy trace missing or not analyzable")
         if summary.get("status") != "all_runs_completed_needs_independent_validation":
             raise ValueError(f"{round_dir.name}: run study status is {summary.get('status')}")
         if audit.get("status") != "PASS" or audit.get("candidate_count") != 1:
@@ -143,6 +152,7 @@ def load_runs(root: Path) -> list[dict]:
             "mgxs_sha256": audit_case["mgxs_sha256"],
             "mgxs_energy_group_boundaries": physical.get("mgxs_energy_group_boundaries"),
             "mgxs_group_structure_audit": physical.get("mgxs_group_structure_audit"),
+            "source_convergence": source_convergence,
             "raw_hdf5_audit": audit["status"],
         })
     if not rows:
