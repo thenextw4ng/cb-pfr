@@ -6,10 +6,16 @@ from pathlib import Path
 from scripts.run_beavrs_cycle1_map_validation import (
     build_assembly_map,
     load_measurements,
+    fahrenheit_to_kelvin,
 )
 
 
 class BeavrsCycle1MapValidationTests(unittest.TestCase):
+    def test_cycle1_temperature_conversion_matches_reported_inlet_temperature(self):
+        self.assertAlmostEqual(fahrenheit_to_kelvin(558.875), 565.8583333333, places=8)
+        with self.assertRaisesRegex(ValueError, "finite"):
+            fahrenheit_to_kelvin(float("nan"))
+
     def test_assembly_map_uses_one_based_mesh_indices_and_reverses_y(self):
         template = [["dummy" for _ in range(19)] for _ in range(19)]
         template[2][8] = "J___1"
