@@ -6,6 +6,7 @@ from pathlib import Path
 
 from scripts.run_c5g7_layout_study import (
     CANONICAL_ASSIGNMENT,
+    PINNED_UPSTREAM_COMMIT,
     patch_builder,
     patch_mgxs_energy_boundaries,
     validate_design_space,
@@ -22,7 +23,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         (model / "2d").mkdir(parents=True)
         (self.source / "UPSTREAM_PROVENANCE.json").write_text(json.dumps({
             "source_repository": "https://github.com/mit-crpg/benchmarks.git",
-            "source_commit": "a" * 40,
+            "source_commit": PINNED_UPSTREAM_COMMIT,
         }), encoding="utf-8")
         self.builder = model / "2d" / "build-xml-2d.py"
         self.builder.write_text(
@@ -30,7 +31,10 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             "batches = 20000\n"
             "inactive = 500\n"
             "particles = 10000\n"
-            "settings_file.particles = particles\n",
+            "settings_file.particles = particles\n"
+            "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\n"
+            "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\n"
+            "settings_file.entropy_dimension = [51, 51, 1]\n",
             encoding="utf-8",
         )
         self.materials = model / "materials.py"
@@ -66,7 +70,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
 
     def test_source_provenance_and_builder_required(self):
         model, revision = validate_source(self.source)
-        self.assertEqual(revision, "a" * 40)
+        self.assertEqual(revision, PINNED_UPSTREAM_COMMIT)
         self.assertTrue((model / "2d" / "build-xml-2d.py").is_file())
 
     def test_design_space_accepts_six_unique_valid_layouts(self):
@@ -102,6 +106,9 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         self.assertIn("inactive = 5", text)
         self.assertIn("particles = 200", text)
         self.assertIn("settings_file.seed = 620000", text)
+        self.assertIn("entropy_mesh = openmc.RegularMesh()", text)
+        self.assertIn("settings_file.entropy_mesh = entropy_mesh", text)
+        self.assertNotIn("settings_file.entropy_lower_left", text)
         self.assertNotIn(CANONICAL_ASSIGNMENT, text)
 
     def test_patch_fails_closed_when_upstream_template_changes(self):
