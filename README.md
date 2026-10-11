@@ -47,6 +47,18 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 | QUBO → C5G7 mapping | **NO_DEFENSIBLE_MAPPING_FOUND** |
 | Universal superiority | **Not claimed** |
 
+## BEAVRS experimental comparison workflow
+
+A reproducible full-core BEAVRS Cycle 1 day-0 radial detector-map comparison runner and GitHub Actions workflow are now included:
+
+- [BEAVRS comparison protocol](reports/BEAVRS_CYCLE1_EXPERIMENTAL_COMPARISON_PROTOCOL.md)
+- [BEAVRS validation execution plan](reports/BEAVRS_VALIDATION_EXECUTION_PLAN_2026-10-11.md)
+- [Run manifest](config/benchmarks/beavrs_validation_manifest.json)
+- [Runner script](scripts/run_beavrs_cycle1_map_validation.py)
+- [GitHub Actions workflow](.github/workflows/beavrs-cycle1-map-validation.yml)
+
+The workflow uses the pinned public BEAVRS source, OpenMC 0.15.3, and the official ENDF/B-VII.1 HDF5 data library; it records data hashes and uploads raw run/comparison artifacts. It compares a normalized 58-assembly detector map with mesh-integrated fission rates. A known bank-E insertion mismatch (measurement: 230 steps withdrawn; upstream model default: 228) and the absence of a detector-response/uncertainty-weighted acceptance analysis mean this is an **initial experimental comparison**, not by itself a complete physical-validation certificate. Check the linked workflow run and its artifacts before reporting any numerical result.
+
 ## Validation-claim decision
 
 The current defensible claim boundary is recorded in [Validation Claim Decision (2026-10-11)](reports/VALIDATION_CLAIM_DECISION_2026-10-11.md): the method/software has reproducible synthetic-benchmark evidence, while nuclear experimental validation remains **NOT ESTABLISHED**. A KRITZ-2 comparison utility or a successful smoke run is not itself experimental validation.
