@@ -57,7 +57,11 @@ def main():
                 p.error(f"{cid}: layout changed across rounds")
             layouts[cid]=c["layout"]
             case_dir=rd/cid
-            sp=case_dir/"model/2d/statepoint.100.h5"; settings=case_dir/"model/2d/settings.xml"; mgxs=case_dir/"model/2d/mgxs.h5"
+            statepoint_rel = phys.get("statepoint")
+            if not isinstance(statepoint_rel, str) or not statepoint_rel:
+                p.error(f"{rd.name}/{cid}: physical result lacks a statepoint path")
+            sp = case_dir / statepoint_rel
+            settings=case_dir/"model/2d/settings.xml"; mgxs=case_dir/"model/2d/mgxs.h5"
             if not sp.is_file() or not settings.is_file() or not mgxs.is_file():
                 p.error(f"{rd.name}/{cid}: required file missing")
             sp_hash,settings_hash,mgxs_hash=sha(sp),sha(settings),sha(mgxs)
