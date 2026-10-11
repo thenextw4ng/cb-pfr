@@ -52,19 +52,23 @@ This is **exploratory smoke-budget evidence**, not benchmark-grade validation. T
 
 ## Production-versus-regenerated XML comparison
 
-The [input-provenance comparison report](c5g7_input_provenance_comparison_2026-10-11.md) found exact equality for canonical geometry, tallies, and plots. The material XML definitions are identical after normalizing only the local `cross_sections` path. Settings differ by the expected compute budget and explicit smoke seed. The production `mgxs.h5` and regenerated canonical library are byte-identical: SHA-256 `170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216`; all 63 datasets and all metadata match. See the [direct MGXS comparison workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38100560219). However, an earlier repeatability artifact has a different MGXS hash with a one-ULP root energy-boundary difference; provenance across those 18 runs still needs explanation. The primary-specification review remains open.
+The [input-provenance comparison report](c5g7_input_provenance_comparison_2026-10-11.md) found exact equality for canonical geometry, tallies, and plots. The material XML definitions are identical after normalizing only the local `cross_sections` path. Settings differ by the expected compute budget and explicit smoke seed. The production `mgxs.h5` and regenerated canonical library are byte-identical: SHA-256 `170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216`; all 63 datasets and all metadata match. See the [direct MGXS comparison workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38100560219). An earlier repeatability artifact had a different MGXS hash with a one-ULP root energy-boundary difference. The source uses `np.logspace(-5, 7, 8)` when generating the group structure; the preparation adapter now normalizes the endpoints explicitly. A fresh repeated-run workflow is verifying this fix. The primary-specification review remains open.
+
+## Assembly-integrated fission-rate proxy smoke results
+
+The [six-layout fission-rate proxy report](c5g7_assembly_fission_proxy_smoke_2026-10-11.md) and [CSV results](../results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv) now report assembly-integrated fission tally and a normalized peaking factor for all six layouts. This was one seed per layout at 100 batches / 10 inactive / 1,000 particles per batch. The metric is a fission-rate proxy, not absolute power; mesh-bin covariance is not propagated, and the ranking is not an optimization conclusion. The workflow used the MGXS file byte-identical to the production library.
 
 ## What remains unverified
 
 1. The production statepoint's scalar/settings/tally metadata have passed the OpenMC API audit and a separate raw-HDF5 comparison. The XML comparison now confirms geometry/tally/plot equality and material-definition equality after normalizing the local cross-section path. Remaining benchmark verification includes explaining the cross-workflow MGXS discrepancy and completing boundary-condition/composition review against the primary specification.
-2. The XML input comparison narrowed the discrepancy to the absolute cross-section path, but the production MGXS file is missing from the evidence archive. Exact nuclear-data correspondence and benchmark acceptance tolerance must be reviewed before interpreting the scalar match as benchmark verification.
+2. The production MGXS file is present and byte-identical to the regenerated canonical library. Exact correspondence to the primary benchmark specification and the official comparison protocol still need review before interpreting the scalar match as benchmark verification.
 3. The archived run_01–run_03 stage34 outputs must be linked to exact candidate IDs and configuration/input hashes before they can support a candidate comparison.
 4. The abstract QUBO categories (fresh, once_burned, twice_burned) still have no defensible mapping to C5G7 UO2/MOX material or depletion states.
 5. Benchmark-grade candidate comparison still requires a reviewed physical model/material mapping, a predeclared objective and acceptance protocol, a higher common computational budget, and additional independent seeds per layout. The current three repeated runs per layout are smoke-budget only.
 
 ## Conclusion
 
-The recorded production scalar is consistent in scale with the published 2-D C5G7 reference, and its extraction has now been independently cross-checked from the committed HDF5 bytes. Exact model/nuclear-data correspondence and full benchmark acceptance remain unverified. Six layouts have exploratory smoke results and three seeds per layout, but no benchmark-grade six-candidate evaluation or physical CB-PFR validation is established.
+The recorded production scalar is consistent in scale with the published 2-D C5G7 reference, and its extraction has now been independently cross-checked from the committed HDF5 bytes. Exact model/nuclear-data correspondence and full benchmark acceptance remain unverified. Six layouts have exploratory smoke results, three-seed repeatability data at low budget, and one-seed assembly fission-rate proxy outputs. No benchmark-grade six-candidate evaluation or physical CB-PFR validation is established.
 
 ## References
 
