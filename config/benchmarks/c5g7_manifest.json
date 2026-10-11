@@ -43,11 +43,15 @@
     "reference_values_transcribed_and_reviewed": false,
     "openmc_baseline_run_verified": false,
     "candidate_mapping_status": "blocked",
-    "reason": "The production statepoint scalar was independently read with OpenMC 0.16.0 and matched the recorded mean/standard deviation. Canonical geometry, tally, and plot XML match the pinned upstream regeneration; material XML definitions match after normalizing the local cross_sections path. The production MGXS file is present in the evidence archive and is being compared directly with the regenerated library. The legacy fresh/once_burned/twice_burned labels still have no defensible mapping to C5G7 UO2/MOX enrichment or depletion compositions.",
+    "reason": "The production statepoint scalar was independently read with OpenMC 0.16.0 and matched the recorded mean/standard deviation. Canonical geometry, tally, and plot XML match the pinned upstream regeneration; material XML definitions match after normalizing the local cross_sections path. The archived production MGXS and regenerated canonical MGXS are byte-identical (SHA-256 170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216), with all 63 datasets and all metadata matching. A separate earlier repeated-smoke artifact still shows a one-ULP root group-boundary metadata discrepancy versus that hash, so provenance across all repeated runs needs explanation. The legacy fresh/once_burned/twice_burned labels still have no defensible mapping to C5G7 UO2/MOX enrichment or depletion compositions.",
     "statepoint_scalar_read_verified": true,
     "model_xml_comparison": "partial_match_except_local_cross_sections_path",
     "production_mgxs_file_available": true,
-    "production_mgxs_hash_verified": false
+    "production_mgxs_hash_verified": true,
+    "production_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+    "canonical_regenerated_mgxs_byte_identical": true,
+    "production_mgxs_semantic_sha256": "fb4bb5adaaf6ccbc79a364fb37e7e3e1c2a0af9f8955e74d7649143760307d10",
+    "production_mgxs_dataset_content_sha256": "c054ced2866ce997a617d47c541cc62a25cedd4621bf732a1b9ba44857b14db8"
   },
   "mapping_contract": {
     "required_position_map": null,
