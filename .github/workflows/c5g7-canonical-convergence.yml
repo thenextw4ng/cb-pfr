@@ -1,9 +1,6 @@
 name: C5G7 canonical high-budget numerical screen
 
 on:
-  push:
-    paths:
-      - ".github/workflows/c5g7-canonical-convergence.yml"
   workflow_dispatch:
     inputs:
       batches:
