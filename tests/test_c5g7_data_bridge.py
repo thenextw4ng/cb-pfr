@@ -74,6 +74,29 @@ class TestC5G7DataBridge(unittest.TestCase):
             with self.assertRaises(ExternalDataError):
                 load_external_results(path)
 
+    def test_mixed_benchmark_cases_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "data.csv"
+            write_csv(path, EXPECTED_CANDIDATES[:2])
+            text = path.read_text(encoding="utf-8").replace(
+                "C5G7-2D-2x2-explicit-layout", "DIFFERENT_CASE", 1
+            )
+            path.write_text(text, encoding="utf-8")
+            with self.assertRaises(ExternalDataError):
+                load_external_results(path)
+
+    def test_cbpfr_metric_without_limit_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "data.csv"
+            write_csv(path, EXPECTED_CANDIDATES)
+            rows = load_external_results(path)
+            limits = [{
+                "name": "keff", "value_attribute": "keff_mean",
+                "uncertainty_attribute": "keff_uncertainty", "scale": 0.01,
+            }]
+            with self.assertRaises(ExternalDataError):
+                assess_cbpfr_limits(rows, limits)
+
 
 if __name__ == "__main__":
     unittest.main()
