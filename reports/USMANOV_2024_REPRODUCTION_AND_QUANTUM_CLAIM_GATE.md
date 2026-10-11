@@ -63,3 +63,8 @@ python scripts/analyze_solver_benchmark.py --input results/solver_trials.csv --o
 ```
 
 The workflow is intentionally fail-closed: no raw trial data means no reproduction claim, and no device job records means no quantum-hardware execution claim.
+
+
+## Optional actual QPU runner
+
+`scripts/run_dwave_qubo_benchmark.py` is an optional D-Wave adapter for a frozen QUBO JSON file. It requires the separately installed `dwave-system` package and `DWAVE_API_TOKEN` in the runtime environment; no token is stored in this repository. It archives per-call best energies/samples, solver metadata, problem hash, configured anneal-time sum, and end-to-end call time. A QPU run must be compared with classical methods using the same exact QUBO, success target, and budget. The adapter has not been run against a QPU in this repository; no hardware execution or quantum advantage is claimed.
