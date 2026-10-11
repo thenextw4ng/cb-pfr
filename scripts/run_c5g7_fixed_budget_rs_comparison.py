@@ -49,6 +49,7 @@ def main() -> int:
     if a.sqa_reads<1 or a.sqa_sweeps<1: raise ValueError("SQA reads/sweeps must be positive")
     rows=load_rows(a.input); groups=defaultdict(list)
     for r in rows: groups[r["layout_signature"]].append(r)
+    mgxs_hashes = {r["mgxs_sha256"] for r in rows}
     summaries=[]
     for sig in sorted(EXPECTED):
         g=groups[sig]
