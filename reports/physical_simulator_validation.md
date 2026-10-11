@@ -46,7 +46,7 @@ A separate 2×2 UO2/MOX assembly-placement formulation has now been run for all 
 - [Three-round repeatability analysis](c5g7_repeatability_smoke_2026-10-11.md)
 - [Repeatability workflow and raw statepoint artifacts](https://github.com/thenextw4ng/cb-pfr/actions/runs/38097472734)
 
-This is **exploratory smoke-budget evidence**, not benchmark-grade validation. The reported k_eff ranking is descriptive rather than an optimization objective; the current budget is low, only three repetitions exist per layout, and exact production-vs-smoke materials metadata correspondence remains under review. The repeated-run analysis found one root MGXS metadata energy boundary differing by one floating-point step across separate workflow invocations, while all 63 dataset payloads matched; see the [machine-readable comparison](../results/c5g7_repeatability_smoke_2026-10-11/mgxs_semantic_comparison.json).
+This is **historical exploratory smoke evidence only**, not standard-C5G7 benchmark validation. The reported k_eff ranking is descriptive rather than an optimization objective, and the budget is low. More importantly, these runs used the upstream log-spaced group boundaries, not the standard C5G7 boundaries. The prior one-ULP metadata observation was a separate serialization issue and did not detect the much larger group-structure mismatch. The corrected group audit is documented in the [input-provenance report](c5g7_input_provenance_comparison_2026-10-11.md).
 
 ## Production-versus-regenerated XML comparison
 
@@ -54,11 +54,11 @@ The [input-provenance comparison report](c5g7_input_provenance_comparison_2026-1
 
 ## Assembly-integrated fission-rate proxy smoke results
 
-The [six-layout fission-rate proxy report](c5g7_assembly_fission_proxy_smoke_2026-10-11.md) and [CSV results](../results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv) now report assembly-integrated fission tally and a normalized peaking factor for all six layouts. This was one seed per layout at 100 batches / 10 inactive / 1,000 particles per batch. The metric is a fission-rate proxy, not absolute power; mesh-bin covariance is not propagated, and the ranking is not an optimization conclusion. The workflow used the MGXS file byte-identical to the production library.
+The [six-layout fission-rate proxy report](c5g7_assembly_fission_proxy_smoke_2026-10-11.md) and [CSV results](../results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv) now report assembly-integrated fission tally and a normalized peaking factor for all six layouts. This was one seed per layout at 100 batches / 10 inactive / 1,000 particles per batch. The metric is a fission-rate proxy, not absolute power; mesh-bin covariance is not propagated, and the ranking is not an optimization conclusion. These historical results used nonstandard log-spaced energy-group boundaries and must not be used for standard C5G7 physical ranking. The corrected runner now regenerates MGXS with the standard group boundaries.
 
 ## What remains unverified
 
-1. The production statepoint's scalar/settings/tally metadata have passed the OpenMC API audit and a separate raw-HDF5 comparison. The XML comparison now confirms geometry/tally/plot equality and material-definition equality after normalizing the local cross-section path. Remaining benchmark verification includes explaining the cross-workflow MGXS discrepancy and completing boundary-condition/composition review against the primary specification.
+1. The historical production statepoint's scalar/settings/tally metadata passed the OpenMC API audit, and the XML comparison confirms geometry/tally/plot equality plus material-definition equality after normalizing the local cross-section path. However, its MGXS uses nonstandard energy-group boundaries. A corrected standard-group transport rerun and boundary-condition/composition review against the primary specification are still required.
 2. The historical production MGXS file is present and byte-identical to the old regenerated library, but both used nonstandard log-spaced group boundaries. The scalar match is withdrawn as benchmark evidence. Corrected standard-group runs and primary-specification review are required.
 3. The archived run_01–run_03 stage34 outputs must be linked to exact candidate IDs and configuration/input hashes before they can support a candidate comparison.
 4. The abstract QUBO categories (fresh, once_burned, twice_burned) still have no defensible mapping to C5G7 UO2/MOX material or depletion states.
