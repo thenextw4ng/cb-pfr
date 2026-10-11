@@ -33,7 +33,7 @@ The proposed protocol is machine-readable in `config/benchmarks/c5g7_validation_
 
 ### Gate G0 — exact model identity (blocking)
 
-Before numerical benchmark acceptance, compare the canonical generated geometry, material compositions, settings, boundary conditions, group structure, and nuclear-data provenance to the chosen primary specification. In particular, reconcile production-versus-smoke materials XML. Keep exact input hashes and the upstream commit in the run manifest. A close k-effective value is a useful sanity check but cannot substitute for this review.
+Before numerical benchmark acceptance, compare the canonical generated geometry, material compositions, settings, boundary conditions, group structure, and nuclear-data provenance to the chosen primary specification. See [the input-provenance comparison](c5g7_input_provenance_comparison_2026-10-11.md). The production-versus-smoke material XML difference has now been explained: only the absolute `cross_sections` path differs; geometry, tallies, plots, and the rest of material definitions match. The raw production MGXS file is still missing, so its nuclear-data identity remains unverified. Keep exact input hashes and the upstream commit in the run manifest. A close k-effective value is a useful sanity check but cannot substitute for this review.
 
 ### Gate G1 — canonical k-effective screening
 
