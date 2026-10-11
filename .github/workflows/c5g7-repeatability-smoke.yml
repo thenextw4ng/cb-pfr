@@ -10,6 +10,7 @@ on:
       - "scripts/audit_c5g7_evidence.py"
       - "scripts/analyze_c5g7_fission_objective_repeatability.py"
       - "scripts/analyze_c5g7_assembly_fission.py"
+      - "scripts/audit_c5g7_spatial_mapping.py"
       - "scripts/prepare_c5g7_reference.py"
       - "config/benchmarks/c5g7_2x2_design_space.json"
   pull_request:
@@ -20,11 +21,12 @@ on:
       - "scripts/audit_c5g7_smoke_statepoints.py"
       - "scripts/audit_c5g7_evidence.py"
       - "scripts/prepare_c5g7_reference.py"
+      - "scripts/audit_c5g7_spatial_mapping.py"
       - "config/benchmarks/c5g7_2x2_design_space.json"
   workflow_dispatch:
 
 concurrency:
-  group: c5g7-repeatability-${{ github.ref }}
+  group: c5g7-repeatability-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -75,6 +77,13 @@ jobs:
               --raw-audit "/tmp/c5g7-repeatability/round_${seed_base}/analysis/raw_hdf5_audit.json" \
               --out "/tmp/c5g7-repeatability/round_${seed_base}/analysis/evidence_integrity_audit.json"
           done
+      - name: Independently audit raw-HDF5 mesh-to-assembly spatial mapping
+        shell: bash -el {0}
+        run: |
+          python scripts/audit_c5g7_spatial_mapping.py \
+            --study-root /tmp/c5g7-repeatability \
+            --out /tmp/c5g7-repeatability/spatial_mapping_audit.json
+          cat /tmp/c5g7-repeatability/spatial_mapping_audit.json
       - name: Analyze repeated-run variability and rank stability
         shell: bash -el {0}
         run: |
