@@ -79,7 +79,7 @@ Artifact: [beavrs-cycle1-map-comparison-38117279412.zip](https://github.com/then
 
 The model reproduces the critical condition within its Monte Carlo uncertainty, but the spatial map comparison is poor and does **not** pass as a validated flux-shape comparison. Therefore the overall BEAVRS physical-validation gate remains **NOT ESTABLISHED**. The next technical task is to resolve the model-to-observable mismatch (the assembly-integrated fission-rate proxy is not the detector response operator), examine the fuel-loading and detector-position mapping independently, and propagate benchmark uncertainty before making a physical-validation claim.
 
-The run manifest records SE=230, matching the Cycle 1 day-0 record. The archived comparison JSON's limitation list retained one stale sentence about the upstream SE=228 default; the manifest and source configuration show the actual override. The result's integrity audit checks artifact consistency, not scientific adequacy. A source fix was committed afterward so future runs emit the corrected limitation text.
+The run manifest records SE=230, matching the Cycle 1 day-0 record. The archived comparison JSON's limitation list retained one stale sentence about the upstream SE=228 default; the manifest and source configuration show the actual override. The result's integrity audit checks artifact consistency, not scientific adequacy. A source fix was committed afterward, and a metadata-clean rerun is in progress at [workflow 38117736764](https://github.com/thenextw4ng/cb-pfr/actions/runs/38117736764); it does not change the physics configuration or the interpretation of the completed comparison.
 
 ## First-run correction record
 
