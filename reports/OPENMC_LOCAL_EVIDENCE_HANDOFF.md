@@ -12,6 +12,15 @@ The `main` branch includes `OpenMC_HDF5_Evidence_2026-10-11.zip` at the reposito
 - `scripts/audit_openmc_statepoint.py`: read-only extraction of scalar statepoint metadata and tally mean/std-dev values through OpenMC's API.
 - `scripts/inventory_openmc_runs.py`: artifact inventory and SHA-256 checksums.
 
+## Separate six-layout smoke-run evidence
+
+The C5G7 layout workflow also completed six low-budget transport smoke runs with OpenMC 0.16.0. The common settings were 100 batches, 10 inactive, 1,000 particles per batch, one thread, and explicit seeds 620000–620005. All six runs completed and used the same MGXS SHA-256; the statepoint/input hashes and scalar results are preserved in `results/c5g7_layout_smoke_2026-10-10/`.
+
+- [Full smoke-run workflow artifact](https://github.com/thenextw4ng/cb-pfr/actions/runs/38085586809)
+- [Smoke-run scientific interpretation](c5g7_smoke_run_2026-10-10.md)
+
+These runs verify that the isolated candidate cases can execute under the smoke profile. They do not provide benchmark-grade ranking or same-layout repeatability: there is one low-budget run per layout, and the canonical production and smoke materials XML differ. The six-layout study is a separate assembly-placement formulation, not a mapping of the legacy burnup-state QUBO.
+
 ## Still missing for a full candidate-level physical study
 1. Stable candidate IDs and exact configuration vectors matched to each physical statepoint.
 2. Verified proof that the five fixed reflector positions remain unchanged for each candidate.
