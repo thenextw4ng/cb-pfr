@@ -111,6 +111,11 @@ def load_external_results(path: str | Path) -> dict[str, LayoutResult]:
                 configuration_hash=(row.get("configuration_hash") or "").strip() or None,
                 notes=(row.get("notes") or "").strip(),
             )
+    benchmark_cases = {item.benchmark_case for item in results.values()}
+    if len(benchmark_cases) > 1:
+        raise ExternalDataError(
+            "rows use different benchmark_case labels; do not combine incomparable cases in one ranking"
+        )
     return results
 
 
@@ -224,6 +229,8 @@ def assess_cbpfr_limits(
         passes = True
         for metric in metrics:
             name = str(metric["name"])
+            if metric.get("lower") is None and metric.get("upper") is None:
+                raise ExternalDataError(f"metric {name}: at least one explicit lower/upper limit is required")
             value_attr = str(metric["value_attribute"])
             uncertainty_attr = str(metric["uncertainty_attribute"])
             value = None if row is None else getattr(row, value_attr, None)
