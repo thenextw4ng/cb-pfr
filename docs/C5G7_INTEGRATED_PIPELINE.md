@@ -49,3 +49,19 @@ The command ingests completed OpenMC outputs; it does not launch OpenMC transpor
 - `BLOCKED_NO_CONSERVATIVELY_FEASIBLE_CANDIDATE`: no candidate passes the caller-declared screen; no solver selection is accepted.
 
 Every status is software/data-path evidence, not official C5G7 benchmark acceptance, a convergence certificate, physical superiority, a reactor-safety conclusion, or quantum advantage. Fission-rate peaking is a dimensionless relative proxy, not absolute power.
+
+
+## Export repeated study outputs into the pipeline
+
+For new OpenMC runs, first execute the existing C5G7 study runner in `run` mode for each independent seed round, using the same batches/inactive/particles/threads and a different seed base. Then export and audit the raw statepoints into the run-level CSV:
+
+```bash
+python scripts/export_c5g7_run_level_evidence.py \
+  --study-summary results/round1/STUDY_SUMMARY.json results/round2/STUDY_SUMMARY.json results/round3/STUDY_SUMMARY.json \
+  --out-csv results/repeated-study/run_level_results.csv \
+  --audit-out results/repeated-study/export_audit.json
+```
+
+The exporter re-hashes statepoints and MGXS files, checks the run manifests and corrected group boundaries, re-parses the mesh tally through the OpenMC API, and verifies that the parsed k-effective mean/SD match the study summary. It rejects partial studies, duplicate seeds/statepoints, mismatched budgets, inconsistent MGXS hashes, or nonstandard group structures. It requires at least three complete six-layout study summaries and does not launch OpenMC itself.
+
+Then pass the exported CSV to the integrated pipeline command above. Archived smoke rows may instead use `scripts/prepare_c5g7_selection_input.py`, but that adapter explicitly restores only the documented smoke settings; it does not upgrade those historical runs to benchmark-grade evidence.
