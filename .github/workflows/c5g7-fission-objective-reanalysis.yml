@@ -1,0 +1,53 @@
+name: C5G7 corrected-group fission-objective reanalysis
+
+on:
+  push:
+    branches:
+      - research/c5g7-fission-objective-reanalysis-20261011
+    paths:
+      - ".github/workflows/c5g7-fission-objective-reanalysis.yml"
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Completed corrected-group repeatability run ID
+        required: true
+        default: "38103007310"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  reanalyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-fission-reanalysis
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Download completed corrected-group smoke artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: c5g7-layout-repeatability-smoke
+          path: /tmp/c5g7-corrected-smoke
+          repository: thenextw4ng/cb-pfr
+          run-id: ${{ inputs.source_run_id || '38103007310' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Analyze fission-peaking objective across repeated seeds
+        shell: bash -el {0}
+        run: |
+          python scripts/analyze_c5g7_fission_objective_repeatability.py \
+            --study-root /tmp/c5g7-corrected-smoke \
+            --outdir /tmp/c5g7-fission-objective-analysis
+      - name: Upload objective analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-corrected-group-fission-objective-analysis
+          path: /tmp/c5g7-fission-objective-analysis/
+          if-no-files-found: error
