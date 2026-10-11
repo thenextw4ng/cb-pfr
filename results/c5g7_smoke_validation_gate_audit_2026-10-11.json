@@ -128,5 +128,9 @@
       "ranking_is_descriptive_only": true
     }
   ],
-  "interpretation": "All run identity/integrity checks pass on the committed smoke CSV. The canonical k-effective scalar screen fails the provisional project limits because the mean differs from the reference by more than 100 pcm and individual-run Monte Carlo uncertainty exceeds 10 pcm. Noncanonical layout differences from the canonical benchmark reference are descriptive only, not acceptance failures. These are low-budget smoke runs and not official benchmark acceptance."
+  "interpretation": "All run identity/integrity checks pass on the normalized repeatability CSV, including a shared MGXS hash byte-identical to production. The canonical k-effective scalar screen fails the provisional project limits because the mean differs from the reference by more than 100 pcm and individual-run Monte Carlo uncertainty exceeds 10 pcm. Noncanonical layout differences from the canonical benchmark reference are descriptive only, not acceptance failures. These are low-budget smoke runs and not official benchmark acceptance.",
+  "data_source": "results/c5g7_repeatability_normalized_2026-10-11/run_level_results.csv",
+  "workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100905238",
+  "mgxs_byte_identical_to_production": true,
+  "shared_mgxs_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216"
 }
