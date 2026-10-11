@@ -39,7 +39,7 @@ jobs:
           environment-name: openmc
           cache-environment: true
           create-args: >-
-            python=3.11
+            python=3.12
             openmc=0.16.0
             numpy
             h5py
@@ -110,7 +110,7 @@ jobs:
           environment-name: openmc
           cache-environment: true
           create-args: >-
-            python=3.11
+            python=3.12
             openmc=0.16.0
             numpy
             h5py
