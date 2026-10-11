@@ -20,7 +20,8 @@
     "unique_seeds": true,
     "unique_statepoint_hashes": true,
     "single_mgxs_hash": true,
-    "all_raw_hdf5_audits_pass": true
+    "all_raw_hdf5_audits_pass": true,
+    "mgxs_byte_identical_to_production": true
   },
   "model_identity_reviewed": false,
   "tally_reference_reviewed": false,
