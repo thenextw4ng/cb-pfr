@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "comparison_workflow": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38100560219",
+  "status": "PARTIAL_MODEL_INPUT_IDENTITY_CONFIRMED",
+  "production_root_member": "c5g7-run/2d",
+  "candidate_source_repository": "https://github.com/mit-crpg/benchmarks.git",
+  "candidate_source_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+  "xml_comparison": {
+    "method": "XML attribute-order normalization; child order and element values preserved",
+    "geometry_xml": {
+      "identical": true,
+      "sha256": "f71a6c422b2f1d4d8342334824007a20f1471141f5330d0d1ca0b51e9dfe5f33"
+    },
+    "materials_xml": {
+      "byte_identical": false,
+      "production_sha256": "7ff8894035c362469db5b086a620d284fff359dd29c8ffddb8b2135d905b5d11",
+      "candidate_sha256": "c0cb038d386e7b91a9ce9f7f03b757cb9a34a60d830e6eb27a99616f0a0af3f8",
+      "material_definitions_equal_ignoring_cross_sections_path": true,
+      "only_difference": "absolute cross_sections path"
+    },
+    "tallies_xml": {
+      "identical": true,
+      "sha256": "bf760a5aa30301c456ca14cd3f444b4675f6fb1e6e04b8339b4a39d4b4bbef9e"
+    },
+    "plots_xml": {
+      "identical": true,
+      "sha256": "fd5b99e438202d616860cca56c5ca381d7a0e1dc032c300e2ccd104dcb222e9b"
+    },
+    "settings_xml": {
+      "expected_profile_difference": true,
+      "production": {
+        "batches": 20000,
+        "inactive": 500,
+        "particles_per_batch": 10000,
+        "seed": "not recorded in XML"
+      },
+      "candidate": {
+        "batches": 100,
+        "inactive": 10,
+        "particles_per_batch": 1000,
+        "seed": 620000
+      },
+      "production_sha256": "e17d67a3373def5cf20ebe37860c5b1755b8f8a5742c3886f3c88c0ef13726b7",
+      "candidate_sha256": "4cd338d6c1a773d316fd0a3c6835d33424b47e168a22d24e15b50bd52b7bc9f0"
+    }
+  },
+  "mgxs_comparison": {
+    "byte_identical": true,
+    "full_semantic_equal": true,
+    "dataset_content_equal": true,
+    "production_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+    "candidate_sha256": "170cc799f496e952465583bb078b2a88eae0f09886a821fd7ee8999d1eb93216",
+    "full_semantic_sha256": "fb4bb5adaaf6ccbc79a364fb37e7e3e1c2a0af9f8955e74d7649143760307d10",
+    "dataset_content_sha256": "c054ced2866ce997a617d47c541cc62a25cedd4621bf732a1b9ba44857b14db8",
+    "datasets": 63,
+    "groups": 33,
+    "total_hdf5_objects_including_root": 96,
+    "attributes": 45,
+    "byte_size": 61256,
+    "workflow_status": "PASS"
+  },
+  "residual_issue": {
+    "description": "A separate repeated-smoke artifact recorded a different MGXS byte hash; dataset payloads match but one root group-structure energy boundary differs by one floating-point step.",
+    "reference": "results/c5g7_repeatability_smoke_2026-10-11/mgxs_semantic_comparison.json",
+    "resolved": false
+  },
+  "conclusion": "Production and regenerated canonical XML/MGXS inputs strongly match at the file/data level except for expected absolute cross_sections path and run-budget/seed differences. The official benchmark model-identity gate still requires review against the primary specification and reconciliation of the separate repeatability-artifact MGXS metadata discrepancy. This is not benchmark certification or a reactor-safety claim."
+}
