@@ -81,3 +81,15 @@ These results improve repeatability evidence but remain smoke-budget results, no
 ## Interpretation rule
 
 A ZIP integrity pass is a byte-integrity check. A raw-HDF5/OpenMC API pass is a data-extraction and consistency check. Software CI verifies software behavior. None of these alone proves benchmark correctness, candidate-level physical performance, independent repetition, or reactor safety.
+
+## Added 2026-10-11 validation artifacts
+
+- `reports/c5g7_input_provenance_comparison_2026-10-11.md` and `results/c5g7_input_provenance_comparison_2026-10-11.json`: exact production-to-regenerated XML/MGXS comparison; canonical MGXS is byte-identical to production.
+- `results/c5g7_repeatability_normalized_2026-10-11/`: 18 repeated low-budget runs with production-identical MGXS, raw HDF5 audits, run-level statepoint hashes, summary CSV/JSON, and provenance notes.
+- `reports/c5g7_assembly_fission_proxy_smoke_2026-10-11.md` and `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv`: six-layout assembly-integrated fission-rate proxy; not absolute power or an optimization conclusion.
+- `results/c5g7_smoke_validation_gate_audit_2026-10-11.json`: fail-closed audit of the smoke repeatability dataset.
+- `scripts/analyze_c5g7_canonical_convergence.py` and `config/benchmarks/c5g7_validation_protocol.json`: canonical repeated-run numerical screening and acceptance gates.
+- Long-running screens: [six-layout intermediate budget](https://github.com/thenextw4ng/cb-pfr/actions/runs/38100178360) and [canonical high-budget numerical screen](https://github.com/thenextw4ng/cb-pfr/actions/runs/38101618802). Their outputs should be added to this manifest after completion.
+
+All smoke results are exploratory. Benchmark acceptance remains blocked on primary-specification review and benchmark-compatible spatial reference tallies.
+
