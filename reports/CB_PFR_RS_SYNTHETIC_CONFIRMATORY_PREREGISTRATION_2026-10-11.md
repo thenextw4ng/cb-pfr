@@ -73,7 +73,7 @@ If any criterion fails, report that the confirmatory benchmark did not establish
 
 Even if all decision criteria pass, the conclusion is limited to the locked synthetic scenario family and implementation. It does not establish performance on real OpenMC results, general algorithmic superiority, a valid QUBO-to-reactor mapping, or physical reactor validity. Physical claims are outside this protocol and remain `NOT_ESTABLISHED`.
 
-## 8. Pre-execution clarification\n\nVersion 1.1 clarifies that the confirmatory comparisons are CB-PFR versus point-estimate R&S and uniform margin. The QUBO-only comparator is not run in this confirmation because no valid QUBO-energy signal is defined by the synthetic data-generating process; inventing a proxy after seeing exploratory results would be misleading. This clarification is made before the confirmatory workflow run.\n\n## 9. Execution record
+## 8. Pre-execution clarification\n\nVersion 1.1 clarifies that the confirmatory comparisons are CB-PFR versus point-estimate R&S and uniform margin. The QUBO-only comparator is not run in this confirmation because no valid QUBO-energy signal is defined by the synthetic data-generating process; inventing a proxy after seeing exploratory results would be misleading. This clarification is made before any confirmatory result is inspected or interpreted; any run started before this amendment is treated as a smoke test, not the confirmatory run.\n\n## 9. Execution record
 
 - Execution status: `PENDING`
 - Raw output: pending
