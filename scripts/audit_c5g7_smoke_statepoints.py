@@ -197,27 +197,30 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--study-summary", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("--expected-candidates", type=int, default=6, help="expected candidate count; default is six-layout smoke study")
     args = parser.parse_args()
+    if args.expected_candidates < 1:
+        parser.error("--expected-candidates must be at least 1")
     if args.out.exists():
         parser.error(f"output already exists: {args.out}")
     try:
         study = json.loads(args.study_summary.read_text(encoding="utf-8"))
         root = args.study_summary.parent
         cases = study.get("cases")
-        if not isinstance(cases, list) or len(cases) != 6:
-            raise ValueError("expected exactly six candidate cases in STUDY_SUMMARY.json")
+        if not isinstance(cases, list) or len(cases) != args.expected_candidates:
+            raise ValueError(f"expected exactly {args.expected_candidates} candidate cases in STUDY_SUMMARY.json")
         results = [audit_candidate(root, case, study.get("settings", {})) for case in cases]
         ids = [r.get("candidate_id") for r in results]
         seeds = [r.get("seed") for r in results]
         statepoint_hashes = [r.get("statepoint_sha256") for r in results]
         mgxs_hashes = {r.get("mgxs_sha256") for r in results}
         aggregate_checks = [
-            {"name": "six_unique_candidate_ids", "status": "PASS" if len(set(ids)) == 6 else "FAIL",
-             "actual": ids, "expected": "six unique IDs"},
-            {"name": "six_unique_seeds", "status": "PASS" if len(set(seeds)) == 6 else "FAIL",
-             "actual": seeds, "expected": "six unique seeds"},
-            {"name": "six_unique_statepoint_hashes", "status": "PASS" if len(set(statepoint_hashes)) == 6 else "FAIL",
-             "actual": statepoint_hashes, "expected": "six unique statepoint hashes"},
+            {"name": "six_unique_candidate_ids", "status": "PASS" if len(set(ids)) == args.expected_candidates else "FAIL",
+             "actual": ids, "expected": f"{args.expected_candidates} unique IDs"},
+            {"name": "six_unique_seeds", "status": "PASS" if len(set(seeds)) == args.expected_candidates else "FAIL",
+             "actual": seeds, "expected": f"{args.expected_candidates} unique seeds"},
+            {"name": "six_unique_statepoint_hashes", "status": "PASS" if len(set(statepoint_hashes)) == args.expected_candidates else "FAIL",
+             "actual": statepoint_hashes, "expected": f"{args.expected_candidates} unique statepoint hashes"},
             {"name": "shared_mgxs_hash", "status": "PASS" if len(mgxs_hashes) == 1 and None not in mgxs_hashes else "FAIL",
              "actual": sorted(str(v) for v in mgxs_hashes), "expected": "one non-empty common MGXS hash"},
         ]
