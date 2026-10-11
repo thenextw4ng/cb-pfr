@@ -27,6 +27,7 @@ jobs:
           create-args: >-
             python=3.11
             openmc=0.15.3
+            pillow
           cache-environment: true
 
       - name: Freeze BEAVRS source and install model generator
@@ -81,6 +82,13 @@ jobs:
           openmc -p 2>&1 | tee geometry_plot.log
           find . -maxdepth 1 -type f \( -name '*.png' -o -name '*.ppm' \) -print
           test -s radial_mats_midplane.png
+
+      - name: Overlay assembly labels and instrumented positions
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/render_beavrs_coordinate_overlay.py --run-dir /tmp/beavrs-coordinate-audit
+          test -s /tmp/beavrs-coordinate-audit/beavrs_coordinate_overlay.png
 
       - name: Upload coordinate audit artifacts
         if: always()
