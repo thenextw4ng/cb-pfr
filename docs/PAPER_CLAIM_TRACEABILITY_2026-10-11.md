@@ -37,7 +37,7 @@ The code-and-evidence audit is reproducible, but the full scientific claims are 
 - Six C5G7 layout signatures were each evaluated with three independent seeds at 100 batches, 10 inactive batches, and 1,000 particles per batch.
 - For UMMU, the recorded mean \(k_{\mathrm{eff}}\) is 1.18610263; between-seed sample SD is 0.00386340 and the standard error of the mean is 0.00223053 for three runs.
 - The published reference \(k_{\mathrm{eff}}=1.18655\pm0.000095\) is used only as a numerical screen because model identity and benchmark-grade convergence have not been signed off.
-- The mean assembly-integrated fission-rate peaking proxy for UMMU is 1.886113, with between-seed sample SD 0.028995. It is not comparable to the published maximum normalized pin power 2.498.
+- The six-layout smoke artifact contains aggregate flux tally values; this is evidence that the tally ran, not a validated flux distribution. The mean assembly-integrated fission-rate peaking proxy for UMMU is 1.886113, with between-seed sample SD 0.028995. It is not comparable to the published maximum normalized pin power 2.498.
 - The synthetic CB-PFR aggregate reports selected true-feasibility rates of 0.857, 0.933, 0.976 and 0.966 for QUBO-only, point-estimate, CB-PFR and uniform-margin methods, respectively. These are synthetic benchmark results only.
 
 ## Reproducibility

@@ -46,6 +46,13 @@ def build_report(root: Path) -> dict[str, Any]:
 
     with (results / "benchmark_comparison.csv").open(newline="", encoding="utf-8") as handle:
         comparisons = list(csv.DictReader(handle))
+    with (results / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv").open(newline="", encoding="utf-8") as handle:
+        smoke_layout_rows = list(csv.DictReader(handle))
+    flux_tally_present = (
+        len(smoke_layout_rows) == 6
+        and all(row.get("aggregate_flux_score") not in (None, "") for row in smoke_layout_rows)
+        and all(float(row["aggregate_flux_score"]) > 0 for row in smoke_layout_rows)
+    )
     keff_screen_recorded = any(
         row.get("metric") == "k_eff"
         and row.get("comparison_status", "").startswith("NUMERICAL_SCREEN_ONLY")
@@ -99,8 +106,9 @@ def build_report(root: Path) -> dict[str, Any]:
             "meaning": "The recorded values are low-budget numerical screens, not accepted benchmark validation.",
         },
         "flux_distribution_output": {
-            "status": "NOT_ESTABLISHED",
-            "evidence": "The preserved analysis establishes k_eff and an assembly-integrated fission-rate proxy; a reviewed flux-distribution result is not evidenced by this claim audit.",
+            "status": "PASS_EXPLORATORY_TALLY_ONLY" if flux_tally_present else "NOT_ESTABLISHED",
+            "evidence": "results/c5g7_layout_smoke_2026-10-10/candidate_summary.csv and scripts/analyze_c5g7_smoke_results.py",
+            "meaning": "A mesh flux tally is present in the six-layout low-budget smoke evidence. This establishes tally execution only; spatial-map review, full uncertainty treatment, and benchmark-grade validation are not established.",
         },
         "power_peaking_comparison": {
             "status": "BLOCKED_NONCOMPARABLE_OBSERVABLES" if unlike_power_blocked else "NOT_ESTABLISHED",
@@ -153,6 +161,7 @@ def build_report(root: Path) -> dict[str, Any]:
             "18_run_six_layout_three_seed_summary_consistent": all_six_layouts_have_three_runs,
             "transport_artifact_audits_consistent": transport_evidence_integrity,
             "keff_screen_recorded": keff_screen_recorded,
+            "exploratory_flux_tally_present": flux_tally_present,
             "unlike_power_observable_blocked": unlike_power_blocked,
             "synthetic_aggregate_consistent": synthetic_ok,
             "high_budget_incomplete_state_preserved": high_budget_incomplete,

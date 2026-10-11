@@ -12,6 +12,7 @@ class PaperClaimAuditTests(unittest.TestCase):
         self.assertTrue(all(report["evidence_integrity_checks"].values()))
         claims = report["claims"]
         self.assertEqual(claims["repeated_quantum_annealing_frequency_and_hamming_analysis"]["status"], "NOT_RUN")
+        self.assertEqual(claims["flux_distribution_output"]["status"], "PASS_EXPLORATORY_TALLY_ONLY")
         self.assertEqual(claims["usmanov_burnup_state_to_c5g7_material_mapping"]["status"], "BLOCKED_NO_DEFENSIBLE_MAPPING_FOUND")
         self.assertEqual(claims["experimental_physical_validation"]["status"], "NOT_ESTABLISHED")
         self.assertEqual(claims["cbpfr_software_and_synthetic_benchmark"]["status"], "PASS_REPRODUCIBLE_AGGREGATE")
