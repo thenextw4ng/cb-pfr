@@ -1,6 +1,6 @@
 # Fixed-budget R&S and classical SQA comparison — 2026-10-11
 
-**Workflow:** https://github.com/thenextw4ng/cb-pfr/actions/runs/38121832440  
+**Workflow:** https://github.com/thenextw4ng/cb-pfr/actions/runs/38121963972  
 **Workflow result:** success  
 **Artifact:** c5g7-fixed-budget-rs-sqa (machine-readable `comparison.json`)  
 **Status:** RETROSPECTIVE_SMOKE_DATA_COMPARISON_NOT_PHYSICAL_VALIDATION
@@ -22,7 +22,7 @@ Does the existing CB-PFR heuristic select a different or demonstrably better C5G
 1. **Fixed-budget equal-allocation R&S baseline:** use the same 18 observations, with three observations per layout, and select the layout with the lowest sample mean of the dimensionless fission-rate-peaking proxy.
 2. **CB-PFR:** reproduce the existing smoke-test heuristic with the same illustrative settings: (k_{eff}in[1.13,1.22]), fission-peaking proxy ≤ 2.0, uncertainty multiplier 2, and risk weight 1. These are illustrative software-test limits, not official C5G7 acceptance criteria or reactor safety limits.
 3. **Exact QUBO selector:** enumerate all 64 binary selector states and verify a unique one-hot minimizer.
-4. **Classical simulated quantum annealing (SQA):** run `dwave.samplers.PathIntegralAnnealingSampler` with 500 reads and 500 sweeps per read on that six-variable selector QUBO. This is a classical simulation, not a QPU run.
+4. **Classical simulated quantum annealing (SQA):** run `dwave.samplers.PathIntegralAnnealingSampler` with 500 reads and 500 sweeps per read, with fixed sampler seed 20261011 on that six-variable selector QUBO. This is a classical simulation, not a QPU run.
 
 The R&S analysis is retrospective equal allocation, not adaptive sequential R&S. Because all OpenMC rows already exist, this run does not demonstrate adaptive allocation savings.
 
@@ -39,8 +39,8 @@ The R&S analysis is retrospective equal allocation, not adaptive sequential R&S.
 | SQA reads / sweeps per read | 500 / 500 |
 | SQA best sample | MUMU, one-hot feasible |
 | SQA best energy | −2.0 |
-| SQA exact-ground-state hits | 143 / 500 (28.6%) |
-| SQA one-hot samples | 497 / 500 (99.4%) |
+| SQA random seed | 20261011 |\n| SQA exact-ground-state hits | 166 / 500 (33.2%) |
+| SQA one-hot samples | 500 / 500 (100%) |
 | Best SQA energy matches exact minimum | Yes |
 
 The current physical-data summary for the selected MUMU layout is mean (k_{eff}=1.14482492), between-seed SD (0.00216958), mean fission-peaking proxy (1.29626537), and between-seed SD of that proxy (0.02260486). These are descriptive results from the smoke-budget study, not a design recommendation.
