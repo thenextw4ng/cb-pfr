@@ -2,18 +2,20 @@
 **Date:** 2026-10-12  
 **Repository:** `thenextw4ng/cb-pfr`  
 **Working branch:** `feature/step05-scientific-integration`  
-**Scope:** repository audit, evidence/data-source plan, BRIN relevance, CB-PFR method boundary, and candidate-to-evaluation integration contract.
+**Pull request:** https://github.com/thenextw4ng/cb-pfr/pull/45
 
 ## Executive outcome
 
-Steps 01–05 have been advanced on an isolated branch. The main branch is untouched. The new integration layer is a software contract, not a claim that OpenMC was executed or that CB-PFR has physical validation.
+Steps 01–05 have been advanced on an isolated branch; main remains untouched. This is a software and evidence-contract implementation, not a claim that a new OpenMC run or QPU run occurred.
 
 ### Changes made
-- Added `src/cbpfr/experiment.py`: versioned experiment metadata, candidate evaluation records, metric observations with units and uncertainty semantics, provenance validation, fail-closed candidate/evaluation matching, single-source-kind comparisons, ranking orchestration, and deterministic bundle SHA-256.
-- Added `tests/test_experiment_contract.py`: tests for versioned output, source provenance, explicit OpenMC metadata, missing/duplicate candidates, mixed data sources, units and uncertainty semantics, ambiguous units, and stable bundle hashing.
-- Exported the contract from `cbpfr` and advanced package version to `0.2.0`.
-- Preserved all existing QUBO formulations and OpenMC runners. No direct mapping from the legacy burnup-state QUBO to C5G7 UO₂/MOX has been introduced.
-- Added this execution report as an audit trail.
+- `src/cbpfr/experiment.py`: versioned experiment metadata, evaluation records, explicit metric units/uncertainty semantics, fail-closed candidate/evaluation matching, source-kind separation, ranking orchestration, and stable bundle hashing.
+- `src/cbpfr/solvers.py`: exact classical reference solver, upper-triangular QUBO conversion, and optional adapter for a user-supplied Ocean-compatible sampler.
+- `src/cbpfr/pipeline.py`: strict solver-output → candidate → evaluation → CB-PFR orchestration with solver identity and vector matching, and a hashed decision bundle.
+- `pages/02_Quantum_Optimization.py`: dedicated QUBO/quantum optimization workstation.
+- Tests: `tests/test_experiment_contract.py`, `tests/test_solvers.py`, and `tests/test_pipeline.py`.
+- Documentation: `docs/QUANTUM_OPTIMIZATION_ARCHITECTURE.md` and `reports/QUANTUM_OPTIMIZATION_IMPLEMENTATION_2026-10-12.md`.
+- Package version synchronized to 0.3.0 in `pyproject.toml` and `src/cbpfr/__init__.py`.
 
 ## Step 01 — Repository and claim audit
 
@@ -21,9 +23,8 @@ Steps 01–05 have been advanced on an isolated branch. The main branch is untou
 - `src/cbpfr/qubo.py`: categorical burnup-state QUBO with fresh / once-burned / twice-burned labels and constraint penalties.
 - `src/cbpfr/c5g7_design_qubo.py`: separate four-position C5G7 UO₂/MOX placement encoding with exactly two MOX assemblies; six feasible layouts.
 - `src/cbpfr/ranking.py`: CB-PFR conservative feasibility ranking and point-estimate / uniform-margin / QUBO-only comparators.
-- `src/cbpfr/integration.py`: prior thin adapter from QUBO candidates and physical estimates to rankings and JSON/CSV-like records.
-- `src/cbpfr/openmc.py`: OpenMC preflight, candidate manifest and statepoint/keff parsing helpers. It deliberately refuses to infer materials or geometry from burnup labels.
-- Existing CI runs unit tests, source compilation, archive audits, and synthetic reproduction checks.
+- `src/cbpfr/integration.py`: existing adapter from QUBO candidates and physical estimates to rankings.
+- `src/cbpfr/openmc.py`: OpenMC preflight, candidate manifest and statepoint/keff parsing helpers; it does not infer materials or geometry from burnup labels.
 
 ### Evidence constraints that remain binding
 1. The 40,000-pool confirmatory synthetic study did not reach its predeclared practical-effect threshold of +2 percentage points. It is not evidence of general or physical superiority.
@@ -34,62 +35,53 @@ Steps 01–05 have been advanced on an isolated branch. The main branch is untou
 
 ## Step 02 — Dataset and evidence-source plan
 
-The integration contract distinguishes these source kinds:
-- `synthetic`: generated from a declared data-generating process.
-- `mock`: illustrative UI/test fixture only.
-- `openmc_statepoint`: output tied to a statepoint hash, explicit model identity/revision, and seed.
-- `experimental_measurement`: measured data with an identifiable source reference and measurement uncertainty definition.
-- `benchmark_reference`: reference values for a declared benchmark, kept distinct from new simulator output.
+The integration contract distinguishes `synthetic`, `mock`, `openmc_statepoint`, `experimental_measurement`, and `benchmark_reference` sources. Comparisons cannot silently mix these kinds.
 
 ### Candidate sources to audit before use
-- Existing repository C5G7/OpenMC statepoints and manifests: immediately available for provenance/integrity work; currently exploratory evidence.
-- BEAVRS Cycle 1 day-0 experimental detector map and pinned upstream model: available in the repository's workflow and analysis artifacts; current spatial agreement is poor, so do not use as a validation success.
-- BRIN's *Atom Indonesia* paper on neutron-flux measurement at RSG-GAS with foil-activation benchmarking: `https://atomindonesia.brin.go.id/index.php/aij/article/view/1768`. This is a source lead, **not** confirmation that all raw measurements are downloadable or compatible with the current model.
-- IAEA research-reactor computational benchmarking report: `https://www-pub.iaea.org/MTCD/Publications/PDF/TE-1879_web.pdf`. Use only after checking the benchmark state, observables, data access, and acceptance criteria.
-- IAEA EXFOR experimental reaction data: `https://nucleus.iaea.org/Pages/experimental-nuclear-reaction-data.aspx`. It is a possible source for nuclear reaction-data work, not a drop-in RSG-GAS core-level detector map.
+- Existing repository C5G7/OpenMC statepoints and manifests: available for provenance/integrity work; currently exploratory evidence.
+- BEAVRS Cycle 1 day-0 experimental detector map and pinned upstream model: current spatial agreement is poor, so do not use it as a validation success.
+- BRIN's *Atom Indonesia* paper on neutron-flux measurement at RSG-GAS with foil-activation benchmarking: https://atomindonesia.brin.go.id/index.php/aij/article/view/1768. This is a source lead, not confirmation that raw measurements are downloadable or compatible.
+- IAEA research-reactor computational benchmarking report: https://www-pub.iaea.org/MTCD/Publications/PDF/TE-1879_web.pdf.
+- IAEA EXFOR: https://nucleus.iaea.org/Pages/experimental-nuclear-reaction-data.aspx. This is not a drop-in RSG-GAS core-level detector map.
 
-**Data rule:** do not label a paper's reported values as a reusable raw dataset until the underlying table/files, units, uncertainty, licensing, benchmark state, and mapping to model observables have been inspected. No external dataset is claimed to have been imported by this commit.
+**Data rule:** do not label published values a reusable raw dataset until the files/tables, units, uncertainty, licensing, benchmark state, and mapping to model observables have been inspected. No external dataset is claimed to have been imported by this change.
 
 ## Step 03 — Substantive BRIN relevance
 
-The defensible product connection is to Indonesian reactor-neutronics and research-reactor analysis, with RSG-GAS measurements and BRIN-published work as potential evidence sources. The product's use case is to make candidate-selection decisions auditable: each result should expose the source dataset, model revision, configuration, uncertainty meaning, comparison baseline, and reason a candidate passed or failed a declared screen.
+The defensible connection is to Indonesian reactor-neutronics and research-reactor analysis, with RSG-GAS measurements and BRIN-published work as potential evidence sources. CB-PFR's use case is to make candidate-selection decisions auditable: source dataset, model revision, configuration, uncertainty meaning, baseline, and pass/fail reasons.
 
-This is a research/use-case connection, **not** a claim of BRIN partnership, endorsement, procurement, or deployment. Formal collaboration requires direct contact and confirmation.
+This is a research/use-case connection, not a claim of BRIN partnership, endorsement, procurement, or deployment.
 
-## Step 04 — CB-PFR method boundary
+## Step 04 — CB-PFR and quantum method boundary
 
-CB-PFR remains a post-optimization ranking/selection layer. It does not itself solve QUBO, run neutron transport, create material definitions, or certify reactor safety. The optimization formulation, candidate encoding, simulator/measurement evidence, and ranking method must be separately identified.
+CB-PFR remains a post-optimization ranking/selection layer. It does not itself solve neutron transport, create material definitions, or certify reactor safety. The optimization formulation, candidate encoding, solver, simulator/measurement evidence, and ranking method must be separately identified.
 
-The new `ExperimentSpec` requires explicit:
-- `formulation_id` — the mathematical problem/encoding family used;
-- `candidate_encoding_id` — how candidate vectors map to named candidate states;
-- `optimizer_name` and `optimizer_class` — including a distinction between classical simulated quantum annealing and a quantum annealer;
-- `code_revision` — the code revision associated with the experiment.
+The solver taxonomy distinguishes exact classical enumeration, classical heuristics, classical simulated annealing, classical simulated quantum annealing, quantum annealer hardware, and external solvers. The exact solver is a small-instance reference only. The Ocean adapter accepts a sampler supplied by the caller; it does not provision credentials or establish that a QPU ran.
 
-The contract deliberately does not claim a novel theoretical theorem. Novelty remains a literature-comparison question; current evidence supports describing CB-PFR as the user's proposed and implemented method, with synthetic results interpreted only under their declared protocol.
+No novel theorem or quantum advantage is claimed. Novelty remains a literature-comparison question.
 
-## Step 05 — Candidate → evaluation → CB-PFR integration
+## Step 05 — Candidate → solver → evaluation → CB-PFR integration
 
-The new `run_ranked_experiment(...)` path now enforces:
-1. Every candidate has a non-empty unique ID.
-2. Every candidate has exactly one evaluation record; missing, extra, or duplicate records fail closed.
-3. Every evaluation contains exactly the metrics declared by the experiment.
-4. Each observation includes a finite mean, nonnegative finite uncertainty, explicit units, and explicit uncertainty semantics.
-5. Observation units and uncertainty kind must match the declared metric limits.
-6. One comparison batch cannot silently mix synthetic, mock, OpenMC, experimental, and benchmark-reference records.
-7. OpenMC statepoint provenance requires a SHA-256, model ID, model revision, and explicit seed.
-8. Output has a versioned schema marker, formulation identity, source classification, per-candidate provenance, ranking rows, and explicit non-claims.
-9. A stable JSON serialization can be hashed for a bundle-level integrity identifier.
+The new `run_solver_to_physics_pipeline(...)` path:
+1. Requires solver metadata and verifies solver name/class and variable count against the experiment.
+2. Verifies candidate IDs and binary vectors are unchanged from the solver output.
+3. Requires one complete evaluation record per candidate; missing, extra, or duplicate records fail closed.
+4. Requires metric names, units, and uncertainty semantics to match declared limits.
+5. Requires finite means and finite nonnegative uncertainties.
+6. Separates synthetic, mock, OpenMC, experimental, and benchmark evidence kinds.
+7. Requires an OpenMC statepoint hash, model ID, model revision, and seed for statepoint provenance.
+8. Emits formulation identity, solver output, evaluation provenance, ranking rows, non-claims, and a deterministic SHA-256 decision-bundle hash.
 
-### Why this matters
-The old adapter accepted a map of estimates but did not establish a versioned, per-candidate evidence contract. The new boundary is designed to prevent a synthetic demo from being accidentally presented as OpenMC output, prevent incomplete candidate batches from receiving a ranking, and preserve the identity of the formulation. It still cannot prove that an input model is physically correct or that its limits are scientifically justified.
+### Important C5G7 formulation finding
+The current C5G7 QUBO encodes only the constraint of exactly two MOX assemblies. It does not include (k_\mathrm{eff}), fission-rate distribution, or OpenMC response. All six feasible layouts tie in QUBO energy. The valid workflow is to generate/verify candidates, evaluate them under a frozen physics protocol, then rank using declared observables and CB-PFR. A physically superior layout cannot be selected from this QUBO energy alone.
 
 ## Validation status
 
-- New tests are committed in `tests/test_experiment_contract.py`; GitHub Actions must be checked for the resulting commit before calling them passed.
-- The contract does not launch OpenMC. Long transport runs are deferred until a specific protocol, source/model revision, tally observable, acceptance rule, and compute budget are frozen.
-- No result in this report establishes physical validation, an incremental physical benefit from CB-PFR, reactor safety, BRIN collaboration, quantum-device execution, or quantum advantage.
+- New tests are committed, but **passing CI has not been observed** through the available status endpoint at the time of writing.
+- The local execution container could not reach GitHub to clone and run the tests independently.
+- No OpenMC simulation or QPU execution was started by this change.
+- No result establishes physical validation, CB-PFR physical superiority, reactor safety, BRIN collaboration, or quantum advantage.
 
-## Immediate next gate
+## Next gate
 
-Run CI on this branch and resolve any failures. Then wire the contract into the existing C5G7 result loader and dashboard using archived result manifests without rerunning transport. Only after that data path passes should we freeze a higher-budget OpenMC comparison protocol.
+Confirm CI and resolve failures. Then wire the integration contract to archived C5G7 result manifests and dashboard views without rerunning transport. Freeze a higher-budget OpenMC comparison protocol only after the data path and acceptance criteria are reviewed.
