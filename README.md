@@ -208,3 +208,12 @@ A public external comparison has been transcribed by family, with a pinned upstr
 - [Machine-readable aggregate CSV](config/benchmarks/public_qubo_benchmark_summary.csv)
 
 The upstream summary covers 1,912 QUBO instances: the classical reference has a lower objective on 1,280 matched cases, equal objective on 576, and 56 cases lack a D-Wave result. This is **source-reported aggregate evidence, not an independent rerun**, not a nuclear fuel-management dataset, and not evidence that CB-PFR improves QPU outputs. No QPU job was submitted by this repository.
+
+
+### Physical-validation gate reports
+
+- [BEAVRS experimental comparison protocol and latest result](reports/BEAVRS_CYCLE1_EXPERIMENTAL_COMPARISON_PROTOCOL.md) — current map mismatch and temperature-matched rerun status.
+- [C5G7 CB-PFR physical-effectiveness gate](reports/C5G7_CB_PFR_PHYSICAL_EFFECTIVENESS_GATE_2026-10-11.md) — descriptive six-layout results, canonical (k_\mathrm{eff}) uncertainty check, and why the smoke study does not yet demonstrate a CB-PFR treatment effect.
+- [Validation claim decision](reports/VALIDATION_CLAIM_DECISION_2026-10-11.md) — supported and unsupported claims.
+
+These reports intentionally separate software/integration evidence from nuclear benchmark validation and physical selection effectiveness.
