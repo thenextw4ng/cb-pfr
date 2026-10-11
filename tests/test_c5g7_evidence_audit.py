@@ -108,8 +108,7 @@ class C5G7EvidenceAuditTests(unittest.TestCase):
             design.write_text(json.dumps(data))
             report = audit_study(study, design, raw)
             self.assertEqual(report["status"], "FAIL")
-            self.assertTrue(any("design:" in x and "reflector" in x
-                                for x in report["failed_checks"]))
+            self.assertIn("design_contract_valid", report["failed_checks"])
 
 
 if __name__ == "__main__":
