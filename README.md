@@ -6,6 +6,11 @@
 **Version:** 0.1.0  
 **Status:** research prototype / methodological working paper
 
+## Benchmark protocol
+
+- [Pre-registered candidate-selection benchmark protocol](reports/CB_PFR_PREREGISTERED_SELECTION_BENCHMARK_PROTOCOL_2026-10-11.md): separates method-effect testing from reactor-model validation and defines paired baselines, outcomes, and go/no-go gates.
+- [Machine-readable preregistration](config/benchmarks/cbpfr_selection_benchmark_preregistration.json): current status is protocol-only; C5G7 remains exploratory and BEAVRS physical validation is not established.
+
 ## Research question
 
 Optimization can produce candidates that look good under nominal estimates but become fragile when downstream quantities are uncertain. CB-PFR studies whether candidate selection can incorporate uncertainty into the feasibility screen **after** optimization.
