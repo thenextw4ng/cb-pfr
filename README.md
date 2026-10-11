@@ -47,6 +47,10 @@ The deterministic ranking prioritizes QUBO feasibility, conservative physical fe
 | QUBO → C5G7 mapping | **NO_DEFENSIBLE_MAPPING_FOUND** |
 | Universal superiority | **Not claimed** |
 
+## Validation-claim decision
+
+The current defensible claim boundary is recorded in [Validation Claim Decision (2026-10-11)](reports/VALIDATION_CLAIM_DECISION_2026-10-11.md): the method/software has reproducible synthetic-benchmark evidence, while nuclear experimental validation remains **NOT ESTABLISHED**. A KRITZ-2 comparison utility or a successful smoke run is not itself experimental validation.
+
 ## Recorded synthetic result
 
 | Method | Selected true-feasibility rate |
