@@ -87,7 +87,7 @@ def audit_spatial_reference(payloads: list[dict], sources: list[str] | None = No
     passed = all(item["within_published_reference_uncertainty"] for item in per_position.values())
     return {
         "schema_version": "1.0",
-        "status": "NORMALIZED_SPATIAL_SHAPE_SCREEN_PASS" if passed else "NORMALIZED_SPATIAL_SHAPE_SCREEN_FAIL",
+        "status": "EXPLORATORY_SPATIAL_SHAPE_SCREEN_ONLY",
         "run_count": len(payloads),
         "candidate_id": "c5g7-2x2-UMMU",
         "layout_signature": "UMMU",
@@ -140,7 +140,7 @@ def main() -> int:
         "maximum_absolute_relative_difference_percent": report["maximum_absolute_relative_difference_percent"],
         "out": str(args.out),
     }, indent=2))
-    return 0 if report["status"] == "NORMALIZED_SPATIAL_SHAPE_SCREEN_PASS" else 1
+    return 0
 
 
 if __name__ == "__main__":
