@@ -18,23 +18,15 @@ from cbpfr.openmc import preflight_openmc
 from cbpfr.qubo import CoreSpec, build_usmanov_style_qubo, enumerate_feasible_candidates
 from cbpfr.ranking import MetricLimit, PhysicalEstimate
 from cbpfr.repeatability import summarize_repeated_rankings
+from cbpfr.dashboard_ui import apply_workstation_style, render_header, render_workspace_sidebar, load_smoke, base_layout
 
-st.set_page_config(page_title="ReactorQ Studio", page_icon="⚛️", layout="wide")
-st.markdown("""
-<style>
-.block-container {padding-top: 1.5rem; max-width: 1440px;}
-.hero {padding: 1.5rem 1.8rem; border: 1px solid rgba(128,128,128,.25);
-       border-radius: 18px; background: linear-gradient(120deg, rgba(40,90,150,.13), rgba(35,160,130,.08));}
-.muted {color: #8b949e;}
-</style>
-<div class="hero">
-  <h1>⚛️ ReactorQ Studio</h1>
-  <p>QUBO optimization · uncertainty-aware ranking · OpenMC readiness</p>
-  <p class="muted">Research prototype — demo data is synthetic, not reactor simulation evidence.</p>
-</div>
-""", unsafe_allow_html=True)
-
-st.page_link("pages/01_C5G7_Layout_Explorer.py", label="Open CB-PFR Scientific Workstation", icon="🌐")
+st.set_page_config(page_title="CB-PFR | Scientific Workstation", page_icon="⚛️", layout="wide")
+apply_workstation_style()
+render_header("Overview", "RESEARCH WORKSTATION · EVIDENCE-AWARE MODE")
+render_workspace_sidebar("Overview", load_smoke())
+st.markdown("## Scientific Workstation")
+st.caption("QUBO optimization · uncertainty-aware ranking · OpenMC evidence review. Synthetic demo estimates are explicitly labelled and are not reactor simulation evidence.")
+st.page_link("pages/01_C5G7_Layout_Explorer.py", label="Open C5G7 Geometry Explorer", icon="🌐")
 st.markdown("### Recorded C5G7 transport visualization")
 st.caption("Source: repository candidate-summary CSV. These are exploratory smoke-run values, not a validated reactor ranking.")
 visual_df = pd.read_csv(Path(__file__).resolve().parent / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv").sort_values("candidate_id").reset_index(drop=True)
@@ -47,9 +39,8 @@ fig = go.Figure(go.Scatter(
     customdata=visual_df[["layout_signature", "seed"]].to_numpy(),
     hovertemplate="Candidate %{x}<br>Layout %{customdata[0]}<br>Seed %{customdata[1]}<br>Recorded k-effective %{y:.7f}<extra></extra>",
 ))
+base_layout(fig, height=340)
 fig.update_layout(
-    template="plotly_dark", height=340,
-    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
     margin={"l": 50, "r": 20, "t": 20, "b": 80},
     xaxis_title="Candidate / layout", yaxis_title="Reported k-effective mean",
 )
