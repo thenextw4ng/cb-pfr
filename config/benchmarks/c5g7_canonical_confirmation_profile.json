@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "profile_id": "CBPFR-C5G7-canonical-confirmation-7000x10000-v1",
   "purpose": "Higher-budget, three-seed numerical confirmation for the canonical UMMU C5G7 reference arrangement only.",
-  "status": "CONFIGURED_NOT_YET_EXECUTED",
+  "status": "EXECUTED_NUMERICAL_SCREEN_PASS_VALIDATION_BLOCKED",
   "model": {
     "benchmark": "2D seven-group C5G7",
     "candidate_id": "c5g7-2x2-UMMU",
@@ -79,6 +79,27 @@
       "Do not call this reactor-safety certification.",
       "Do not choose a material-placement winner from the canonical run.",
       "Do not infer physical convergence from a scalar k-effective match alone."
+    ]
+  },
+  "execution": {
+    "date_utc": "2026-10-12",
+    "source_workflow_run_id": 38196703024,
+    "recovery_analysis_workflow_run_id": 38222690312,
+    "recovery_artifact_id": 11735016906,
+    "recovery_artifact_sha256": "bc6f81587d5914b78bffebbb098e74e44e35bfcab6ebd3fa8a24731cbc064715",
+    "seed_bases": [
+      720000,
+      730000,
+      740000
+    ],
+    "run_count": 3,
+    "aggregate_status": "NUMERICAL_SCREEN_PASS_FULL_BENCHMARK_STILL_BLOCKED",
+    "physical_validation_status": "BLOCKED",
+    "blocking_reasons": [
+      "independent primary C5G7 specification review/sign-off remains pending",
+      "source/eigenvalue convergence diagnostics remain review-required; post-hoc trend analysis is not an acceptance test",
+      "assembly fission-rate proxy versus published assembly-power comparability and uncertainty covariance require independent review",
+      "this canonical confirmation does not transport-validate all six candidate layouts"
     ]
   }
 }
