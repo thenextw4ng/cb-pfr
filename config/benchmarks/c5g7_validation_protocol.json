@@ -57,7 +57,7 @@
       "warning": "Limits are provisional project screens until the selected primary benchmark's prescribed comparison metric is transcribed and reviewed.",
       "initial_screen": {
         "canonical_confirmation_profile": "config/benchmarks/c5g7_canonical_confirmation_profile.json",
-        "status": "CONFIGURED_NOT_YET_EXECUTED"
+        "status": "EXECUTED_EXPLORATORY_FISSION_RATE_PROXY_SCREEN_PHYSICAL_ACCEPTANCE_BLOCKED"
       }
     },
     {
@@ -103,6 +103,6 @@
     "A numerical match alone does not prove model identity.",
     "The four-variable UO2/MOX QUBO is a new assembly-placement encoding, not the legacy burnup-state QUBO.",
     "The proposed intermediate compute profile is not represented as executed or converged.",
-    "The canonical high-budget confirmation profile is configured but not executed until its workflow is dispatched."
+    "The canonical high-budget confirmation was executed in three independent runs; its scalar numerical screen passed, while physical acceptance remains blocked by source-convergence review, independent primary-specification sign-off, and spatial-tally comparability."
   ]
 }
