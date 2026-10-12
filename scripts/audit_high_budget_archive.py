@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Audit the archived CB-PFR high-budget OpenMC evidence against CASE_RESULT records.
+"""Audit archived CB-PFR high-budget OpenMC evidence against CASE_RESULT records.
 
 Usage:
     python scripts/audit_high_budget_archive.py path/to/high-budget-artifact.zip
 
-The audit is intentionally read-only. It checks the archive's own record integrity,
-per-run statepoint/MGXS hashes, candidate/seed coverage, and stored run settings.
-It does not certify model validity, convergence, or physical acceptance.
+Read-only audit of run records, settings, provenance hashes, candidate/seed coverage,
+and descriptive k-effective summaries. It does not certify physical-model validity,
+convergence, or physical acceptance.
 """
 from __future__ import annotations
 
@@ -15,18 +15,13 @@ import collections
 import hashlib
 import json
 import statistics
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import PurePosixPath
 
-
 EXPECTED_LAYOUTS = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
 EXPECTED_ROUNDS = {820000, 830000, 840000}
-EXPECTED_SETTINGS = {
-    "batches": 7000,
-    "inactive": 500,
-    "particles": 10000,
-    "threads": 2,
-}
+EXPECTED_XML_SETTINGS = {"batches": 7000, "inactive": 500, "particles": 10000}
 
 
 def audit(archive: str) -> dict:
@@ -41,17 +36,15 @@ def audit(archive: str) -> dict:
             parts = PurePosixPath(name).parts
             if len(parts) < 3:
                 raise ValueError(f"Unexpected archive path: {name}")
-            round_name = parts[1]
             try:
-                round_id = int(round_name.rsplit("-", 1)[1])
+                round_id = int(parts[1].rsplit("-", 1)[1])
             except (IndexError, ValueError) as exc:
                 raise ValueError(f"Cannot parse seed round from {name}") from exc
 
             case = json.loads(zf.read(name))
             physical = case["physical_results"]
             statepoint_rel = physical["statepoint"]
-            hashes = case["output_hashes_after_run"]
-            statepoint_hash = hashes.get(statepoint_rel)
+            statepoint_hash = case["output_hashes_after_run"].get(statepoint_rel)
             mgxs_hash = physical["mgxs_sha256_after_transport"]
             if not statepoint_hash or len(statepoint_hash) != 64:
                 raise ValueError(f"Missing/invalid statepoint hash: {name}")
@@ -63,9 +56,18 @@ def audit(archive: str) -> dict:
             settings_path = name.rsplit("/", 1)[0] + "/model/2d/settings.xml"
             if settings_path not in names:
                 raise ValueError(f"Missing settings.xml: {settings_path}")
-            settings_xml = zf.read(settings_path).decode("utf-8", errors="replace")
-            # Settings are checked using the explicit CASE_RESULT/log metadata when
-            # available, with XML text retained for the evidence report.
+            settings_bytes = zf.read(settings_path)
+            root = ET.fromstring(settings_bytes)
+            xml_settings = {}
+            for key, expected in EXPECTED_XML_SETTINGS.items():
+                node = root.find(key)
+                if node is None or node.text is None or int(node.text.strip()) != expected:
+                    raise ValueError(f"Unexpected/missing {key} in {settings_path}")
+                xml_settings[key] = int(node.text.strip())
+            seed_node = root.find("seed")
+            if seed_node is None or int(seed_node.text.strip()) != int(case["seed"]):
+                raise ValueError(f"Settings seed mismatch: {name}")
+
             records.append({
                 "source": name,
                 "round": round_id,
@@ -78,7 +80,8 @@ def audit(archive: str) -> dict:
                 "statepoint_sha256": statepoint_hash,
                 "mgxs_sha256": mgxs_hash,
                 "canonical_reference_arrangement": bool(case["is_canonical_reference_arrangement"]),
-                "settings_xml_sha256": hashlib.sha256(settings_xml.encode()).hexdigest(),
+                "settings_xml_sha256": hashlib.sha256(settings_bytes).hexdigest(),
+                **xml_settings,
             })
 
     layout_counts = collections.Counter(r["layout"] for r in records)
@@ -124,8 +127,7 @@ def main() -> None:
     parser.add_argument("--json", dest="json_path", help="Optional path to write the full audit JSON")
     args = parser.parse_args()
     result = audit(args.archive)
-    compact = {k: v for k, v in result.items() if k != "records"}
-    print(json.dumps(compact, indent=2, sort_keys=True))
+    print(json.dumps({k: v for k, v in result.items() if k != "records"}, indent=2, sort_keys=True))
     if args.json_path:
         with open(args.json_path, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, sort_keys=True)
