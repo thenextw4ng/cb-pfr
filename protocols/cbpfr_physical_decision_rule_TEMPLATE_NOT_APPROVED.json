@@ -1,0 +1,18 @@
+{
+  "schema_version": "cbpfr.physical-decision-rule.v1",
+  "status": "TEMPLATE_NOT_APPROVED",
+  "approved_by": null,
+  "approved_at": null,
+  "model_specification_reference": null,
+  "physical_metrics": [],
+  "acceptance_criteria": [],
+  "uncertainty_method": null,
+  "reference_covariance_treatment": null,
+  "selection_objective": null,
+  "candidate_set_hash": null,
+  "model_and_mgxs_hashes": [],
+  "heldout_protocol": null,
+  "change_control": "Any post-result change must be versioned as exploratory and requires a new independent holdout for confirmatory claims.",
+  "decision_on_missing_or_unreviewed_gate": "NO_SELECTION / INCONCLUSIVE",
+  "notes": "Do not fill numeric limits from observed candidate results. Cite the primary specification or justify criteria prospectively. Distinguish k_eff, normalized fission-rate shape, assembly power, and absolute power."
+}
