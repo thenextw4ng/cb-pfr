@@ -2,6 +2,11 @@ name: C5G7 high-budget OpenMC batch
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/c5g7-high-budget-compute.yml
   push:
     branches:
       - feature/step05-scientific-integration
