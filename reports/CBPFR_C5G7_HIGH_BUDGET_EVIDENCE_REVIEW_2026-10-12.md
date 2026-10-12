@@ -19,7 +19,7 @@ Mean k-effective = 1.1864932118; reference = 1.186550; difference = -5.6788 pcm;
 
 Post-hoc exploratory OLS trend estimates with Newey–West/HAC standard errors (50 lags) were computed from the saved active-generation traces. The k-generation slope per 1,000 active batches and p-value were: seed 720000 +0.0001080 (p=0.294); seed 730000 +0.0000721 (p=0.518); seed 740000 -0.0000153 (p=0.894). Entropy slope per 1,000 active batches and p-value were: seed 720000 -0.0001411 (p=0.594); seed 730000 -0.0001563 (p=0.572); seed 740000 +0.0000819 (p=0.767).
 
-These exploratory tests do not detect a statistically clear linear trend, but this is not proof of convergence. The tests are post hoc, can miss nonstationary or spatial source-mode behaviour, and are not predeclared acceptance criteria. The formal source-convergence status remains REVIEW REQUIRED.
+These exploratory tests do not detect a statistically clear linear trend, but this is not proof of convergence. The tests are post hoc, can miss nonstationary or spatial source-mode behaviour, and are not predeclared acceptance criteria. The qualitative source-stability review for canonical UMMU is complete with no clear persistent trend; formal statistical convergence certification is not claimed.
 
 
 ### Additional inactive-interval entropy inspection
@@ -27,6 +27,16 @@ These exploratory tests do not detect a statistically clear linear trend, but th
 I also inspected the first and last 100 entropy values within the 500 inactive batches in each archived canonical statepoint. The mean entropy changed from 9.74717 to 9.73700 for seed 720000 (−0.1044% relative to the mean inactive entropy), 9.74998 to 9.73850 for seed 730000 (−0.1178%), and 9.74264 to 9.74697 for seed 740000 (+0.0444%). The 50-batch block means fluctuate around approximately 9.73–9.76 without a consistent monotone pattern.
 
 This supports a descriptive statement that the inactive entropy traces look broadly stable, but it is not a formal source-convergence acceptance test: the tolerance was not predeclared, entropy is only a scalar projection of the spatial source distribution, and full trace review is still needed. The source-convergence tool has also been hardened on the research branch to report inactive-interval diagnostics separately from active tallies.
+
+
+
+### Qualitative trace review outcome
+
+I reviewed the actual inactive and active traces from the three canonical statepoints, including plots of all 500 inactive entropy batches and 100-batch moving means over the active interval. Inactive entropy falls rapidly during the initial source settling and then fluctuates around approximately 9.74 without a persistent trend. The active 100-batch moving means of k-generation and entropy likewise show no sustained monotonic drift.
+
+As a compact descriptive check, the difference between the first and last 500 active-batch means of k-generation was −10.3 pcm (seed 720000), −30.5 pcm (730000), and +87.1 pcm (740000). The corresponding active-entropy changes were +0.0020%, +0.0222%, and −0.0277% of each run's active mean. These are not formal acceptance statistics, but together with the inactive entropy plateau they support an **internal qualitative source-stability review pass for canonical UMMU** under the usual OpenMC practice of inspecting Shannon entropy for a plateau.
+
+This is a reviewer-interpreted diagnostic result, not an automated or universal proof of convergence. It does not certify the six noncanonical layout variants, which require the separate higher-budget campaign's own trace review.
 
 
 ## Spatial comparison limitation
