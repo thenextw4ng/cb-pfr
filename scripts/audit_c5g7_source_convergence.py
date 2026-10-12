@@ -59,17 +59,47 @@ def summarize_trace(values: list[float], inactive: int, *, label: str) -> dict:
     }
 
 
+def summarize_inactive(values: list[float], inactive: int, *, label: str) -> dict:
+    """Summarize the pre-tally interval separately; do not discard it."""
+    segment = values[:inactive]
+    if not segment:
+        return {"status": "NO_INACTIVE_BATCHES", "trace_length": 0}
+    if not all(math.isfinite(v) for v in segment):
+        raise ValueError(f"{label} inactive trace must contain finite values")
+    quarter = max(1, len(segment) // 4)
+    half = max(1, len(segment) // 2)
+    first_quarter = segment[:quarter]
+    last_quarter = segment[-quarter:]
+    first_half = segment[:half]
+    second_half = segment[half:] or segment[-1:]
+    return {
+        "status": "DESCRIPTIVE_ONLY",
+        "trace_length": len(segment),
+        "mean": mean(segment),
+        "first_quarter_mean": mean(first_quarter),
+        "last_quarter_mean": mean(last_quarter),
+        "last_minus_first_quarter_mean": mean(last_quarter) - mean(first_quarter),
+        "first_half_mean": mean(first_half),
+        "second_half_mean": mean(second_half),
+        "second_minus_first_half_mean": mean(second_half) - mean(first_half),
+        "ols_slope_per_1000_inactive_batches": slope_per_1000(segment),
+    }
+
+
 def analyze_traces(k_generation: list[float], entropy: list[float], inactive: int,
                    n_batches: int | None = None) -> dict:
     if not k_generation:
         raise ValueError("statepoint has no k_generation trace")
     if not entropy:
         return {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "status": "FAIL_MISSING_ENTROPY_TRACE",
             "inactive_batches": inactive,
+            "inactive_k_generation": summarize_inactive(k_generation, inactive, label="k_generation"),
+            "inactive_entropy": None,
             "k_generation": summarize_trace(k_generation, inactive, label="k_generation"),
             "entropy": None,
+            "automatic_convergence_claim": False,
             "interpretation": "The statepoint has no Shannon-entropy trace; source convergence is not assessed.",
         }
     k = summarize_trace(k_generation, inactive, label="k_generation")
@@ -79,18 +109,20 @@ def analyze_traces(k_generation: list[float], entropy: list[float], inactive: in
     k_half = len(k_active) // 2
     k_half_delta_pcm = (mean(k_active[k_half:]) - mean(k_active[:k_half])) * 1e5
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "status": "DIAGNOSTIC_REVIEW_REQUIRED",
         "n_batches_metadata": n_batches,
         "inactive_batches": inactive,
+        "inactive_k_generation": summarize_inactive(k_generation, inactive, label="k_generation"),
+        "inactive_entropy": summarize_inactive(entropy, inactive, label="entropy"),
         "k_generation": k,
         "entropy": h,
         "k_generation_second_minus_first_half_pcm": k_half_delta_pcm,
         "automatic_convergence_claim": False,
         "interpretation": (
-            "These are descriptive source/eigenvalue convergence diagnostics. Inspect the full batch-wise "
-            "traces and predeclared tolerances; a flat scalar mean or a small half-window difference alone "
-            "does not prove source convergence or benchmark validity."
+            "These are descriptive source/eigenvalue convergence diagnostics. Review the inactive-interval "
+            "entropy before active tally accumulation and inspect the full active traces against declared "
+            "tolerances; a flat scalar mean or small window difference alone does not prove source convergence."
         ),
     }
 
