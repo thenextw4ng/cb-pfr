@@ -3,6 +3,7 @@ const palette = {text:"#e8f1f7",muted:"#91a8b9",line:"#263f52",cyan:"#55d4df",bl
 let records = [];
 let metadata = {};
 let meshData = null;
+let assemblyRecords = [];
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => row[key] !== null && row[key] !== undefined && row[key] !== "" && Number.isFinite(Number(row[key]));
 function label(row){return String(row.candidate_id ?? "Candidate") + " · " + String(row.layout_signature ?? "layout");}
@@ -57,6 +58,7 @@ async function init(){
   $("candidateSelect").innerHTML=records.map(r=>'<option value="'+String(r.candidate_id).replaceAll('"',"&quot;")+'">'+label(r)+'</option>').join("");
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
   showCandidate();drawOtherCharts();
+  await initAssembly();
   await initMesh();
  }catch(error){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
@@ -136,4 +138,32 @@ async function initMesh(){
   $("meshProvenance").textContent="The archived spatial tally could not be loaded: "+error.message;
   ["meshHeatmap","meshContour","meshSurface"].forEach(id=>$(id).innerHTML='<div class="loading">No spatial values displayed. No scientific data have been fabricated.</div>');
  }
+}
+
+/* Assembly-level fission proxy: use the repository's explicit four-position records. */
+async function initAssembly(){
+ try{
+  const response=await fetch("/api/assembly",{headers:{Accept:"application/json"}});
+  if(!response.ok)throw new Error("HTTP "+response.status);
+  const payload=await response.json();assemblyRecords=payload.records||[];
+  if(!assemblyRecords.length)throw new Error("No assembly fission proxy records found.");
+  const select=$("assemblyCandidate");
+  select.innerHTML=assemblyRecords.map((r,i)=>'<option value="'+i+'">'+r.candidate_id+' · '+r.layout_signature+'</option>').join("");
+  select.addEventListener("change",drawAssembly);
+  drawAssembly();
+ }catch(error){
+  $("assemblyMap").innerHTML='<div class="loading">Assembly map unavailable: '+error.message+'</div>';
+  $("assemblyBar").innerHTML='<div class="loading">No recorded assembly values displayed.</div>';
+  $("assemblyCaption").textContent="Source: results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv";
+ }
+}
+function drawAssembly(){
+ const i=Number($("assemblyCandidate").value),r=assemblyRecords[i];if(!r)return;
+ const positions=["p00","p01","p10","p11"],vals=positions.map(p=>Number(r[p+"_fission_rate"]));
+ const materials=String(r.layout_signature).split("").map(c=>c==="M"?"MOX":"UO₂");
+ const grid=[[vals[0],vals[1]],[vals[2],vals[3]]];
+ const materialGrid=[[materials[0],materials[1]],[materials[2],materials[3]]];
+ chart("assemblyMap",[{type:"heatmap",x:["Left","Right"],y:["Top","Bottom"],z:grid,customdata:materialGrid,colorscale:"Viridis",showscale:true,colorbar:{title:{text:"Fission-rate proxy",font:{size:10}}},text:grid.map((row,y)=>row.map((v,x)=>materialGrid[y][x]+"<br>"+positions[y*2+x]+"<br>"+v.toExponential(3))),texttemplate:"%{customdata}<br>%{z:.3g}",textfont:{color:"#ffffff",size:13},hovertemplate:"Position %{x}, %{y}<br>Material %{customdata}<br>Fission-rate proxy %{z:.6g}<extra></extra>"}],{margin:{l:55,r:25,t:12,b:45},xaxis:{...baseLayout.xaxis,title:"Assembly column"},yaxis:{...baseLayout.yaxis,title:"Assembly row",autorange:"reversed"},showlegend:false});
+ chart("assemblyBar",[{type:"bar",x:positions,y:vals,marker:{color:materials.map(m=>m==="MOX"?palette.orange:palette.cyan),line:{color:"#e8f1f7",width:1}},customdata:materials,hovertemplate:"%{x} · %{customdata}<br>Proxy %{y:.7g}<extra></extra>",text:vals.map(v=>v.toExponential(2)),textposition:"outside"}],{margin:{l:55,r:20,t:25,b:45},xaxis:{...baseLayout.xaxis,title:"Assembly position"},yaxis:{...baseLayout.yaxis,title:"Integrated fission-rate proxy"},showlegend:false});
+ $("assemblyCaption").textContent=r.candidate_id+" · layout "+r.layout_signature+" · seed "+r.seed+" · keff "+Number(r.keff_mean).toFixed(6)+" ± "+Number(r.keff_std_dev).toExponential(2)+" · status: "+r.status;
 }
