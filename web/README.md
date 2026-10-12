@@ -42,3 +42,25 @@ The server uses Python's standard library for HTTP, plus the project's `h5py` an
 - QUBO-to-C5G7 mapping and CB-PFR physical validation remain unresolved/not established in the repository evidence.
 
 The existing Streamlit application remains intact as a fallback while this interface is tested.
+
+
+## External OpenMC geometry artifacts
+
+The HTML workstation does **not** draw a synthetic assembly map. It discovers and previews existing geometry files from OpenMC/ParaView workflows under these repository folders: `plots/`, `plot/`, `geometry/`, `model/`, `c5g7-run/`, `evidence/`, `results/`, and `artifacts/`.
+
+1. Activate the Python environment that has the OpenMC executable available.
+2. Use the validated model input directory containing `geometry.xml`, `materials.xml`, and `settings.xml`.
+3. Generate a geometry-only slice plot (this does not run neutron transport):
+
+   ```bash
+   python tools/export_openmc_geometry.py --model-dir model
+   ```
+
+   Replace `model` with the directory containing the real XML inputs. For the workstation to discover the result, place/copy the resulting `cbpfr_geometry/` directory under one of the scanned repository folders (for example `model/cbpfr_geometry/`).
+4. Refresh the HTML workstation and press **Refresh artifacts** in OpenMC geometry explorer.
+
+The helper uses OpenMC `--plot` mode only. It does not modify authoritative XML inputs or run a transport simulation. Its default slice window is 100 cm × 100 cm centered at (0, 0, 0); inspect and adjust plot origin/width in the helper if that does not match the model coordinate bounds.
+
+PNG plots are previewed directly. VTK/VTI files are listed as real 3D datasets and can be opened in ParaView; the dashboard does not pretend that a 2D tally surface is a volumetric reactor geometry.
+
+Official OpenMC geometry visualization guide: https://docs.openmc.org/en/latest/usersguide/plots.html
