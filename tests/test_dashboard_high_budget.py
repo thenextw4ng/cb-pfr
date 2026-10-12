@@ -11,7 +11,7 @@ class HighBudgetEvidenceDashboardTests(unittest.TestCase):
     def test_high_budget_page_loads_and_audits_archived_runs(self):
         app = AppTest.from_file(PAGE_PATH, default_timeout=30).run()
         self.assertEqual(app.exception, [])
-        visible = "\n".join(element.value for element in app.markdown)
+        visible = "\n".join(element.value for element in app.markdown + app.title)
         self.assertIn("High-Budget Study Inspector", visible)
         self.assertIn("Interpretation boundary", visible)
         self.assertTrue(any("Candidate comparison" in tab.label for tab in app.tabs))
