@@ -294,6 +294,110 @@ try:
         base_layout(fig_unc, height=520)
         st.plotly_chart(fig_unc, use_container_width=True, config={"displaylogo": False, "scrollZoom": True})
 
+
+    # Expanded scientific visualization suite: all views are derived from the same audited tally arrays.
+    st.markdown("### Visualization workbench")
+    st.caption("All panels below use the selected statepoint mesh tally. 3-D is a surface of the recorded 2-D field—not a reconstructed reactor or a genuine volumetric mesh.")
+    viz_tabs = st.tabs(["Contour map", "3-D field surface", "Distribution", "X / Y profiles", "Score comparison", "Uncertainty diagnostics"])
+    with viz_tabs[0]:
+        contour_values = rel_grid if field_view == "Relative SD (%)" else mean_grid
+        contour_title = f"{score_name} · " + ("relative SD (%)" if field_view == "Relative SD (%)" else "mean tally")
+        contour = go.Figure(go.Contour(
+            z=contour_values, colorscale="Magma" if field_view == "Relative SD (%)" else palette.lower(),
+            contours={"coloring": "heatmap", "showlines": True},
+            colorbar={"title": "Relative SD (%)" if field_view == "Relative SD (%)" else colorbar_title},
+            hovertemplate="x-bin %{x}<br>y-bin %{y}<br>value %{z:.5g}<extra></extra>",
+            connectgaps=False,
+        ))
+        contour.update_layout(title=contour_title, xaxis_title="Mesh x-bin index", yaxis_title="Mesh y-bin index", yaxis={"autorange":"reversed"})
+        base_layout(contour, height=490)
+        st.plotly_chart(contour, use_container_width=True, config={"displaylogo":False,"scrollZoom":True}, key="viz_contour")
+    with viz_tabs[1]:
+        surface_values = rel_grid if field_view == "Relative SD (%)" else mean_grid
+        surf = go.Figure(go.Surface(
+            z=surface_values, colorscale="Magma" if field_view == "Relative SD (%)" else palette.lower(),
+            colorbar={"title":"Relative SD (%)" if field_view == "Relative SD (%)" else colorbar_title},
+            connectgaps=False,
+            hovertemplate="x-bin %{x}<br>y-bin %{y}<br>value %{z:.5g}<extra></extra>",
+        ))
+        surf.update_layout(title=f"3-D surface · {score_name}", scene={
+            "xaxis_title":"Mesh x-bin","yaxis_title":"Mesh y-bin","zaxis_title":"Displayed value",
+            "bgcolor":PANEL,"xaxis":{"gridcolor":LINE,"color":TEXT},"yaxis":{"gridcolor":LINE,"color":TEXT},
+            "zaxis":{"gridcolor":LINE,"color":TEXT},
+        })
+        base_layout(surf, height=560)
+        st.plotly_chart(surf, use_container_width=True, config={"displaylogo":False,"scrollZoom":True}, key="viz_surface")
+        st.caption("Height represents the selected scalar value, not physical elevation. Use the PyVista 3D Mesh Viewer only when a genuine 3-D tally is present.")
+    with viz_tabs[2]:
+        distribution = rel_grid if field_view == "Relative SD (%)" else mean_grid
+        vals = distribution[np.isfinite(distribution)]
+        if vals.size:
+            hist = go.Figure(go.Histogram(x=vals, nbinsx=50, marker={"color":CYAN,"line":{"color":PANEL,"width":0.5}}))
+            hist.update_layout(title=f"Value distribution · {score_name}", xaxis_title="Displayed field value", yaxis_title="Number of mesh bins")
+            base_layout(hist, height=420)
+            st.plotly_chart(hist, use_container_width=True, key="viz_histogram")
+            q1, q2, q3, q4 = st.columns(4)
+            q1.metric("Minimum", f"{np.min(vals):.5g}")
+            q2.metric("Median", f"{np.median(vals):.5g}")
+            q3.metric("95th percentile", f"{np.percentile(vals,95):.5g}")
+            q4.metric("Maximum", f"{np.max(vals):.5g}")
+        else:
+            st.warning("No finite values are available for the distribution.")
+    with viz_tabs[3]:
+        row_a, row_b = st.columns(2)
+        with row_a:
+            y_bin = st.slider("Y-bin for X profile", 0, dims[1]-1, dims[1]//2, key="viz_ybin")
+            profile_x = mean_grid[y_bin, :]
+            fig_x = go.Figure(go.Scatter(x=np.arange(dims[0]), y=profile_x, mode="lines+markers", line={"color":CYAN}))
+            fig_x.update_layout(title=f"X profile at y-bin {y_bin}", xaxis_title="X-bin index", yaxis_title=f"{score_name} mean")
+            base_layout(fig_x, height=370)
+            st.plotly_chart(fig_x, use_container_width=True, key="viz_profile_x")
+        with row_b:
+            x_bin = st.slider("X-bin for Y profile", 0, dims[0]-1, dims[0]//2, key="viz_xbin")
+            profile_y = mean_grid[:, x_bin]
+            fig_y = go.Figure(go.Scatter(x=np.arange(dims[1]), y=profile_y, mode="lines+markers", line={"color":ORANGE}))
+            fig_y.update_layout(title=f"Y profile at x-bin {x_bin}", xaxis_title="Y-bin index", yaxis_title=f"{score_name} mean")
+            base_layout(fig_y, height=370)
+            st.plotly_chart(fig_y, use_container_width=True, key="viz_profile_y")
+        st.caption("Profiles use raw recorded mean tallies, even when the primary field display is log-scaled.")
+    with viz_tabs[4]:
+        score_options = [s for s in mesh_tally["scores"]]
+        selected_scores = st.multiselect("Scores to compare", score_options, default=score_options[:min(4,len(score_options))], key="viz_compare_scores")
+        if selected_scores:
+            comp = go.Figure()
+            for selected_score in selected_scores:
+                j = score_options.index(selected_score)
+                arr = mesh_tally["mean"][:,j].reshape((dims[1],dims[0]))
+                finite_arr = arr[np.isfinite(arr)]
+                if finite_arr.size:
+                    # Normalize each score independently for shape comparison; never imply shared physical units.
+                    lo, hi = float(np.min(finite_arr)), float(np.max(finite_arr))
+                    norm = (arr-lo)/(hi-lo) if hi > lo else np.zeros_like(arr)
+                    comp.add_trace(go.Scatter(x=np.arange(dims[0]), y=np.nanmean(norm,axis=0), mode="lines+markers", name=selected_score))
+            comp.update_layout(title="Normalized mean profile by score", xaxis_title="Mesh x-bin index", yaxis_title="Within-score normalized mean")
+            base_layout(comp, height=430)
+            st.plotly_chart(comp, use_container_width=True, key="viz_score_comparison")
+            st.caption("Each score is normalized independently to [0, 1] for spatial-shape comparison. This is not a comparison of absolute magnitude or physical units.")
+        else:
+            st.info("Select at least one score.")
+    with viz_tabs[5]:
+        unc_left, unc_right = st.columns(2)
+        with unc_left:
+            cv = go.Figure(go.Heatmap(z=rel_grid, colorscale="Magma", colorbar={"title":"Relative SD (%)"}, connectgaps=False,
+                hovertemplate="x-bin %{x}<br>y-bin %{y}<br>relative SD %{z:.5g}%<extra></extra>"))
+            cv.update_layout(title="Relative statistical uncertainty", xaxis_title="Mesh x-bin", yaxis_title="Mesh y-bin", yaxis={"autorange":"reversed"})
+            base_layout(cv, height=420)
+            st.plotly_chart(cv, use_container_width=True, key="viz_uncertainty_map")
+        with unc_right:
+            uncvals = rel_grid[np.isfinite(rel_grid)]
+            if uncvals.size:
+                ecdf = np.sort(uncvals)
+                fig_ecdf = go.Figure(go.Scatter(x=ecdf, y=np.arange(1,len(ecdf)+1)/len(ecdf), mode="lines", line={"color":ORANGE}))
+                fig_ecdf.update_layout(title="Empirical CDF of relative SD", xaxis_title="Relative SD (%)", yaxis_title="Cumulative fraction", yaxis={"range":[0,1]})
+                base_layout(fig_ecdf, height=420)
+                st.plotly_chart(fig_ecdf, use_container_width=True, key="viz_uncertainty_ecdf")
+        st.caption("Relative SD is a per-bin Monte Carlo statistic. It is not between-seed repeatability or a candidate reliability probability.")
+
     positive_count = int(np.count_nonzero(positive))
     zero_count = int(np.count_nonzero(np.isfinite(mean_grid) & (mean_grid == 0)))
     m1, m2, m3, m4 = st.columns(4)
