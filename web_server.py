@@ -16,6 +16,7 @@ CANDIDATE_CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_s
 STATEPOINT_ARCHIVE = ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip"
 STATEPOINT_MEMBER = "c5g7-run/2d/statepoint.20000.h5"
 STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
+ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
 
 
 def read_candidates():
@@ -38,6 +39,24 @@ def read_candidates():
                     row[key] = value
             rows.append(row)
     return rows
+
+
+def read_assembly_evidence():
+    """Read the explicit 2x2 assembly-integrated fission-rate proxy records."""
+    if not ASSEMBLY_CSV.is_file():
+        raise FileNotFoundError(f"Assembly evidence not found: {ASSEMBLY_CSV.relative_to(ROOT)}")
+    with ASSEMBLY_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        required = {"candidate_id", "layout_signature", "seed", "keff_mean", "keff_std_dev", "p00_fission_rate", "p01_fission_rate", "p10_fission_rate", "p11_fission_rate", "status"}
+        if not reader.fieldnames or not required.issubset(set(reader.fieldnames)):
+            raise ValueError("Assembly evidence CSV is missing required columns.")
+        records = []
+        for raw in reader:
+            row = dict(raw)
+            for key in ("seed", "keff_mean", "keff_std_dev", "p00_fission_rate", "p01_fission_rate", "p10_fission_rate", "p11_fission_rate"):
+                row[key] = float(raw[key]) if raw.get(key) not in (None, "") else None
+            records.append(row)
+    return {"source": str(ASSEMBLY_CSV.relative_to(ROOT)), "status_scope": "exploratory smoke evidence; not absolute power", "records": records}
 
 
 def read_mesh_evidence():
@@ -142,6 +161,11 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 payload = {"metadata": {"source": str(CANDIDATE_CSV.relative_to(ROOT)), "mode": "recorded repository evidence; no OpenMC execution"}, "records": read_candidates()}
                 return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, csv.Error) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
+        if path == "/api/assembly":
+            try:
+                return self._send(200, json.dumps(read_assembly_evidence(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, csv.Error) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/mesh":
