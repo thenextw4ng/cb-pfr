@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -138,7 +139,7 @@ b.metric("Candidate layouts", str(runs["layout_signature"].nunique()) if not run
 c.metric("Runs per layout", "3" if not issues else "Check audit")
 d.metric("Histories / run (nominal)", "25.0M")
 
-tab_summary, tab_runs, tab_provenance = st.tabs(["Candidate comparison", "Run-level inspection", "Provenance & limits"])
+tab_summary, tab_runs, tab_provenance, tab_screen = st.tabs(["Candidate comparison", "Run-level inspection", "Provenance & limits", "CB-PFR screen"])
 
 with tab_summary:
     st.markdown("### Between-run estimates")
@@ -279,6 +280,97 @@ with tab_provenance:
     )
     st.caption("The CSV adapter adds the deterministic candidate ID and declared corrected-group boundary string required by the CLI. It preserves the recorded run values and hashes unchanged.")
     st.link_button("Open source GitHub Actions run", payload["source_workflow_run"])
+
+
+with tab_screen:
+    st.markdown("### Exploratory CB-PFR screen")
+    st.warning(
+        "All limits below must come from a documented, user-approved study protocol. "
+        "No universal k-effective acceptance band or fission-peaking limit is supplied by this app. "
+        "This screen is a software decision aid, not a physical-validation or reactor-safety assessment."
+    )
+    with st.form("cbpfr_exploratory_screen_form"):
+        left, right = st.columns(2)
+        with left:
+            keff_min_text = st.text_input("Lower k-effective bound (required)", placeholder="Enter protocol value")
+            keff_max_text = st.text_input("Upper k-effective bound (required)", placeholder="Enter protocol value")
+            fission_max_text = st.text_input("Maximum fission-rate peaking proxy (required)", placeholder="Enter protocol value")
+            uncertainty_text = st.text_input("Uncertainty multiplier (required)", placeholder="Enter protocol value")
+        with right:
+            keff_scale_text = st.text_input("k-effective violation scale (required)", placeholder="Enter protocol value")
+            fission_scale_text = st.text_input("Peaking violation scale (required)", placeholder="Enter protocol value")
+            risk_weight_text = st.text_input("Between-run risk weight (required)", placeholder="Enter protocol value")
+            st.caption("The run budget and minimum replication are taken from the audited dataset: 5,000 batches, 5,000 particles/batch, and three runs/layout.")
+        confirm_protocol = st.checkbox("I have a documented protocol for these limits and understand this is not safety validation.")
+        run_screen = st.form_submit_button("Evaluate CB-PFR screen", type="primary", use_container_width=True)
+
+    if run_screen:
+        st.session_state.pop("cbpfr_screen_result", None)
+        raw_values = {
+            "keff_min": keff_min_text, "keff_max": keff_max_text,
+            "fission_peaking_max": fission_max_text, "uncertainty_multiplier": uncertainty_text,
+            "keff_scale": keff_scale_text, "fission_peaking_scale": fission_scale_text,
+            "risk_weight": risk_weight_text,
+        }
+        try:
+            if not confirm_protocol:
+                raise ValueError("Confirm the documented-protocol checkbox before evaluating a screen.")
+            if any(not value.strip() for value in raw_values.values()):
+                raise ValueError("Enter all seven required numerical criteria; the app intentionally supplies no acceptance defaults.")
+            parameters = {key: float(value) for key, value in raw_values.items()}
+            if not all(math.isfinite(value) for value in parameters.values()):
+                raise ValueError("All criteria must be finite numeric values.")
+            from scripts.run_c5g7_cbpfr_pipeline import run_integrated_pipeline
+            with tempfile.TemporaryDirectory(prefix="cbpfr-screen-") as temp_dir:
+                csv_path = Path(temp_dir) / "high_budget_run_level.csv"
+                runs.to_csv(csv_path, index=False)
+                result = run_integrated_pipeline(
+                    csv_path,
+                    backend="exact",
+                    num_reads=100,
+                    **parameters,
+                    min_batches=5000,
+                    min_particles=5000,
+                    min_replicates=3,
+                )
+            st.session_state["cbpfr_screen_result"] = result
+        except (ValueError, OSError, RuntimeError, KeyError) as exc:
+            st.error(f"Screen not run: {exc}")
+
+    screen_result = st.session_state.get("cbpfr_screen_result")
+    if screen_result:
+        decision = screen_result["decision"]
+        if decision["accepted"]:
+            st.success("The exact selector reproduced a candidate under the caller-supplied screening protocol. This is not a validated physical design.")
+        else:
+            st.error("No accepted candidate was produced under the supplied screening protocol; the pipeline correctly did not approve a selection.")
+        st.metric("Pipeline status", screen_result["status"])
+        st.json({
+            "screening_parameters": screen_result["screening_parameters"],
+            "decision": decision,
+            "evidence_audit": screen_result["evidence_audit"],
+            "bundle_sha256": screen_result["bundle_sha256"],
+        })
+        candidates = screen_result["candidates"]
+        st.dataframe(pd.DataFrame([{
+            "Layout": item["layout_signature"],
+            "Runs": item["replicate_count"],
+            "Mean k-effective": item["mean_keff"],
+            "Operational k-effective bound": str(item["keff_bound"]),
+            "Mean fission peaking proxy": item["mean_fission_rate_peaking_factor"],
+            "Peaking upper bound": item["fission_peaking_upper_bound"],
+            "Conservatively feasible under supplied limits": item["conservatively_feasible"],
+            "Normalized violation": item["normalized_conservative_violation"],
+        } for item in candidates]), use_container_width=True, hide_index=True)
+        st.download_button(
+            "Download integrated CB-PFR decision bundle JSON",
+            json.dumps(screen_result, indent=2, sort_keys=True, allow_nan=False).encode("utf-8"),
+            "cbpfr_high_budget_integrated_decision_bundle.json",
+            "application/json",
+        )
+    else:
+        st.caption("No screening has been run. Enter all protocol criteria and explicitly confirm the protocol to evaluate the archived data.")
+
 
 st.markdown("---")
 st.caption("C5G7 high-budget study · 6 layouts × 3 independent seed rounds · 5,000 batches × 5,000 particles/run. The raw HDF5 statepoints remain in the linked workflow artifact.")
