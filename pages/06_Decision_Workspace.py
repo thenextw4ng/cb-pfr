@@ -110,5 +110,8 @@ if st.button("Export decision review record", type="primary"):
         "winner_selected": False,
         "claim_boundary": "Exploratory recorded smoke data; not benchmark-grade physical validation.",
     }
-    st.download_button("Download review JSON", json.dumps(payload, indent=2, allow_nan=False), "cbpfr_decision_review.json", "application/json")
+    st.session_state["cbpfr_decision_review_payload"] = json.dumps(payload, indent=2, allow_nan=False)
     st.success("Review record prepared. This export records review state; it does not validate the design.")
+
+if st.session_state.get("cbpfr_decision_review_payload"):
+    st.download_button("Download review JSON", st.session_state["cbpfr_decision_review_payload"], "cbpfr_decision_review.json", "application/json")
