@@ -15,7 +15,9 @@ class CanonicalConfirmationProfileTests(unittest.TestCase):
 
     def test_profile_declares_canonical_only_and_standard_groups(self):
         profile = self.profile
-        self.assertEqual(profile["status"], "CONFIGURED_NOT_YET_EXECUTED")
+        self.assertEqual(profile["status"], "EXECUTED_NUMERICAL_SCREEN_PASS_VALIDATION_BLOCKED")
+        self.assertEqual(profile["execution"]["run_count"], 3)
+        self.assertEqual(profile["execution"]["physical_validation_status"], "BLOCKED")
         self.assertEqual(profile["model"]["candidate_id"], "c5g7-2x2-UMMU")
         self.assertEqual(profile["model"]["layout_signature"], "UMMU")
         self.assertEqual(
