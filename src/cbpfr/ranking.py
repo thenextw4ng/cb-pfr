@@ -23,14 +23,23 @@ class MetricLimit:
     units: str = "unspecified"
     bound_kind: str = "operational_heuristic"
     def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValueError("metric name must be a non-empty string")
         if self.lower is None and self.upper is None:
             raise ValueError(f"metric {self.name} needs a lower and/or upper limit")
+        for label, value in (("lower", self.lower), ("upper", self.upper), ("z", self.z), ("scale", self.scale), ("weight", self.weight)):
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"metric {self.name} {label} must be a finite real number")
         if self.lower is not None and self.upper is not None and self.lower > self.upper:
             raise ValueError(f"metric {self.name} has lower limit above upper limit")
         if self.z < 0 or self.scale <= 0 or self.weight < 0:
             raise ValueError(f"metric {self.name} has invalid z, scale, or weight")
-        if not self.uncertainty_kind.strip():
+        if not isinstance(self.uncertainty_kind, str) or not self.uncertainty_kind.strip() or self.uncertainty_kind == "unspecified":
             raise ValueError(f"metric {self.name} must identify uncertainty_kind")
+        if not isinstance(self.units, str) or not self.units.strip() or self.units == "unspecified":
+            raise ValueError(f"metric {self.name} must declare units")
         if self.bound_kind not in {"operational_heuristic", "known_normal_one_sided"}:
             raise ValueError(f"metric {self.name} has unsupported bound_kind; it must not imply an untested confidence claim")
 
