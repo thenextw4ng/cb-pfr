@@ -9,7 +9,7 @@ WORKFLOW = ROOT / ".github" / "workflows" / "c5g7-canonical-convergence.yml"
 class CanonicalWorkflowContractTests(unittest.TestCase):
     def test_inactive_batch_input_and_environment_fallback_agree(self):
         text = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn('inactive:\n        description: "Inactive batches"\n        required: true\n        default: "500"', text)
+        self.assertIn('inactive:\n        description: "Inactive batches per run"\n        required: true\n        default: "500"', text)
         self.assertIn("INACTIVE: ${{ inputs.inactive || '500' }}", text)
         self.assertNotIn("INACTIVE: ${{ inputs.inactive || '100' }}", text)
 
@@ -22,8 +22,11 @@ class CanonicalWorkflowContractTests(unittest.TestCase):
     def test_transport_and_analysis_artifacts_are_preserved_even_on_failure(self):
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("if: always()", text)
-        self.assertIn("name: c5g7-canonical-high-budget-screen-", text)
-        self.assertIn("path: /tmp/c5g7-canonical-convergence/", text)
+        self.assertIn("name: seed_${{ matrix.seed_base }}", text)
+        self.assertIn("path: ${{ runner.temp }}/c5g7-canonical-convergence/seed_", text)
+        self.assertIn("name: c5g7-canonical-confirmation-aggregate", text)
+        self.assertIn("pattern: seed_*", text)
+        self.assertIn("Validate run settings against the predeclared profile", text)
 
     def test_recovery_workflow_installs_openmc_and_activates_environment(self):
         recovery = ROOT / ".github" / "workflows" / "c5g7-canonical-recover-analysis.yml"
