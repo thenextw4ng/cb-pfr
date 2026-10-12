@@ -25,7 +25,10 @@ def apply_workstation_style():
     st.markdown(
         f"""
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
         :root {{ color-scheme: dark; }}
+        html, body, [class*='css'], .stApp, button, input, textarea, select, label {{ font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif !important; }}
+        code, pre, .stCode, [data-testid='stMetricValue'] {{ font-family: 'IBM Plex Mono', monospace !important; }}
         .stApp {{ background: radial-gradient(ellipse at 52% -15%, #132a38 0%, {BG} 58%); color: {TEXT}; }}
         .block-container {{ max-width: 1640px; padding: 1.15rem 2rem 3rem; }}
         /* MagicPath workstation port: suppress Streamlit's duplicate default page list. */
