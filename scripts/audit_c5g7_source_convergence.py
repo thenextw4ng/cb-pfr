@@ -63,6 +63,19 @@ def analyze_traces(k_generation: list[float], entropy: list[float], inactive: in
                    n_batches: int | None = None) -> dict:
     if not k_generation:
         raise ValueError("statepoint has no k_generation trace")
+    if n_batches is not None:
+        if isinstance(n_batches, bool) or n_batches < 1:
+            raise ValueError("n_batches metadata must be a positive integer")
+        if len(k_generation) != n_batches:
+            raise ValueError(
+                f"k_generation trace length {len(k_generation)} does not match n_batches metadata {n_batches}"
+            )
+        if entropy and len(entropy) != n_batches:
+            raise ValueError(
+                f"entropy trace length {len(entropy)} does not match n_batches metadata {n_batches}"
+            )
+    if entropy and len(entropy) != len(k_generation):
+        raise ValueError("k_generation and entropy traces must have matching lengths")
     if not entropy:
         return {
             "schema_version": "1.0",
@@ -74,7 +87,6 @@ def analyze_traces(k_generation: list[float], entropy: list[float], inactive: in
         }
     k = summarize_trace(k_generation, inactive, label="k_generation")
     h = summarize_trace(entropy, inactive, label="entropy")
-    k_half_delta_pcm = h.get("second_minus_first_half_mean")  # overwritten below for clarity
     k_active = k_generation[inactive:]
     k_half = len(k_active) // 2
     k_half_delta_pcm = (mean(k_active[k_half:]) - mean(k_active[:k_half])) * 1e5

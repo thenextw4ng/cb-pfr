@@ -25,6 +25,14 @@ class C5G7SourceConvergenceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             analyze_traces([1.0, 1.0, 1.0], [2.0, 2.0, 2.0], inactive=3)
 
+    def test_trace_lengths_must_match_statepoint_batch_metadata(self):
+        with self.assertRaisesRegex(ValueError, "k_generation trace length"):
+            analyze_traces([1.0, 1.0, 1.0], [2.0, 2.0, 2.0], inactive=0, n_batches=4)
+
+    def test_k_generation_and_entropy_traces_must_match(self):
+        with self.assertRaisesRegex(ValueError, "matching lengths"):
+            analyze_traces([1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0], inactive=0)
+
 
 if __name__ == "__main__":
     unittest.main()

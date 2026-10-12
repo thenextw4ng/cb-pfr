@@ -10,7 +10,7 @@ on:
       inactive:
         description: "Inactive batches"
         required: true
-        default: "100"
+        default: "500"
       particles:
         description: "Particles per batch"
         required: true
@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 360
     env:
       BATCHES: ${{ inputs.batches || '7000' }}
-      INACTIVE: ${{ inputs.inactive || '100' }}
+      INACTIVE: ${{ inputs.inactive || '500' }}
       PARTICLES: ${{ inputs.particles || '10000' }}
       SEED_BASES: "720000 730000 740000"
     steps:
@@ -66,6 +66,10 @@ jobs:
               --statepoint "$CASE_DIR/$STATEPOINT_REL" \
               --candidate-id c5g7-2x2-UMMU --layout-signature UMMU \
               --out "$ROUND/analysis/assembly_fission.json"
+            python scripts/audit_c5g7_source_convergence.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --out-json "$ROUND/analysis/source_convergence.json" \
+              --out-csv "$ROUND/analysis/source_convergence.csv"
           done
       - name: Aggregate canonical numerical gates
         shell: bash -el {0}

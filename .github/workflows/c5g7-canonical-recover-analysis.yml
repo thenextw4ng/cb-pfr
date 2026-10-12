@@ -1,0 +1,88 @@
+name: Recover C5G7 canonical convergence analysis from saved statepoints
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Completed canonical run whose artifact contains saved statepoints"
+        required: true
+        default: "38196703024"
+      artifact_name:
+        description: "Artifact name from the source run"
+        required: true
+        default: "c5g7-canonical-high-budget-screen-7000-10000"
+  pull_request:
+    paths:
+      - ".github/workflows/c5g7-canonical-recover-analysis.yml"
+      - "scripts/audit_c5g7_source_convergence.py"
+      - "scripts/analyze_c5g7_canonical_convergence.py"
+      - "tests/test_c5g7_canonical_workflow_contract.py"
+      - "pyproject.toml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  recover-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0 for statepoint analysis
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-canonical-recovery
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Download saved canonical statepoints and audit outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name || 'c5g7-canonical-high-budget-screen-7000-10000' }}
+          run-id: ${{ inputs.source_run_id || '38196703024' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/c5g7-canonical-convergence
+      - name: Recreate missing source-convergence diagnostics and aggregate
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          OUT=/tmp/c5g7-canonical-convergence
+          shopt -s nullglob
+          rounds=( "$OUT"/seed_* )
+          if [ "${#rounds[@]}" -lt 3 ]; then
+            echo "Expected at least three saved seed directories; found ${#rounds[@]}" >&2
+            find "$OUT" -maxdepth 3 -type f -print
+            exit 2
+          fi
+          for ROUND in "${rounds[@]}"; do
+            CASE_DIR="$ROUND/c5g7-2x2-UMMU"
+            RESULT="$CASE_DIR/CASE_RESULT.json"
+            if [ ! -f "$RESULT" ]; then
+              echo "Missing saved case result: $RESULT" >&2
+              exit 2
+            fi
+            STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["physical_results"]["statepoint"])' "$RESULT")"
+            STATEPOINT="$CASE_DIR/$STATEPOINT_REL"
+            if [ ! -f "$STATEPOINT" ]; then
+              echo "Missing saved statepoint: $STATEPOINT" >&2
+              exit 2
+            fi
+            python scripts/audit_c5g7_source_convergence.py \
+              --statepoint "$STATEPOINT" \
+              --out-json "$ROUND/analysis/source_convergence.json" \
+              --out-csv "$ROUND/analysis/source_convergence.csv"
+          done
+          python scripts/analyze_c5g7_canonical_convergence.py \
+            --rounds-root "$OUT" \
+            --out-json "$OUT/canonical_convergence_analysis.json" \
+            --out-md "$OUT/canonical_convergence_analysis.md"
+          cat "$OUT/canonical_convergence_analysis.md"
+      - name: Preserve recovered analysis and original statepoints
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-canonical-recovered-analysis-${{ inputs.source_run_id || '38196703024' }}
+          path: /tmp/c5g7-canonical-convergence/
+          if-no-files-found: error
