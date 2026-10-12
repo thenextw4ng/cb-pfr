@@ -19,21 +19,14 @@ from cbpfr.openmc import preflight_openmc
 from cbpfr.qubo import CoreSpec, build_usmanov_style_qubo, enumerate_feasible_candidates
 from cbpfr.ranking import MetricLimit, PhysicalEstimate
 from cbpfr.repeatability import summarize_repeated_rankings
+from cbpfr.dashboard_ui import apply_workstation_style, render_header, render_workspace_sidebar, load_smoke, base_layout
 
-st.set_page_config(page_title="ReactorQ Studio", page_icon="⚛️", layout="wide")
-st.markdown("""
-<style>
-.block-container {padding-top: 1.5rem; max-width: 1440px;}
-.hero {padding: 1.5rem 1.8rem; border: 1px solid rgba(128,128,128,.25);
-       border-radius: 18px; background: linear-gradient(120deg, rgba(40,90,150,.13), rgba(35,160,130,.08));}
-.muted {color: #8b949e;}
-</style>
-<div class="hero">
-  <h1>⚛️ ReactorQ Studio</h1>
-  <p>QUBO optimization · uncertainty-aware ranking · OpenMC readiness</p>
-  <p class="muted">Research prototype — demo data is synthetic, not reactor simulation evidence.</p>
-</div>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="CB-PFR | Scientific Workstation", page_icon="⚛️", layout="wide")
+apply_workstation_style()
+render_header("Overview", "RESEARCH WORKSTATION · EVIDENCE-AWARE MODE")
+render_workspace_sidebar("Overview", load_smoke())
+st.markdown("## Scientific Workstation")
+st.caption("QUBO optimization · uncertainty-aware ranking · OpenMC evidence review. Demo estimates are labelled and are not reactor simulation evidence.")
 
 st.page_link("pages/01_C5G7_Layout_Explorer.py", label="Open CB-PFR Scientific Workstation", icon="🌐")
 st.page_link("pages/06_High_Budget_Evidence.py", label="Open High-Budget Evidence Workstation", icon="📊")
