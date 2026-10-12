@@ -8,9 +8,11 @@ This report does not assert that all seven gates have passed. It closes the evid
 
 ## Evidence source and provenance
 
-- GitHub Actions run: [38196703024](https://github.com/thenextw4ng/cb-pfr/actions/runs/38196703024)
-- Artifact: `c5g7-canonical-high-budget-screen-7000-10000`, ID `11725784076`
-- Artifact SHA-256 reported by GitHub: `b996708634ff41491b0323bdac11d5ab2574c6716d42fca1a8bf449795aca953`
+- Original transport run: [38196703024](https://github.com/thenextw4ng/cb-pfr/actions/runs/38196703024)
+- Original transport artifact: `c5g7-canonical-high-budget-screen-7000-10000`, ID `11725784076`
+- Recovered analysis run: [38207010156](https://github.com/thenextw4ng/cb-pfr/actions/runs/38207010156), completed successfully on 2026-10-12
+- Recovered artifact: `c5g7-canonical-recovered-analysis-38196703024`, ID `11727463825`, SHA-256 `6384b82f9981a2fd3ec271e88f10478be84880526be0ae72c7199da02a679c7e`
+- The recovery re-used the saved statepoints; it did not rerun transport.
 - Workflow source commit: `e086af2860797cc935c1db1d1d9305f256183537`
 - Pinned upstream source: `https://github.com/mit-crpg/benchmarks.git`, commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450`
 - OpenMC: `0.16.0`, verified from the saved statepoint HDF5 metadata and the workflow's pinned environment.
@@ -19,7 +21,7 @@ This report does not assert that all seven gates have passed. It closes the evid
 
 ## A — Model identity and provenance
 
-**Status: `INPUT_PROVENANCE_VERIFIED; INDEPENDENT_SPECIFICATION_REVIEW_PENDING`.**
+**Status: `INPUT_PROVENANCE_VERIFIED; PINNED-UPSTREAM SOURCE MATCH REVIEWED; INDEPENDENT BENCHMARK SIGN-OFF PENDING`.**
 
 For each seed, all **30 recorded output files** were re-hashed and compared with that run's `output_hashes_after_run` manifest: **30/30 matched per run**, with zero missing files and zero mismatched hashes (90 file-hash checks total). This includes geometry XML, materials XML, settings XML, MGXS HDF5, generated builders, statepoints, summaries, tally outputs, logs, and copied model source files.
 
@@ -39,7 +41,9 @@ For each seed, all **30 recorded output files** were re-hashed and compared with
 
 The settings hashes differ as expected because each run has a distinct seed. The materials XML hashes differ because each XML contains the absolute path to its run-specific MGXS file; the MGXS content hash itself is identical. The generated builder is also seed-specific. All three runs report the standard C5G7 seven-group boundaries: `[1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000]` eV.
 
-**Remaining blocker:** these checks prove file identity and internal provenance, not full fidelity to the primary OECD/NEA specification. Independent sign-off on material definitions, geometry, boundary conditions, and benchmark correspondence is not recorded.
+Compared against the pinned upstream source at commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450`, the production 2-D builder preserves the upstream 3×3 lattice layout, assembly pitch and extent, mixed reflective/vacuum boundary definitions, 7-group C5G7 data definitions, source-box definition, and mesh/tally definitions. Production changes visible in the builder are runtime settings (7000 batches, 500 inactive, seed) and the added convergence/evidence plumbing. The upstream reference itself uses a log-spaced group structure in `materials.py`; the production artifact's MGXS is separately audited to the standard C5G7 boundaries. This difference is explicitly recorded and the historical production scalar using the nonstandard structure is not used as a comparison target.
+
+**Remaining blocker:** the source-code/input comparison is a strong provenance check, not independent sign-off by a benchmark specialist. Record this as `UPSTREAM_SOURCE_MATCH_REVIEWED; INDEPENDENT_BENCHMARK_SIGNOFF_PENDING`, not as full physical validation.
 
 ## B — Mesh-to-assembly mapping
 
@@ -68,14 +72,14 @@ This is a C5G7 assembly-placement reformulation, **not** a reproduction or mater
 
 ## D — Data integrity and reproducibility
 
-**Status: `THREE-RUN CANONICAL ARTIFACT INTEGRITY PASS; WORKFLOW REPAIR NOT YET END-TO-END VERIFIED`.**
+**Status: `THREE-RUN ARTIFACT INTEGRITY PASS; RECOVERY WORKFLOW END-TO-END PASS; SOURCE-CONVERGENCE INTERPRETATION OPEN`.**
 
 - Three distinct seeds and three distinct statepoint hashes are present.
 - Raw HDF5 audits pass 22/22 checks per run.
 - Geometry and MGXS hashes are common across runs; computational settings are the same apart from the intentionally distinct seed and run-specific file paths.
 - Statepoint, summary, raw audit, assembly-fission output, settings, MGXS, and logs are preserved in the source artifact.
 
-The original workflow failed only at aggregation because it did not generate the source-convergence files required by its own aggregator. A repair was committed on PR #50 to generate the JSON/CSV diagnostics before aggregation. The subsequent repository test matrix is green, but the repaired canonical workflow/recovery workflow has not yet been executed end-to-end on GitHub Actions.
+The original transport workflow failed only at aggregation because it did not generate source-convergence files required by its own aggregator. The repaired recovery workflow has now executed end-to-end successfully: it installed OpenMC 0.16.0, downloaded the original saved artifact, generated per-seed JSON/CSV diagnostics from the saved statepoints, ran the repository aggregator, and uploaded artifact `11727463825`. This is a post-processing recovery, not a new transport run. The remaining D/E issue is scientific interpretation of the saved traces, not missing diagnostic files.
 
 ## E — Metrics and benchmark protocol
 
@@ -102,18 +106,20 @@ Reference target used by the repository protocol: (k_{eff}=1.18655), reference s
 
 The provisional project screens pass: three replicates, unique statepoints, common settings/MGXS/group structure, absolute reference difference ≤100 pcm, absolute combined z ≤2, and maximum reported per-run SD ≤10 pcm. These are internal screens, **not official OECD/NEA acceptance criteria**.
 
-Saved source/eigenvalue diagnostics were reconstructed from the original HDF5 traces without rerunning transport. The second-half-minus-first-half (k)-generation differences were +45.61, +38.09, and −21.48 pcm for seeds 720000, 730000, and 740000. First-to-last-quarter entropy differences were −0.0000685, −0.0019471, and −0.0010348. These are descriptive diagnostics only; the protocol has no justified predeclared trace threshold and the traces still require review. No automatic source-convergence certificate is claimed.
+Saved source/eigenvalue diagnostics were generated by the repaired repository workflow from the original statepoints, without rerunning transport. The second-half-minus-first-half `k_generation` differences were +45.61, +38.09, and −21.48 pcm; first-to-last-quarter means changed by +42.06, +65.05, and +23.99 pcm for seeds 720000, 730000, and 740000 respectively. Entropy first-to-last-quarter differences were −0.0000685, −0.0019471, and −0.0010348 on a trace mean near 9.74. The entropy shifts are small in relative terms, but the generation-eigenvalue quarter shifts are not negligible compared with the reported 9.4–9.7 pcm within-run standard deviations. The OLS slopes and window differences are descriptive, correlated batch traces—not independent observations or formal convergence tests. **Scientific interpretation: source/eigenvalue stationarity is not yet demonstrated by a predeclared acceptance protocol.** The diagnostic status remains `DIAGNOSTIC_REVIEW_REQUIRED`; no automatic convergence certificate is claimed. This does not invalidate the scalar result by itself, but it blocks a full physical-validation claim until an expert review or an explicitly justified follow-up protocol resolves it.
 
 ## F — CI and fail-closed integration
 
-**Status: `UNIT/CONTRACT TEST MATRIX PASS; REPAIRED CANONICAL WORKFLOW NOT YET RUN END-TO-END`.**
+**Status: `UNIT/CONTRACT TEST MATRIX PASS; RECOVERY WORKFLOW END-TO-END PASS; PRODUCTION TRANSPORT WORKFLOW STILL NEEDS ITS OWN CONFIRMATION RUN`.**
 
-- Current PR #49 head `439f916a9306c8fe2832ac3e3338bddbb44f5814`: all six reported Python 3.10/3.11/3.12 test-matrix check runs passed.
-- Current PR #50 head `040ed70db5f87ac7640049f21c5b77f7d8b4f11d`: all six reported Python 3.10/3.11/3.12 test-matrix check runs passed.
+- Scientific readiness branch commit `55b061d867ebc1cd92e17b429a4cd35068c6bc0a`: all six reported Python 3.10/3.11/3.12 test-matrix check runs passed.
+- Workflow repair commit `c0c7cefdf26e91806c7481f2d2645d2a63a4183f`: all six reported Python 3.10/3.11/3.12 test-matrix check runs passed.
+- Recovery workflow run [38207010156](https://github.com/thenextw4ng/cb-pfr/actions/runs/38207010156): job completed successfully; all six analysis/recovery steps passed.
+- Repository test run [38207010089](https://github.com/thenextw4ng/cb-pfr/actions/runs/38207010089): completed successfully.
 - PR #50 adds source-convergence JSON/CSV generation before aggregation, installs and activates pinned OpenMC 0.16.0 in the recovery workflow, and aligns the inactive-batch fallback at 500.
 - Regression tests assert that diagnostics precede aggregation, artifact upload runs even after a failure, and the recovery environment includes OpenMC.
 
-The green test matrix is software evidence only. The repaired high-budget/recovery workflow has not yet been executed end-to-end on GitHub Actions. The recovery workflow is introduced on PR #50 and needs to be present on the repository's default branch before a normal manual dispatch can be used. PR #50 remains draft/open and has not been merged.
+The green test matrix and successful recovery workflow establish software/workflow readiness for post-processing the saved run. The canonical high-budget transport workflow itself has not been rerun after the workflow fix, because the existing three transport results were already complete and recovery succeeded without repeating expensive transport. PR #50 remains draft/open and has not been merged; the fix therefore remains proposed rather than incorporated into `main`.
 
 ## G — Analysis, reporting, and release
 
@@ -126,7 +132,7 @@ The canonical scalar result, per-run uncertainty, between-seed variability, hash
 1. Obtain an independent primary-specification/model-identity review (A).
 2. Complete a benchmark-compatible spatial tally comparison using the actual saved statepoint and reviewed mesh mapping (B).
 3. Review the full source-convergence traces and record an evidence-based interpretation; do not invent a threshold after seeing results (D/E).
-4. Execute the repaired canonical workflow or recovery workflow end-to-end on GitHub Actions and archive its output (D/F).
+4. Review the recovered source/eigenvalue traces under a documented, defensible protocol and decide whether a new transport run is scientifically necessary (D/E). The recovery workflow itself already passed and its output is archived.
 5. Keep physical layout selection blocked until the design-specific (k_{eff}) acceptance band and tally mapping/objective are approved (C/E).
 
 No additional algorithm, metric, experiment, or cosmetic redesign is authorized by this closeout. Repeat transport only if an actual technical failure or evidence gap makes the saved results uninterpretable; do not rerun to obtain a preferred result.
