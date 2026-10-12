@@ -25,7 +25,10 @@ def apply_workstation_style():
     st.markdown(
         f"""
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
         :root {{ color-scheme: dark; }}
+        html, body, [class*='css'], .stApp, button, input, textarea, select, label {{ font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif !important; }}
+        code, pre, .stCode, [data-testid='stMetricValue'] {{ font-family: 'IBM Plex Mono', monospace !important; }}
         .stApp {{ background: radial-gradient(ellipse at 52% -15%, #132a38 0%, {BG} 58%); color: {TEXT}; }}
         .block-container {{ max-width: 1640px; padding: 1.15rem 2rem 3rem; }}
         /* MagicPath workstation port: suppress Streamlit's duplicate default page list. */
@@ -146,7 +149,9 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
             ("Physics Fields", "pages/02_Physics_Field_Explorer.py"),
             ("Monte Carlo Results", "pages/03_Monte_Carlo_Reliability.py"),
             ("QUBO / Optimization", "pages/04_QUBO_Optimization.py"),
+            ("Decision Workspace", "pages/06_Decision_Workspace.py"),
             ("Provenance & Validation", "pages/05_Provenance_Validation.py"),
+            ("Help & Methods", "pages/07_Help_Methods.py"),
             ("High-Budget Evidence", "pages/06_High_Budget_Evidence.py"),
         ]
         for label, path in modules:
@@ -213,7 +218,7 @@ def base_layout(fig: go.Figure, height: int = 340, **kwargs) -> go.Figure:
         height=height,
         paper_bgcolor=BG,
         plot_bgcolor=PANEL,
-        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
+        font={"family": "Roboto Condensed, Arial Narrow, sans-serif", "color": TEXT, "size": 11},
         margin={"l": 56, "r": 22, "t": 28, "b": 55},
         xaxis={"gridcolor": LINE, "linecolor": LINE, "zerolinecolor": LINE, "ticks": "outside", "tickcolor": LINE},
         yaxis={"gridcolor": LINE, "linecolor": LINE, "zerolinecolor": LINE, "ticks": "outside", "tickcolor": LINE},
@@ -245,7 +250,7 @@ def layout_figure(signature: str, height: int = 330) -> go.Figure:
     ))
     fig.update_layout(
         height=height, paper_bgcolor=BG, plot_bgcolor=PANEL,
-        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
+        font={"family": "Roboto Condensed, Arial Narrow, sans-serif", "color": TEXT, "size": 11},
         margin={"l": 52, "r": 18, "t": 24, "b": 45},
         xaxis={"side": "top", "fixedrange": True},
         yaxis={"autorange": "reversed", "fixedrange": True},
