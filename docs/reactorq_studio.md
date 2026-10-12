@@ -118,3 +118,8 @@ The **High-Budget Evidence** page reads the compact, versioned run-level record 
 The page shows descriptive means, between-run sample standard deviations, Student-t 95% intervals with three independent runs per layout, individual run values, and provenance metadata. The intervals are exploratory and have only two degrees of freedom. The page deliberately does not select a winner, certify convergence, or claim physical validation.
 
 The full raw HDF5 statepoints and full exporter/objective audits remain in the GitHub Actions artifact linked from the page. The compact committed JSON is an inspectable UI dataset, not a replacement for the raw evidence. Source workflow: https://github.com/thenextw4ng/cb-pfr/actions/runs/38182056526
+
+
+## Interactive CB-PFR screen
+
+The High-Budget Evidence page also exposes the integrated CB-PFR screening pipeline. It requires all seven numeric limits/scales to be entered explicitly and a checkbox confirming that the user has a documented protocol. It does not supply a default keff acceptance band or fission-peaking threshold. The screen consumes completed run evidence; it does not run OpenMC. The exact selector backend is classical exact enumeration, not quantum hardware. Any candidate is only the result of the user-supplied screen and is not a validated physical design or safety conclusion.
