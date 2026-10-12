@@ -11,6 +11,17 @@ class C5G7SourceConvergenceTests(unittest.TestCase):
         self.assertFalse(result["automatic_convergence_claim"])
         self.assertEqual(result["k_generation"]["active_trace_length"], 6)
         self.assertIn("last_minus_first_quarter_mean", result["entropy"])
+        self.assertEqual(result["inactive_entropy"]["trace_length"], 2)
+        self.assertIn("last_minus_first_quarter_mean", result["inactive_entropy"])
+        self.assertIn("inactive_k_generation", result)
+        self.assertFalse(result["automatic_convergence_claim"])
+
+    def test_zero_inactive_batches_are_reported_explicitly(self):
+        k = [1.1, 1.2, 1.18, 1.19, 1.186, 1.187]
+        h = [2.0, 2.2, 2.1, 2.15, 2.14, 2.13]
+        result = analyze_traces(k, h, inactive=0, n_batches=6)
+        self.assertEqual(result["inactive_entropy"]["status"], "NO_INACTIVE_BATCHES")
+        self.assertFalse(result["automatic_convergence_claim"])
 
     def test_missing_entropy_fails_source_assessment(self):
         result = analyze_traces([1.0, 1.1, 1.0, 1.01, 1.0], [], inactive=1)

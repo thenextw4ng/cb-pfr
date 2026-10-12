@@ -1,0 +1,61 @@
+{
+  "schema_version": "cbpfr.scientific-closeout.v1",
+  "date": "2026-10-12",
+  "status": {
+    "compute_execution": "PASS",
+    "run_evidence_integrity": "PASS",
+    "internal_model_tally_review": "PARTIAL_EXTERNAL_SIGNOFF_REQUIRED",
+    "decision_rule": "FAIL_CLOSED_PROTOCOL_FROZEN_NUMERIC_LIMITS_NOT_APPROVED",
+    "proxy_holdout_analysis": "DESCRIPTIVE_ONLY",
+    "qubo_only_vs_cbpfr_superiority": "BLOCKED",
+    "physical_validation": "NOT_CERTIFIED",
+    "winner_selected": false
+  },
+  "source": {
+    "workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38229045726",
+    "raw_artifact_id": 11747677926,
+    "raw_artifact_sha256": "be48b17c2c336a97d08673d191457b9c695853759180116f5382f636b4c93019",
+    "run_level_csv_sha256": "3eb5d575cc5076ead39de04907beddd25fa2310465b508208579bbd4a5c0192d",
+    "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+    "mgxs_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129"
+  },
+  "compute": {
+    "runs": 18,
+    "layouts": 6,
+    "seed_rounds": [820000, 830000, 840000],
+    "batches": 7000,
+    "inactive_batches": 500,
+    "particles_per_batch": 10000,
+    "threads": 2,
+    "nominal_histories": 1260000000,
+    "active_histories": 1170000000
+  },
+  "proxy_holdout": {
+    "method": "Leave one seed round out: select by mean relative fission-rate proxy in two rounds and evaluate in the held-out round.",
+    "folds": [
+      {"held_out_round": 820000, "selected": "MMUU", "held_out_proxy": 1.2947109741086231, "held_out_best": "MMUU", "regret": 0.0},
+      {"held_out_round": 830000, "selected": "MMUU", "held_out_proxy": 1.295351514527503, "held_out_best": "MMUU", "regret": 0.0},
+      {"held_out_round": 840000, "selected": "MMUU", "held_out_proxy": 1.2960441797456754, "held_out_best": "MMUU", "regret": 0.0}
+    ],
+    "interpretation": "Descriptive ranking stability only. Same proxy is used for selection/evaluation, only three rounds exist, and physical validation is not certified."
+  },
+  "frozen_decision_rule": {
+    "rule": "No winner unless independent model/tally review is signed off; model-appropriate acceptance criteria are justified from primary specifications before final ranking; uncertainty treatment is documented; and a candidate passes all predeclared criteria. Otherwise NO_SELECTION / INCONCLUSIVE.",
+    "numeric_limits": null,
+    "reason_numeric_limits_null": "No scientifically approved physical acceptance limits were found in the audited evidence; do not invent limits from observed outcomes."
+  },
+  "remaining_blockers": [
+    "Independent review of generated geometry/material/boundary inputs against the primary C5G7 specification.",
+    "Independent validation of mesh-to-assembly mapping and the relative fission-rate proxy against an appropriate reference tally.",
+    "Review source/eigenvalue stationarity and the large smoke-to-high-budget mean shifts; convergence is not certified.",
+    "Approve a justified physical acceptance rule and uncertainty handling before ranking.",
+    "Obtain comparable pre-physics QUBO objective scores and run a fair predeclared CB-PFR versus QUBO-only/simple-baseline evaluation."
+  ],
+  "nonclaims": [
+    "No physical validation certificate",
+    "No absolute power or flux validation",
+    "No reactor safety conclusion",
+    "No CB-PFR superiority proof",
+    "No quantum advantage claim"
+  ]
+}
