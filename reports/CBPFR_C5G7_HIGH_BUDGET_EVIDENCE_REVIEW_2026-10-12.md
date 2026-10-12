@@ -21,6 +21,14 @@ Post-hoc exploratory OLS trend estimates with Newey–West/HAC standard errors (
 
 These exploratory tests do not detect a statistically clear linear trend, but this is not proof of convergence. The tests are post hoc, can miss nonstationary or spatial source-mode behaviour, and are not predeclared acceptance criteria. The formal source-convergence status remains REVIEW REQUIRED.
 
+
+### Additional inactive-interval entropy inspection
+
+I also inspected the first and last 100 entropy values within the 500 inactive batches in each archived canonical statepoint. The mean entropy changed from 9.74717 to 9.73700 for seed 720000 (−0.1044% relative to the mean inactive entropy), 9.74998 to 9.73850 for seed 730000 (−0.1178%), and 9.74264 to 9.74697 for seed 740000 (+0.0444%). The 50-batch block means fluctuate around approximately 9.73–9.76 without a consistent monotone pattern.
+
+This supports a descriptive statement that the inactive entropy traces look broadly stable, but it is not a formal source-convergence acceptance test: the tolerance was not predeclared, entropy is only a scalar projection of the spatial source distribution, and full trace review is still needed. The source-convergence tool has also been hardened on the research branch to report inactive-interval diagnostics separately from active tallies.
+
+
 ## Spatial comparison limitation
 
 The tally is integrated mesh `fission`, not absolute power in watts. The current comparison uses published assembly power values (492.8, 211.7, 211.7, 139.8) as a normalized spatial-shape reference. Observed normalized fission-rate fractions were p00 0.4669140, p01 0.2005424, p10 0.2003942, p11 0.1321494; normalized reference fractions were 0.4666667, 0.2004735, 0.2004735, 0.1323864. Relative differences were +0.0530%, +0.0344%, -0.0395%, and -0.1790%, respectively.
