@@ -96,7 +96,19 @@ def apply_workstation_style():
         div[data-baseweb="select"] > div, div[data-baseweb="input"] > div {{ background: {PANEL}; border-color: {LINE}; }}
         div[role="radiogroup"] {{ gap: 8px; }}
         hr {{ border-color: {LINE}; }}
-        </style>
+        .cbpfr-hero {{ position:relative; overflow:hidden; border:1px solid {LINE}; border-radius:10px; padding:26px 30px 20px; margin:2px 0 22px; background:linear-gradient(112deg,rgba(18,49,67,.96),rgba(8,23,35,.96) 58%,rgba(19,39,52,.94)); }}
+        .cbpfr-hero:after {{ content:""; position:absolute; right:-70px; top:-115px; width:310px; height:310px; border:1px solid rgba(85,212,223,.18); border-radius:50%; box-shadow:0 0 0 26px rgba(85,212,223,.025),0 0 0 54px rgba(85,212,223,.025),0 0 0 82px rgba(85,212,223,.02); pointer-events:none; }}
+        .hero-eyebrow,.module-number {{ color:{CYAN}; font-family:'IBM Plex Mono',monospace; font-size:.66rem; letter-spacing:.16em; font-weight:600; }}
+        .hero-title {{ color:{TEXT}; font-size:clamp(2rem,4vw,3.35rem); font-weight:750; line-height:1.03; letter-spacing:-.04em; margin:15px 0 12px; }}
+        .hero-title span {{ color:{CYAN}; }}
+        .hero-copy {{ color:#b6c9d6; font-size:.94rem; line-height:1.6; max-width:760px; }}
+        .hero-meta {{ display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:22px; padding-top:13px; border-top:1px solid {LINE}; color:{MUTED}; font-family:'IBM Plex Mono',monospace; font-size:.61rem; letter-spacing:.055em; }}
+        .candidate-metadata {{ display:grid; grid-template-columns:70px 1fr; gap:7px 12px; border-top:1px solid {LINE}; margin-top:10px; padding-top:12px; font-family:'IBM Plex Mono',monospace; font-size:.7rem; }}
+        .candidate-metadata span {{ color:{MUTED}; }} .candidate-metadata b {{ color:{TEXT}; font-weight:500; overflow-wrap:anywhere; }}
+        .module-number {{ margin-bottom:10px; }} .module-copy {{ color:{MUTED}; font-size:.82rem; line-height:1.5; min-height:48px; margin-bottom:13px; }}
+        div[data-testid="stVerticalBlockBorderWrapper"] {{ background:linear-gradient(150deg,rgba(16,37,54,.54),rgba(8,22,33,.68)); }}
+        div[data-testid="stPlotlyChart"] {{ box-shadow:0 8px 24px rgba(0,0,0,.12); }}
+                </style>
         """,
         unsafe_allow_html=True,
     )
