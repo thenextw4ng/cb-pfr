@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
+import math
 
 from .experiment import (
     CandidateEvaluation,
@@ -53,11 +54,31 @@ def run_solver_to_physics_pipeline(
         if candidate_id in solution_vectors:
             raise ExperimentContractError("solver output contains duplicate candidate IDs")
         try:
-            vector = tuple(int(value) for value in solution["vector"])
+            raw_vector = solution["vector"]
+            if not isinstance(raw_vector, (list, tuple)):
+                raise TypeError("vector must be a list or tuple")
+            if any(isinstance(value, bool) or not isinstance(value, int) or value not in (0, 1) for value in raw_vector):
+                raise ValueError("vector entries must be integer 0 or 1")
+            vector = tuple(raw_vector)
         except (KeyError, TypeError, ValueError) as exc:
-            raise ExperimentContractError("solver solution vector is invalid") from exc
-        if len(vector) != model.variable_count or any(value not in (0, 1) for value in vector):
+            raise ExperimentContractError("solver solution vector is invalid; expected integer binary values") from exc
+        if len(vector) != model.variable_count:
             raise ExperimentContractError("solver solution vector has invalid binary dimension")
+        try:
+            recomputed_energy = float(model.energy(vector))
+            recomputed_violations = model.constraint_violations(vector)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ExperimentContractError("solver solution cannot be evaluated against the QUBO model") from exc
+        claimed_energy = solution.get("qubo_energy")
+        if isinstance(claimed_energy, bool) or not isinstance(claimed_energy, (int, float)):
+            raise ExperimentContractError("solver solution is missing a numeric qubo_energy")
+        if not math.isfinite(float(claimed_energy)) or not math.isclose(float(claimed_energy), recomputed_energy, rel_tol=1e-10, abs_tol=1e-10):
+            raise ExperimentContractError("solver solution energy does not match the QUBO model")
+        if solution.get("feasible") is not model.is_feasible(vector):
+            raise ExperimentContractError("solver feasibility flag does not match the QUBO model")
+        claimed_violations = solution.get("constraint_violations")
+        if not isinstance(claimed_violations, Mapping) or dict(claimed_violations) != recomputed_violations:
+            raise ExperimentContractError("solver constraint violations do not match the QUBO model")
         solution_vectors[candidate_id] = vector
     for candidate in candidates:
         if solution_vectors.get(candidate.candidate_id) != tuple(candidate.vector):
