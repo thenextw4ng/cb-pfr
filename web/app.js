@@ -58,13 +58,13 @@ async function init(){
   $("candidateSelect").innerHTML=records.map(r=>'<option value="'+String(r.candidate_id).replaceAll('"',"&quot;")+'">'+label(r)+'</option>').join("");
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
   showCandidate();drawOtherCharts();
-  await initAssembly();
+  await initGeometry();
   await initMesh();
  }catch(error){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
   $("layoutView").innerHTML='<div class="loading">Evidence unavailable — no scientific values are fabricated.</div>';
   $("sourcePath").textContent="API unavailable";
-  await initAssembly();
+  await initGeometry();
   await initMesh();
  }
 }
@@ -142,30 +142,45 @@ async function initMesh(){
  }
 }
 
-/* Assembly-level fission proxy: use the repository's explicit four-position records. */
-async function initAssembly(){
+/* Displays existing external geometry artifacts only; never synthesizes a reactor layout. */
+async function initGeometry(){
+ const refresh=$("reloadGeometry");
+ if(refresh)refresh.addEventListener("click",async()=>{refresh.disabled=true;refresh.textContent="↻ Scanning…";await loadGeometryArtifacts();refresh.disabled=false;refresh.textContent="↻ Refresh artifacts";});
+ await loadGeometryArtifacts();
+}
+async function loadGeometryArtifacts(){
  try{
-  const response=await fetch("/api/assembly",{headers:{Accept:"application/json"}});
+  const response=await fetch("/api/geometry-artifacts",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("HTTP "+response.status);
-  const payload=await response.json();assemblyRecords=payload.records||[];
-  if(!assemblyRecords.length)throw new Error("No assembly fission proxy records found.");
-  const select=$("assemblyCandidate");
-  select.innerHTML=assemblyRecords.map((r,i)=>'<option value="'+i+'">'+r.candidate_id+' · '+r.layout_signature+'</option>').join("");
-  select.addEventListener("change",drawAssembly);
-  drawAssembly();
+  const payload=await response.json(),items=payload.artifacts||[];
+  $("geometryStatus").textContent=items.length?items.length+" ARTIFACT(S) FOUND":"NO GEOMETRY ARTIFACTS";
+  $("geometryStatus").classList.toggle("warning",!items.length);
+  $("geometryProvenance").textContent=items.length?"Found "+items.length+" existing file(s) in repository output folders. Preview uses original files; no geometry is inferred.":"No supported geometry visualization files were found in approved output folders. Generate them from the actual OpenMC model inputs, then refresh.";
+  const list=$("geometryArtifactList");
+  if(!items.length){
+   list.innerHTML='<div class="empty-state"><b>No external geometry output found</b><p>Expected OpenMC-generated PNG slice/raytrace plots or VTK/VTI datasets in plots/, plot/, geometry/, model/, c5g7-run/, evidence/, results/, or artifacts/.</p><p>The dashboard deliberately does not replace missing files with a fabricated assembly diagram.</p></div>';
+   $("geometryPreview").innerHTML='<div class="empty-state"><b>Geometry preview unavailable</b><p>Generate a plot from the validated OpenMC model inputs and click Refresh artifacts.</p><p><a href="https://docs.openmc.org/en/latest/usersguide/plots.html" target="_blank" rel="noreferrer">OpenMC geometry plotting documentation ↗</a></p></div>';
+   $("geometryCaption").textContent="No external geometry artifact selected.";return;
+  }
+  list.innerHTML=items.map((item,i)=>'<button class="artifact-item" type="button" data-artifact-index="'+i+'"><span class="artifact-icon">'+(item.kind==="image"?"IMG":"3D")+'</span><span class="artifact-meta"><b>'+escapeHtml(item.name)+'</b><small>'+escapeHtml(item.path)+' · '+item.format+' · '+formatBytes(item.size_bytes)+'</small></span><span class="tag">'+item.kind.toUpperCase()+'</span></button>').join("");
+  list.querySelectorAll("[data-artifact-index]").forEach(button=>button.addEventListener("click",()=>showGeometryArtifact(items[Number(button.dataset.artifactIndex)])));
+  showGeometryArtifact(items.find(item=>item.kind==="image")||items[0]);
  }catch(error){
-  $("assemblyMap").innerHTML='<div class="loading">Assembly map unavailable: '+error.message+'</div>';
-  $("assemblyBar").innerHTML='<div class="loading">No recorded assembly values displayed.</div>';
-  $("assemblyCaption").textContent="Source: results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv";
+  $("geometryStatus").textContent="ARTIFACT SCAN FAILED";$("geometryStatus").classList.add("warning");
+  $("geometryProvenance").textContent="Could not inspect geometry outputs: "+error.message;
+  $("geometryArtifactList").innerHTML='<div class="loading">Artifact inventory unavailable.</div>';
  }
 }
-function drawAssembly(){
- const i=Number($("assemblyCandidate").value),r=assemblyRecords[i];if(!r)return;
- const positions=["p00","p01","p10","p11"],vals=positions.map(p=>Number(r[p+"_fission_rate"]));
- const materials=String(r.layout_signature).split("").map(c=>c==="M"?"MOX":"UO₂");
- const grid=[[vals[0],vals[1]],[vals[2],vals[3]]];
- const materialGrid=[[materials[0],materials[1]],[materials[2],materials[3]]];
- chart("assemblyMap",[{type:"heatmap",x:["Left","Right"],y:["Top","Bottom"],z:grid,customdata:materialGrid,colorscale:"Viridis",showscale:true,colorbar:{title:{text:"Fission-rate proxy",font:{size:10}}},text:grid.map((row,y)=>row.map((v,x)=>materialGrid[y][x]+"<br>"+positions[y*2+x]+"<br>"+v.toExponential(3))),texttemplate:"%{customdata}<br>%{z:.3g}",textfont:{color:"#ffffff",size:13},hovertemplate:"Position %{x}, %{y}<br>Material %{customdata}<br>Fission-rate proxy %{z:.6g}<extra></extra>"}],{margin:{l:55,r:25,t:12,b:45},xaxis:{...baseLayout.xaxis,title:"Assembly column"},yaxis:{...baseLayout.yaxis,title:"Assembly row",autorange:"reversed"},showlegend:false});
- chart("assemblyBar",[{type:"bar",x:positions,y:vals,marker:{color:materials.map(m=>m==="MOX"?palette.orange:palette.cyan),line:{color:"#e8f1f7",width:1}},customdata:materials,hovertemplate:"%{x} · %{customdata}<br>Proxy %{y:.7g}<extra></extra>",text:vals.map(v=>v.toExponential(2)),textposition:"outside"}],{margin:{l:55,r:20,t:25,b:45},xaxis:{...baseLayout.xaxis,title:"Assembly position"},yaxis:{...baseLayout.yaxis,title:"Integrated fission-rate proxy"},showlegend:false});
- $("assemblyCaption").textContent=r.candidate_id+" · layout "+r.layout_signature+" · seed "+r.seed+" · keff "+Number(r.keff_mean).toFixed(6)+" ± "+Number(r.keff_std_dev).toExponential(2)+" · status: "+r.status;
+function showGeometryArtifact(item){
+ if(!item)return;
+ document.querySelectorAll(".artifact-item").forEach(el=>el.classList.remove("active"));
+ const active=document.querySelector('[data-artifact-index="'+Array.from(document.querySelectorAll(".artifact-item")).findIndex(el=>el.dataset.artifactIndex===String(Array.from(document.querySelectorAll(".artifact-item")).findIndex(x=>x===el)))+'"]');
+ // Mark the selected source by matching its path text, avoiding assumptions about array order after refresh.
+ document.querySelectorAll(".artifact-item").forEach(el=>{if(el.textContent.includes(item.name))el.classList.add("active");});
+ const preview=$("geometryPreview");
+ if(item.kind==="image")preview.innerHTML='<img class="external-geometry-image" src="'+item.url+'" alt="External scientific geometry artifact: '+escapeHtml(item.name)+'" loading="lazy">';
+ else preview.innerHTML='<div class="empty-state"><b>3D dataset detected: '+escapeHtml(item.format)+'</b><p>This is an externally generated 3D dataset, not a browser-native image preview.</p><p>Open it in ParaView or ParaView Glance to inspect the actual geometry and fields.</p><a href="'+item.url+'" target="_blank" rel="noreferrer">Open/download source dataset ↗</a> · <a href="https://www.paraview.org/" target="_blank" rel="noreferrer">ParaView ↗</a></div>';
+ $("geometryCaption").textContent=item.path+" · "+item.format+" · "+formatBytes(item.size_bytes)+" · existing external-tool output";
 }
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function formatBytes(bytes){if(bytes<1024)return bytes+" B";if(bytes<1048576)return (bytes/1024).toFixed(1)+" KB";return (bytes/1048576).toFixed(2)+" MB";}
