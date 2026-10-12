@@ -172,7 +172,7 @@ class ExperimentContractTests(unittest.TestCase):
             self._run(evaluations)
 
     def test_rejects_ambiguous_metric_limit_units(self):
-        bad_metrics = [MetricLimit(name="keff", lower=0.9, upper=1.1)]
+        bad_metrics = [MetricLimit(name="keff", lower=0.9, upper=1.1, uncertainty_kind="MC standard deviation")]
         with self.assertRaisesRegex(ExperimentContractError, "declare units"):
             run_ranked_experiment(
                 spec=self.spec,
