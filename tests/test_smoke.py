@@ -46,6 +46,17 @@ class CBPFRTests(unittest.TestCase):
         self.assertEqual(result.metric_assessments[0].status, "missing")
         self.assertTrue(math.isinf(result.aggregate_violation))
 
+    def test_metric_contract_rejects_nan_limits_and_uniform_margins(self):
+        with self.assertRaisesRegex(ValueError, "finite real number"):
+            self.metric(upper=float("nan"))
+        with self.assertRaisesRegex(ValueError, "finite real number"):
+            self.metric(scale=float("inf"))
+        with self.assertRaisesRegex(ValueError, "finite, numeric, and nonnegative"):
+            rank_all_methods(
+                self.model, self.candidates[:1], {}, [self.metric()],
+                {"response": float("nan")},
+            )
+
     def test_negative_nan_and_infinite_uncertainty_fail_closed(self):
         metric=self.metric()
         for uncertainty in (-1.0, math.nan, math.inf):

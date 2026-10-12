@@ -80,8 +80,12 @@ def _assessment_for_metric(metric: MetricLimit, supplied: tuple[float, float] | 
     if supplied is None:
         return MetricAssessment(metric.name, None, None, None, None, math.inf, math.inf, False, "missing")
     mean, uncertainty = supplied
-    if not (math.isfinite(mean) and math.isfinite(uncertainty)) or uncertainty < 0:
-        return MetricAssessment(metric.name, mean, uncertainty, None, None, math.inf, math.inf, False, "nonfinite_or_negative")
+    if (isinstance(mean, bool) or isinstance(uncertainty, bool)
+            or not isinstance(mean, (int, float)) or not isinstance(uncertainty, (int, float))
+            or not math.isfinite(mean) or not math.isfinite(uncertainty) or uncertainty < 0):
+        return MetricAssessment(metric.name, mean if isinstance(mean, (int, float)) else None,
+                                uncertainty if isinstance(uncertainty, (int, float)) else None,
+                                None, None, math.inf, math.inf, False, "nonfinite_or_negative")
     width = metric.z * uncertainty if width_override is None else width_override
     if not math.isfinite(width) or width < 0:
         return MetricAssessment(metric.name, mean, uncertainty, None, None, math.inf, math.inf, False, "invalid_width")
@@ -130,8 +134,11 @@ def rank_all_methods(model: QuboModel, candidates: Sequence[Candidate], estimate
     if not metrics:
         raise ValueError("at least one physical metric must be declared")
     expected = {metric.name for metric in metrics}
-    if set(uniform_margins) != expected or any(value < 0 for value in uniform_margins.values()):
-        raise ValueError("uniform margins must give one nonnegative value for every metric")
+    if set(uniform_margins) != expected:
+        raise ValueError("uniform margins must give one value for every metric")
+    if any(isinstance(value, bool) or not isinstance(value, (int, float))
+           or not math.isfinite(value) or value < 0 for value in uniform_margins.values()):
+        raise ValueError("uniform margins must be finite, numeric, and nonnegative")
     return {
         "qubo_only": _rank("qubo_only", model, candidates, estimates, metrics, mode="qubo"),
         "point_estimate": _rank("point_estimate", model, candidates, estimates, metrics, mode="point"),
