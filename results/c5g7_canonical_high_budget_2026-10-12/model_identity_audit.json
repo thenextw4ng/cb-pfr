@@ -78,6 +78,7 @@
         "statepoint_sha256": "db098b04a16cdc4771fb469c82a65be214327adc79742d04bb25f1b6589e29e1"
       },
       "hashes_match_run_manifest": true,
+      "output_hash_audit": {"expected_file_count": 30, "missing_files": 0, "mismatched_hashes": 0},
       "source_trace_lengths": {"n_batches": 7000, "inactive": 500, "k_generation": 7000, "entropy": 7000},
       "source_diagnostics_status": "DESCRIPTIVE_REVIEW_REQUIRED"
     },
@@ -98,6 +99,7 @@
         "statepoint_sha256": "c060252df030789e1a7072fe8f71c7849a2e8f2920540a72436352c030b7a562"
       },
       "hashes_match_run_manifest": true,
+      "output_hash_audit": {"expected_file_count": 30, "missing_files": 0, "mismatched_hashes": 0},
       "source_trace_lengths": {"n_batches": 7000, "inactive": 500, "k_generation": 7000, "entropy": 7000},
       "source_diagnostics_status": "DESCRIPTIVE_REVIEW_REQUIRED"
     },
@@ -118,6 +120,7 @@
         "statepoint_sha256": "a36a386c0a108a138f767750c103598d0b96ee82ed6eaab50cfa914cdf03e179"
       },
       "hashes_match_run_manifest": true,
+      "output_hash_audit": {"expected_file_count": 30, "missing_files": 0, "mismatched_hashes": 0},
       "source_trace_lengths": {"n_batches": 7000, "inactive": 500, "k_generation": 7000, "entropy": 7000},
       "source_diagnostics_status": "DESCRIPTIVE_REVIEW_REQUIRED"
     }
