@@ -22,10 +22,13 @@ The server uses Python's standard library for HTTP, plus the project's `h5py` an
 - Select flux, fission, or nu-fission; choose mean tally or relative Monte Carlo standard deviation; switch between log and linear display for means; select a color scale.
 - The API reports SHA-256 and whether the archived statepoint matches `evidence/openmc_local_baseline_2026-10-11/statepoint_summary.json`.
 
+- Assembly-level 2 × 2 heatmap and bar comparison from `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv`; the source is explicitly marked exploratory smoke evidence and is not absolute power. The current model is not a hexagonal core, so the UI does not fabricate a hex-lattice rendering.
+
 ## API
 
 - `GET /api/health` — process health and evidence mode
 - `GET /api/candidates` — candidate records and source metadata
+- `GET /api/assembly` — four assembly-integrated fission-rate proxy values per recorded candidate
 - `GET /api/mesh` — archived 2D OpenMC mesh tallies and provenance metadata
 
 ## Scientific limits
