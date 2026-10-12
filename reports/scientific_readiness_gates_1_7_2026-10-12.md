@@ -43,3 +43,7 @@ The canonical workflow's aggregator requires `analysis/source_convergence.json`,
 - No safety conclusion from (k_\mathrm{eff}) values.
 - No winner among the six UO2/MOX layouts.
 - No quantum advantage or hardware quantum-annealing claim.
+
+## How to execute Gate 3/4 confirmation
+
+The workflow is configured but has **not** been dispatched yet. In GitHub, open **Actions → C5G7 canonical high-budget numerical screen → Run workflow**, select branch `feature/scientific-readiness-gates-1-7`, and keep the defaults: batches `7000`, inactive `500`, particles `10000`. It launches three independent seed jobs in parallel and preserves their raw statepoints and diagnostics as 90-day artifacts. Do not change one of the settings independently: the workflow intentionally rejects settings that differ from the predeclared profile.
