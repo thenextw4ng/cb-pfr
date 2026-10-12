@@ -18,7 +18,9 @@ Work can proceed in parallel with the canonical high-budget run. The most conseq
 
 ## B. Mesh-to-assembly tally mapping
 
-The reducer in `scripts/analyze_c5g7_assembly_fission.py` assumes a 51×51 mesh and maps four 17×17 blocks to p00/p01/p10/p11 using explicit x/y slices. It sums the `fission` score and computes max integrated assembly rate divided by mean integrated assembly rate.
+The reducer in `scripts/analyze_c5g7_assembly_fission.py` maps a 51×51 mesh to four 17×17 fuel blocks. Static review of the pinned upstream source at commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450` supports the geometry arithmetic: the core spans `[-32.13, 32.13]` cm in x/y (64.26 cm); the 51-bin mesh therefore has 1.26 cm bins; each 21.42 cm assembly spans exactly 17 bins. The upstream builder assigns the 3×3 lattice rows as `[[UO2, MOX, reflector], [MOX, UO2, reflector], [reflector, reflector, reflector]]`, with the first RectLattice row at the high-y side. The upstream mesh tally is defined over the same core bounds with scores `flux`, `fission`, and `nu-fission`. Thus, the reducer's upper-left fuel blocks correspond to x slices `0:17` / `17:34` and top-row y slice `34:51`, with the second fuel row at y slice `17:34`.
+
+This is a static source-level consistency audit, not an independent inspection of the exact generated XML/statepoint or an external spatial benchmark comparison. Since `fission` is a mesh tally score, summing its bin scores is consistent with an integrated tally; it should not be re-described as absolute power without a separate normalization and physical interpretation.
 
 **Completed code-side work:** added synthetic contract tests for block indices, integrated arithmetic, layout-to-material labels, excluded non-fuel bins, invalid shape, non-finite/negative values, wrong material count, and zero-rate blocks.
 
