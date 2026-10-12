@@ -26,6 +26,10 @@
 
 The artifact name says “high-budget”, but the recorded common settings are **5,000 batches / 500 inactive / 5,000 particles per batch / 2 threads**. Each run therefore has 22.5 million nominal active histories. The study summaries explicitly warn that these are smoke-test settings and must not be treated as benchmark-grade or converged evidence.
 
+## Geometry/layout invariants inspected in the raw inputs
+
+I parsed the generated 3×3 core lattice in all 18 archived `geometry.xml` files, not only the study manifests. Exactly six distinct fuel-layout patterns occur, each exactly three times. Across all 18 files, the five reflector positions remain the same water-reflector universe (the rightmost column and bottom row in the generated lattice array); only the 2×2 fuel block changes. The fuel block contains exactly two UO2 and two MOX assembly universes in every case. This directly supports the claimed fixed-reflector / six-layout design invariant for the archived screening campaign.
+
 ## Integrity audit
 
 - All 18 layout/seed records are present (six layouts × three seed rounds).
