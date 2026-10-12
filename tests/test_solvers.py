@@ -49,6 +49,28 @@ class SolverLayerTests(unittest.TestCase):
             from cbpfr.solvers import _validate_run_args
             _validate_run_args("made up", "quantumish", 10)
 
+    def test_exact_solver_rejects_boolean_limits(self):
+        with self.assertRaisesRegex(SolverContractError, "max_variables"):
+            solve_exact(self.model, max_variables=True)
+        with self.assertRaisesRegex(SolverContractError, "max_solutions"):
+            solve_exact(self.model, max_solutions=True)
+
+    def test_qubo_model_rejects_malformed_matrix_and_nonfinite_coefficients(self):
+        from cbpfr.qubo import ModelSpecificationError, QuboModel
+        with self.assertRaisesRegex(ModelSpecificationError, "square"):
+            QuboModel(self.model.spec, ((1.0,),), 0.0)
+        bad = [list(row) for row in self.model.q_upper]
+        bad[0][0] = float("nan")
+        with self.assertRaisesRegex(ModelSpecificationError, "finite"):
+            QuboModel(self.model.spec, tuple(tuple(row) for row in bad), 0.0)
+
+    def test_qubo_rejects_float_and_boolean_candidate_bits(self):
+        from cbpfr.qubo import CandidateMappingError
+        with self.assertRaisesRegex(CandidateMappingError, "integer binary"):
+            self.model.energy((1.0, 0, 0, 0, 1, 0))
+        with self.assertRaisesRegex(CandidateMappingError, "integer binary"):
+            self.model.energy((True, 0, 0, 0, 1, 0))
+
 
 if __name__ == "__main__":
     unittest.main()
