@@ -36,6 +36,19 @@ The archived tally contains mesh/global `flux`, `fission`, and `nu-fission` scor
 
 The 2020 Frontiers report provides the reference assembly-power values and uncertainty scale (inner UO2 492.8 ± 0.10%, MOX 211.7 ± 0.18%, outer UO2 139.8 ± 0.20%) and demonstrates that assembly power and pin power are separate benchmark observables. These values should not be treated as a direct one-to-one reference for an unconverted fission-rate tally.
 
+## Exploratory normalized spatial-shape comparison
+
+The existing canonical UMMU spatial audit compared normalized assembly fission-rate fractions with normalized published assembly-power fractions. This is a **shape-only exploratory comparison**, not direct power validation.
+
+| Assembly bin | Observed normalized fission-rate fraction | Reference normalized power fraction | Relative difference | Approx. combined z |
+|---|---:|---:|---:|---:|
+| p00 | 0.4669140 | 0.4666667 | +0.0530% | +0.584 |
+| p01 | 0.2005424 | 0.2004735 | +0.0344% | +0.216 |
+| p10 | 0.2003942 | 0.2004735 | −0.0395% | −0.240 |
+| p11 | 0.1321494 | 0.1323864 | −0.1790% | −0.817 |
+
+The z values use first-order uncertainty propagation, assume independent reference assembly-power estimates, and combine those with the between-run standard error from three normalized run-level fractions. A reference covariance matrix was unavailable. All four values lie within approximately one combined standard uncertainty under these assumptions, but this does **not** establish a benchmark pass: the computed quantity is a fission-rate proxy, not a demonstrated power-equivalent tally, and the covariance/tally-definition assumptions need review.
+
 ## Gate outcome
 
 - **Static geometry / group-structure consistency:** internal review pass, with the source and coordinate convention documented above.
