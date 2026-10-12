@@ -35,6 +35,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.page_link("pages/01_C5G7_Layout_Explorer.py", label="Open CB-PFR Scientific Workstation", icon="🌐")
+st.page_link("pages/06_High_Budget_Evidence.py", label="Open High-Budget Evidence Workstation", icon="📊")
 st.markdown("### Recorded C5G7 transport visualization")
 st.caption("Source: repository candidate-summary CSV. These are exploratory smoke-run values, not a validated reactor ranking.")
 visual_df = pd.read_csv(Path(__file__).resolve().parent / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv").sort_values("candidate_id").reset_index(drop=True)
