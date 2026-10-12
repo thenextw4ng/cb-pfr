@@ -23,13 +23,20 @@ class MetricLimit:
     units: str = "unspecified"
     bound_kind: str = "operational_heuristic"
     def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValueError("metric name must be a non-empty string")
         if self.lower is None and self.upper is None:
             raise ValueError(f"metric {self.name} needs a lower and/or upper limit")
+        for label, value in (("lower", self.lower), ("upper", self.upper), ("z", self.z), ("scale", self.scale), ("weight", self.weight)):
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"metric {self.name} {label} must be a finite real number")
         if self.lower is not None and self.upper is not None and self.lower > self.upper:
             raise ValueError(f"metric {self.name} has lower limit above upper limit")
         if self.z < 0 or self.scale <= 0 or self.weight < 0:
             raise ValueError(f"metric {self.name} has invalid z, scale, or weight")
-        if not self.uncertainty_kind.strip():
+        if not isinstance(self.uncertainty_kind, str) or not self.uncertainty_kind.strip() or self.uncertainty_kind == "unspecified":
             raise ValueError(f"metric {self.name} must identify uncertainty_kind")
         if self.bound_kind not in {"operational_heuristic", "known_normal_one_sided"}:
             raise ValueError(f"metric {self.name} has unsupported bound_kind; it must not imply an untested confidence claim")
@@ -71,8 +78,12 @@ def _assessment_for_metric(metric: MetricLimit, supplied: tuple[float, float] | 
     if supplied is None:
         return MetricAssessment(metric.name, None, None, None, None, math.inf, math.inf, False, "missing")
     mean, uncertainty = supplied
-    if not (math.isfinite(mean) and math.isfinite(uncertainty)) or uncertainty < 0:
-        return MetricAssessment(metric.name, mean, uncertainty, None, None, math.inf, math.inf, False, "nonfinite_or_negative")
+    if (isinstance(mean, bool) or isinstance(uncertainty, bool)
+            or not isinstance(mean, (int, float)) or not isinstance(uncertainty, (int, float))
+            or not math.isfinite(mean) or not math.isfinite(uncertainty) or uncertainty < 0):
+        return MetricAssessment(metric.name, mean if isinstance(mean, (int, float)) else None,
+                                uncertainty if isinstance(uncertainty, (int, float)) else None,
+                                None, None, math.inf, math.inf, False, "nonfinite_or_negative")
     width = metric.z * uncertainty if width_override is None else width_override
     if not math.isfinite(width) or width < 0:
         return MetricAssessment(metric.name, mean, uncertainty, None, None, math.inf, math.inf, False, "invalid_width")
@@ -121,8 +132,11 @@ def rank_all_methods(model: QuboModel, candidates: Sequence[Candidate], estimate
     if not metrics:
         raise ValueError("at least one physical metric must be declared")
     expected = {metric.name for metric in metrics}
-    if set(uniform_margins) != expected or any(value < 0 for value in uniform_margins.values()):
-        raise ValueError("uniform margins must give one nonnegative value for every metric")
+    if set(uniform_margins) != expected:
+        raise ValueError("uniform margins must give one value for every metric")
+    if any(isinstance(value, bool) or not isinstance(value, (int, float))
+           or not math.isfinite(value) or value < 0 for value in uniform_margins.values()):
+        raise ValueError("uniform margins must be finite, numeric, and nonnegative")
     return {
         "qubo_only": _rank("qubo_only", model, candidates, estimates, metrics, mode="qubo"),
         "point_estimate": _rank("point_estimate", model, candidates, estimates, metrics, mode="point"),

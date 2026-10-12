@@ -6,6 +6,7 @@ OpenMC unless a separately configured, validated OpenMC model is supplied.
 from __future__ import annotations
 
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,28 +36,74 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.page_link("pages/01_C5G7_Layout_Explorer.py", label="Open CB-PFR Scientific Workstation", icon="🌐")
-st.markdown("### Recorded C5G7 transport visualization")
-st.caption("Source: repository candidate-summary CSV. These are exploratory smoke-run values, not a validated reactor ranking.")
-visual_df = pd.read_csv(Path(__file__).resolve().parent / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv").sort_values("candidate_id").reset_index(drop=True)
-fig = go.Figure(go.Scatter(
-    x=visual_df["candidate_id"],
-    y=visual_df["keff_mean"],
-    mode="markers",
-    marker={"size": 12, "color": ["#58d7df" if bool(v) else "#7ba8ff" for v in visual_df["canonical_reference"]], "line": {"color": "#dceaff", "width": 0.8}},
-    error_y={"type": "data", "array": visual_df["keff_std_dev"], "visible": True, "color": "#91a9c2", "thickness": 1.4, "width": 4},
-    customdata=visual_df[["layout_signature", "seed"]].to_numpy(),
-    hovertemplate="Candidate %{x}<br>Layout %{customdata[0]}<br>Seed %{customdata[1]}<br>Recorded k-effective %{y:.7f}<extra></extra>",
-))
-fig.update_layout(
-    template="plotly_dark", height=340,
-    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-    margin={"l": 50, "r": 20, "t": 20, "b": 80},
-    xaxis_title="Candidate / layout", yaxis_title="Reported k-effective mean",
-)
-fig.update_xaxes(tickangle=-25, gridcolor="#26364a")
-fig.update_yaxes(gridcolor="#26364a")
-st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
-st.caption("Whiskers are the reported within-run standard deviations; they are not confidence intervals across independent runs.")
+st.page_link("pages/06_High_Budget_Evidence.py", label="Open High-Budget Evidence Workstation", icon="📊")
+st.markdown("### Archived C5G7 high-budget study")
+evidence_path = Path(__file__).resolve().parent / "results" / "c5g7_high_budget_2026-10-12" / "run_level_evidence.json"
+if not evidence_path.is_file():
+    st.warning("The committed high-budget run-level evidence file is not available.")
+else:
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    run_df = pd.DataFrame(evidence["runs"])
+    t_critical_df2 = 4.3026527299
+    summary_rows = []
+    for signature, group in run_df.groupby("layout_signature"):
+        row = {"layout_signature": signature, "n_runs": len(group)}
+        for metric in ("keff_mean", "fission_rate_peaking_factor"):
+            values = pd.to_numeric(group[metric], errors="raise")
+            mean = float(values.mean())
+            sd = float(values.std(ddof=1))
+            half_width = t_critical_df2 * sd / math.sqrt(len(values))
+            row[f"{metric}_mean"] = mean
+            row[f"{metric}_ci_low"] = mean - half_width
+            row[f"{metric}_ci_high"] = mean + half_width
+        summary_rows.append(row)
+    visual_df = pd.DataFrame(summary_rows).sort_values("layout_signature").reset_index(drop=True)
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Archived runs", len(run_df))
+    k2.metric("Candidate layouts", run_df["layout_signature"].nunique())
+    k3.metric("Independent runs / layout", "3")
+    k4.metric("Nominal histories / run", "25.0M")
+    st.caption("Source: archived high-budget OpenMC evidence. Error bars are descriptive 95% Student-t intervals across three independent seed runs per layout (df = 2), not convergence certificates.")
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown("**Fission-rate peaking proxy**")
+        fig = go.Figure(go.Scatter(
+            x=visual_df["layout_signature"],
+            y=visual_df["fission_rate_peaking_factor_mean"],
+            mode="markers",
+            marker={"size": 12, "color": "#58d7df", "line": {"color": "#dceaff", "width": 0.8}},
+            error_y={
+                "type": "data",
+                "array": visual_df["fission_rate_peaking_factor_ci_high"] - visual_df["fission_rate_peaking_factor_mean"],
+                "arrayminus": visual_df["fission_rate_peaking_factor_mean"] - visual_df["fission_rate_peaking_factor_ci_low"],
+                "visible": True, "color": "#91a9c2", "thickness": 1.4, "width": 4,
+            },
+            customdata=visual_df[["n_runs", "keff_mean_mean"]].to_numpy(),
+            hovertemplate="Layout %{x}<br>Mean peaking proxy %{y:.6f}<br>Runs %{customdata[0]}<br>Mean k-effective %{customdata[1]:.7f}<extra></extra>",
+        ))
+        fig.update_layout(template="plotly_dark", height=340, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin={"l": 45, "r": 15, "t": 15, "b": 40}, xaxis_title="2×2 material layout", yaxis_title="Fission-rate peaking proxy")
+        fig.update_yaxes(gridcolor="#26364a")
+        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+    with right:
+        st.markdown("**k-effective by layout**")
+        fig_k = go.Figure(go.Scatter(
+            x=visual_df["layout_signature"],
+            y=visual_df["keff_mean_mean"],
+            mode="markers",
+            marker={"size": 12, "color": "#7ba8ff", "line": {"color": "#dceaff", "width": 0.8}},
+            error_y={
+                "type": "data",
+                "array": visual_df["keff_mean_ci_high"] - visual_df["keff_mean_mean"],
+                "arrayminus": visual_df["keff_mean_mean"] - visual_df["keff_mean_ci_low"],
+                "visible": True, "color": "#91a9c2", "thickness": 1.4, "width": 4,
+            },
+            customdata=visual_df[["n_runs", "fission_rate_peaking_factor_mean"]].to_numpy(),
+            hovertemplate="Layout %{x}<br>Mean k-effective %{y:.7f}<br>Runs %{customdata[0]}<br>Mean peaking proxy %{customdata[1]:.6f}<extra></extra>",
+        ))
+        fig_k.update_layout(template="plotly_dark", height=340, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin={"l": 55, "r": 15, "t": 15, "b": 40}, xaxis_title="2×2 material layout", yaxis_title="Reported k-effective mean")
+        fig_k.update_yaxes(gridcolor="#26364a")
+        st.plotly_chart(fig_k, use_container_width=True, config={"displaylogo": False})
+    st.warning("Evidence integrity passed, but physical validation and convergence remain uncertified. No layout is selected as a winner; the current peaking value is a relative proxy, not absolute power or a safety metric.")
 
 with st.sidebar:
     st.header("Experiment setup")

@@ -23,7 +23,7 @@ def fixture_rows():
                 "keff_mean": str(keff),
                 "keff_std_dev": str(keff_sd),
                 "fission_rate_peaking_factor": str(fpeak),
-                "statepoint_sha256": f"statepoint-{seed_base}-{sig}",
+                "statepoint_sha256": f"{seed_base + index:064x}",
                 "mgxs_sha256": "a" * 64,
                 "group_structure_audit": "PASS",
                 "mgxs_energy_group_boundaries_eV": GROUP_EDGES,
@@ -80,6 +80,44 @@ class PhysicalSelectionTests(unittest.TestCase):
                     writer.writeheader()
                     writer.writerows(rows)
                 load_and_validate(path, min_batches=2000, min_particles=5000, min_replicates=3)
+
+    def test_rejects_non_sha256_provenance_and_duplicate_global_seeds(self):
+        import csv, tempfile
+        from pathlib import Path
+        rows = fixture_rows()
+        rows[0]["statepoint_sha256"] = "not-a-hash"
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "runs.csv"
+            with path.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+                writer.writeheader()
+                writer.writerows(rows)
+            with self.assertRaisesRegex(ValueError, "64-character lowercase SHA-256"):
+                load_and_validate(path, min_batches=2000, min_particles=5000, min_replicates=3)
+
+        rows = fixture_rows()
+        rows[-1]["seed"] = rows[0]["seed"]
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "runs.csv"
+            with path.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+                writer.writeheader()
+                writer.writerows(rows)
+            with self.assertRaisesRegex(ValueError, "seeds must be unique"):
+                load_and_validate(path, min_batches=2000, min_particles=5000, min_replicates=3)
+
+    def test_rejects_boolean_or_nonpositive_budget_contract(self):
+        import csv, tempfile
+        from pathlib import Path
+        rows = fixture_rows()
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "runs.csv"
+            with path.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+                writer.writeheader()
+                writer.writerows(rows)
+            with self.assertRaisesRegex(ValueError, "min_batches must be a positive integer"):
+                load_and_validate(path, min_batches=True, min_particles=5000, min_replicates=3)
 
     def test_inconsistent_compute_settings_are_rejected(self):
         rows = fixture_rows()

@@ -8,6 +8,7 @@ exactly equal to direct_penalty_terms summed over all terms.
 from __future__ import annotations
 from dataclasses import dataclass
 from itertools import combinations, product
+import math
 import json
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
@@ -61,13 +62,28 @@ class QuboModel:
     spec: CoreSpec
     q_upper: tuple[tuple[float,...],...]
     offset: float
+
+    def __post_init__(self) -> None:
+        n = len(self.spec.positions) * 3
+        if len(self.q_upper) != n or any(len(row) != n for row in self.q_upper):
+            raise ModelSpecificationError(f"QUBO matrix must be square with shape ({n}, {n})")
+        if isinstance(self.offset, bool) or not isinstance(self.offset, (int, float)) or not math.isfinite(self.offset):
+            raise ModelSpecificationError("QUBO offset must be a finite real number")
+        for i, row in enumerate(self.q_upper):
+            for j, value in enumerate(row):
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                    raise ModelSpecificationError("QUBO coefficients must be finite real numbers")
+                if j < i and value != 0:
+                    raise ModelSpecificationError("QUBO matrix must be upper triangular; lower-triangle entries must be zero")
+
     @property
     def variable_count(self)->int: return len(self.spec.positions)*3
     def variable_index(self,burnup:int,position:str)->int: return burnup*len(self.spec.positions)+self.spec.positions.index(position)
     def _require_binary(self,vector:Sequence[int])->tuple[int,...]:
         if len(vector)!=self.variable_count: raise CandidateMappingError(f"candidate has {len(vector)} variables; expected {self.variable_count}")
-        converted=tuple(vector)
-        if any(value not in (0,1) for value in converted): raise CandidateMappingError("candidate variables must all be binary 0 or 1")
+        converted = tuple(vector)
+        if any(isinstance(value, bool) or not isinstance(value, int) or value not in (0, 1) for value in converted):
+            raise CandidateMappingError("candidate variables must be integer binary values 0 or 1 (booleans and floats are not accepted)")
         return converted
     def quadratic_energy(self,vector:Sequence[int])->float:
         z=self._require_binary(vector)

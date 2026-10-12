@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "manifest_id": "CBPFR-C5G7-model-identity-review-v1",
+  "status": "TEMPLATE_NOT_REVIEWED",
+  "model": {
+    "benchmark_case": "2D seven-group C5G7",
+    "upstream_repository": "https://github.com/mit-crpg/benchmarks.git",
+    "upstream_commit_expected": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+    "openmc_version_expected": "0.16.0",
+    "energy_group_boundaries_eV_expected": [
+      0.00001, 0.0635, 10.0, 100.0, 1000.0, 500000.0, 1000000.0, 20000000.0
+    ]
+  },
+  "generated_inputs": {
+    "geometry_xml_sha256": null,
+    "materials_xml_sha256": null,
+    "settings_xml_sha256": null,
+    "mgxs_hdf5_sha256": null,
+    "source_builder_sha256": null
+  },
+  "physics_review": {
+    "geometry_dimensions_and_lattice_orientation": "NOT_REVIEWED",
+    "fuel_and_reflector_material_definitions": "NOT_REVIEWED",
+    "boundary_conditions": "NOT_REVIEWED",
+    "tally_score_filter_and_normalization": "NOT_REVIEWED",
+    "cross_section_generation_and_group_structure": "NOT_REVIEWED",
+    "production_vs_smoke_input_differences": "NOT_REVIEWED"
+  },
+  "run_settings": {
+    "batches": null,
+    "inactive": null,
+    "particles_per_batch": null,
+    "threads": null,
+    "seed": null
+  },
+  "review": {
+    "reviewer": null,
+    "review_date": null,
+    "primary_specification_reference": null,
+    "independent_signoff": false,
+    "notes": "A hash proves file identity, not physical correctness. Populate from the exact files used in a run."
+  },
+  "nonclaims": [
+    "This template is not a completed model identity review.",
+    "Passing scalar keff screening does not establish spatial validation.",
+    "No reactor-safety certification is implied."
+  ]
+}
