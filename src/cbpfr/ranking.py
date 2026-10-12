@@ -38,8 +38,6 @@ class MetricLimit:
             raise ValueError(f"metric {self.name} has invalid z, scale, or weight")
         if not isinstance(self.uncertainty_kind, str) or not self.uncertainty_kind.strip() or self.uncertainty_kind == "unspecified":
             raise ValueError(f"metric {self.name} must identify uncertainty_kind")
-        if not isinstance(self.units, str) or not self.units.strip() or self.units == "unspecified":
-            raise ValueError(f"metric {self.name} must declare units")
         if self.bound_kind not in {"operational_heuristic", "known_normal_one_sided"}:
             raise ValueError(f"metric {self.name} has unsupported bound_kind; it must not imply an untested confidence claim")
 
