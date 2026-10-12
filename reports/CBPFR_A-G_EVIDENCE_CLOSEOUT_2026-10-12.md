@@ -2,7 +2,7 @@
 
 **Purpose:** record what was verified from the canonical high-budget C5G7 artifact and distinguish software/provenance evidence from physical validation.
 
-**Overall status:** `SOFTWARE_CHECKS_GREEN; CANONICAL_NUMERICAL_SCREEN_PASS; FULL_PHYSICAL_VALIDATION_BLOCKED`.
+**Overall status:** `SOFTWARE_TESTS_AND_RECOVERY_PASS; CANONICAL_NUMERICAL_SCREEN_PASS; SPATIAL_SHAPE_SANITY_CHECK_PASS; SOURCE_CONVERGENCE_AND_FULL_PHYSICAL_VALIDATION_REVIEW_OPEN`.
 
 This report does not assert that all seven gates have passed. It closes the evidence review to the extent supported by artifacts currently available and identifies the remaining non-negotiable blockers. The project scope remains frozen to A–G.
 
@@ -129,11 +129,11 @@ The canonical scalar result, per-run uncertainty, between-seed variability, hash
 
 ### Remaining release blockers
 
-1. Obtain an independent primary-specification/model-identity review (A).
-2. Complete a benchmark-compatible spatial tally comparison using the actual saved statepoint and reviewed mesh mapping (B).
-3. Review the full source-convergence traces and record an evidence-based interpretation; do not invent a threshold after seeing results (D/E).
-4. Review the recovered source/eigenvalue traces under a documented, defensible protocol and decide whether a new transport run is scientifically necessary (D/E). The recovery workflow itself already passed and its output is archived.
-5. Keep physical layout selection blocked until the design-specific (k_{eff}) acceptance band and tally mapping/objective are approved (C/E).
+1. Obtain independent sign-off on fidelity to the primary C5G7 specification. The pinned upstream source match is reviewed, but code provenance is not independent benchmark certification (A).
+2. Keep the normalized assembly fission-rate comparison labeled as a spatial-shape sanity check unless the published reference quantity and tally definition are formally shown to be compatible. The maximum normalized-position difference is 0.179%, but fission-rate tally and reported assembly power are not automatically identical quantities (B).
+3. Complete a documented source/eigenvalue trace review. The available traces are noisy; first-to-last-quarter `k_generation` shifts are +42.06, +65.05, and +23.99 pcm, while entropy shifts are small. The diagnostic script correctly leaves all runs at `DIAGNOSTIC_REVIEW_REQUIRED`. Do not invent a pass threshold after seeing the data. If expert review concludes stationarity is inadequate, predeclare a justified follow-up protocol before any additional transport (D/E).
+4. Compare all six layouts under the same corrected MGXS/settings protocol and approve a design-specific objective/acceptance band before naming a physical winner. The six-layout optimization objective must not be inferred from a reference-only confirmation run (C/E).
+5. PR #50 remains draft/open. Its recovery workflow and test matrix pass, but the fix is not yet merged into `main`; do not treat the default-branch workflow as repaired until that change is reviewed and merged (F/G).
 
 No additional algorithm, metric, experiment, or cosmetic redesign is authorized by this closeout. Repeat transport only if an actual technical failure or evidence gap makes the saved results uninterpretable; do not rerun to obtain a preferred result.
 
