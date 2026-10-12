@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -37,6 +38,17 @@ class HighBudgetEvidenceDashboardTests(unittest.TestCase):
         summary = namespace["summarize_runs"](runs)
         self.assertEqual(set(summary["layout_signature"]), {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"})
         self.assertTrue((summary["n_runs"] == 3).all())
+        self.assertTrue((runs["candidate_id"] == "c5g7-2x2-" + runs["layout_signature"]).all())
+        self.assertTrue(runs["mgxs_energy_group_boundaries_eV"].eq("1e-05;0.0635;10.0;100.0;1000.0;500000.0;1000000.0;20000000.0").all())
+        # Verify the downloadable CSV is accepted by the real integrated-pipeline validator.
+        from scripts.run_c5g7_cbpfr_physical_selection import load_and_validate
+        with tempfile.TemporaryDirectory() as tmp:
+            csv_path = Path(tmp) / "pipeline_input.csv"
+            runs.to_csv(csv_path, index=False)
+            rows, audit = load_and_validate(csv_path, min_batches=5000, min_particles=5000, min_replicates=3)
+            self.assertEqual(audit["run_count"], 18)
+            self.assertEqual(audit["layout_count"], 6)
+            self.assertTrue(audit["unique_statepoint_hashes"])
 
 
 if __name__ == "__main__":
