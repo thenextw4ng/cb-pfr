@@ -170,4 +170,4 @@ No additional algorithm, metric, experiment, or cosmetic redesign is authorized 
 - OpenMC's 7-group C5G7 example using the corrected group boundaries: https://github.com/openmc-dev/openmc/blob/develop/examples/pincell_random_ray/build_xml.py
 - OpenMC `EnergyGroups` ordering documentation: https://docs.openmc.org/en/stable/_modules/openmc/mgxs/groups.html
 - Current workflow repair PR: https://github.com/thenextw4ng/cb-pfr/pull/50
-- Scientific readiness tests/report PR: https://github.com/thenextw4ng/cb-pfr/pull/49
+- Final software/A–G integration PR: https://github.com/thenextw4ng/cb-pfr/pull/52
