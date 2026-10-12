@@ -22,6 +22,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0 for statepoint analysis
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-canonical-recovery
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
       - name: Download saved canonical statepoints and audit outputs
         uses: actions/download-artifact@v4
         with:
@@ -30,7 +38,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: /tmp/c5g7-canonical-convergence
       - name: Recreate missing source-convergence diagnostics and aggregate
-        shell: bash
+        shell: bash -el {0}
         run: |
           set -euo pipefail
           OUT=/tmp/c5g7-canonical-convergence
