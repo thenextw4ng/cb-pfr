@@ -24,7 +24,7 @@ class QuboAlgebraicRegressionTests(unittest.TestCase):
             inner=frozenset(("B", "C")),
             edges=(("A", "B"), ("B", "C"), ("C", "D")),
             inventory=(1, 2, 1),
-            symmetry_pairs=(("A", "D"),),
+            symmetry_pairs=(),
             description="Small deterministic algebraic regression fixture.",
         )
         self.model = build_usmanov_style_qubo(self.spec)
