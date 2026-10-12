@@ -10,7 +10,7 @@ on:
       inactive:
         description: "Inactive batches"
         required: true
-        default: "100"
+        default: "500"
       particles:
         description: "Particles per batch"
         required: true
@@ -25,9 +25,10 @@ jobs:
     timeout-minutes: 360
     env:
       BATCHES: ${{ inputs.batches || '7000' }}
-      INACTIVE: ${{ inputs.inactive || '100' }}
+      INACTIVE: ${{ inputs.inactive || '500' }}
       PARTICLES: ${{ inputs.particles || '10000' }}
       SEED_BASES: "720000 730000 740000"
+      PROFILE: config/benchmarks/c5g7_canonical_confirmation_profile.json
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned OpenMC 0.16.0
@@ -38,6 +39,42 @@ jobs:
             python=3.12
             openmc=0.16.0
           cache-environment: true
+      - name: Validate run settings against the predeclared profile
+        shell: bash -el {0}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          profile = json.loads(Path(os.environ["PROFILE"]).read_text(encoding="utf-8"))
+          compute = profile["compute"]
+          actual = {
+              "batches_total": int(os.environ["BATCHES"]),
+              "inactive_batches": int(os.environ["INACTIVE"]),
+              "particles_per_batch": int(os.environ["PARTICLES"]),
+              "threads": 1,
+              "independent_seed_bases": [int(v) for v in os.environ["SEED_BASES"].split()],
+          }
+          expected = {
+              "batches_total": compute["batches_total"],
+              "inactive_batches": compute["inactive_batches"],
+              "particles_per_batch": compute["particles_per_batch"],
+              "threads": compute["threads"],
+              "independent_seed_bases": compute["independent_seed_bases"],
+          }
+          if actual != expected:
+              raise SystemExit(f"workflow inputs differ from predeclared profile: actual={actual}; expected={expected}")
+          if actual["inactive_batches"] >= actual["batches_total"]:
+              raise SystemExit("inactive batches must be smaller than total batches")
+          if compute["active_batches"] != actual["batches_total"] - actual["inactive_batches"]:
+              raise SystemExit("profile active batch count is inconsistent")
+          if compute["nominal_histories_per_run"] != actual["batches_total"] * actual["particles_per_batch"]:
+              raise SystemExit("profile nominal history count is inconsistent")
+          if compute["nominal_active_histories_per_run"] != (actual["batches_total"] - actual["inactive_batches"]) * actual["particles_per_batch"]:
+              raise SystemExit("profile active history count is inconsistent")
+          print(json.dumps({"profile_id": profile["profile_id"], "settings": actual,
+                            "nominal_histories_total": compute["nominal_histories_total"],
+                            "nominal_active_histories_total": compute["nominal_active_histories_total"]}, indent=2))
+          PY
       - name: Prepare pinned upstream C5G7 model
         shell: bash -el {0}
         run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
