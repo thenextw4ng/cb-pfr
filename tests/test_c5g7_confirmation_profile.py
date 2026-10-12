@@ -50,7 +50,10 @@ class CanonicalConfirmationProfileTests(unittest.TestCase):
 
     def test_profile_does_not_claim_official_acceptance(self):
         self.assertFalse(self.profile["predeclared_project_screens"]["official_benchmark_acceptance"])
-        self.assertFalse(self.profile["decision_policy"]["never"] == [])
+        nonclaims = self.profile["decision_policy"]["never"]
+        self.assertTrue(any("safety" in item.lower() for item in nonclaims))
+        self.assertTrue(any("winner" in item.lower() for item in nonclaims))
+        self.assertTrue(any("convergence" in item.lower() for item in nonclaims))
 
 
 if __name__ == "__main__":
