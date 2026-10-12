@@ -1,53 +1,48 @@
-# CB-PFR C5G7 physical-validation decision — 2026-10-12
+# CB-PFR C5G7 physical-validation decision — corrected review, 2026-10-12
 
 ## Executive decision
 
-**Status: NOT VALIDATED against the published C5G7 benchmark.** This is a completed evidence-based decision from the artifacts currently available, not a claim that no useful evidence exists. The available runs support internal execution/integrity checks and a descriptive numerical comparison. They do not support an external physical-validation pass because the archived CB-PFR model is a custom 2×2 fuel-assembly arrangement with a surrounding reflector, whereas the published standard 2-D C5G7 benchmark is a 16-assembly mini-core (eight UO₂ and eight MOX assemblies) with its own specified geometry and boundary conditions. Similar numerical k-effective values do not make geometrically different problems equivalent.
+**Status: PHYSICAL VALIDATION NOT YET ESTABLISHED.** This decision supersedes the earlier wording that treated the four-fuel-position model as geometrically different from standard C5G7. The pinned upstream MIT-CRPG C5G7 implementation uses a 2-D quarter-core representation: a 2×2 fuel block with an L-shaped reflector in a 3×3 lattice. Therefore, the fact that the model contains four fuel assemblies does not by itself invalidate comparison with the standard 2-D benchmark. The repository's static model-identity review finds the dimensions, 17×17 pin lattices, assembly pitch, reflector placement, boundary-condition orientation, and corrected seven-group boundaries structurally consistent with the published 2-D C5G7 description. Independent primary-specification sign-off is still required before calling the model benchmark-faithful.
 
-Primary benchmark source: Song et al., *GPU Based Two-Level CMFD Accelerating Two-Dimensional MOC Neutron Transport Calculation*, Table 1 reports C5G7 reference k-effective 1.18655 ± 9.5 pcm, maximum pin power 2.498 ± 0.16%, minimum pin power 0.232 ± 0.58%, and normalized assembly power results. The OECD/NEA C5G7-TD overview describes the underlying mini-core as sixteen assemblies: eight UO₂ and eight MOX, surrounded by a water reflector. Links: https://www.frontiersin.org/journals/energy-research/articles/10.3389/fenrg.2020.00124/full and https://oecd-nea.org/science/wprs/egrts/c5g7-td/.
+Primary references:
+- OECD/NEA C5G7 benchmark description: https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation
+- Song et al., *Frontiers in Energy Research* (2020), Table 1: https://www.frontiersin.org/journals/energy-research/articles/10.3389/fenrg.2020.00124/full
+- Pinned model source: https://github.com/mit-crpg/benchmarks/tree/ba41bee54320ada0b4ac39a0dd2ca3c1d090a450/c5g7/openmc
 
-## Evidence inventory reviewed
+## What is established
 
-1. Screening campaign, GitHub Actions run [38182056526](https://github.com/thenextw4ng/cb-pfr/actions/runs/38182056526): 18 completed OpenMC runs, six custom layouts × three seeds. Recorded settings are 5,000 total batches, 500 inactive batches, 5,000 particles per batch (22.5 million nominal active histories per run). Artifact/export integrity checks pass, but its own metadata calls these smoke-test settings.
-2. Canonical UMMU campaign, GitHub Actions run [38196703024](https://github.com/thenextw4ng/cb-pfr/actions/runs/38196703024): three independent seeds, each 7,000 batches, 500 inactive, 10,000 particles per batch (65 million nominal active histories per run). This is higher-budget than the 18-run screen, but it covers only the custom UMMU 2×2 arrangement.
-3. The raw high-budget `assembly_fission.json` explicitly defines its reported metric as `max(assembly-integrated fission rate) / mean(assembly-integrated fission rate)` and says uncertainty is not propagated for correlated mesh bins. It calls the metric a dimensionless fission-rate proxy, not absolute power or a reactor-safety metric.
+1. **Model structure — internal static review pass.** The archived generated model is structurally consistent with the 2-D quarter-core C5G7 representation. The 3×3 lattice contains four fuel assemblies and five fixed reflector positions; x/y bounds are ±32.13 cm; assembly pitch is 21.42 cm; each assembly uses a 17×17 pin lattice. The five reflector positions are invariant across the six design variants. This is an internal static review, not independent primary-specification sign-off.
+2. **Energy-group structure — pass for the audited corrected runs.** The generated MGXS records the standard C5G7 seven-group boundaries [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV. The historical nonstandard log-spaced-group runs must not be used as benchmark evidence.
+3. **Run and artifact integrity — pass for the audited bundles.** The 18-run screen has six layouts × three seeds with unique statepoints and recorded hashes. The separate canonical UMMU confirmation has three unique seeds and statepoint hashes, raw HDF5 audits passing 22 checks per run, and recorded common geometry/MGXS provenance.
+4. **Canonical scalar screen — provisional numerical pass.** The three-seed UMMU mean k-effective is 1.1864932118 versus published 1.18655, a difference of −5.6788 pcm. The between-seed sample SD is 15.5684 pcm and SEM is 8.9884 pcm. The combined-uncertainty z-score recorded by the project is about −0.434. These are numerical screening results; they do not replace model-identity review or source-convergence acceptance.
+5. **Normalized spatial-shape screen — exploratory pass.** The maximum absolute relative difference between normalized integrated assembly fission-rate fractions and normalized published assembly-power fractions is 0.1790%; RMS relative difference is approximately 0.097%. All four differences are within the reference's stated relative uncertainty scale. A separate delta-method review gives |z| < 1 for all four bins under an independence approximation. This is a shape-only proxy comparison: it is not direct validation of absolute power, and the published reference covariance is unavailable.
 
-## k-effective arithmetic (descriptive only)
+## What remains open and why
 
-| Seed | OpenMC k-effective | Reported within-run standard deviation |
-|---:|---:|---:|
-| 720000 | 1.1863182340 | 9.4186 pcm |
-| 730000 | 1.1865450004 | 9.6983 pcm |
-| 740000 | 1.1866164010 | 9.6174 pcm |
-| **Mean** | **1.1864932118** | — |
-| Between-seed sample SD | — | **15.5684 pcm** |
-| Standard error of the three-run mean | — | **8.9884 pcm** |
-
-Against the published number 1.18655, the arithmetic difference is −5.6788 pcm. If the published ±9.5 pcm is treated as a one-standard-deviation uncertainty, combining it with the observed standard error gives approximately 13.08 pcm; the numerical difference is smaller than this combined uncertainty. **This is not a valid benchmark pass**, because the compared geometries / model definitions have not been shown to be identical. It is only a numerical proximity check and must not be described as validation.
-
-## Why pin/assembly-power validation is not passed
-
-The published reference gives standard C5G7 pin-power and assembly-power observables for the specified benchmark geometry. The archived CB-PFR output is a four-assembly, custom-layout tally and its peak-to-mean metric is a fission-rate proxy. No evidence in the current package establishes a one-to-one mapping between those four custom assembly tallies and the published standard C5G7 assembly/pin-power data. Therefore a numerical error, RMS error, or uncertainty-weighted pass/fail statistic for power cannot honestly be calculated from these non-equivalent observables.
-
-## Gate-by-gate decision
-
-| Gate | Decision | Evidence / reason |
+| Gate | Current status | Evidence required to close |
 |---|---|---|
-| Run/artifact integrity for the 18-run screen | PASS | 18 records, unique seeds/statepoint hashes, common group structure/MGXS audit reported; screening only. |
-| Six-layout/five-reflector-position invariant in archived screening inputs | PASS for the archived generated inputs | Raw-input audit found six distinct fuel patterns repeated three times and the five reflector positions unchanged. This is a structural check, not physical validation. |
-| Higher-budget raw-statepoint availability for canonical UMMU | PASS | Three seed-specific statepoints and raw HDF5 audits are archived. |
-| k-effective numerical proximity to published C5G7 value | DESCRIPTIVE CHECK ONLY | −5.68 pcm, but the custom 2×2 model is not demonstrated to be the standard 16-assembly benchmark geometry. |
-| Source/eigenvalue convergence acceptance | NOT ESTABLISHED | The 18-run traces have material quarter-to-quarter shifts; the three-run UMMU campaign does not establish a predeclared convergence criterion for all layouts. |
-| Pin/assembly-power comparison | NOT EVALUABLE from current evidence | Observable and geometry mapping to published reference has not been established. |
-| External physical validation of all six CB-PFR layouts | FAIL / NOT DEMONSTRATED | No apples-to-apples benchmark case plus comparable power observable is present for all six layouts. |
+| Primary model identity | BLOCKED pending independent sign-off | Qualified reviewer checks the exact primary specification against generated geometry, material compositions, boundary conditions, settings, and cross-section provenance; records discrepancies and signs the manifest. |
+| Source/eigenvalue stationarity | DIAGNOSTIC REVIEW REQUIRED | Review complete batch-wise k-generation and entropy traces using a predeclared, justified criterion or qualified interpretation. No universal entropy-slope threshold is assumed. Extend inactive/active histories only if the traces or precision assessment require it. |
+| Spatial observable comparability | EXPLORATORY ONLY | Independently approve mesh-to-assembly mapping, tally definition, normalization, and uncertainty propagation. The current tally is integrated fission rate, not absolute power in watts; reference covariance is unavailable. |
+| Six-layout physical comparison | SCREENING ONLY | The higher-budget confirmation covers canonical UMMU only. All six layouts need comparable, common-budget transport evidence with sufficient convergence/precision before any physical ranking can be claimed. |
+| Physical selection / optimization claim | BLOCKED | Predeclare a defensible physical objective and acceptance constraints. Do not choose a winner from k-effective alone or from the minimum QUBO energy. |
+| Release software checks | CI pass on audited head; rerun required after this correction | Re-run the exact updated commit's tests and evidence audits; preserve workflow IDs, logs, and artifacts. |
 
-## What can safely be concluded now
+### Batch-trace note
 
-- The archived OpenMC runs executed and produced traceable output.
-- The fixed-reflector and six-layout invariant is supported for the archived screening inputs.
-- The higher-budget UMMU result is numerically close to the commonly reported C5G7 reference k-effective, but that coincidence cannot validate a custom 2×2 model against the standard 16-assembly benchmark.
-- The current artifacts do **not** establish physical validity of the custom model, a validated ranking of all six layouts, reactor safety, or suitability for a real operating reactor.
+The archived 7,000-batch UMMU traces contain 6,500 active batches after 500 inactive batches. The active k-generation first-half versus last-half mean shifts are approximately +4.56 pcm (seed 720000), +3.81 pcm (seed 730000), and −2.15 pcm (seed 740000). Active entropy slopes and window differences are descriptive diagnostics, not an automatic pass/fail rule. These values do not alone prove non-convergence, but they also do not justify claiming stationarity without a declared acceptance rationale and review.
 
-## Minimum path to a genuine benchmark pass
+## Candidate-layout scope
 
-Freeze a separate benchmark-validation case that exactly implements the published C5G7 geometry/materials/boundary conditions and tally definitions. Run it with independent seeds and a predeclared convergence rule; compare k-effective, maximum/minimum pin power, and normalized pin-power distribution against the published reference with uncertainties and consistent normalization. Only after that case passes should the six custom CB-PFR layouts be described as evaluated by a benchmark-checked transport model. The six layouts are a separate design study and must not be conflated with the benchmark reference case.
+The six layouts are a project-specific assembly-placement study with exactly two UO₂ and two MOX assemblies, not six official benchmark reference cases. The canonical UMMU arrangement is the one compared with the published reference. The other five layouts require a separate physical interpretation and should not inherit the canonical k-effective target automatically. The earlier 18-run campaign used 5,000 batches, 500 inactive, 5,000 particles/batch and is a screening campaign; it is not automatically a convergence-grade confirmation.
+
+The assembly fission-rate peaking factor is defined as max(assembly-integrated fission rate) / mean(assembly-integrated fission rate). It is dimensionless and is not absolute power, a reactor-safety metric, or a validated design objective by itself.
+
+## Release decision
+
+- **Software reproducibility:** recent CI on the audited commit passed Python 3.10, 3.11, and 3.12 test jobs; the saved-statepoint recovery/analysis workflow also passed. The updated report commit must receive its own CI result.
+- **Numerical benchmark screening:** provisional pass for canonical UMMU k-effective and exploratory normalized spatial shape.
+- **Physical validation:** **NOT YET ESTABLISHED** pending independent primary-specification sign-off, source/eigenvalue stationarity review, spatial-tally comparability review, and adequate evidence for all six candidate layouts if a six-layout ranking is claimed.
+- **Safety / absolute power / quantum advantage:** not claimed.
+
+This decision is intentionally fail-closed. A green software test suite, a close central k-effective value, or a small normalized spatial residual cannot independently certify physical validation.
