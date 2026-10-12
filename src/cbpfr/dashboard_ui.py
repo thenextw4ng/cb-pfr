@@ -29,18 +29,22 @@ def apply_workstation_style():
         :root {{ color-scheme: dark; }}
         html, body, [class*='css'], .stApp, button, input, textarea, select, label {{ font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif !important; }}
         code, pre, .stCode, [data-testid='stMetricValue'] {{ font-family: 'IBM Plex Mono', monospace !important; }}
-        .stApp {{ background: radial-gradient(ellipse at 52% -15%, #132a38 0%, {BG} 58%); color: {TEXT}; }}
-        .block-container {{ max-width: 1640px; padding: 1.15rem 2rem 3rem; }}
-        /* MagicPath workstation port: suppress Streamlit's duplicate default page list. */
-        header[data-testid="stHeader"] {{ background: rgba(7,17,27,.94); }}
-        /* Keep Streamlit header controls visible so the sidebar can always be reopened. */
+        .stApp {{ background: linear-gradient(180deg, #0b1a27 0%, {BG} 300px); color: {TEXT}; }}
+        .block-container {{ width: min(100% - 2rem, 1540px); max-width: 1540px; padding: 1.15rem 1.35rem 3.5rem; }}
+        /* Single, consistent workstation shell; keep native controls reachable. */
+        header[data-testid="stHeader"] {{ background: rgba(7,17,27,.96); border-bottom: 1px solid rgba(38,63,82,.45); }}
         [data-testid="stToolbar"] {{ visibility: visible; height: auto; }}
         button[data-testid="stSidebarCollapsedControl"], button[data-testid="stSidebarNavCollapse"] {{ visibility: visible !important; display: flex !important; }}
         section[data-testid="stSidebar"] {{ background: #081724; border-right: 1px solid {LINE}; }}
         section[data-testid="stSidebar"] div[data-testid="stSidebarNav"] {{ display: none; }}
         section[data-testid="stSidebar"] div[data-testid="stSidebarContent"] {{ padding-top: 1rem; }}
-        .stApp {{ background: linear-gradient(180deg, #0b1a27 0%, {BG} 260px); color: {TEXT}; }}
-        .block-container {{ max-width: 1580px; padding: 1rem 1.7rem 3rem; }}
+        div[data-testid="stHorizontalBlock"] {{ gap: 1rem; }}
+        div[data-testid="stVerticalBlockBorderWrapper"] {{ border-color: {LINE}; }}
+        div[data-testid="stPlotlyChart"] {{ max-width: 100%; }}
+        @media (max-width: 900px) {{
+          .block-container {{ width: 100%; padding: .8rem .8rem 2.5rem; }}
+          div[data-testid="stHorizontalBlock"] {{ flex-wrap: wrap; }}
+        }}
         div[data-testid="stVerticalBlockBorderWrapper"] {{ border-color: {LINE}; }}
         div[data-testid="stTabs"] button {{ font-weight: 650; }}
         div[data-testid="stTabs"] button[aria-selected="true"] {{ color: {CYAN}; border-bottom-color: {CYAN}; }}
