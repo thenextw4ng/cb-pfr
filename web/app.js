@@ -20,6 +20,7 @@ function showCandidate(){
  $("layoutView").innerHTML=layoutCells(row.layout_signature);
  $("layoutCaption").textContent=label(row)+" · seed "+(row.seed??"not recorded");
  drawCandidateChart();
+ drawAssemblyField();
 }
 function drawCandidateChart(){
  const key=$("metricSelect").value;
@@ -58,6 +59,7 @@ async function init(){
   $("candidateSelect").innerHTML=records.map(r=>'<option value="'+String(r.candidate_id).replaceAll('"',"&quot;")+'">'+label(r)+'</option>').join("");
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
   showCandidate();drawOtherCharts();
+  await initAssembly();
   await initGeometry();
   await initMesh();
  }catch(error){
@@ -183,3 +185,34 @@ function showGeometryArtifact(item){
 }
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function formatBytes(bytes){if(bytes<1024)return bytes+" B";if(bytes<1048576)return (bytes/1024).toFixed(1)+" KB";return (bytes/1048576).toFixed(2)+" MB";}
+
+
+/* Assembly-integrated fission-rate proxy: direct CSV evidence, never interpreted as absolute power. */
+async function initAssembly(){
+ try{
+  const response=await fetch("/api/assembly",{headers:{Accept:"application/json"}});
+  if(!response.ok){let detail="HTTP "+response.status;try{detail=(await response.json()).error||detail}catch(_){}throw new Error(detail)}
+  const payload=await response.json();
+  assemblyRecords=(payload.records||[]).filter(r=>["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].every(k=>Number.isFinite(Number(r[k]))));
+  if(!assemblyRecords.length)throw new Error("No complete 2×2 assembly proxy records.");
+  $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
+  $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility.";
+  drawAssemblyField();
+ }catch(error){
+  $("assemblyFieldStatus").textContent="ASSEMBLY DATA UNAVAILABLE";
+  $("assemblyFieldStatus").classList.add("warning");
+  $("assemblyFieldProvenance").textContent="Could not load assembly evidence: "+error.message;
+  ["assemblyMap","assemblyBar"].forEach(id=>{if($(id))$(id).innerHTML='<div class="loading">No assembly values displayed; no data are fabricated.</div>';});
+ }
+}
+function drawAssemblyField(){
+ if(!assemblyRecords.length||!$("assemblyMap")||!$("assemblyBar"))return;
+ const selectedId=$("candidateSelect")?.value;
+ const row=assemblyRecords.find(r=>String(r.candidate_id)===String(selectedId))||assemblyRecords[0];
+ const positions=[["p00_fission_rate","p01_fission_rate"],["p10_fission_rate","p11_fission_rate"]];
+ const z=positions.map(line=>line.map(key=>Number(row[key])));
+ chart("assemblyMap",[{type:"heatmap",x:["Column 0","Column 1"],y:["Row 0","Row 1"],z,customdata:[["p00","p01"],["p10","p11"]],colorscale:"Cividis",colorbar:{title:{text:"Fission-rate proxy",font:{size:10}}},hovertemplate:"Position %{customdata}<br>Proxy %{z:.6g}<extra></extra>"}],{margin:{l:65,r:20,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Recorded position index"},yaxis:{...baseLayout.yaxis,title:"Recorded position index",autorange:"reversed"},showlegend:false});
+ const keys=[["p00_fission_rate","p00"],["p01_fission_rate","p01"],["p10_fission_rate","p10"],["p11_fission_rate","p11"]];
+ const candidates=assemblyRecords;
+ chart("assemblyBar",keys.map(([key,name],i)=>({type:"bar",name,x:candidates.map(r=>String(r.candidate_id)),y:candidates.map(r=>Number(r[key])),marker:{color:[palette.cyan,palette.blue,palette.orange,"#8d9ee8"][i]},hovertemplate:"Candidate %{x}<br>Position "+name+"<br>Proxy %{y:.6g}<extra></extra>"})),{barmode:"group",margin:{l:60,r:15,t:35,b:80},legend:{orientation:"h",y:1.15,x:0},xaxis:{...baseLayout.xaxis,title:"Candidate ID"},yaxis:{...baseLayout.yaxis,title:"Recorded fission-rate proxy (units as source)"},shapes:[{type:"rect",xref:"x",yref:"paper",x0:-0.5,x1:candidates.findIndex(r=>String(r.candidate_id)===String(selectedId))+0.5,y0:0,y1:1,line:{width:0},fillcolor:"rgba(85,212,223,0.07)"}]});
+}
