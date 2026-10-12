@@ -161,6 +161,7 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
             ("Overview", "app.py"),
             ("C5G7 Layout Explorer", "pages/01_C5G7_Layout_Explorer.py"),
             ("Physics Fields", "pages/02_Physics_Field_Explorer.py"),
+            ("3D Mesh Viewer", "pages/08_3D_Mesh_Viewer.py"),
             ("Monte Carlo Results", "pages/03_Monte_Carlo_Reliability.py"),
             ("QUBO / Optimization", "pages/04_QUBO_Optimization.py"),
             ("Provenance & Validation", "pages/05_Provenance_Validation.py"),
