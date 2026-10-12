@@ -106,14 +106,14 @@ Saved source/eigenvalue diagnostics were reconstructed from the original HDF5 tr
 
 ## F — CI and fail-closed integration
 
-**Status: `TEST MATRIX PASS ON VERIFIED CODE/EVIDENCE REVISIONS; CANONICAL WORKFLOW RUN PENDING`.**
+**Status: `UNIT/CONTRACT TEST MATRIX PASS; REPAIRED CANONICAL WORKFLOW NOT YET RUN END-TO-END`.**
 
-- PR #49 evidence-closeout commit `5ce44f56530b1787b3a7863b7edec7f1c3bdcc6f`: all six reported Python 3.10/3.11/3.12 checks passed, including the new regression tests for the machine-readable run-identity evidence.
-- PR #50 workflow-fix commit `040ed70db5f87ac7640049f21c5b77f7d8b4f11d`: all six reported Python 3.10/3.11/3.12 checks passed.
-- Regression tests now check the 500-inactive-batch input/fallback agreement, diagnostic generation before aggregation, artifact preservation, pinned OpenMC installation and shell activation in the recovery workflow, and fail-closed rejection of truncated/mismatched source traces.
-- The three saved statepoints independently pass the new trace-length contract: each has 7,000 k-generation entries and 7,000 entropy entries matching the 7,000-batch metadata.
+- Current PR #49 head `439f916a9306c8fe2832ac3e3338bddbb44f5814`: all six reported Python 3.10/3.11/3.12 test-matrix check runs passed.
+- Current PR #50 head `040ed70db5f87ac7640049f21c5b77f7d8b4f11d`: all six reported Python 3.10/3.11/3.12 test-matrix check runs passed.
+- PR #50 adds source-convergence JSON/CSV generation before aggregation, installs and activates pinned OpenMC 0.16.0 in the recovery workflow, and aligns the inactive-batch fallback at 500.
+- Regression tests assert that diagnostics precede aggregation, artifact upload runs even after a failure, and the recovery environment includes OpenMC.
 
-The green test matrix is software evidence. It does not mean the repaired high-budget transport/recovery workflow has completed successfully. GitHub Actions end-to-end recovery remains pending until the recovery workflow can be dispatched from the default branch.
+The green test matrix is software evidence only. The repaired high-budget/recovery workflow has not yet been executed end-to-end on GitHub Actions. The recovery workflow is introduced on PR #50 and needs to be present on the repository's default branch before a normal manual dispatch can be used. PR #50 remains draft/open and has not been merged.
 
 ## G — Analysis, reporting, and release
 
