@@ -33,7 +33,9 @@ def apply_workstation_style():
         .block-container {{ max-width: 1640px; padding: 1.15rem 2rem 3rem; }}
         /* MagicPath workstation port: suppress Streamlit's duplicate default page list. */
         header[data-testid="stHeader"] {{ background: rgba(7,17,27,.94); }}
-        [data-testid="stToolbar"] {{ visibility: hidden; height: 0; }}
+        /* Keep Streamlit header controls visible so the sidebar can always be reopened. */
+        [data-testid="stToolbar"] {{ visibility: visible; height: auto; }}
+        button[data-testid="stSidebarCollapsedControl"], button[data-testid="stSidebarNavCollapse"] {{ visibility: visible !important; display: flex !important; }}
         section[data-testid="stSidebar"] {{ background: #081724; border-right: 1px solid {LINE}; }}
         section[data-testid="stSidebar"] div[data-testid="stSidebarNav"] {{ display: none; }}
         section[data-testid="stSidebar"] div[data-testid="stSidebarContent"] {{ padding-top: 1rem; }}
@@ -163,17 +165,9 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
                     unsafe_allow_html=True,
                 )
             else:
-                # Use native multipage navigation in the real app. During isolated
-                # AppTest runs, a target page may not be registered; fall back to
-                # a quiet index row instead of failing the dashboard smoke test.
-                try:
-                    st.page_link(path, label=label)
-                except Exception:
-                    st.markdown(
-                        f'<div style="border:1px solid {LINE};background:{PANEL};border-radius:6px;'
-                        f'padding:9px 10px;margin:5px 0;color:{MUTED};font-size:.77rem">{label}</div>',
-                        unsafe_allow_html=True,
-                    )
+                # Use a real Streamlit multipage link. Do not silently replace
+                # a broken navigation control with a non-clickable decorative row.
+                st.page_link(path, label=label)
         st.markdown("---")
         st.markdown('<div class="workspace-kicker">System status</div>', unsafe_allow_html=True)
         openmc_label = "18-RUN ARCHIVE" if active == "High-Budget Evidence" else "SMOKE VIEW"
