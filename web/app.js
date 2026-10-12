@@ -40,6 +40,9 @@ function drawOtherCharts(){
 }
 function showError(message){const el=$("apiError");el.hidden=false;el.textContent=message;}
 async function init(){
+ setupNavigation();
+ const reloadButton=$("reloadEvidence");
+ if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();reloadButton.disabled=false;reloadButton.textContent="↻ Reload evidence";});
  try{
   const response=await fetch("/api/candidates",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("API returned HTTP "+response.status);
@@ -62,6 +65,19 @@ async function init(){
  }
 }
 document.addEventListener("DOMContentLoaded",init);
+function setupNavigation(){
+ const sidebar=document.querySelector(".sidebar");
+ const toggle=$("navToggle");
+ if(toggle&&sidebar)toggle.addEventListener("click",()=>{const open=sidebar.classList.toggle("nav-open");toggle.setAttribute("aria-expanded",String(open));});
+ document.querySelectorAll(".nav-item[data-target]").forEach(link=>link.addEventListener("click",event=>{
+  const target=$(link.dataset.target);if(!target)return;event.preventDefault();
+  target.scrollIntoView({behavior:"smooth",block:"start"});history.replaceState(null,"","#"+link.dataset.target);
+  document.querySelectorAll(".nav-item").forEach(item=>item.classList.toggle("active",item===link));
+  if(sidebar&&window.matchMedia("(max-width: 680px)").matches){sidebar.classList.remove("nav-open");if(toggle)toggle.setAttribute("aria-expanded","false");}
+ }));
+ const sections=[...document.querySelectorAll(".section[id]")];
+ if("IntersectionObserver" in window){const observer=new IntersectionObserver(entries=>{const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(!visible)return;document.querySelectorAll(".nav-item").forEach(item=>item.classList.toggle("active",item.dataset.target===visible.target.id));},{rootMargin:"-15% 0px -65% 0px",threshold:[0,.2,.5]});sections.forEach(s=>observer.observe(s));}
+}
 
 /* Spatial visualization is loaded from the archived OpenMC HDF5 statepoint via the local Python API. */
 const fieldPalette = {Viridis:"Viridis",Cividis:"Cividis",Plasma:"Plasma",Magma:"Magma",Turbo:"Turbo"};
@@ -96,6 +112,8 @@ function drawMesh(){
  chart("meshHeatmap",[{type:"heatmap",x:xs,y:ys,z:z,customdata:raw,colorscale:f.view==="relative_sd"?"Magma":paletteName,colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:hover(f.colorTitle),connectgaps:false}],{margin:{l:50,r:25,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Mesh x-bin index"},yaxis:{...baseLayout.yaxis,title:"Mesh y-bin index",autorange:"reversed"},showlegend:false});
  chart("meshContour",[{type:"contour",x:xs,y:ys,z:z,customdata:raw,colorscale:f.view==="relative_sd"?"Magma":paletteName,contours:{coloring:"heatmap",showlines:true},colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:hover(f.colorTitle),connectgaps:false,ncontours:14}],{margin:{l:50,r:25,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Mesh x-bin index"},yaxis:{...baseLayout.yaxis,title:"Mesh y-bin index",autorange:"reversed"},showlegend:false});
  chart("meshSurface",[{type:"surface",x:xs,y:ys,z:z, surfacecolor:z,colorscale:f.view==="relative_sd"?"Magma":paletteName,colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:"x-bin %{x}<br>y-bin %{y}<br>Displayed value %{z:.6g}<extra></extra>",connectgaps:false,showscale:true}],{margin:{l:5,r:5,t:5,b:5},scene:{xaxis:{title:"X bin",gridcolor:palette.line,color:palette.muted},yaxis:{title:"Y bin",gridcolor:palette.line,color:palette.muted},zaxis:{title:f.colorTitle,gridcolor:palette.line,color:palette.muted},bgcolor:"rgba(0,0,0,0)",camera:{eye:{x:1.55,y:1.55,z:1.1}}}});
+ const cy=Math.floor(f.mean.length/2), profileY=f.mean[cy]||[], profileSD=f.sd[cy]||[], profile=profileY.map((v,i)=>({x:i,y:f.view==="relative_sd"&&v>0?100*profileSD[i]/v:(f.view==="mean"&&scale==="log"&&v>0?Math.log10(v):v)}));
+ chart("meshProfile",[{type:"scatter",mode:"lines+markers",name:f.colorTitle,x:profile.map(p=>p.x),y:profile.map(p=>p.y),line:{color:palette.cyan,width:2},marker:{size:4,color:palette.orange},connectgaps:false,hovertemplate:"x-bin %{x}<br>"+f.colorTitle+" %{y:.6g}<extra></extra>"}],{margin:{l:60,r:20,t:15,b:50},showlegend:false,xaxis:{...baseLayout.xaxis,title:"X mesh-bin index"},yaxis:{...baseLayout.yaxis,title:f.colorTitle}});
  const st=f.stats;
  $("fieldKpis").innerHTML=[["Mesh dimensions",f.item.dimensions[0]+" × "+f.item.dimensions[1],"Archived tally bins"],["Finite bins",st.finite.toLocaleString(),"Finite recorded means"],["Positive bins",st.positive.toLocaleString(),"Positive mean tally values"],["Max tally mean",st.max===null?"—":st.max.toExponential(4),"Recorded "+f.score+" mean"]].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
 }
