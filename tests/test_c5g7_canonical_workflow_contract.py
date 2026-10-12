@@ -25,6 +25,16 @@ class CanonicalWorkflowContractTests(unittest.TestCase):
         self.assertIn("name: c5g7-canonical-high-budget-screen-", text)
         self.assertIn("path: /tmp/c5g7-canonical-convergence/", text)
 
+    def test_recovery_workflow_installs_openmc_and_activates_environment(self):
+        recovery = ROOT / ".github" / "workflows" / "c5g7-canonical-recover-analysis.yml"
+        text = recovery.read_text(encoding="utf-8")
+        self.assertIn("openmc=0.16.0", text)
+        self.assertIn("python=3.12", text)
+        self.assertIn("shell: bash -el {0}", text)
+        self.assertIn("actions/download-artifact@v4", text)
+        self.assertIn("scripts/audit_c5g7_source_convergence.py", text)
+        self.assertIn("scripts/analyze_c5g7_canonical_convergence.py", text)
+
 
 if __name__ == "__main__":
     unittest.main()
