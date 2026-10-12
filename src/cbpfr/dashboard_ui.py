@@ -147,6 +147,7 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
             ("Monte Carlo Results", "pages/03_Monte_Carlo_Reliability.py"),
             ("QUBO / Optimization", "pages/04_QUBO_Optimization.py"),
             ("Provenance & Validation", "pages/05_Provenance_Validation.py"),
+            ("High-Budget Evidence", "pages/06_High_Budget_Evidence.py"),
         ]
         for label, path in modules:
             if label == active:
