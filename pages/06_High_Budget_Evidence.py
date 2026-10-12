@@ -13,7 +13,7 @@ import streamlit as st
 
 from cbpfr.dashboard_ui import (
     CYAN, MUTED, ORANGE, apply_workstation_style, base_layout,
-    render_header, render_page_intro,
+    render_header, render_page_intro, render_workspace_sidebar,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,6 +116,7 @@ except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
 
 evidence_hash = hashlib.sha256(EVIDENCE_PATH.read_bytes()).hexdigest()
 summary = summarize_runs(runs) if not runs.empty else pd.DataFrame()
+render_workspace_sidebar("High-Budget Evidence", runs)
 
 if issues:
     st.error("Evidence contract blocked — do not use these data for candidate selection.")
