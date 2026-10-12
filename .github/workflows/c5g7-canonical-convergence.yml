@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   canonical-screen:
-    name: Canonical UMMU seed ${ matrix.seed_base }
+    name: Canonical UMMU seed ${{ matrix.seed_base }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
@@ -30,9 +30,9 @@ jobs:
       matrix:
         seed_base: [720000, 730000, 740000]
     env:
-      BATCHES: ${ inputs.batches || '7000' }
-      INACTIVE: ${ inputs.inactive || '500' }
-      PARTICLES: ${ inputs.particles || '10000' }
+      BATCHES: ${{ inputs.batches || '7000' }}
+      INACTIVE: ${{ inputs.inactive || '500' }}
+      PARTICLES: ${{ inputs.particles || '10000' }}
       PROFILE: config/benchmarks/c5g7_canonical_confirmation_profile.json
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +93,7 @@ jobs:
         shell: bash -el {0}
         run: |
           set -euo pipefail
-          OUT="$RUNNER_TEMP/c5g7-canonical-convergence/seed_${ matrix.seed_base }"
+          OUT="$RUNNER_TEMP/c5g7-canonical-convergence/seed_${{ matrix.seed_base }}"
           mkdir -p "$OUT"
           python scripts/run_c5g7_layout_study.py \
             --source-root /tmp/mit-crpg-benchmarks \
@@ -101,7 +101,7 @@ jobs:
             --output "$OUT" \
             --mode run --candidate-ids c5g7-2x2-UMMU \
             --batches "$BATCHES" --inactive "$INACTIVE" --particles "$PARTICLES" \
-            --threads 1 --seed-base "${ matrix.seed_base }"
+            --threads 1 --seed-base "${{ matrix.seed_base }}"
           python scripts/audit_c5g7_smoke_statepoints.py \
             --study-summary "$OUT/STUDY_SUMMARY.json" \
             --out "$OUT/analysis/raw_hdf5_audit.json" \
@@ -120,8 +120,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: seed_${ matrix.seed_base }
-          path: ${ runner.temp }/c5g7-canonical-convergence/seed_${ matrix.seed_base }/
+          name: seed_${{ matrix.seed_base }}
+          path: ${{ runner.temp }}/c5g7-canonical-convergence/seed_${{ matrix.seed_base }}/
           if-no-files-found: error
           retention-days: 90
           compression-level: 1
