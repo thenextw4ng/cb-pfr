@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "report_id": "CBPFR-C5G7-SPATIAL-UNCERTAINTY-REVIEW-2026-10-12",
+  "status": "EXPLORATORY_NOT_PHYSICAL_VALIDATION",
+  "generated_at_utc": "2026-10-12",
+  "source_artifact": {
+    "recovery_workflow_run_id": 38222690312,
+    "artifact_id": 11735016906,
+    "artifact_sha256": "bc6f81587d5914b78bffebbb098e74e44e35bfcab6ebd3fa8a24731cbc064715",
+    "seeds": [
+      720000,
+      730000,
+      740000
+    ],
+    "statepoint_sha256": [
+      "db098b04a16cdc4771fb469c82a65be214327adc79742d04bb25f1b6589e29e1",
+      "c060252df030789e1a7072fe8f71c7849a2e8f2920540a72436352c030b7a562",
+      "a36a386c0a108a138f767750c103598d0b96ee82ed6eaab50cfa914cdf03e179"
+    ]
+  },
+  "metric": {
+    "observed_quantity": "normalized integrated mesh fission-rate fraction by fuel assembly",
+    "reference_quantity": "normalized published assembly power",
+    "reference_citation": "Song et al., Frontiers in Energy Research (2020), Table 1, https://doi.org/10.3389/fenrg.2020.00124",
+    "comparability_status": "PROXY_ONLY_REQUIRES_INDEPENDENT_REVIEW",
+    "absolute_power_claim": false
+  },
+  "uncertainty_method": {
+    "observed_fraction_standard_error": "sample standard error across three independent run-level fractions",
+    "reference_fraction_standard_uncertainty": "first-order delta-method propagation of published raw assembly-power uncertainties through normalization",
+    "reference_covariance_assumption": "raw assembly-power estimates treated as independent because no covariance matrix was available",
+    "combined_z_definition": "(observed normalized fraction - reference normalized fraction) / sqrt(observed fraction SE^2 + propagated reference fraction SE^2)",
+    "acceptance_status": "EXPLORATORY_DIAGNOSTIC_ONLY; criterion was not pre-registered as official benchmark acceptance"
+  },
+  "results": {
+    "p00": {
+      "material": "UO2_inner",
+      "observed_normalized_fraction": 0.46691399613651646,
+      "reference_normalized_fraction": 0.4666666666666667,
+      "relative_difference_percent": 0.05299917211067928,
+      "observed_fraction_standard_error": 0.000212485443,
+      "propagated_reference_fraction_standard_uncertainty": 0.000365962,
+      "combined_uncertainty_z": 0.5844089815016236
+    },
+    "p01": {
+      "material": "MOX",
+      "observed_normalized_fraction": 0.2005423875092598,
+      "reference_normalized_fraction": 0.20047348484848485,
+      "relative_difference_percent": 0.03436996210597343,
+      "observed_fraction_standard_error": 0.000036098,
+      "propagated_reference_fraction_standard_uncertainty": 0.000316,
+      "combined_uncertainty_z": 0.2164403286131983
+    },
+    "p10": {
+      "material": "MOX",
+      "observed_normalized_fraction": 0.20039423191063702,
+      "reference_normalized_fraction": 0.20047348484848485,
+      "relative_difference_percent": -0.039532877830561475,
+      "observed_fraction_standard_error": 0.000096139,
+      "propagated_reference_fraction_standard_uncertainty": 0.000316,
+      "combined_uncertainty_z": -0.23973786051952856
+    },
+    "p11": {
+      "material": "UO2_outer",
+      "observed_normalized_fraction": 0.1321493844435867,
+      "reference_normalized_fraction": 0.13238636363636364,
+      "relative_difference_percent": -0.17900574218343568,
+      "observed_fraction_standard_error": 0.000151668,
+      "propagated_reference_fraction_standard_uncertainty": 0.000247,
+      "combined_uncertainty_z": -0.816993957810613
+    }
+  },
+  "interpretation": "All four exploratory combined-z magnitudes are below 1 under the stated independence approximation. This does not establish official benchmark acceptance, source convergence, direct power-tally equivalence, or overall physical validation. A covariance matrix and independent review of fission-rate/power comparability remain unresolved."
+}
