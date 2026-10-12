@@ -146,7 +146,9 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
             ("Physics Fields", "pages/02_Physics_Field_Explorer.py"),
             ("Monte Carlo Results", "pages/03_Monte_Carlo_Reliability.py"),
             ("QUBO / Optimization", "pages/04_QUBO_Optimization.py"),
+            ("Decision Workspace", "pages/06_Decision_Workspace.py"),
             ("Provenance & Validation", "pages/05_Provenance_Validation.py"),
+            ("Help & Methods", "pages/07_Help_Methods.py"),
         ]
         for label, path in modules:
             if label == active:
@@ -206,7 +208,7 @@ def base_layout(fig: go.Figure, height: int = 340, **kwargs) -> go.Figure:
         height=height,
         paper_bgcolor=BG,
         plot_bgcolor=PANEL,
-        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
+        font={"family": "Roboto Condensed, Arial Narrow, sans-serif", "color": TEXT, "size": 11},
         margin={"l": 56, "r": 22, "t": 28, "b": 55},
         xaxis={"gridcolor": LINE, "linecolor": LINE, "zerolinecolor": LINE, "ticks": "outside", "tickcolor": LINE},
         yaxis={"gridcolor": LINE, "linecolor": LINE, "zerolinecolor": LINE, "ticks": "outside", "tickcolor": LINE},
@@ -238,7 +240,7 @@ def layout_figure(signature: str, height: int = 330) -> go.Figure:
     ))
     fig.update_layout(
         height=height, paper_bgcolor=BG, plot_bgcolor=PANEL,
-        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
+        font={"family": "Roboto Condensed, Arial Narrow, sans-serif", "color": TEXT, "size": 11},
         margin={"l": 52, "r": 18, "t": 24, "b": 45},
         xaxis={"side": "top", "fixedrange": True},
         yaxis={"autorange": "reversed", "fixedrange": True},
