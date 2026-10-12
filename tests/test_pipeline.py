@@ -84,6 +84,27 @@ class SolverPipelineTests(unittest.TestCase):
                 metrics=self.metrics, uniform_margins={"response": 0.02},
             )
 
+    def test_pipeline_rejects_tampered_solver_energy_and_lossy_vector_coercion(self):
+        bad_energy = self.solver_run.to_dict()
+        bad_energy["solutions"] = [dict(row) for row in bad_energy["solutions"]]
+        bad_energy["solutions"][0]["qubo_energy"] += 100.0
+        with self.assertRaisesRegex(ExperimentContractError, "energy does not match"):
+            run_solver_to_physics_pipeline(
+                spec=self.spec, model=self.model, solver_run=bad_energy,
+                candidates=self.candidates, evaluations=self.evaluations,
+                metrics=self.metrics, uniform_margins={"response": 0.02},
+            )
+
+        bad_vector = self.solver_run.to_dict()
+        bad_vector["solutions"] = [dict(row) for row in bad_vector["solutions"]]
+        bad_vector["solutions"][0]["vector"] = [0.5 if i == 0 else v for i, v in enumerate(bad_vector["solutions"][0]["vector"])]
+        with self.assertRaisesRegex(ExperimentContractError, "integer binary"):
+            run_solver_to_physics_pipeline(
+                spec=self.spec, model=self.model, solver_run=bad_vector,
+                candidates=self.candidates, evaluations=self.evaluations,
+                metrics=self.metrics, uniform_margins={"response": 0.02},
+            )
+
     def test_pipeline_rejects_candidate_not_from_solver(self):
         from cbpfr.qubo import Candidate
         bad_candidates = [Candidate("invented", self.candidates[0].vector)]
