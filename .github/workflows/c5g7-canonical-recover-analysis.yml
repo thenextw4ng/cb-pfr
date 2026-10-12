@@ -11,6 +11,13 @@ on:
         description: "Artifact name from the source run"
         required: true
         default: "c5g7-canonical-high-budget-screen-7000-10000"
+  pull_request:
+    paths:
+      - ".github/workflows/c5g7-canonical-recover-analysis.yml"
+      - "scripts/audit_c5g7_source_convergence.py"
+      - "scripts/analyze_c5g7_canonical_convergence.py"
+      - "tests/test_c5g7_canonical_workflow_contract.py"
+      - "pyproject.toml"
 
 permissions:
   actions: read
@@ -33,8 +40,8 @@ jobs:
       - name: Download saved canonical statepoints and audit outputs
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.artifact_name }}
-          run-id: ${{ inputs.source_run_id }}
+          name: ${{ inputs.artifact_name || 'c5g7-canonical-high-budget-screen-7000-10000' }}
+          run-id: ${{ inputs.source_run_id || '38196703024' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: /tmp/c5g7-canonical-convergence
       - name: Recreate missing source-convergence diagnostics and aggregate
@@ -76,6 +83,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: c5g7-canonical-recovered-analysis-${{ inputs.source_run_id }}
+          name: c5g7-canonical-recovered-analysis-${{ inputs.source_run_id || '38196703024' }}
           path: /tmp/c5g7-canonical-convergence/
           if-no-files-found: error
