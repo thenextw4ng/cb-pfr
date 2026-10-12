@@ -174,7 +174,6 @@ async function loadGeometryArtifacts(){
 function showGeometryArtifact(item){
  if(!item)return;
  document.querySelectorAll(".artifact-item").forEach(el=>el.classList.remove("active"));
- const active=document.querySelector('[data-artifact-index="'+Array.from(document.querySelectorAll(".artifact-item")).findIndex(el=>el.dataset.artifactIndex===String(Array.from(document.querySelectorAll(".artifact-item")).findIndex(x=>x===el)))+'"]');
  // Mark the selected source by matching its path text, avoiding assumptions about array order after refresh.
  document.querySelectorAll(".artifact-item").forEach(el=>{if(el.textContent.includes(item.name))el.classList.add("active");});
  const preview=$("geometryPreview");
