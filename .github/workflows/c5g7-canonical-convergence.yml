@@ -103,6 +103,10 @@ jobs:
               --statepoint "$CASE_DIR/$STATEPOINT_REL" \
               --candidate-id c5g7-2x2-UMMU --layout-signature UMMU \
               --out "$ROUND/analysis/assembly_fission.json"
+            python scripts/audit_c5g7_source_convergence.py \\
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \\
+              --out-json "$ROUND/analysis/source_convergence.json" \\
+              --out-csv "$ROUND/analysis/source_convergence.csv"
           done
       - name: Aggregate canonical numerical gates
         shell: bash -el {0}
