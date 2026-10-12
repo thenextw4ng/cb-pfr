@@ -9,7 +9,7 @@ Python 3.10+ recommended.
 ```bash
 git clone https://github.com/thenextw4ng/cb-pfr.git
 cd cb-pfr
-git checkout integration/reactorq-studio
+git checkout feature/reactorq-high-budget-workstation
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
@@ -109,3 +109,12 @@ python scripts/audit_benchmark_manifest.py \
 ```
 
 The current expected status is `blocked` (CLI exit code 2) until the exact benchmark model, nuclear-data provenance, reviewed material/depletion mapping, reference data, and baseline calculation are supplied. This gate audits manifest structure and declared readiness; it does not run OpenMC or validate the physical model.
+
+
+## High-budget C5G7 evidence workstation
+
+The **High-Budget Evidence** page reads the compact, versioned run-level record in `results/c5g7_high_budget_2026-10-12/run_level_evidence.json`. It checks the expected 18 rows, six layouts, three runs per layout, unique seeds and statepoint hashes, common MGXS hash, corrected-group audit labels, compute settings, and explicit no-certification flags before displaying results.
+
+The page shows descriptive means, between-run sample standard deviations, Student-t 95% intervals with three independent runs per layout, individual run values, and provenance metadata. The intervals are exploratory and have only two degrees of freedom. The page deliberately does not select a winner, certify convergence, or claim physical validation.
+
+The full raw HDF5 statepoints and full exporter/objective audits remain in the GitHub Actions artifact linked from the page. The compact committed JSON is an inspectable UI dataset, not a replacement for the raw evidence. Source workflow: https://github.com/thenextw4ng/cb-pfr/actions/runs/38182056526
