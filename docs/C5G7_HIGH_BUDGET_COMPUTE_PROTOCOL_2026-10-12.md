@@ -19,7 +19,7 @@ This is a higher-budget follow-up to the 100-batch / 1,000-particle smoke profil
 
 ## Current execution
 
-- GitHub Actions run: [38225888104](https://github.com/thenextw4ng/cb-pfr/actions/runs/38225888104).
+- GitHub Actions run: [38225986636](https://github.com/thenextw4ng/cb-pfr/actions/runs/38225888104).
 - The workflow has started all three seed-round jobs and reached the OpenMC transport step. Final completion, raw-statepoint integrity, and aggregate audit are still pending until the run finishes.
 - Expected artifact: `cbpfr-c5g7-six-layout-high-budget-confirmation-2026-10-12`.
 
