@@ -106,13 +106,14 @@ Saved source/eigenvalue diagnostics were reconstructed from the original HDF5 tr
 
 ## F — CI and fail-closed integration
 
-**Status: `TEST MATRIX PASS ON CURRENT PR COMMITS; CANONICAL WORKFLOW RUN PENDING`.**
+**Status: `TEST MATRIX PASS ON VERIFIED CODE/EVIDENCE REVISIONS; CANONICAL WORKFLOW RUN PENDING`.**
 
-- PR #49 head `8bf351f482b52f813deb82f8dd28b452f6dc9fc2`: all six reported Python 3.10/3.11/3.12 check runs passed.
-- PR #50 workflow-fix head `7ac1ff36784a4a2d1ea080eabd8d932c7aa83641`: all six reported Python 3.10/3.11/3.12 check runs passed.
-- The PR #50 fix also corrected a configuration inconsistency: the manual input default was 500 inactive batches while the environment fallback remained 100; both are now 500.
+- PR #49 evidence-closeout commit `5ce44f56530b1787b3a7863b7edec7f1c3bdcc6f`: all six reported Python 3.10/3.11/3.12 checks passed, including the new regression tests for the machine-readable run-identity evidence.
+- PR #50 workflow-fix commit `040ed70db5f87ac7640049f21c5b77f7d8b4f11d`: all six reported Python 3.10/3.11/3.12 checks passed.
+- Regression tests now check the 500-inactive-batch input/fallback agreement, diagnostic generation before aggregation, artifact preservation, pinned OpenMC installation and shell activation in the recovery workflow, and fail-closed rejection of truncated/mismatched source traces.
+- The three saved statepoints independently pass the new trace-length contract: each has 7,000 k-generation entries and 7,000 entropy entries matching the 7,000-batch metadata.
 
-The green test matrix is software evidence. It does not mean the repaired high-budget transport workflow has completed successfully.
+The green test matrix is software evidence. It does not mean the repaired high-budget transport/recovery workflow has completed successfully. GitHub Actions end-to-end recovery remains pending until the recovery workflow can be dispatched from the default branch.
 
 ## G — Analysis, reporting, and release
 
