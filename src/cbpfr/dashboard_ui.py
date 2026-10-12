@@ -171,9 +171,15 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
                     )
         st.markdown("---")
         st.markdown('<div class="workspace-kicker">System status</div>', unsafe_allow_html=True)
-        st.markdown('<div class="status-line"><span class="status-dot"></span> OpenMC results <b style="margin-left:auto">SMOKE</b></div>', unsafe_allow_html=True)
-        st.markdown('<div class="status-line"><span class="status-dot"></span> Spatial tallies <b style="margin-left:auto">PENDING</b></div>', unsafe_allow_html=True)
-        hash_ok = bool((df["mgxs_sha256_before_transport"].astype(str) == df["mgxs_sha256_after_transport"].astype(str)).all())
+        openmc_label = "18-RUN ARCHIVE" if active == "High-Budget Evidence" else "SMOKE VIEW"
+        st.markdown(f'<div class="status-line"><span class="status-dot"></span> OpenMC results <b style="margin-left:auto">{openmc_label}</b></div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-line"><span class="status-dot"></span> Spatial tallies <b style="margin-left:auto">PARTIAL / REVIEW</b></div>', unsafe_allow_html=True)
+        if {"mgxs_sha256_before_transport", "mgxs_sha256_after_transport"}.issubset(df.columns):
+            hash_ok = bool((df["mgxs_sha256_before_transport"].astype(str) == df["mgxs_sha256_after_transport"].astype(str)).all())
+        elif "mgxs_sha256" in df.columns:
+            hash_ok = bool(df["mgxs_sha256"].nunique() == 1)
+        else:
+            hash_ok = False
         dot = GREEN if hash_ok else RED
         label = "MATCHED" if hash_ok else "REVIEW"
         st.markdown(f'<div class="status-line"><span class="status-dot" style="background:{dot}"></span> MGXS hash <b style="margin-left:auto">{label}</b></div>', unsafe_allow_html=True)
