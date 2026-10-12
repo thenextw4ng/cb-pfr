@@ -18,6 +18,7 @@ class HighBudgetEvidenceDashboardTests(unittest.TestCase):
         self.assertTrue(any("Candidate comparison" in tab.label for tab in app.tabs))
         self.assertTrue(any("Run-level inspection" in tab.label for tab in app.tabs))
         self.assertTrue(any("Provenance & limits" in tab.label for tab in app.tabs))
+        self.assertTrue(any("CB-PFR screen" in tab.label for tab in app.tabs))
         self.assertTrue(any("18 unique run records" in element.value for element in app.success))
 
     def test_archived_evidence_has_expected_shape_and_no_winner_claim(self):
