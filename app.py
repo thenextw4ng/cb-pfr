@@ -78,7 +78,7 @@ else:
                 "arrayminus": visual_df["fission_rate_peaking_factor_mean"] - visual_df["fission_rate_peaking_factor_ci_low"],
                 "visible": True, "color": "#91a9c2", "thickness": 1.4, "width": 4,
             },
-            customdata=visual_df[["n_runs", "keff_mean"]].to_numpy(),
+            customdata=visual_df[["n_runs", "keff_mean_mean"]].to_numpy(),
             hovertemplate="Layout %{x}<br>Mean peaking proxy %{y:.6f}<br>Runs %{customdata[0]}<br>Mean k-effective %{customdata[1]:.7f}<extra></extra>",
         ))
         fig.update_layout(template="plotly_dark", height=340, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin={"l": 45, "r": 15, "t": 15, "b": 40}, xaxis_title="2×2 material layout", yaxis_title="Fission-rate peaking proxy")
