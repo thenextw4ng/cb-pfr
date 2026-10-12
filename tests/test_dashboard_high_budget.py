@@ -50,6 +50,25 @@ class HighBudgetEvidenceDashboardTests(unittest.TestCase):
             self.assertEqual(audit["run_count"], 18)
             self.assertEqual(audit["layout_count"], 6)
             self.assertTrue(audit["unique_statepoint_hashes"])
+            from scripts.run_c5g7_cbpfr_pipeline import run_integrated_pipeline
+            result = run_integrated_pipeline(
+                csv_path,
+                backend="exact",
+                num_reads=100,
+                keff_min=0.9,
+                keff_max=1.0,
+                fission_peaking_max=1.0,
+                uncertainty_multiplier=1.0,
+                keff_scale=1.0,
+                fission_peaking_scale=1.0,
+                risk_weight=1.0,
+                min_batches=5000,
+                min_particles=5000,
+                min_replicates=3,
+            )
+            self.assertEqual(result["status"], "BLOCKED_NO_CONSERVATIVELY_FEASIBLE_CANDIDATE")
+            self.assertFalse(result["decision"]["accepted"])
+            self.assertIsNone(result["solver_run"])
 
 
 if __name__ == "__main__":
