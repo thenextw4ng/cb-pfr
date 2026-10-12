@@ -21,7 +21,7 @@ This report does not assert that all seven gates have passed. It closes the evid
 
 **Status: `INPUT_PROVENANCE_VERIFIED; INDEPENDENT_SPECIFICATION_REVIEW_PENDING`.**
 
-For each seed, the actual saved files were re-hashed and compared with that run's `output_hashes_after_run` manifest. All six checks matched per run: geometry XML, materials XML, settings XML, MGXS HDF5, generated 2-D builder, and statepoint. No hash mismatch was found.
+For each seed, all **30 recorded output files** were re-hashed and compared with that run's `output_hashes_after_run` manifest: **30/30 matched per run**, with zero missing files and zero mismatched hashes (90 file-hash checks total). This includes geometry XML, materials XML, settings XML, MGXS HDF5, generated builders, statepoints, summaries, tally outputs, logs, and copied model source files.
 
 | Input / output | SHA-256 by seed |
 |---|---|
