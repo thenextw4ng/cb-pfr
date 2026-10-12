@@ -10,7 +10,16 @@
     "upstream_repository": "https://github.com/mit-crpg/benchmarks.git",
     "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
     "openmc_version": "0.16.0",
-    "energy_group_boundaries_eV": [0.00001, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000]
+    "energy_group_boundaries_eV": [
+      0.00001,
+      0.0635,
+      10,
+      100,
+      1000,
+      500000,
+      1000000,
+      20000000
+    ]
   },
   "compute": {
     "batches_total": 7000,
@@ -18,7 +27,11 @@
     "active_batches": 6500,
     "particles_per_batch": 10000,
     "threads": 1,
-    "independent_seed_bases": [720000, 730000, 740000],
+    "independent_seed_bases": [
+      720000,
+      730000,
+      740000
+    ],
     "runs": 3,
     "nominal_histories_per_run": 70000000,
     "nominal_active_histories_per_run": 65000000,
