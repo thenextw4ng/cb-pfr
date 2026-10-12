@@ -18,6 +18,8 @@ class CanonicalWorkflowContractTests(unittest.TestCase):
         diagnostics = text.index("scripts/audit_c5g7_source_convergence.py")
         aggregator = text.index("scripts/analyze_c5g7_canonical_convergence.py")
         self.assertLess(diagnostics, aggregator)
+        spatial = text.index("scripts/audit_c5g7_spatial_reference.py")
+        self.assertLess(spatial, aggregator)
 
     def test_transport_and_analysis_artifacts_are_preserved_even_on_failure(self):
         text = WORKFLOW.read_text(encoding="utf-8")
