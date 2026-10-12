@@ -83,7 +83,7 @@ The original transport workflow failed only at aggregation because it did not ge
 
 ## E — Metrics and benchmark protocol
 
-**Status: `PROVISIONAL_SCALAR_SCREEN_PASS; FULL_BENCHMARK_ACCEPTANCE_BLOCKED`.**
+**Status: `PROVISIONAL_SCALAR_SCREEN_PASS; SPATIAL-SHAPE SANITY CHECK PASS; CONVERGENCE REVIEW AND FULL BENCHMARK ACCEPTANCE BLOCKED`.**
 
 Reference target used by the repository protocol: (k_{eff}=1.18655), reference standard uncertainty (0.000095). The combined uncertainty calculation uses the reference uncertainty and the empirical between-seed standard error in quadrature.
 
@@ -142,5 +142,7 @@ No additional algorithm, metric, experiment, or cosmetic redesign is authorized 
 - OECD/NEA, *Benchmark on Deterministic Transport Calculations Without Spatial Homogenisation: A 2-D/3-D MOX Fuel Assembly Benchmark*, NEA/NSC/DOC(2003)16: https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation
 - Published C5G7 assembly/pin-power reference comparison (Frontiers in Energy Research, 2020): https://www.frontiersin.org/journals/energy-research/articles/10.3389/fenrg.2020.00124/full
 - Pinned model source: https://github.com/mit-crpg/benchmarks/tree/ba41bee54320ada0b4ac39a0dd2ca3c1d090a450
+- OpenMC's 7-group C5G7 example using the corrected group boundaries: https://github.com/openmc-dev/openmc/blob/develop/examples/pincell_random_ray/build_xml.py
+- OpenMC `EnergyGroups` ordering documentation: https://docs.openmc.org/en/stable/_modules/openmc/mgxs/groups.html
 - Current workflow repair PR: https://github.com/thenextw4ng/cb-pfr/pull/50
 - Scientific readiness tests/report PR: https://github.com/thenextw4ng/cb-pfr/pull/49
