@@ -10,7 +10,7 @@ on:
       inactive:
         description: "Inactive batches"
         required: true
-        default: "100"
+        default: "500"
       particles:
         description: "Particles per batch"
         required: true
