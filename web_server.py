@@ -14,7 +14,18 @@ ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 CANDIDATE_CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
 STATEPOINT_ARCHIVE = ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip"
+# The archive may already exist on the user Desktop without being committed to GitHub.
+STATEPOINT_ARCHIVE_FALLBACK = Path.home() / "Desktop" / "OpenMC_HDF5_Evidence_2026-10-11.zip"
 STATEPOINT_MEMBER = "c5g7-run/2d/statepoint.20000.h5"
+
+
+def locate_statepoint_archive():
+    for archive_path in (STATEPOINT_ARCHIVE, STATEPOINT_ARCHIVE_FALLBACK):
+        if archive_path.is_file():
+            return archive_path
+    raise FileNotFoundError(
+        f"Statepoint archive not found at {STATEPOINT_ARCHIVE} or {STATEPOINT_ARCHIVE_FALLBACK}."
+    )
 STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
 
@@ -107,15 +118,14 @@ def read_assembly_evidence():
 
 def read_mesh_evidence():
     """Read only the known production member from the committed statepoint archive."""
-    if not STATEPOINT_ARCHIVE.is_file():
-        raise FileNotFoundError(f"Statepoint archive not found: {STATEPOINT_ARCHIVE.name}")
+    archive_path = locate_statepoint_archive()
     try:
         import h5py
         import numpy as np
     except ImportError as exc:
         raise RuntimeError("Spatial field visualization needs h5py and numpy. Install project requirements with: python -m pip install -r requirements.txt") from exc
 
-    with zipfile.ZipFile(STATEPOINT_ARCHIVE) as archive:
+    with zipfile.ZipFile(archive_path) as archive:
         matches = [name for name in archive.namelist() if name == STATEPOINT_MEMBER]
         if len(matches) != 1:
             raise ValueError(f"Expected exactly one {STATEPOINT_MEMBER} entry, found {len(matches)}.")
@@ -177,7 +187,7 @@ def read_mesh_evidence():
     return {
         "mesh_tallies": records,
         "provenance": {
-            "source": "Repository archive · " + STATEPOINT_MEMBER,
+            "source": str(archive_path) + " · " + STATEPOINT_MEMBER,
             "sha256": actual_hash,
             "expected_sha256": expected_hash,
             "hash_matches": actual_hash == expected_hash if expected_hash else None,
