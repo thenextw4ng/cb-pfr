@@ -67,7 +67,11 @@ def _validate_run_args(solver_name: str, solver_class: str, reads: int) -> None:
 
 
 def _solution(model: QuboModel, vector: Sequence[int], sample_count: int = 1) -> SolverSolution:
-    normalized = tuple(int(v) for v in vector)
+    normalized = tuple(vector)
+    if any(isinstance(v, bool) or not isinstance(v, int) or v not in (0, 1) for v in normalized):
+        raise SolverContractError("solver sample must contain only integer binary values 0 or 1")
+    if isinstance(sample_count, bool) or not isinstance(sample_count, int) or sample_count < 1:
+        raise SolverContractError("sample_count must be a positive integer")
     violations = model.constraint_violations(normalized)
     return SolverSolution(
         candidate_id="qubo-" + "".join(str(v) for v in normalized),
@@ -86,13 +90,15 @@ def solve_exact(
     max_solutions: int = 20,
 ) -> SolverRun:
     """Classical exhaustive reference solve; safe only for small binary models."""
+    if isinstance(max_variables, bool) or not isinstance(max_variables, int) or max_variables < 1:
+        raise SolverContractError("max_variables must be a positive integer")
+    if isinstance(max_solutions, bool) or not isinstance(max_solutions, int) or max_solutions < 1:
+        raise SolverContractError("max_solutions must be a positive integer")
     n = model.variable_count
     if n > max_variables:
         raise SolverContractError(
             f"exact enumeration blocked at {n} variables; configured maximum is {max_variables}"
         )
-    if max_solutions < 1:
-        raise SolverContractError("max_solutions must be positive")
     started = time.perf_counter()
     best: list[tuple[float, tuple[int, ...], bool, Mapping[str, int]]] = []
     for vector in product((0, 1), repeat=n):
@@ -192,10 +198,28 @@ def solve_with_ocean_sampler(
     aggregated: dict[tuple[int, ...], int] = {}
     for row in rows:
         sample = row.sample
-        vector = tuple(int(sample[i]) for i in range(model.variable_count))
-        if any(value not in (0, 1) for value in vector):
+        try:
+            raw_vector = tuple(sample[i] for i in range(model.variable_count))
+        except (KeyError, IndexError, TypeError) as exc:
+            raise SolverContractError("sampler returned a sample with missing variables") from exc
+        try:
+            valid_vector = all(not isinstance(value, bool) and math.isfinite(float(value))
+                               and float(value) in (0.0, 1.0) for value in raw_vector)
+        except (TypeError, ValueError, OverflowError):
+            valid_vector = False
+        if not valid_vector:
             raise SolverContractError("sampler returned a non-binary sample")
-        aggregated[vector] = aggregated.get(vector, 0) + int(row.num_occurrences)
+        vector = tuple(int(value) for value in raw_vector)
+        occurrences = row.num_occurrences
+        try:
+            count_value = float(occurrences)
+            valid_count = (not isinstance(occurrences, bool) and math.isfinite(count_value)
+                           and count_value.is_integer() and count_value >= 1)
+        except (TypeError, ValueError, OverflowError):
+            valid_count = False
+        if not valid_count:
+            raise SolverContractError("sampler num_occurrences must be a positive integer")
+        aggregated[vector] = aggregated.get(vector, 0) + int(count_value)
     if not aggregated:
         raise SolverContractError("sampler returned no samples")
     ordered = sorted(
