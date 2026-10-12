@@ -1,6 +1,7 @@
 import math
 import tempfile
 import unittest
+from itertools import product
 from pathlib import Path
 
 from cbpfr.experiments import held_out_lookup, paired_binary_difference, require_equal_evaluation_budget
@@ -25,6 +26,24 @@ class CBPFRTests(unittest.TestCase):
         base=dict(name="response", upper=1.0, z=1.0, scale=1.0, weight=1.0, uncertainty_kind="known_se")
         base.update(kwargs)
         return MetricLimit(**base)
+
+    def test_qubo_expansion_matches_direct_penalties_for_every_binary_state(self):
+        spec = CoreSpec(
+            name="exhaustive-two-position-test",
+            positions=("A", "B"),
+            boundary=frozenset(),
+            inner=frozenset(),
+            edges=(("A", "B"),),
+            inventory=(1, 1, 0),
+            description="Exhaustive mathematical fixture; not reactor geometry.",
+        )
+        model = build_usmanov_style_qubo(spec)
+        for vector in product((0, 1), repeat=model.variable_count):
+            self.assertAlmostEqual(
+                model.energy(vector),
+                sum(model.direct_penalty_terms(vector).values()),
+                msg=f"energy mismatch for vector={vector}",
+            )
 
     def test_exact_toy_core_has_expected_size(self):
         self.assertEqual(self.model.variable_count, 21)
