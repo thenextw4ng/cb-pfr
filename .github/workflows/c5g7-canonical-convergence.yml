@@ -171,6 +171,15 @@ jobs:
                   raise SystemExit(f"{name}: run status is {summary.get('status')}")
           print("Three complete independent canonical evidence bundles are present.")
           PY
+      - name: Audit normalized spatial distribution against published C5G7 reference
+        shell: bash -el {0}
+        run: |
+          python scripts/audit_c5g7_spatial_reference.py \
+            --run-json /tmp/c5g7-canonical-convergence/seed_720000/analysis/assembly_fission.json \
+            --run-json /tmp/c5g7-canonical-convergence/seed_730000/analysis/assembly_fission.json \
+            --run-json /tmp/c5g7-canonical-convergence/seed_740000/analysis/assembly_fission.json \
+            --out /tmp/c5g7-canonical-convergence/spatial_reference_audit.json
+          cat /tmp/c5g7-canonical-convergence/spatial_reference_audit.json
       - name: Aggregate provisional numerical screens
         shell: bash -el {0}
         run: |
