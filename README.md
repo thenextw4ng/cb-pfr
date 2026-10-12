@@ -1,6 +1,16 @@
-# CB-PFR — Confidence-Bounded Physical Feasibility Ranking
+# CB-PFR Simulator
 
-> An uncertainty-aware post-optimization selection layer for candidate configurations.
+> Research software connecting QUBO-based candidate generation, OpenMC neutron-transport evaluation, and CB-PFR uncertainty-aware post-optimization screening.
+
+**Project/software name:** CB-PFR Simulator  
+**Method name:** CB-PFR — Confidence-Bounded Physical Feasibility Ranking  
+**Research status:** reproducible research prototype with exploratory C5G7/OpenMC evidence; not a physically validated reactor-design tool.
+
+## Start here: focused research summary
+
+The repository has accumulated many historical experiments and supporting artifacts. For the current research story, methods, relevant results, campaign distinctions, supported claims, and limitations, start with the [CB-PFR Simulator Research Dossier](docs/CB-PFR_SIMULATOR_RESEARCH_DOSSIER.md). The [methodological manuscript draft](paper/CBPFR_Methodological_Manuscript_Draft_v0.1.md) is the corresponding publication artifact.
+
+**Core contribution:** make the transition from discrete optimization to physics-based evaluation and uncertainty-aware candidate screening explicit and auditable. The current composition-only QUBO enforces the two-MOX/two-UO₂ constraint but ties all six feasible layouts; it does not itself optimize neutron-physics performance. Current evidence supports software integration and exploratory analysis, not a physically optimal layout, complete benchmark validation, CB-PFR superiority, or quantum advantage.
 
 **Author:** Fahry Bagus Adiputra  
 **Version:** 0.1.0  
