@@ -207,12 +207,26 @@ try:
     else:
         st.info("Uploaded statepoint loaded for inspection. Its identity has not been associated with a candidate layout.")
     st.caption(f"{statepoint_origin} · SHA-256: {statepoint_hash}")
+    if not statepoint["mesh_tallies"]:
+        st.warning("No compatible mesh tallies were found in this statepoint.")
+        st.stop()
     mesh_tally = st.selectbox(
         "Mesh tally",
         statepoint["mesh_tallies"],
         format_func=lambda item: f'{item["tally_name"]} · {item["dimensions"][0]} × {item["dimensions"][1]} mesh',
+        key="physics_mesh_tally",
     )
-    score_name = st.selectbox("Tally score", mesh_tally["scores"])
+    if not mesh_tally["scores"]:
+        st.warning("The selected mesh tally has no readable score bins.")
+        st.stop()
+    score_name = st.selectbox("Tally score", mesh_tally["scores"], key="physics_tally_score")
+    view_col, scale_col, palette_col = st.columns([1, 1, 1.2])
+    with view_col:
+        field_view = st.selectbox("Field view", ["Mean tally", "Relative SD (%)"], key="physics_field_view")
+    with scale_col:
+        color_scale = st.selectbox("Mean scale", ["Log₁₀", "Linear"], key="physics_mean_scale")
+    with palette_col:
+        palette = st.selectbox("Mean color palette", ["Viridis", "Cividis", "Plasma", "Turbo"], key="physics_palette")
     score_index = mesh_tally["scores"].index(score_name)
     dims = mesh_tally["dimensions"]
     mean_values = mesh_tally["mean"][:, score_index]
@@ -226,23 +240,43 @@ try:
     metric_left, metric_right = st.columns([1.55, 1], gap="large")
     with metric_left:
         positive_values = mean_values[np.isfinite(mean_values) & (mean_values > 0)]
-        if positive_values.size:
-            log_grid = np.full(mean_grid.shape, np.nan, dtype=float)
-            log_grid[positive] = np.log10(mean_grid[positive])
-            hover_mean = np.where(np.isfinite(mean_grid), mean_grid, np.nan)
+        if field_view == "Relative SD (%)":
+            field_grid = rel_grid
+            hover_values = rel_grid
+            field_title = f"{score_name} · relative Monte Carlo SD"
+            colorbar_title = "Relative SD (%)"
+            colorscale = "Magma"
+        else:
+            field_grid = mean_grid.copy()
+            if color_scale == "Log₁₀":
+                field_grid[~positive] = np.nan
+                field_grid[positive] = np.log10(field_grid[positive])
+                colorbar_title = "log₁₀(score mean)"
+            else:
+                field_grid[~np.isfinite(field_grid)] = np.nan
+                colorbar_title = "Score mean"
+            hover_values = mean_grid
+            field_title = f"{score_name} · mesh tally mean ({color_scale.lower()} display)"
+            colorscale = palette
+        if np.isfinite(field_grid).any():
             fig_mesh = go.Figure(go.Heatmap(
-                z=log_grid,
-                customdata=hover_mean,
-                colorscale="Viridis",
-                colorbar={"title": "log₁₀(score mean)"},
-                hovertemplate="Mesh x-bin %{x}<br>Mesh y-bin %{y}<br>Mean %{customdata:.6g}<extra></extra>",
+                z=field_grid,
+                customdata=hover_values,
+                colorscale=colorscale,
+                colorbar={"title": colorbar_title},
+                hovertemplate="Mesh x-bin %{x}<br>Mesh y-bin %{y}<br>Recorded value %{customdata:.6g}<extra></extra>",
                 connectgaps=False,
             ))
-            fig_mesh.update_layout(title=f"{score_name} · mesh tally mean (log color scale)", xaxis_title="Mesh x-bin index", yaxis_title="Mesh y-bin index")
+            fig_mesh.update_layout(
+                title=field_title,
+                xaxis_title="Mesh x-bin index",
+                yaxis_title="Mesh y-bin index",
+                yaxis={"autorange": "reversed"},
+            )
             base_layout(fig_mesh, height=520)
-            st.plotly_chart(fig_mesh, use_container_width=True, config={"displaylogo": False})
+            st.plotly_chart(fig_mesh, use_container_width=True, config={"displaylogo": False, "scrollZoom": True})
         else:
-            st.warning("No positive finite means are available for this score.")
+            st.warning("No finite values are available for this selected field.")
     with metric_right:
         fig_unc = go.Figure(go.Heatmap(
             z=rel_grid,
@@ -251,9 +285,14 @@ try:
             hovertemplate="Mesh x-bin %{x}<br>Mesh y-bin %{y}<br>Relative SD %{z:.4g}%<extra></extra>",
             connectgaps=False,
         ))
-        fig_unc.update_layout(title=f"{score_name} · relative Monte Carlo SD", xaxis_title="Mesh x-bin index", yaxis_title="Mesh y-bin index")
+        fig_unc.update_layout(
+            title=f"{score_name} · relative Monte Carlo SD",
+            xaxis_title="Mesh x-bin index",
+            yaxis_title="Mesh y-bin index",
+            yaxis={"autorange": "reversed"},
+        )
         base_layout(fig_unc, height=520)
-        st.plotly_chart(fig_unc, use_container_width=True, config={"displaylogo": False})
+        st.plotly_chart(fig_unc, use_container_width=True, config={"displaylogo": False, "scrollZoom": True})
 
     positive_count = int(np.count_nonzero(positive))
     zero_count = int(np.count_nonzero(np.isfinite(mean_grid) & (mean_grid == 0)))
