@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07111b">
+  <title>CB-PFR | Scientific Workstation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="/"><span class="brand-mark">C</span><span>CB<span class="accent">·</span>PFR<small>SCIENTIFIC WORKSTATION</small></span></a>
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item active" href="#overview"><span>◫</span> Overview</a>
+      <a class="nav-item" href="#candidates"><span>⌘</span> Candidate observatory</a>
+      <a class="nav-item" href="#physics"><span>▦</span> Physics evidence</a>
+      <a class="nav-item" href="#integrity"><span>◎</span> Evidence integrity</a>
+      <div class="sidebar-bottom"><div class="live-dot"></div><div><b>Evidence-aware mode</b><small>Recorded repository data only</small></div></div>
+    </aside>
+    <main class="main" id="overview">
+      <header class="topbar"><div><div class="eyebrow">RESEARCH CONTROL ROOM / 01</div><h1>Physical Feasibility <span>Ranking Workbench</span></h1><p class="lede">Inspect candidate configurations, recorded transport indicators, uncertainty, and evidence integrity in one scientific workspace.</p></div><div class="status-pill"><i></i> EXPLORATORY</div></header>
+      <div class="notice"><b>SCIENTIFIC BOUNDARY</b><span>This dashboard displays recorded evidence. It does not launch OpenMC, infer missing spatial fields, or certify a physical design.</span></div>
+      <section class="metrics" id="metrics"><article class="metric"><label>Candidate records</label><strong>—</strong><small>Loading repository data</small></article><article class="metric"><label>Unique layouts</label><strong>—</strong><small>Distinct signatures</small></article><article class="metric"><label>k-effective span</label><strong>—</strong><small>Recorded mean values</small></article><article class="metric"><label>Recorded seeds</label><strong>—</strong><small>Distinct seed values</small></article></section>
+      <section class="section" id="candidates"><div class="section-head"><div><div class="eyebrow">01 / CANDIDATE OBSERVATORY</div><h2>Configuration inspector</h2><p>Choose a recorded candidate to inspect its layout and available aggregate metrics.</p></div><div class="control"><label for="candidateSelect">SELECT CANDIDATE</label><select id="candidateSelect"><option>Loading…</option></select></div></div>
+        <div class="grid two"><article class="panel layout-panel"><div class="panel-head"><div><h3>Assembly placement</h3><p>2 × 2 categorical arrangement</p></div><span class="tag">CONFIGURATION</span></div><div id="layoutView" class="layout-view"><div class="loading">Loading recorded configuration…</div></div><div class="legend"><span><i class="uo2"></i> UO₂</span><span><i class="mox"></i> MOX</span><span class="muted">Schematic only · not pin-cell geometry</span></div><div id="layoutCaption" class="caption">—</div></article>
+          <article class="panel chart-panel"><div class="panel-head"><div><h3>Candidate comparison</h3><p>Repository-reported metrics</p></div><div class="control compact"><label for="metricSelect">METRIC</label><select id="metricSelect"><option value="keff_mean">k-effective mean</option><option value="aggregate_flux_score">Aggregate flux score</option><option value="aggregate_fission_score">Aggregate fission score</option></select></div></div><div id="candidateChart" class="chart"></div></article></div>
+      </section>
+      <section class="section" id="physics"><div class="section-head"><div><div class="eyebrow">02 / PHYSICS EVIDENCE</div><h2>Recorded transport indicators</h2><p>Explore available aggregate values without treating them as spatial fields.</p></div></div>
+        <div class="grid two"><article class="panel"><div class="panel-head"><div><h3>k-effective distribution</h3><p>Candidate-summary records</p></div><span class="tag">RECORDED</span></div><div id="distributionChart" class="chart"></div></article><article class="panel"><div class="panel-head"><div><h3>Aggregate indicators</h3><p>Scores shown in repository units (where defined)</p></div><span class="tag">SUMMARY DATA</span></div><div id="aggregateChart" class="chart"></div></article></div>
+        <div class="note-row"><span class="note-icon">i</span><p><b>Interpretation limit.</b> Aggregate flux/fission scores are not spatial distributions. The repository’s separately archived 51 × 51 OpenMC mesh tally is a distinct evidence source and is not reconstructed by this summary view.</p></div>
+      </section>
+      <section class="section" id="integrity"><div class="section-head"><div><div class="eyebrow">03 / EVIDENCE INTEGRITY</div><h2>Data provenance</h2><p>Current source and limitations reported by the backend.</p></div></div><article class="panel integrity-panel"><div class="integrity-row"><span class="check">✓</span><div><b>Candidate summary loaded from repository</b><p id="sourcePath">Waiting for API…</p></div><span class="tag">SOURCE FILE</span></div><div class="integrity-row"><span class="warn">!</span><div><b>Physical validation not established</b><p>No claim of physical feasibility certification is made by this UI.</p></div><span class="tag warning">NOT CERTIFIED</span></div><div class="integrity-row"><span class="warn">!</span><div><b>QUBO → C5G7 mapping</b><p>Repository evidence currently records no defensible mapping.</p></div><span class="tag warning">UNRESOLVED</span></div><div id="apiError" class="error" hidden></div></article></section>
+      <footer><span>CB-PFR · Confidence-Bounded Physical Feasibility Ranking</span><span>Research prototype / evidence-aware interface</span></footer>
+    </main>
+  </div>
+</body>
+</html>
