@@ -32,7 +32,7 @@ A separate higher-budget canonical UMMU confirmation used three seed bases 72000
 
 ## Critical spatial-tally limitation
 
-The archived tally contains mesh/global `flux`, `fission`, and `nu-fission` scores. The assembly-level value used in the current selection workflow is a **fission-rate proxy**, not a direct power tally. The assembly-power reference is only comparable after the score definition, material-dependent fission energy treatment, spatial integration, normalization, and uncertainty/covariance assumptions are justified. A close normalized shape alone cannot close this gate.
+The archived tally contains mesh/global `flux`, `fission`, and `nu-fission` scores. The assembly-level value is a **normalized fission-rate distribution**, not absolute power in watts. This distinction matters, but it does not make the tally inherently incomparable: the [OpenMC C5G7 multigroup example](https://docs.openmc.org/en/v0.11.0/examples/mg-mode-part-i.html) explicitly uses the fission reaction-rate tally as its pin-power distribution and normalizes it to the average pin power. After assembly integration and normalization, the current spatial screen is therefore a defensible *relative-power shape* comparison, subject to confirming the exact assembly-bin mapping and reference uncertainty treatment.
 
 The 2020 Frontiers report provides the reference assembly-power values and uncertainty scale (inner UO2 492.8 ± 0.10%, MOX 211.7 ± 0.18%, outer UO2 139.8 ± 0.20%) and demonstrates that assembly power and pin power are separate benchmark observables. These values should not be treated as a direct one-to-one reference for an unconverted fission-rate tally.
 
@@ -47,7 +47,7 @@ The existing canonical UMMU spatial audit compared normalized assembly fission-r
 | p10 | 0.2003942 | 0.2004735 | −0.0395% | −0.240 |
 | p11 | 0.1321494 | 0.1323864 | −0.1790% | −0.817 |
 
-The z values use first-order uncertainty propagation, assume independent reference assembly-power estimates, and combine those with the between-run standard error from three normalized run-level fractions. A reference covariance matrix was unavailable. All four values lie within approximately one combined standard uncertainty under these assumptions, but this does **not** establish a benchmark pass: the computed quantity is a fission-rate proxy, not a demonstrated power-equivalent tally, and the covariance/tally-definition assumptions need review.
+The observed relative differences have an RMS of approximately 0.097% and a maximum absolute difference of approximately 0.179%, both within the project's provisional spatial-screen limits (2% RMS and 5% maximum absolute error). This is a provisional normalized-shape screen pass, not an absolute-power validation. The z values use first-order uncertainty propagation, assume independent reference assembly-power estimates, and combine those with the between-run standard error from three normalized run-level fractions. A reference covariance matrix was unavailable. All four values lie within approximately one combined standard uncertainty under these assumptions, but this does **not** establish a benchmark pass: the computed quantity is a fission-rate proxy, not a demonstrated power-equivalent tally, and the covariance/tally-definition assumptions need review.
 
 ## Gate outcome
 
@@ -55,7 +55,7 @@ The z values use first-order uncertainty propagation, assume independent referen
 - **Canonical UMMU scalar k-effective numerical screen:** provisional project screen pass from the separate three-seed confirmation.
 - **Independent model-identity sign-off:** still requires a reviewer to inspect the primary benchmark specification and sign the machine-readable manifest; this report is not a substitute for independent sign-off.
 - **Source convergence:** the archived six-layout run remains review-required; a larger-budget six-layout transport campaign is being run separately. No convergence claim should be made until its raw batch traces are analyzed against declared criteria.
-- **Assembly power / spatial acceptance:** blocked pending tally comparability and uncertainty treatment.
+- **Normalized spatial-shape screen:** provisional numerical screen passes (RMS 0.097%, maximum absolute difference 0.179%); independent review of assembly-bin mapping and normalized reference uncertainty/covariance remains required. Absolute power in watts is not established.
 - **Six-layout physical winner:** not selected; no winner is justified by these checks.
 
 **Bottom line:** the canonical input structure and standard group boundaries are consistent with the published 2D C5G7 description, and the canonical k-effective screen is numerically close to reference. The remaining physical-validation blockers are specific and testable: independent sign-off, source convergence, and a benchmark-compatible spatial power observable. This is benchmark verification, not reactor-safety certification.
