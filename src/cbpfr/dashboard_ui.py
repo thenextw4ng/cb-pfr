@@ -149,6 +149,7 @@ def render_workspace_sidebar(active: str, df: pd.DataFrame):
             ("Physics Fields", "pages/02_Physics_Field_Explorer.py"),
             ("Monte Carlo Results", "pages/03_Monte_Carlo_Reliability.py"),
             ("QUBO / Optimization", "pages/04_QUBO_Optimization.py"),
+            ("High-Budget Evidence", "pages/06_High_Budget_Evidence.py"),
             ("Decision Workspace", "pages/06_Decision_Workspace.py"),
             ("Provenance & Validation", "pages/05_Provenance_Validation.py"),
             ("Help & Methods", "pages/07_Help_Methods.py"),
