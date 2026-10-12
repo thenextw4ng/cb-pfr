@@ -26,3 +26,7 @@
  .section-actions{align-items:flex-start}
  #meshProfile{height:300px}
 }
+
+.field-chart{min-height:280px}
+#assemblyMap,#assemblyBar{height:390px}
+@media(max-width:680px){#assemblyMap,#assemblyBar{height:320px}}
