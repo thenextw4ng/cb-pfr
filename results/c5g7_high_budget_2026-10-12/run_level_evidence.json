@@ -289,5 +289,10 @@
       "threads": 2,
       "mgxs_sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129"
     }
-  ]
+  ],
+  "source_run_level_csv_sha256": "fb9808aad32bdffed09b3f18f69b845e401ff4e63dad935c9777e7ae0d2e518e",
+  "source_export_audit_status": "RUN_EVIDENCE_EXPORTED_INTEGRITY_PASS_PHYSICAL_VALIDATION_NOT_CERTIFIED",
+  "source_objective_audit_status": "EVIDENCE_INTEGRITY_PASS_DESIGN_SELECTION_BLOCKED",
+  "source_budget_comparison_status": "DESCRIPTIVE_BUDGET_COMPARISON_COMPLETE",
+  "source_artifact_sha256": "7b085fa1a07495bdc7b654c120c83cf75164209ae8ddb8980b3200ae1a3ed49a"
 }
