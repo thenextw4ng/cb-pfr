@@ -1,0 +1,74 @@
+{
+  "schema_version": "cbpfr.comparison-readiness.v1",
+  "as_of": "2026-10-12",
+  "input_csv": "results/c5g7_six_layout_confirmation_2026-10-12/run_level_results.csv",
+  "input_csv_sha256": "3eb5d575cc5076ead39de04907beddd25fa2310465b508208579bbd4a5c0192d",
+  "run_count": 18,
+  "checks": {
+    "nonempty_csv": true,
+    "required_columns_present": true,
+    "exactly_18_runs": true,
+    "six_expected_layouts": true,
+    "three_seed_rounds": true,
+    "unique_seed_ids": true,
+    "unique_statepoint_hashes": true,
+    "single_mgxs_hash": true,
+    "group_structure_pass": true,
+    "common_run_settings": true
+  },
+  "descriptive_proxy_holdout": [
+    {
+      "held_out_round": "820000",
+      "training_rounds": [
+        "830000",
+        "840000"
+      ],
+      "proxy_selected_layout": "MMUU",
+      "held_out_proxy_of_selected": 1.2947109741086231,
+      "held_out_proxy_minimum_layout": "MMUU",
+      "held_out_proxy_minimum": 1.2947109741086231,
+      "descriptive_proxy_regret": 0,
+      "same_layout_as_held_out_proxy_minimum": true
+    },
+    {
+      "held_out_round": "830000",
+      "training_rounds": [
+        "820000",
+        "840000"
+      ],
+      "proxy_selected_layout": "MMUU",
+      "held_out_proxy_of_selected": 1.295351514527503,
+      "held_out_proxy_minimum_layout": "MMUU",
+      "held_out_proxy_minimum": 1.295351514527503,
+      "descriptive_proxy_regret": 0,
+      "same_layout_as_held_out_proxy_minimum": true
+    },
+    {
+      "held_out_round": "840000",
+      "training_rounds": [
+        "820000",
+        "830000"
+      ],
+      "proxy_selected_layout": "MMUU",
+      "held_out_proxy_of_selected": 1.2960441797456754,
+      "held_out_proxy_minimum_layout": "MMUU",
+      "held_out_proxy_minimum": 1.2960441797456754,
+      "descriptive_proxy_regret": 0,
+      "same_layout_as_held_out_proxy_minimum": true
+    }
+  ],
+  "qubo_score_table_status": "MISSING",
+  "decision_rule_status": "MISSING",
+  "comparison_status": "BLOCKED_NOT_IDENTIFIABLE",
+  "cbpfr_superiority_established": false,
+  "physical_validation_certified": false,
+  "winner_selected": false,
+  "blockers": [
+    "No comparable pre-physics QUBO score table for all six layouts",
+    "No approved, predeclared physical acceptance-rule file",
+    "Independent primary C5G7 model/tally sign-off is not recorded in this input package",
+    "Three seed rounds are exploratory only; prospective held-out evaluation is needed for a confirmatory superiority claim",
+    "Fission-rate peaking factor is a relative proxy, not absolute power or an approved safety criterion"
+  ],
+  "interpretation": "Run-table integrity checks pass. The descriptive holdout uses the same fission-rate proxy for selection and evaluation, and only three rounds exist. The feasible material-placement QUBO E=A*(sum(y_i)-2)^2 ties across all exactly-two-MOX layouts and cannot rank them. Post-physics selector energy is not a pre-physics QUBO objective. No physical validation, winner, or CB-PFR superiority is established."
+}
