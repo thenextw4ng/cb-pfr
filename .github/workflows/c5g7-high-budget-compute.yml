@@ -244,3 +244,5 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           compression-level: 1
+
+# Manual retrigger marker: requested additional C5G7 repeated-run evidence on 2026-10-12.
