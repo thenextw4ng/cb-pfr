@@ -1,5 +1,7 @@
 # CB-PFR A–G Evidence Closeout — 2026-10-12
 
+**Governing acceptance contract:** [Scientific and Physical Validation Contract A–G](https://github.com/thenextw4ng/cb-pfr/blob/main/reports/CBPFR_SCIENTIFIC_PHYSICAL_VALIDATION_CONTRACT_A-G_2026-10-12.md). The gates target physical/scientific validation; passing software tests or numerical screens alone does not close them.
+
 **Purpose:** record what was verified from the canonical high-budget C5G7 artifact and distinguish software/provenance evidence from physical validation.
 
 **Overall status:** `SOFTWARE_TESTS_AND_RECOVERY_PASS; CANONICAL_NUMERICAL_SCREEN_PASS; SPATIAL_SHAPE_SANITY_CHECK_PASS; SOURCE_CONVERGENCE_AND_FULL_PHYSICAL_VALIDATION_REVIEW_OPEN`.
