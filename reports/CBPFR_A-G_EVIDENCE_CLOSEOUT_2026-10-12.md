@@ -4,7 +4,7 @@
 
 **Purpose:** record what was verified from the canonical high-budget C5G7 artifact and distinguish software/provenance evidence from physical validation.
 
-**Overall status:** `SOFTWARE_TESTS_AND_RECOVERY_PASS; CANONICAL_NUMERICAL_SCREEN_PASS; SPATIAL_SHAPE_SANITY_CHECK_PASS; SOURCE_CONVERGENCE_AND_FULL_PHYSICAL_VALIDATION_REVIEW_OPEN`.
+**Overall status:** `SOFTWARE_TESTS_AND_RECOVERY_PASS; CANONICAL_NUMERICAL_SCREEN_PASS; NORMALIZED_SPATIAL_SHAPE_SCREEN_PASS; CANONICAL_QUALITATIVE_SOURCE_STABILITY_REVIEW_PASS; SIX_LAYOUT_HIGH_BUDGET_CONFIRMATION_IN_PROGRESS`.
 
 This report does not assert that all seven gates have passed. It closes the evidence review to the extent supported by artifacts currently available and identifies the remaining non-negotiable blockers. The project scope remains frozen to A–G.
 
@@ -76,18 +76,18 @@ This is a C5G7 assembly-placement reformulation, **not** a reproduction or mater
 
 ## D — Data integrity and reproducibility
 
-**Status: `THREE-RUN ARTIFACT INTEGRITY PASS; RECOVERY WORKFLOW END-TO-END PASS; SOURCE-CONVERGENCE INTERPRETATION OPEN`.**
+**Status: `THREE-RUN ARTIFACT INTEGRITY PASS; RECOVERY WORKFLOW END-TO-END PASS; CANONICAL QUALITATIVE SOURCE-STABILITY REVIEW PASS; SIX-LAYOUT HIGH-BUDGET TRACE REVIEW PENDING`.**
 
 - Three distinct seeds and three distinct statepoint hashes are present.
 - Raw HDF5 audits pass 22/22 checks per run.
 - Geometry and MGXS hashes are common across runs; computational settings are the same apart from the intentionally distinct seed and run-specific file paths.
 - Statepoint, summary, raw audit, assembly-fission output, settings, MGXS, and logs are preserved in the source artifact.
 
-The original transport workflow failed only at aggregation because it did not generate source-convergence files required by its own aggregator. The repaired recovery workflow has now executed end-to-end successfully: it installed OpenMC 0.16.0, downloaded the original saved artifact, generated per-seed JSON/CSV diagnostics from the saved statepoints, ran the repository aggregator, and uploaded artifact `11727463825`. This is a post-processing recovery, not a new transport run. The remaining D/E issue is scientific interpretation of the saved traces, not missing diagnostic files.
+The original transport workflow failed only at aggregation because it did not generate source-convergence files required by its own aggregator. The repaired recovery workflow has now executed end-to-end successfully: it installed OpenMC 0.16.0, downloaded the original saved artifact, generated per-seed JSON/CSV diagnostics from the saved statepoints, ran the repository aggregator, and uploaded artifact `11727463825`. This is a post-processing recovery, not a new transport run. Manual review of the canonical UMMU inactive-entropy and active k-generation/entropy traces found a clear early entropy settling followed by a plateau and no sustained monotonic drift. This is a qualitative internal source-stability review, not an automated convergence certificate. The six-layout high-budget confirmation is now running in [Actions run 38226185450](https://github.com/thenextw4ng/cb-pfr/actions/runs/38226185450); its own traces must be reviewed before closing the design-study stability gate.
 
 ## E — Metrics and benchmark protocol
 
-**Status: `PROVISIONAL_SCALAR_SCREEN_PASS; SPATIAL-SHAPE SANITY CHECK PASS; CONVERGENCE REVIEW AND FULL BENCHMARK ACCEPTANCE BLOCKED`.**
+**Status: `CANONICAL SCALAR SCREEN PASS; NORMALIZED SPATIAL-SHAPE SCREEN PASS; CANONICAL QUALITATIVE SOURCE-STABILITY REVIEW PASS; SIX-LAYOUT CONFIRMATION AND INDEPENDENT SPECIFICATION REVIEW PENDING`.**
 
 Reference target used by the repository protocol: (k_{eff}=1.18655), reference standard uncertainty (0.000095). The combined uncertainty calculation uses the reference uncertainty and the empirical between-seed standard error in quadrature.
 
