@@ -2,6 +2,7 @@ const $ = (id) => document.getElementById(id);
 const palette = {text:"#e8f1f7",muted:"#91a8b9",line:"#263f52",cyan:"#55d4df",blue:"#247fa0",orange:"#f5bb62"};
 let records = [];
 let metadata = {};
+let meshData = null;
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => row[key] !== null && row[key] !== undefined && row[key] !== "" && Number.isFinite(Number(row[key]));
 function label(row){return String(row.candidate_id ?? "Candidate") + " · " + String(row.layout_signature ?? "layout");}
@@ -53,6 +54,7 @@ async function init(){
   $("candidateSelect").innerHTML=records.map(r=>'<option value="'+String(r.candidate_id).replaceAll('"',"&quot;")+'">'+label(r)+'</option>').join("");
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
   showCandidate();drawOtherCharts();
+  await initMesh();
  }catch(error){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
   $("layoutView").innerHTML='<div class="loading">Evidence unavailable — no scientific values are fabricated.</div>';
@@ -60,3 +62,60 @@ async function init(){
  }
 }
 document.addEventListener("DOMContentLoaded",init);
+
+/* Spatial visualization is loaded from the archived OpenMC HDF5 statepoint via the local Python API. */
+const fieldPalette = {Viridis:"Viridis",Cividis:"Cividis",Plasma:"Plasma",Magma:"Magma",Turbo:"Turbo"};
+function fieldStats(values){
+ const finite=values.flat().filter(v=>Number.isFinite(v));
+ const positive=finite.filter(v=>v>0);
+ return {finite:finite.length,positive:positive.length,min:finite.length?Math.min(...finite):null,max:finite.length?Math.max(...finite):null,mean:finite.length?finite.reduce((a,b)=>a+b,0)/finite.length:null};
+}
+function currentField(){
+ if(!meshData)return null;
+ const score=$("meshScore").value, view=$("meshView").value, scale=$("meshScale").value;
+ const item=meshData.mesh_tallies[0], record=item.scores[score];
+ if(!record)return null;
+ const mean=record.mean, sd=record.std_dev;
+ const relative=mean.map((row,y)=>row.map((v,x)=>Number.isFinite(v)&&v>0&&Number.isFinite(sd[y][x])&&sd[y][x]>=0?100*sd[y][x]/v:null));
+ let values=(view==="relative_sd"?relative:mean).map(row=>row.map(v=>v===null?null:Number(v)));
+ let colorTitle=view==="relative_sd"?"Relative Monte Carlo SD (%)":"Tally mean";
+ if(view==="mean"&&scale==="log"){
+  values=values.map(row=>row.map(v=>v!==null&&v>0?Math.log10(v):null));
+  colorTitle="log₁₀(tally mean)";
+ } else if(view==="mean") colorTitle="Tally mean";
+ return {item,score,view,mean,sd,relative,values,colorTitle,stats:fieldStats(mean)};
+}
+function drawMesh(){
+ if(!meshData)return;
+ const f=currentField();
+ if(!f){$("meshStatus").textContent="SCORE UNAVAILABLE";return;}
+ const palette=$("meshPalette").value;
+ const z=f.values, raw=f.view==="relative_sd"?f.relative:f.mean;
+ const xs=Array.from({length:f.item.dimensions[0]},(_,i)=>i),ys=Array.from({length:f.item.dimensions[1]},(_,i)=>i);
+ const hover=(title)=>"x-bin %{x}<br>y-bin %{y}<br>"+title+" %{customdata:.6g}<extra></extra>";
+ chart("meshHeatmap",[{type:"heatmap",x:xs,y:ys,z:z,customdata:raw,colorscale:f.view==="relative_sd"?"Magma":palette,colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:hover(f.colorTitle),connectgaps:false}],{margin:{l:50,r:25,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Mesh x-bin index"},yaxis:{...baseLayout.yaxis,title:"Mesh y-bin index",autorange:"reversed"},showlegend:false});
+ chart("meshContour",[{type:"contour",x:xs,y:ys,z:z,customdata:raw,colorscale:f.view==="relative_sd"?"Magma":palette,contours:{coloring:"heatmap",showlines:true},colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:hover(f.colorTitle),connectgaps:false,ncontours:14}],{margin:{l:50,r:25,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Mesh x-bin index"},yaxis:{...baseLayout.yaxis,title:"Mesh y-bin index",autorange:"reversed"},showlegend:false});
+ chart("meshSurface",[{type:"surface",x:xs,y:ys,z:z, surfacecolor:z,colorscale:f.view==="relative_sd"?"Magma":palette,colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:"x-bin %{x}<br>y-bin %{y}<br>Displayed value %{z:.6g}<extra></extra>",connectgaps:false,showscale:true}],{margin:{l:5,r:5,t:5,b:5},scene:{xaxis:{title:"X bin",gridcolor:palette.line,color:palette.muted},yaxis:{title:"Y bin",gridcolor:palette.line,color:palette.muted},zaxis:{title:f.colorTitle,gridcolor:palette.line,color:palette.muted},bgcolor:"rgba(0,0,0,0)",camera:{eye:{x:1.55,y:1.55,z:1.1}}}});
+ const st=f.stats;
+ $("fieldKpis").innerHTML=[["Mesh dimensions",f.item.dimensions[0]+" × "+f.item.dimensions[1],"Archived tally bins"],["Finite bins",st.finite.toLocaleString(),"Finite recorded means"],["Positive bins",st.positive.toLocaleString(),"Positive mean tally values"],["Max tally mean",st.max===null?"—":st.max.toExponential(4),"Recorded "+f.score+" mean"]].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
+}
+async function initMesh(){
+ try{
+  const response=await fetch("/api/mesh",{headers:{Accept:"application/json"}});
+  if(!response.ok){let detail="HTTP "+response.status;try{detail=(await response.json()).error||detail}catch(_){}throw new Error(detail)}
+  meshData=await response.json();
+  if(!meshData.mesh_tallies||!meshData.mesh_tallies.length)throw new Error("No compatible 2D mesh tally in the archived statepoint.");
+  const item=meshData.mesh_tallies[0];
+  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"HASH NOT CHECKED";
+  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
+  $("meshProvenance").textContent=meshData.provenance.source+" · "+item.dimensions.join(" × ")+" bins · tally "+item.tally_name+" · SHA-256 "+meshData.provenance.sha256+". "+(meshData.provenance.hash_matches===true?"Archive member hash matches the committed baseline.":meshData.provenance.hash_matches===false?"WARNING: archive hash differs from the recorded baseline; verify provenance before scientific comparison.":"Baseline hash was unavailable; provenance has not been hash-verified.")+" Mesh indices are not mapped to physical assembly coordinates.";
+  const scoreSelect=$("meshScore");scoreSelect.innerHTML=Object.keys(item.scores).map(k=>'<option value="'+k+'">'+k+'</option>').join("");
+  ["meshScore","meshView","meshScale","meshPalette"].forEach(id=>$(id).addEventListener("change",drawMesh));
+  drawMesh();
+ }catch(error){
+  $("meshStatus").textContent="SPATIAL DATA UNAVAILABLE";
+  $("meshStatus").classList.add("warning");
+  $("meshProvenance").textContent="The archived spatial tally could not be loaded: "+error.message;
+  ["meshHeatmap","meshContour","meshSurface"].forEach(id=>$(id).innerHTML='<div class="loading">No spatial values displayed. No scientific data have been fabricated.</div>');
+ }
+}
