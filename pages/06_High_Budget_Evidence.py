@@ -19,6 +19,7 @@ from cbpfr.dashboard_ui import (
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE_PATH = ROOT / "results" / "c5g7_high_budget_2026-10-12" / "run_level_evidence.json"
 EXPECTED_LAYOUTS = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
+GROUP_EDGES_CSV = "1e-05;0.0635;10.0;100.0;1000.0;500000.0;1000000.0;20000000.0"
 T_CRITICAL_DF2_95 = 4.3026527299
 
 
@@ -68,6 +69,10 @@ def load_and_audit(path: Path) -> tuple[dict, pd.DataFrame, list[str]]:
             issues.append(f"Metric {col} contains missing or non-finite values.")
     if runs["keff_std_dev"].le(0).any():
         issues.append("Reported within-run keff standard deviations must be positive.")
+    # These two fields are deterministic schema adapters required by the audited CLI.
+    # They are derived from the declared six-layout encoding and group contract, not guessed measurements.
+    runs["candidate_id"] = "c5g7-2x2-" + runs["layout_signature"].astype(str)
+    runs["mgxs_energy_group_boundaries_eV"] = GROUP_EDGES_CSV
     return payload, runs, issues
 
 
@@ -230,7 +235,7 @@ with tab_runs:
     fig_run.update_layout(xaxis_title="Seed round base", yaxis_title=metric.replace("_", " ").title())
     st.plotly_chart(fig_run, use_container_width=True, config={"displaylogo": False})
     st.dataframe(
-        filtered[["round", "layout_signature", "seed", "keff_mean", "keff_std_dev", "fission_rate_peaking_factor", "group_structure_audit", "batches", "inactive", "particles_per_batch", "threads"]],
+        filtered[["round", "candidate_id", "layout_signature", "seed", "keff_mean", "keff_std_dev", "fission_rate_peaking_factor", "statepoint_sha256", "mgxs_sha256", "group_structure_audit", "mgxs_energy_group_boundaries_eV", "batches", "inactive", "particles_per_batch", "threads"]],
         use_container_width=True, hide_index=True,
     )
     st.download_button(
@@ -265,6 +270,13 @@ with tab_provenance:
         "cbpfr_c5g7_high_budget_run_level_evidence.json",
         "application/json",
     )
+    st.download_button(
+        "Download integrated-pipeline CSV",
+        runs.to_csv(index=False).encode("utf-8"),
+        "cbpfr_c5g7_high_budget_pipeline_input.csv",
+        "text/csv",
+    )
+    st.caption("The CSV adapter adds the deterministic candidate ID and declared corrected-group boundary string required by the CLI. It preserves the recorded run values and hashes unchanged.")
     st.link_button("Open source GitHub Actions run", payload["source_workflow_run"])
 
 st.markdown("---")
