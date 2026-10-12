@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        seed_base: [620000, 630000, 640000]
+        seed_base: [820000, 830000, 840000]
     defaults:
       run:
         shell: bash -el {0}
@@ -53,13 +53,13 @@ jobs:
           print({
               "layouts": 6,
               "independent_seed_rounds": 3,
-              "batches_per_run": 5000,
+              "batches_per_run": 7000,
               "inactive_batches_per_run": 500,
-              "particles_per_batch": 5000,
+              "particles_per_batch": 10000,
               "threads_per_run": 2,
               "run_count": 18,
-              "nominal_particle_histories": 18 * 5000 * 5000,
-              "active_particle_histories_after_inactive": 18 * (5000 - 500) * 5000,
+              "nominal_particle_histories": 18 * 7000 * 10000,
+              "active_particle_histories_after_inactive": 18 * (7000 - 500) * 10000,
           })
           PY
 
@@ -75,9 +75,9 @@ jobs:
             --design-space "$RUNNER_TEMP/c5g7-design.json" \
             --output "$RUNNER_TEMP/c5g7-study-${{ matrix.seed_base }}" \
             --mode run \
-            --batches 5000 \
+            --batches 7000 \
             --inactive 500 \
-            --particles 5000 \
+            --particles 10000 \
             --threads 2 \
             --seed-base ${{ matrix.seed_base }}
 
@@ -134,22 +134,22 @@ jobs:
 
       - name: Export and re-validate raw OpenMC evidence
         run: |
-          mkdir -p results/c5g7_high_budget_2026-10-12
+          mkdir -p results/c5g7_six_layout_confirmation_2026-10-12
           mapfile -t summaries < <(find artifacts -name STUDY_SUMMARY.json -type f | sort)
           python scripts/export_c5g7_run_level_evidence.py \
             --study-summary "${summaries[@]}" \
-            --out-csv results/c5g7_high_budget_2026-10-12/run_level_results.csv \
-            --audit-out results/c5g7_high_budget_2026-10-12/export_audit.json
+            --out-csv results/c5g7_six_layout_confirmation_2026-10-12/run_level_results.csv \
+            --audit-out results/c5g7_six_layout_confirmation_2026-10-12/export_audit.json
 
       - name: Compute repeated-run intervals and fail-closed selection audit
         run: |
           python scripts/audit_c5g7_corrected_objective.py \
-            --runs-csv results/c5g7_high_budget_2026-10-12/run_level_results.csv \
-            --out results/c5g7_high_budget_2026-10-12/objective_audit.json
+            --runs-csv results/c5g7_six_layout_confirmation_2026-10-12/run_level_results.csv \
+            --out results/c5g7_six_layout_confirmation_2026-10-12/objective_audit.json
           python - <<'PY'
           import json
           from pathlib import Path
-          root = Path("results/c5g7_high_budget_2026-10-12")
+          root = Path("results/c5g7_six_layout_confirmation_2026-10-12")
           export = json.loads((root / "export_audit.json").read_text())
           objective = json.loads((root / "objective_audit.json").read_text())
           assert export["run_count"] == 18, export
@@ -176,7 +176,7 @@ jobs:
           from pathlib import Path
 
           low_path = Path("results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv")
-          high_path = Path("results/c5g7_high_budget_2026-10-12/run_level_results.csv")
+          high_path = Path("results/c5g7_six_layout_confirmation_2026-10-12/run_level_results.csv")
 
           def load(path):
               groups = defaultdict(list)
@@ -229,7 +229,7 @@ jobs:
               "convergence_certified": False,
               "winner_selected": False,
           }
-          destination = Path("results/c5g7_high_budget_2026-10-12/budget_comparison.json")
+          destination = Path("results/c5g7_six_layout_confirmation_2026-10-12/budget_comparison.json")
           destination.write_text(json.dumps(output, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
           print(json.dumps({"status": output["status"], "candidate_count": len(rows), "convergence_certified": False}, indent=2))
           PY
@@ -237,10 +237,10 @@ jobs:
       - name: Upload combined raw data, statepoints, and analysis bundle
         uses: actions/upload-artifact@v4
         with:
-          name: cbpfr-c5g7-high-budget-complete-2026-10-12
+          name: cbpfr-c5g7-six-layout-high-budget-confirmation-2026-10-12
           path: |
             artifacts/
-            results/c5g7_high_budget_2026-10-12/
+            results/c5g7_six_layout_confirmation_2026-10-12/
           if-no-files-found: error
           retention-days: 90
           compression-level: 1
