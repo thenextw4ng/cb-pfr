@@ -142,7 +142,7 @@ As an **exploratory, post-hoc diagnostic only**, I fitted a linear trend against
 - PR #50 adds source-convergence JSON/CSV generation before aggregation, installs and activates pinned OpenMC 0.16.0 in the recovery workflow, and aligns the inactive-batch fallback at 500.
 - Regression tests assert that diagnostics precede aggregation, artifact upload runs even after a failure, and the recovery environment includes OpenMC.
 
-The green test matrix and successful recovery workflow establish software/workflow readiness for post-processing the saved run. The canonical high-budget transport workflow itself has not been rerun after the workflow fix, because the existing three transport results were already complete and recovery succeeded without repeating expensive transport. PR #50 remains draft/open and has not been merged; the fix therefore remains proposed rather than incorporated into `main`.
+The green test matrix and successful recovery workflow establish software/workflow readiness for post-processing the saved run. The canonical high-budget transport workflow itself has not been rerun after the workflow fix, because the existing three transport results were already complete and recovery succeeded without repeating expensive transport. PR #50 was merged into `main` on 2026-10-12; the recovered artifact is archived under run [38207010156](https://github.com/thenextw4ng/cb-pfr/actions/runs/38207010156). The remaining work is scientific review of the traces and physical acceptance evidence, not recovery of missing diagnostic files.
 
 ## G — Analysis, reporting, and release
 
@@ -156,7 +156,7 @@ The canonical scalar result, per-run uncertainty, between-seed variability, hash
 2. The normalized assembly-power/fission-rate distribution comparison now passes against published reference uncertainty (maximum relative difference 0.179%). Do not extend this result to absolute watts, flux, pinwise power, or full reactor validation without corresponding evidence (B).
 3. Complete a documented source/eigenvalue trace review. The available traces are noisy; first-to-last-quarter `k_generation` shifts are +42.06, +65.05, and +23.99 pcm, while entropy shifts are small. The diagnostic script correctly leaves all runs at `DIAGNOSTIC_REVIEW_REQUIRED`. Do not invent a pass threshold after seeing the data. If expert review concludes stationarity is inadequate, predeclare a justified follow-up protocol before any additional transport (D/E).
 4. The six-layout, three-seed screening comparison is now documented. Before naming a physical winner, approve a design-specific objective/acceptance band and state how (k_{eff}) and the fission-rate proxy enter the decision; the canonical confirmation run is higher-budget evidence for UMMU only, not confirmation of every candidate (C/E).
-5. PR #50 remains draft/open. Its recovery workflow and test matrix pass, but the fix is not yet merged into `main`; do not treat the default-branch workflow as repaired until that change is reviewed and merged (F/G).
+5. PR #50 has been merged and the recovery workflow is archived. Review the generated convergence traces and aggregate; run the canonical transport workflow again only if a documented evidence gap remains (D/F/G).
 
 No additional algorithm, metric, experiment, or cosmetic redesign is authorized by this closeout. Repeat transport only if an actual technical failure or evidence gap makes the saved results uninterpretable; do not rerun to obtain a preferred result.
 
