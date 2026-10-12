@@ -43,7 +43,7 @@ function showError(message){const el=$("apiError");el.hidden=false;el.textConten
 async function init(){
  setupNavigation();
  const reloadButton=$("reloadEvidence");
- if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();reloadButton.disabled=false;reloadButton.textContent="↻ Reload evidence";});
+ if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
  try{
   const response=await fetch("/api/candidates",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("API returned HTTP "+response.status);
@@ -64,6 +64,8 @@ async function init(){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
   $("layoutView").innerHTML='<div class="loading">Evidence unavailable — no scientific values are fabricated.</div>';
   $("sourcePath").textContent="API unavailable";
+  await initAssembly();
+  await initMesh();
  }
 }
 document.addEventListener("DOMContentLoaded",init);
