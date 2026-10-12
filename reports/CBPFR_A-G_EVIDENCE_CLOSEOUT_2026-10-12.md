@@ -43,13 +43,15 @@ The settings hashes differ as expected because each run has a distinct seed. The
 
 ## B — Mesh-to-assembly mapping
 
-**Status: `STATIC_GEOMETRY_CONSISTENCY_REVIEWED; BENCHMARK_SPATIAL_VALIDATION_BLOCKED`.**
+**Status: `STATIC_MAPPING_AND_SPATIAL_SHAPE_SANITY_CHECK_PASS; PHYSICS_VALIDATION_BLOCKED`.**
 
 The saved model uses a 51×51×1 mesh spanning `[-32.13, 32.13]` cm in x/y. This gives 1.26 cm bins; each 17×17 fuel assembly spans 21.42 cm. The generated geometry shows the expected 3×3 lattice with a 2×2 fuel block and fixed reflector row/column. The tally includes `flux`, `fission`, and `nu-fission`. The reducer's four 17×17 blocks are consistent with the pinned source's top-down RectLattice row ordering and the declared x/y mesh bounds.
 
 The reported assembly quantity is an integrated `fission` tally and the peaking factor is dimensionless. It is a **relative fission-rate proxy**, not absolute power in watts.
 
-**Remaining blocker:** no benchmark-compatible, trusted spatial reference has yet been compared to the actual statepoint mesh. Static source review and synthetic indexing tests do not independently certify spatial correctness. Therefore no spatial-validation claim is permitted.
+A published 2-D C5G7 study reports reference assembly powers of 492.8 for the inner UO₂ assembly, 211.7 for each MOX assembly, and 139.8 for the outer UO₂ assembly (Frontiers in Energy Research, Table 1: https://www.frontiersin.org/journals/energy-research/articles/10.3389/fenrg.2020.00124/full). After normalizing both the three-run mean integrated fission-rate tally and those published assembly-power values to unit total, the maximum relative difference between the four position fractions is 0.179%. This is a useful independent **spatial-shape sanity check** and is consistent with the declared position ordering.
+
+**Remaining blocker:** the OpenMC quantity is an integrated `fission` event-rate tally, whereas the published reference is assembly power. They are related but not identical physical quantities, and the saved statepoint does not contain a heating/power tally. Therefore this comparison does not satisfy a strict same-quantity benchmark validation; no power-validation claim is permitted. Static source review and synthetic indexing tests also do not replace independent model sign-off.
 
 ## C — QUBO and design-space correctness
 
@@ -131,6 +133,7 @@ No additional algorithm, metric, experiment, or cosmetic redesign is authorized 
 ## References
 
 - OECD/NEA, *Benchmark on Deterministic Transport Calculations Without Spatial Homogenisation: A 2-D/3-D MOX Fuel Assembly Benchmark*, NEA/NSC/DOC(2003)16: https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation
+- Published C5G7 assembly/pin-power reference comparison (Frontiers in Energy Research, 2020): https://www.frontiersin.org/journals/energy-research/articles/10.3389/fenrg.2020.00124/full
 - Pinned model source: https://github.com/mit-crpg/benchmarks/tree/ba41bee54320ada0b4ac39a0dd2ca3c1d090a450
 - Current workflow repair PR: https://github.com/thenextw4ng/cb-pfr/pull/50
 - Scientific readiness tests/report PR: https://github.com/thenextw4ng/cb-pfr/pull/49
