@@ -1,0 +1,81 @@
+"""Help, methods, reproducibility protocol, and scientific claim boundaries."""
+import streamlit as st
+
+from cbpfr.dashboard_ui import apply_workstation_style, render_header, render_page_intro, render_workspace_sidebar, load_smoke
+
+st.set_page_config(page_title="CB-PFR · Help & Methods", page_icon="⚛", layout="wide")
+apply_workstation_style()
+render_header("Help & Methods", "METHODS · REPRODUCIBILITY · CLAIM BOUNDARIES")
+df = load_smoke()
+render_workspace_sidebar("Help & Methods", df)
+render_page_intro(
+    "DOCUMENTATION / OPERATOR GUIDE",
+    "Help & Methods",
+    "A concise guide to the CB-PFR workflow, evidence provenance, visualization semantics, and the checks required before making a physical claim.",
+)
+
+st.markdown("### Research workflow")
+st.code(
+    "Recorded candidate inputs\n"
+    "        ↓\n"
+    "QUBO formulation / feasible-state enumeration\n"
+    "        ↓\n"
+    "Candidate configurations (mapping must be documented)\n"
+    "        ↓\n"
+    "OpenMC transport + audited statepoint/tallies\n"
+    "        ↓\n"
+    "Uncertainty-aware CB-PFR screening and ranking\n"
+    "        ↓\n"
+    "Independent review gates → decision record",
+    language="text",
+)
+st.caption("This is the intended research pipeline. The software does not automatically execute every stage end-to-end.")
+
+with st.expander("01 · Module guide", expanded=True):
+    st.markdown("""
+- **Overview:** project status and recorded evidence summaries.
+- **C5G7 Layout Explorer:** categorical 2×2 UO₂/MOX layout signatures and recorded smoke-run metrics; not pin-resolved geometry.
+- **Physics Fields:** archived OpenMC mesh tallies when available. The mesh is not automatically registered to assembly coordinates.
+- **Monte Carlo Results:** recorded k-effective means and within-run standard deviations. One seed per layout cannot establish between-run repeatability.
+- **QUBO / Optimization:** abstract QUBO or the separate four-position material-assignment formulation; do not silently conflate them.
+- **Decision Workspace:** trade-off plot and reviewer checklist; no automatic physical winner.
+- **Provenance & Validation:** input hashes, run metadata, and evidence audit state.
+- **Help & Methods:** this protocol and claim boundary.
+""")
+with st.expander("02 · Interpret the metrics"):
+    st.markdown("""
+- **k-effective mean:** estimate reported by a transport run; acceptance requires a predeclared benchmark-appropriate band.
+- **Reported standard deviation (σ):** the within-run statistic stored with the run, not a confidence interval across independent runs.
+- **Relative SD:** descriptive within-run spread, not a candidate reliability probability.
+- **Aggregate flux / fission scores:** use only with source definitions and units; they are not automatically spatial flux or absolute power.
+- **QUBO energy:** objective value of one encoded problem, not a physical score without a documented mapping.
+- **CB-PFR score:** post-optimization uncertainty-aware ranking output, not a reactor-safety method or substitute for independent validation.
+""")
+with st.expander("03 · Minimum reproducibility record"):
+    st.markdown("""
+Before comparing candidates, retain:
+1. Exact geometry, material definitions, temperatures, and burnup/composition assumptions.
+2. Nuclear-data library and hash, plus audited multigroup boundaries when using MGXS.
+3. OpenMC version, settings, seeds, tally definitions, statepoint hashes, and logs.
+4. Explicit candidate-to-geometry/material mapping and invariants.
+5. Repeated independent runs and a predeclared uncertainty/convergence procedure.
+6. Physical acceptance limits and an independent benchmark-comparison protocol.
+7. Analysis code/configuration version and machine-readable audit reports.
+""")
+with st.expander("04 · Current evidence boundary", expanded=True):
+    st.warning("Current C5G7 evidence must be interpreted under its specific audit status. The legacy burnup-state QUBO has no defensible mapping to C5G7 materials. Even where numerical screens pass, independent primary-specification review and spatial-comparability checks remain separate requirements.")
+    st.markdown("""
+**Supported:** software integration tests, exact enumeration for small encoded instances, archived-run parsing, provenance checks, and descriptive comparisons of recorded data.
+
+**Not automatically established:** benchmark-grade physical validation, a physically acceptable winning layout, validated legacy-QUBO-to-material mapping, reactor-safety conclusions, or quantum advantage from a QPU.
+
+**Rule:** if evidence is missing or ambiguous, keep the gate blocked and state the limitation explicitly.
+""")
+st.markdown("### Source files and protocols")
+st.markdown("""
+- [Repository README and evidence index](https://github.com/thenextw4ng/cb-pfr/blob/main/README.md)
+- [C5G7 validation and mapping plan](https://github.com/thenextw4ng/cb-pfr/blob/main/reports/C5G7_VALIDATION_AND_MAPPING_PLAN.md)
+- [Validation claim decision](https://github.com/thenextw4ng/cb-pfr/blob/main/reports/VALIDATION_CLAIM_DECISION_2026-10-11.md)
+- [Corrected-group repeatability smoke report](https://github.com/thenextw4ng/cb-pfr/blob/main/reports/c5g7_corrected_group_repeatability_smoke_2026-10-11.md)
+- [BEAVRS experimental comparison protocol](https://github.com/thenextw4ng/cb-pfr/blob/main/reports/BEAVRS_CYCLE1_EXPERIMENTAL_COMPARISON_PROTOCOL.md)
+""")
