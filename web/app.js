@@ -603,6 +603,26 @@ function buildSurfaceContourLines(z,xs,ys,levels,baseZ){
  }
  return {surface,base,segments:surface.z.filter(value=>value!==null).length/2};
 }
+function waitForCoreGeometryReady(timeoutMs=3000){
+ const status=$("core3dStatus")?.textContent||"";
+ const canvas=$("core3dCanvas")?.querySelector("canvas.core3d-canvas");
+ if(canvas||core3dLoadFailed||/WEBGL READY|2D FALLBACK|UNAVAILABLE/i.test(status))return Promise.resolve();
+ return new Promise(resolve=>{
+  let done=false;
+  let timer=null;
+  const finish=()=>{
+   if(done)return;
+   done=true;
+   if(timer!==null)window.clearTimeout(timer);
+   window.removeEventListener("cbpfr-core3d-ready",finish);
+   window.removeEventListener("cbpfr-core3d-failed",finish);
+   resolve();
+  };
+  window.addEventListener("cbpfr-core3d-ready",finish,{once:true});
+  window.addEventListener("cbpfr-core3d-failed",finish,{once:true});
+  timer=window.setTimeout(finish,timeoutMs);
+ });
+}
 const meshDefaultCamera={eye:{x:1.55,y:1.55,z:1.1},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
 async function drawMesh(){
  if(!meshData)return;
@@ -741,8 +761,9 @@ async function drawMesh(){
    line:{color:"rgba(85,212,223,0.56)",width:2},hoverinfo:"skip",showlegend:false,connectgaps:false
   });
  }
+ await waitForCoreGeometryReady();
+ if(drawRevision!==meshDrawRevision)return;
  await chart("meshSurface",surfaceTraces,surfaceLayout);
-
  if(drawRevision!==meshDrawRevision)return;
  if($("meshContourSubtitle"))$("meshContourSubtitle").textContent=f.view==="relative_sd"
   ?"Labelled iso-contours of relative Monte Carlo standard error (%)"
