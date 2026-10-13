@@ -47,7 +47,7 @@ The OECD/NEA 3-D reference is k-effective = 1.183810. Table 10 reports its 68% r
 
 The run's spatial uncertainty distribution is heterogeneous: the flux p95 is markedly higher than its median, so the tail bins need attention before detailed local interpretation. The fission and nu-fission mesh tails are lower for this result, but these descriptive statistics alone do not prove global convergence.
 
-The script scripts/analyze_c5g7_axial_3d.py now writes AXIAL_3D_BENCHMARK_CHECK.json and AXIAL_3D_BENCHMARK_CHECK.md in every workflow artifact. Smoke profiles are automatically classified as smoke-only/no benchmark conclusion; a high-budget scalar close result is labelled preliminary scalar consistency, never an overall benchmark pass.
+The script scripts/analyze_c5g7_axial_3d.py writes AXIAL_3D_BENCHMARK_CHECK.json and AXIAL_3D_BENCHMARK_CHECK.md only for the canonical UMMU benchmark layout. It fails closed for other layout signatures because those alternatives are not the published reference configuration. Smoke runs of UMMU are classified as smoke-only/no benchmark conclusion; a high-budget scalar close result is labelled preliminary scalar consistency, never an overall benchmark pass. Alternative-layout workflows still upload their transport statepoint and tally evidence, but their log explicitly says the canonical scalar reference comparison was skipped.
 
 ## Remaining benchmark gates
 
