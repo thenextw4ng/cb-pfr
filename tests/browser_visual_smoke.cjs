@@ -226,7 +226,23 @@ async function main() {
       const select = document.querySelector("#candidateSelect");
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
-    await mobilePage.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
+    await mobilePage.waitForFunction(() => document.querySelectorAll("#selectedCandidateMetrics .candidate-stat").length === 4, { timeout: 30000 });
+    const mobileMetricsDiagnostic = await mobilePage.evaluate(() => {
+      const target = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      const ancestors = [];
+      for (let el = target; el && ancestors.length < 7; el = el.parentElement) {
+        const style = getComputedStyle(el), rect = el.getBoundingClientRect();
+        ancestors.push({
+          tag: el.tagName.toLowerCase(), id: el.id || "", className: typeof el.className === "string" ? el.className : "",
+          display: style.display, visibility: style.visibility, opacity: style.opacity,
+          width: Math.round(rect.width * 100) / 100, height: Math.round(rect.height * 100) / 100,
+          hidden: Boolean(el.hidden), ariaHidden: el.getAttribute("aria-hidden")
+        });
+      }
+      return { viewportWidth: window.innerWidth, candidateId: document.querySelector("#candidateSelect")?.value, ancestors };
+    });
+    console.log("MOBILE_METRICS_DIAGNOSTIC " + JSON.stringify(mobileMetricsDiagnostic));
+    await mobilePage.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 5000 });
     await mobilePage.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 30000 });
     await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
     await mobilePage.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
