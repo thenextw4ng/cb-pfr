@@ -105,7 +105,7 @@ fs.mkdirSync(outDir, { recursive: true });
       [Number(ummuProxy.p10_fission_rate), Number(ummuProxy.p11_fission_rate)]
     ]);
     assert.ok(ummuMap.selectedOutline === "#ffffff" || ummuMap.selectedOutline[0] === "#ffffff");
-    await page.screenshot({ path: path.join(outDir, "assembly-proxy-map.png") });
+    await page.locator(".assembly-evidence-grid").screenshot({ path: path.join(outDir, "assembly-proxy-map.png") });
 
     await page.screenshot({ path: path.join(outDir, "workstation-desktop.png"), fullPage: true });
 
