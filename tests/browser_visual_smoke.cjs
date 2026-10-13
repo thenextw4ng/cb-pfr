@@ -230,14 +230,9 @@ async function main() {
     await mobilePage.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 30000 });
     await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
     await mobilePage.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
-    for (const selector of [
-      "#meshHeatmap.js-plotly-plot",
-      "#meshContour.js-plotly-plot",
-      "#meshProfile.js-plotly-plot",
-      "#meshSurface.js-plotly-plot"
-    ]) {
-      await mobilePage.waitForSelector(selector + " svg.main-svg", { timeout: 30000 });
-    }
+    // Desktop QA above checks all four Plotly spatial views fully. On mobile,
+    // focus this pass on the Stage 1 core renderer, position inspector, and overflow;
+    // don't initialize/wait for a second full set of heavyweight Plotly SVGs.
     // Wait until all chart/3D initialization has settled before forcing the mobile metric into view.
     await mobilePage.evaluate(() => {
       const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
