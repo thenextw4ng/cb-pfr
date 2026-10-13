@@ -159,6 +159,15 @@ def audit_inputs(candidate_root: Path) -> dict:
             name: {"bytes": (model3d / name).stat().st_size, "sha256": sha256_file(model3d / name)}
             for name in required
         },
+        "candidate_layout": {
+            "layout_signature": signature,
+            "universe_id_by_fuel_type": {"U": 9, "M": 11, "reflector_or_water": 13},
+            "expected_active_layer_universes": expected_active_layer,
+            "recorded_active_layers_match_candidate": True,
+            "recorded_top_layer_universes": top_layer,
+            "recorded_top_layer_is_all_reflector": True,
+        },
+        "materials_by_id": {str(key): value for key, value in sorted(material_names.items())},
         "core_lattice": {
             "dimension_xyz": dimensions,
             "lower_left_cm_xyz": lower_left,
