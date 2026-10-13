@@ -30,6 +30,8 @@ def lattice_record(lattice: ET.Element, include_grid: bool = True) -> dict:
 def derive(archive: zipfile.ZipFile, layout: str) -> tuple[dict, ET.Element, bytes]:
     member = f"c5g7-2x2-{layout}/model/2d/geometry.xml"
     raw = archive.read(member)
+    materials_member = member.replace("geometry.xml", "materials.xml")
+    materials_raw = archive.read(materials_member)
     root = ET.fromstring(raw)
     lattices = {item.attrib["id"]: item for item in root.findall("lattice")}
     core = lattices.get("201")
@@ -50,6 +52,7 @@ def derive(archive: zipfile.ZipFile, layout: str) -> tuple[dict, ET.Element, byt
         "layout_signature": layout,
         "source_member": member,
         "geometry_xml_sha256": hashlib.sha256(raw).hexdigest(),
+        "materials_xml_sha256": hashlib.sha256(materials_raw).hexdigest(),
         "core_universe_grid": core_rec["universe_grid"],
         "assembly_grid": categories,
         "signature_derived_from_xml": signature,
@@ -110,6 +113,7 @@ def build_manifest(archive_path: Path, artifact_name: str, run_id: int, artifact
                 "artifact_id": artifact_id,
                 "artifact_name": artifact_name,
                 "archive_file": archive_path.name,
+                "archive_sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
                 "source_member_pattern": "c5g7-2x2-{LAYOUT}/model/2d/geometry.xml",
                 "interpretation": "Geometry-only input definitions from an archived GitHub Actions screening/smoke study. This manifest is not a transport calculation result.",
             },
