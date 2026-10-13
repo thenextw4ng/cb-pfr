@@ -386,8 +386,14 @@ def read_mesh_evidence():
                 "mesh_id": mesh_id,
                 "dimensions": dims,
                 "n_realizations": n_realizations,
+                "uncertainty_statistic": "standard_error",
                 "scores": {
-                    score: {"mean": mean_grid[score], "std_dev": sd_grid[score]}
+                    score: {
+                        "mean": mean_grid[score],
+                        "standard_error": sd_grid[score],
+                        # Backwards-compatible alias: std_dev historically held standard error here.
+                        "std_dev": sd_grid[score],
+                    }
                     for score in score_bins
                 },
             })
