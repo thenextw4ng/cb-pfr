@@ -1036,12 +1036,17 @@ function drawAxial3D(){
  chart("axial3dPlot",[volumeTrace,sliceTrace],traceLayout);
  $("axial3dSliceLabel").textContent="Z bin "+zIndex+" · "+planeZ.toFixed(2)+" cm";
  const quality=payload.provenance?.score_summary||{};
+ const runState=payload.provenance?.statepoint||{};
  const medianRse=Number(quality.relative_error_percent_median_positive_bins);
  const p95Rse=Number(quality.relative_error_percent_p95_positive_bins);
+ const smokeBudget=Number(runState.n_batches||0)<=30&&Number(runState.n_particles||0)<=500;
+ const smokeNote=smokeBudget
+  ?" SMOKE-PROFILE DIAGNOSTIC ONLY ("+(runState.n_batches??"—")+" total batches, "+(runState.n_inactive??"—")+" inactive, "+(runState.n_particles??"—")+" particles/batch). Do not interpret this low-budget tally as converged or physically validated."
+  :"";
  const uncertaintyText=Number.isFinite(medianRse)
   ?" Positive-mean voxel relative MC standard error: median "+medianRse.toFixed(1)+"%"+(Number.isFinite(p95Rse)?", 95th percentile "+p95Rse.toFixed(1)+"%":"")+". These statistics describe sampling uncertainty spatially; they are not a formal acceptance threshold."
   :" Spatial relative-error summary is not present in the sidecar.";
- $("axial3dSummary").textContent="Score: "+score+" · view: "+(view==="relative_error"?"relative Monte Carlo standard error (%)":"log₁₀ of recorded mean for volume colour")+" · selected plane Z = "+planeZ.toFixed(2)+" cm · volume iso-range "+isomin.toPrecision(4)+" to "+isomax.toPrecision(4)+" · opacity "+opacity.toFixed(2)+". Voxel means and errors remain the recorded values; only the displayed colour variable is transformed."+uncertaintyText;
+ $("axial3dSummary").textContent="Score: "+score+" · view: "+(view==="relative_error"?"relative Monte Carlo standard error (%)":"log₁₀ of recorded mean for volume colour")+" · selected plane Z = "+planeZ.toFixed(2)+" cm · volume iso-range "+isomin.toPrecision(4)+" to "+isomax.toPrecision(4)+" · opacity "+opacity.toFixed(2)+". Voxel means and errors remain the recorded values; only the displayed colour variable is transformed."+smokeNote+uncertaintyText;
 }
 
 /* Displays existing external geometry artifacts only; never synthesizes a reactor layout. */
