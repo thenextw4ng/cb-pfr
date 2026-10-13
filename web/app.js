@@ -6,6 +6,8 @@ let meshData = null;
 let meshDrawRevision = 0;
 let axial3dData = null;
 let axial3dDrawRevision = 0;
+let axial3dLoadStarted = false;
+let axial3dObserver = null;
 let assemblyRecords = [];
 let selectedAssemblyPosition = "P00";
 const candidateMarkColors = { selected: "#ffffff", default: "#788d9b" };
@@ -905,12 +907,15 @@ async function initAxial3D(){
   updateButton.dataset.bound="true";
   updateButton.addEventListener("click",async()=>{
    updateButton.disabled=true;updateButton.textContent="↻ Loading…";
-   await loadAxial3D(true);
+   await requestAxial3DLoad(true);
    updateButton.disabled=false;updateButton.textContent="↻ Reload 3D tally";
   });
  }
  const score=$("axial3dScore"),view=$("axial3dView"),slice=$("axial3dSlice"),opacity=$("axial3dOpacity"),paletteSelect=$("axial3dPalette");
- if(score&&!score.dataset.bound){score.dataset.bound="true";score.addEventListener("change",loadAxial3D);}
+ if(score&&!score.dataset.bound){
+  score.dataset.bound="true";
+  score.addEventListener("change",()=>requestAxial3DLoad(false));
+ }
  [view,slice,opacity,paletteSelect].forEach(control=>{
   if(control&&!control.dataset.bound){
    control.dataset.bound="true";
@@ -918,7 +923,31 @@ async function initAxial3D(){
    control.addEventListener("change",drawAxial3D);
   }
  });
- await loadAxial3D();
+ // Reading and plotting 78,030 voxels is deliberately deferred until this panel
+ // nears the viewport. That keeps candidate exploration and mobile startup responsive.
+ if(axial3dLoadStarted){
+  await loadAxial3D(false);
+  return;
+ }
+ const status=$("axial3dStatus"),summary=$("axial3dSummary");
+ if(status){status.textContent="3D TALLY · LOAD ON VIEW";status.classList.remove("warning");}
+ if(summary)summary.textContent="A recorded OpenMC axial tally is loaded on demand when this panel nears the viewport. The viewer uses the source 51 × 51 × 30 bins and never substitutes the separate 2D terrain.";
+ if("IntersectionObserver" in window){
+  axial3dObserver=new IntersectionObserver(entries=>{
+   if(entries.some(entry=>entry.isIntersecting)){
+    if(axial3dObserver){axial3dObserver.disconnect();axial3dObserver=null;}
+    requestAxial3DLoad(false);
+   }
+  },{rootMargin:"240px 0px",threshold:0.01});
+  axial3dObserver.observe(panel);
+ }else{
+  await requestAxial3DLoad(false);
+ }
+}
+function requestAxial3DLoad(forceRetry=false){
+ axial3dLoadStarted=true;
+ if(axial3dObserver){axial3dObserver.disconnect();axial3dObserver=null;}
+ return loadAxial3D(forceRetry);
 }
 async function loadAxial3D(forceRetry=false){
  try{
