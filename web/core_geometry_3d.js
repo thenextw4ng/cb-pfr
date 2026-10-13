@@ -72,7 +72,7 @@ export function createCoreViewer(container, onAssemblySelect) {
   scene.fog = new THREE.Fog("#07131e", 100, 190);
 
   const camera = new THREE.PerspectiveCamera(37, 1, 0.1, 500);
-  camera.position.set(72, 66.63, 88);
+  camera.position.set(58, 52, 70);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -239,14 +239,14 @@ export function createCoreViewer(container, onAssemblySelect) {
       new THREE.MeshStandardMaterial({ color: "#091925", metalness: 0.3, roughness: 0.92 })
     );
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.95;
+    floor.position.y = -0.42;
     floor.receiveShadow = true;
     model.add(floor);
 
     const gridHelper = new THREE.GridHelper(Math.max(width, depth) + 20, 22, "#2c6075", "#18384a");
-    gridHelper.position.y = -0.9;
-    gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.32;
+    gridHelper.position.y = -0.39;
+    const gridMaterials = Array.isArray(gridHelper.material) ? gridHelper.material : [gridHelper.material];
+    gridMaterials.forEach(material => { material.transparent = true; material.opacity = 0.32; });
     model.add(gridHelper);
 
     const baseMaterials = {
@@ -256,7 +256,7 @@ export function createCoreViewer(container, onAssemblySelect) {
     };
     const baseGeometry = new THREE.BoxGeometry(pitchX * 0.985, 0.48, pitchZ * 0.985);
     const reflectorTopGeometry = new THREE.BoxGeometry(pitchX * 0.97, 0.16, pitchZ * 0.97);
-    const pinGeometry = new THREE.CylinderGeometry(pinRadius * 0.79, pinRadius * 0.79, 1.25, 10, 1);
+    const pinGeometry = new THREE.CylinderGeometry(pinRadius, pinRadius, 1.25, 12, 1);
     const pinMaterialPool = {};
     Object.entries(PIN_COLORS).forEach(([universe, color]) => {
       pinMaterialPool[universe] = new THREE.MeshStandardMaterial({
@@ -438,7 +438,7 @@ export function createCoreViewer(container, onAssemblySelect) {
     reset() {
       controls.reset();
       controls.target.set(0, 1.63, 0);
-      camera.position.set(72, 66.63, 88);
+      camera.position.set(58, 52, 70);
       controls.update();
     },
     highlight(row, col) {
