@@ -104,11 +104,10 @@ def read_model_geometry_manifest():
     if not isinstance(payload, dict) or payload.get("schema_version") != 1:
         raise ValueError("Model geometry manifest has an unsupported schema.")
     provenance = payload.get("provenance", {})
-    archive_sha = provenance.get("archive_sha256", "")
     is_sha256 = lambda value: isinstance(value, str) and len(value) == 64 and all(
         char in "0123456789abcdef" for char in value.lower()
     )
-    if not is_sha256(archive_sha):
+    if not is_sha256(provenance.get("archive_sha256", "")):
         raise ValueError("Model geometry manifest archive SHA-256 is missing or malformed.")
     core = payload.get("core_lattice", {})
     if core.get("id") != 201 or core.get("dimensions") != [3, 3]:
@@ -132,34 +131,36 @@ def read_model_geometry_manifest():
             raise ValueError(f"Pin lattice {lattice_id} contains an unknown material universe.")
     if set(pin_universes) != {"1", "2", "3", "4", "5", "6"}:
         raise ValueError("Model geometry manifest has an incomplete pin material map.")
+    material_names = payload.get("materials", {}).get("by_id", {})
     for universe_id, cell in pin_universes.items():
         material_id = str(cell.get("material_id", ""))
-        if material_id not in payload.get("materials", {}).get("by_id", {}):
-            raise ValueError(f"Pin universe {universe_id} references an unknown material.")
-        if cell.get("material_name") != payload["materials"]["by_id"][material_id]:
+        if material_id not in material_names or cell.get("material_name") != material_names[material_id]:
             raise ValueError(f"Pin universe {universe_id} material label differs from materials.xml.")
+        if str(cell.get("moderator_material_id")) not in material_names:
+            raise ValueError(f"Pin universe {universe_id} references an unknown moderator material.")
     candidates = payload.get("candidates")
     expected = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
     if not isinstance(candidates, list) or len(candidates) != 6:
         raise ValueError("Model geometry manifest must contain exactly six candidates.")
-    seen = set()
     assembly_map = payload.get("assemblies", {})
     if {str(k): v.get("code") for k, v in assembly_map.items()} != {"9": "U", "11": "M", "13": "R"}:
         raise ValueError("Assembly universe mapping differs from the archived XML.")
+    seen = set()
     for candidate in candidates:
         if not isinstance(candidate, dict):
             raise ValueError("Model geometry candidate is not an object.")
-        candidate_id = str(candidate.get("candidate_id", ""))
-        signature = str(candidate.get("layout_signature", ""))
+        candidate_id, signature = str(candidate.get("candidate_id", "")), str(candidate.get("layout_signature", ""))
         if not candidate_id or candidate_id in seen:
             raise ValueError("Model geometry candidate IDs are empty or duplicated.")
         seen.add(candidate_id)
         rows = candidate.get("core_universe_grid", [])
         if len(rows) != 3 or any(not isinstance(row, list) or len(row) != 3 for row in rows):
             raise ValueError(f"Candidate {candidate_id} has an invalid 3 x 3 core universe grid.")
-        mapped_rows = ["".join(assembly_map.get(str(value), {}).get("code", "?") for value in row) for row in rows]
+        if any(str(value) not in assembly_map for row in rows for value in row):
+            raise ValueError(f"Candidate {candidate_id} references an unknown core universe.")
+        mapped_rows = ["".join(assembly_map[str(value)]["code"] for value in row) for row in rows]
         actual = mapped_rows[0][0] + mapped_rows[0][1] + mapped_rows[1][0] + mapped_rows[1][1]
-        if actual != signature or signature not in expected or candidate_id.endswith("-" + signature) is False:
+        if actual != signature or signature not in expected or not candidate_id.endswith("-" + signature):
             raise ValueError(f"Candidate {candidate_id} does not match its XML-derived layout signature.")
         if mapped_rows[0][2] != "R" or mapped_rows[1][2] != "R" or mapped_rows[2] != "RRR":
             raise ValueError(f"Candidate {candidate_id} does not have the expected reflector lattice.")
