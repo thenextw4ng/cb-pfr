@@ -690,6 +690,12 @@ async function drawMesh(){
  const finiteZ=z.flat().filter(v=>typeof v==="number"&&Number.isFinite(v));
  const zMin=finiteZ.length?Math.min(...finiteZ):0, zMax=finiteZ.length?Math.max(...finiteZ):1;
  const zSpan=zMax-zMin;
+ // Pin the 2-D heatmap and contour to an identical numeric range. For a
+ // flat/constant field, open a tiny symmetric range so Plotly still has a
+ // valid scale without changing any tally value.
+ const flatPadding=Math.max(Math.abs(zMin)*0.01,1e-9);
+ const sharedColorMin=zSpan>0?zMin:zMin-flatPadding;
+ const sharedColorMax=zSpan>0?zMax:zMax+flatPadding;
  const rawStep=zSpan>0?zSpan/8:Math.max(Math.abs(zMin)*0.05,0.1);
  const power=Math.pow(10,Math.floor(Math.log10(rawStep)));
  const scaled=rawStep/power;
@@ -701,12 +707,14 @@ async function drawMesh(){
  const colorbar={title:{text:plotTitle,font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}};
  await chart("meshHeatmap",[{
   type:"heatmap",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
+  zmin:sharedColorMin,zmax:sharedColorMax,zauto:false,showscale:true,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
 }],heatLayout);
  if(drawRevision!==meshDrawRevision)return;
  await chart("meshContour",[{
   type:"contour",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
+  zmin:sharedColorMin,zmax:sharedColorMax,zauto:false,showscale:false,
   autocontour:false,
   contours:{
    coloring:"heatmap",showlines:true,showlabels:true,
@@ -715,7 +723,6 @@ async function drawMesh(){
    labelformat:f.view==="relative_sd"?".1f":".2f"
   },
   line:{width:1,color:"rgba(7,17,27,0.72)"},
-  colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false
 }],heatLayout);
  if(drawRevision!==meshDrawRevision)return;
