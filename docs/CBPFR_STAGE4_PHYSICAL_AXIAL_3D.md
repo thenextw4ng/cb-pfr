@@ -34,6 +34,28 @@ For local use, place both `axial_tally_3d.npz` and `AXIAL_3D_STATEPOINT_SUMMARY.
 
 The panel deliberately shows an unavailable state when no 3-D NPZ is installed; it does not inflate or recycle the 2-D tally. The artifact's `AXIAL_3D_STATEPOINT_SUMMARY.json` records the originating statepoint SHA-256 and the NPZ summary has its own SHA-256, allowing source/output matching during installation.
 
+## First high-budget 3-D transport result
+
+A production-profile GitHub Actions run completed for candidate UMMU on 2026-10-13: [workflow run 38393987067](https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067), artifact [11814200461](https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067/artifacts/11814200461). The artifact retains statepoint.7000.h5, the generated XML inputs, OpenMC log, structural audit, input manifest, and axial-tally exports.
+
+- Transport settings: 7,000 batches; 500 inactive; 10,000 particles per batch; 6,500 active realizations; seed 640000; 65,000,000 active particle histories.
+- OpenMC combined k-effective: 1.18394 ± 0.00010 (reported statistical standard deviation); leakage fraction 0.00187 ± 0.00001.
+- Mesh: 51 × 51 × 30 = 78,030 spatial bins over physical bounds X/Y = ±32.13 cm and Z = ±107.1 cm.
+- Relative Monte Carlo standard error for positive-mean bins: flux median 2.08%, p95 25.62%; fission median 2.05%, p95 6.01%; nu-fission median 2.05%, p95 6.00%.
+
+The OECD/NEA 3-D reference is k-effective = 1.183810. Table 10 reports its 68% reference confidence half-width as 0.003% of the reference value. Using this relative half-width as an approximate one-sigma reference uncertainty only for an indicative combined-uncertainty comparison, the observed difference is +0.000130 (+13 pcm; relative bias +0.01098%), or about 1.23 combined statistical standard deviations. The corresponding approximate 95% interval for the difference includes zero. This supports a **preliminary scalar consistency check** for one configuration/run, not a full benchmark pass. Source: [OECD/NEA NEA/NSC/DOC(2003)16, Table 10](https://www.oecd-nea.org/upload/docs/application/pdf/2019-12/nsc-doc2003-16.pdf).
+
+The run's spatial uncertainty distribution is heterogeneous: the flux p95 is markedly higher than its median, so the tail bins need attention before detailed local interpretation. The fission and nu-fission mesh tails are lower for this result, but these descriptive statistics alone do not prove global convergence.
+
+The script scripts/analyze_c5g7_axial_3d.py now writes AXIAL_3D_BENCHMARK_CHECK.json and AXIAL_3D_BENCHMARK_CHECK.md in every workflow artifact. Smoke profiles are automatically classified as smoke-only/no benchmark conclusion; a high-budget scalar close result is labelled preliminary scalar consistency, never an overall benchmark pass.
+
+## Remaining benchmark gates
+
+1. Compare normalized pin-wise fission-power distribution against the OECD/NEA reference and reproduce the report's pin/assembly error metrics.
+2. Independently repeat the candidate with a different seed and compare k-effective and spatial distributions.
+3. Evaluate all six candidates with a consistent calculation budget before making comparative ranking claims.
+4. Keep explicit uncertainty, source/geometry identity, and evidence limitations in every report.
+
 ## Outputs and evidence
 
 A successful workflow uploads the prepared XML files, input manifest, actual statepoint and summary, plus:
