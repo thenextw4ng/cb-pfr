@@ -1209,13 +1209,20 @@ function drawAssemblyField(){
    xgap:4,ygap:4,hoverongaps:false,connectgaps:false,
    hovertemplate:"Position %{customdata[0]} · %{customdata[1]}<br>Geometry index: row %{customdata[6]}, column %{customdata[7]}<br>Candidate %{customdata[2]}<br>Layout %{customdata[3]}<br>Recorded fission-rate proxy %{z:.8g}<br>CSV unit not documented · not absolute power<br>Proxy-run seed %{customdata[4]}<extra></extra>"
   };
+  const mapEl=$("assemblyMap");
+  // Marker sizes scale with the chart's real cell footprint: category outlines
+  // follow each tile, while the selected-position frame remains clearly larger.
+  const mapWidth=mapEl?.clientWidth||560,mapHeight=mapEl?.clientHeight||410;
+  const tileFootprint=Math.min(Math.max(140,mapWidth-170)/2,Math.max(160,mapHeight-66)/2);
+  const materialOutlineSize=Math.max(32,Math.min(144,Math.floor(tileFootprint*0.72)));
+  const selectedOutlineSize=Math.max(40,Math.min(156,Math.floor(tileFootprint*0.86)));
   const materialOutline={
    type:"scatter",mode:"markers",name:"Material category outline",
    x:cells.map(position=>position.col===0?"Column 0":"Column 1"),
    y:cells.map(position=>position.row===0?"Row 0":"Row 1"),
    customdata:cells.map(position=>position.label),
    marker:{
-    symbol:"square-open",size:49,
+    symbol:"square-open",size:materialOutlineSize,
     color:cells.map(position=>materialEdgeColor[position.materialCode]),
     line:{width:2.6,color:cells.map(position=>materialEdgeColor[position.materialCode])}
    },
@@ -1227,10 +1234,9 @@ function drawAssemblyField(){
    x:[highlighted.col===0?"Column 0":"Column 1"],
    y:[highlighted.row===0?"Row 0":"Row 1"],
    customdata:[highlighted.label],
-   marker:{symbol:"square-open",size:62,color:"#ffffff",line:{width:3.2,color:"#ffffff"}},
+   marker:{symbol:"square-open",size:selectedOutlineSize,color:"#ffffff",line:{width:3.2,color:"#ffffff"}},
    hoverinfo:"skip",showlegend:false
   };
-  const mapEl=$("assemblyMap");
   chart("assemblyMap",[heatmap,materialOutline,selectionOutline],{
    autosize:true,margin:{l:58,r:112,t:14,b:52},
    showlegend:false,hovermode:"closest",
