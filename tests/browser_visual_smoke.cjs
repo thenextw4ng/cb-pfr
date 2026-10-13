@@ -227,15 +227,6 @@ async function main() {
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
     await mobilePage.waitForFunction(() => document.querySelectorAll("#selectedCandidateMetrics .candidate-stat").length === 4, { timeout: 30000 });
-    const firstMobileMetric = mobilePage.locator("#selectedCandidateMetrics .candidate-stat").first();
-    await firstMobileMetric.scrollIntoViewIfNeeded();
-    await mobilePage.waitForFunction(() => {
-      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
-      if (!metric) return false;
-      const rect = metric.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
-    }, { timeout: 10000 });
-    await firstMobileMetric.waitFor({ state: "visible", timeout: 10000 });
     await mobilePage.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 30000 });
     await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
     await mobilePage.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
@@ -247,6 +238,24 @@ async function main() {
     ]) {
       await mobilePage.waitForSelector(selector + " svg.main-svg", { timeout: 30000 });
     }
+    // Wait until all chart/3D initialization has settled before forcing the mobile metric into view.
+    await mobilePage.evaluate(() => {
+      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      metric?.scrollIntoView({ block: "center", behavior: "instant" });
+    });
+    await mobilePage.waitForFunction(() => {
+      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      if (!metric) return false;
+      const rect = metric.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+    }, { timeout: 10000 });
+    const mobileMetricsVisible = await mobilePage.evaluate(() => {
+      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      if (!metric) return false;
+      const style = getComputedStyle(metric);
+      return style.visibility !== "hidden" && style.display !== "none" && metric.getBoundingClientRect().height > 0;
+    });
+    assert.equal(mobileMetricsVisible, true, "candidate metrics must remain visible after chart initialization on mobile");
     const mobileOverflow = await mobilePage.evaluate(() => {
       const geometry = document.querySelector("#geometryPreview");
       const overflowing = [...document.querySelectorAll("body *")].filter(el => {
