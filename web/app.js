@@ -560,6 +560,7 @@ function currentField(){
   stats:fieldStats(mean),displayStats:fieldStats(values)
  };
 }
+const meshDefaultCamera={eye:{x:1.55,y:1.55,z:1.1},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
 function drawMesh(){
  if(!meshData)return;
  const f=currentField();
@@ -571,12 +572,26 @@ function drawMesh(){
   return;
  }
  const paletteName=$("meshPalette").value;
- const z=f.values, raw=f.rawValues, scoreLabel=f.score;
+ const z=f.values, scoreLabel=f.score;
  const nx=f.item.dimensions[0], ny=f.item.dimensions[1], coordinates=f.coordinates;
  const xs=coordinates.x, ys=coordinates.y;
+ const exaggeration=Math.max(0.5,Math.min(3,Number($("meshExaggeration")?.value||1)));
  const plotTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":(f.scale==="log"?"log₁₀("+scoreLabel+" tally mean)":"Recorded "+scoreLabel+" tally mean");
  const rawTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":scoreLabel+" tally mean (recorded scale)";
- const hover=(title)=>coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+title+" %{customdata:.6g}<extra></extra>";
+ const sourceCustomData=f.mean.map((row,y)=>row.map((mean,x)=>[
+  Number.isFinite(mean)?mean:null,
+  Number.isFinite(f.standardError[y]?.[x])?f.standardError[y][x]:null,
+  Number.isFinite(f.relative[y]?.[x])?f.relative[y][x]:null
+ ]));
+ const sourceHover=f.view==="relative_sd"
+  ?"<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%<br>Recorded tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}"
+  :"<br>Recorded "+scoreLabel+" tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%";
+ const displayHover=f.view==="mean"&&f.scale==="log"
+  ?"<br>Display Z: log₁₀(mean) = %{z:.5g}"
+  :f.view==="relative_sd"
+   ?"<br>Display Z: relative MC standard error = %{z:.4g}%"
+   :"<br>Display Z: recorded mean = %{z:.6g}";
+ const hover=(title)=>coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+title+sourceHover+"<extra></extra>";
  const axisStyle={...baseLayout.xaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const yAxisStyle={...baseLayout.yaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const sharedAxis={tickfont:{size:10,color:palette.muted},titlefont:{size:11,color:palette.muted}};
@@ -599,12 +614,12 @@ function drawMesh(){
  if(contourEnd<=contourStart)contourEnd=contourStart+contourStep;
  const colorbar={title:{text:plotTitle,font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}};
  chart("meshHeatmap",[{
-  type:"heatmap",x:xs,y:ys,z:z,customdata:raw,colorscale,
+  type:"heatmap",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:hover(rawTitle),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
+  hovertemplate:hover(""),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
  }],heatLayout);
  chart("meshContour",[{
-  type:"contour",x:xs,y:ys,z:z,customdata:raw,colorscale,
+  type:"contour",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
   autocontour:false,
   contours:{
    coloring:"heatmap",showlines:true,showlabels:true,
@@ -614,21 +629,27 @@ function drawMesh(){
   },
   line:{width:1,color:"rgba(7,17,27,0.72)"},
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:hover(rawTitle),connectgaps:false,hoverongaps:false
+  hovertemplate:hover(""),connectgaps:false,hoverongaps:false
  }],heatLayout);
  chart("meshSurface",[{
-  type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:raw,colorscale,
+  type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:sourceCustomData,colorscale,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+rawTitle+" %{customdata:.6g}<br>Displayed Z %{z:.6g}<extra></extra>",
+  contours:{
+   x:{show:false},y:{show:false},
+   z:{show:true,usecolormap:false,highlightcolor:"#e8f1f7",width:1.15,project:{z:true}}
+  },
+  hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+sourceHover+displayHover+"<extra></extra>",
   connectgaps:false,hoverongaps:false,showscale:true,
-  lighting:{ambient:0.72,diffuse:0.78,specular:0.18,roughness:0.72,fresnel:0.08},opacity:0.98
+  lighting:{ambient:0.42,diffuse:0.92,specular:0.26,roughness:0.46,fresnel:0.12},
+  lightposition:{x:1200,y:1000,z:1800},opacity:1
  }],{
   autosize:true,margin:{l:8,r:8,t:8,b:8},
   scene:{
-   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.xRange:undefined},
-   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.yRange:undefined},
-   zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
-   bgcolor:"rgba(0,0,0,0)",aspectmode:"auto",camera:{eye:{x:1.55,y:1.55,z:1.1}}
+   uirevision:"cbpfr-neutron-field-camera-v1",
+   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.xRange:undefined},
+   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.yRange:undefined},
+   zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line},
+   bgcolor:"rgba(0,0,0,0)",aspectmode:"manual",aspectratio:{x:1,y:1,z:Math.min(0.95,0.30*exaggeration)},camera:meshDefaultCamera
   }
  });
  const centerY=Math.floor((ny-1)/2);
@@ -636,8 +657,8 @@ function drawMesh(){
  const profileY=f.view==="relative_sd"?relativeRow:meanRow;
  const profileCustom=xs.map((x,i)=>[meanRow[i],seRow[i],relativeRow[i]]);
  const profileHover=f.view==="relative_sd"
-  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<extra></extra>"
-  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>";
+  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<br>Recorded tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>"
+  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%<extra></extra>";
  const profileError=f.view==="mean"?{
   type:"data",symmetric:false,
   array:seRow.map((se,i)=>Number.isFinite(se)&&se>=0?se:0),
@@ -671,6 +692,7 @@ function drawMesh(){
   "Score: "+scoreLabel,
   "View: "+(f.view==="relative_sd"?"relative Monte Carlo standard error":"recorded tally mean"),
   "Scale: "+(f.view==="relative_sd"?"ratio-derived percentage":f.scale),
+  "Vertical exaggeration: "+exaggeration.toFixed(1)+"× (display-only; source data unchanged)",
   "Mesh: "+dimensionText+" bins",
   "Central cut: "+(coordinates.physical?"Y = "+coordinates.y[centerY].toFixed(3)+" cm (row "+centerY+")":"Y-bin "+centerY),
   "Realizations: "+String(f.item.n_realizations??"not recorded")
@@ -679,7 +701,7 @@ function drawMesh(){
  const coordinateNote=coordinates.physical
   ?"XY axes use archived regular-mesh bounds in cm; plotted coordinates are cell centres. No fuel/reflector/assembly labels are inferred."
   :"Physical XY bounds are unavailable; axes remain mesh-bin indices, not cm or assembly coordinates.";
- if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" Heatmap, contours, profile, and surface reflect the selected display scale; hover values preserve recorded tally means.";
+ if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" The Z dimension is vertically exaggerated through plot aspect ratio only; the tally matrix and hover values are unchanged. Contour projection on the lower reference plane is a display aid.";
  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"DATA LOADED · HASH NOT CHECKED";
  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
 }
@@ -705,13 +727,22 @@ async function initMesh(){
   const availableScores=Object.keys(item.scores);
   scoreSelect.innerHTML=availableScores.map(k=>'<option value="'+escapeHtml(k)+'">'+escapeHtml(k)+'</option>').join("");
   if(!availableScores.includes(scoreSelect.value))scoreSelect.value=availableScores[0]||"";
-  ["meshScore","meshView","meshScale","meshPalette"].forEach(id=>{
+  ["meshScore","meshView","meshScale","meshPalette","meshExaggeration"].forEach(id=>{
    const control=$(id);
    if(control&&!control.dataset.meshListenerBound){
     control.addEventListener("change",drawMesh);
     control.dataset.meshListenerBound="true";
    }
   });
+  const resetCamera=$("meshResetCamera");
+  if(resetCamera&&!resetCamera.dataset.meshListenerBound){
+   resetCamera.addEventListener("click",()=>{
+    const plot=$("meshSurface");
+    if(!window.Plotly||!plot?.data)return;
+    window.Plotly.relayout(plot,{"scene.camera":meshDefaultCamera});
+   });
+   resetCamera.dataset.meshListenerBound="true";
+  }
   drawMesh();
   const resizePlots=()=>{
    if(!window.Plotly||!window.Plotly.Plots)return;
