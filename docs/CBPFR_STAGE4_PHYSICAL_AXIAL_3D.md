@@ -67,3 +67,16 @@ Each file hash is retained so a later workstation integration can bind the 3-D v
 ## Claim boundary
 
 A smoke statepoint establishes only that the selected run completed and emitted a 3-D mesh tally. It does not prove statistical convergence, benchmark agreement, best fuel loading, a quantum advantage, absolute power normalization, reactor safety, burnup/depletion, or thermal-hydraulic behavior. The UI must not substitute the Stage 3 pseudo-height field for this data.
+
+## Workstation assembly-integrated proxy map
+
+The assembly field UI is deliberately discrete and limited to the four recorded CSV fields p00_fission_rate, p01_fission_rate, p10_fission_rate, and p11_fission_rate. It does not interpolate those four values into a continuous contour, and it remains separate from the archived OpenMC 51 × 51 mesh tally and the Stage 4 51 × 51 × 30 axial tally.
+
+- Position labels are consistently P00, P01, P10, P11, ordered row-major to match the four fuel positions at core-grid rows 0–1 and columns 0–1 in the geometry manifest.
+- The quantitative tile fill uses a Cividis scale with a single visible colorbar. Its fixed min/max is calculated across exact candidate-ID + layout-signature matches from the six available proxy records and is shared with the candidate-by-position matrix, so changing the selected candidate does not rescale the colours.
+- The exact CSV values are displayed to eight significant figures where available; compact range ticks show the global scale endpoints and midpoint. The file contains no declared physical unit, so the view says “source units not specified” and never calls these values absolute power.
+- The position edge is categorical only: amber for a MOX position and cyan for UO₂ according to the selected candidate's row-major signature. A separate white outline indicates the selected position. The five reflector positions remain neutral grey in the source-derived core model. These categorical accents do not encode the numerical proxy.
+- A click on a map tile or a position control synchronizes the selected-position outline, material label, and recorded value. The matrix uses the same quantitative range but hides its duplicate colorbar; its white row outline tracks the selected candidate.
+- Verbose source provenance is in a collapsed disclosure by default. The concise map footer keeps the shared range and the “not absolute power” qualification visible.
+
+The assembly proxy source was generated as exploratory low-budget runs. Its existing record says spatial-bin covariance is not propagated, and the six proxy-run seeds are independent of the candidate-summary seeds. It must not be read as an uncertainty-propagated power map, a high-resolution neutron field, a feasibility score, or a safety metric.
