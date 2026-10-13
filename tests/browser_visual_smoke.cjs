@@ -12,10 +12,11 @@ fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 async function main() {
   const browser = await chromium.launch({ headless: true, args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
   const failures = [];
-  const page = await browser.newPage({
+  const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
     deviceScaleFactor: 1
   });
+  const page = await context.newPage();
   page.on("pageerror", error => failures.push("pageerror: " + error.message));
 
   try {
@@ -416,7 +417,7 @@ async function main() {
     // Reuse the desktop page's browser context so already-loaded scientific
     // visualization libraries are cached; this keeps the mobile pass focused on
     // responsive layout instead of making a second cold request to the Plotly CDN.
-    const mobilePage = await page.context().newPage();
+    const mobilePage = await context.newPage();
     await mobilePage.setViewportSize({ width: 390, height: 844 });
     const mobileFailures = [];
     mobilePage.on("pageerror", error => mobileFailures.push("pageerror: " + error.message));
