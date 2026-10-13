@@ -1243,7 +1243,7 @@ function drawAssemblyField(){
   $("assemblyPositionValue").textContent=formatSourceProxy(selectedPosition.value);
   $("assemblyPositionPicker").innerHTML=cells.map(position=>
    '<button type="button" class="assembly-position-option '+(position.materialCode==="M"?"material-mox":"material-uo2")+' '+(position.label===selectedAssemblyPosition?"selected":"")+'" data-assembly-position="'+position.label+'" aria-pressed="'+String(position.label===selectedAssemblyPosition)+'">'+
-    '<span>'+position.label+'</span><b>'+position.material+'</b><strong>'+formatSourceProxy(position.value)+'</strong>'+
+    '<span>'+position.label+'</span><b>'+position.material+'</b><strong>'+formatSourceProxy(position.value,4)+'</strong>'+
    '</button>'
   ).join("");
   const scaleRange=$("assemblyScaleRange");
@@ -1332,7 +1332,7 @@ function drawAssemblyField(){
   x:assemblyPositionDefs.map(position=>position.label),
   y:matrixRows.map(item=>{const signature=String(item.candidate.layout_signature||label(item.candidate));const isSelected=String(item.candidate.candidate_id)===selectedId&&signature.toUpperCase()===String(selected?.layout_signature||"").toUpperCase();return signature+(isSelected?"  ◂":"");}),
   z:matrixRows.map(item=>item.values),
-  text:matrixRows.map(item=>item.values.map(value=>formatSourceProxy(value))),
+  text:matrixRows.map(item=>item.values.map(value=>formatSourceProxy(value,6))),
   texttemplate:"%{text}",textfont:{size:10,color:"#f0f3f5"},
   colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,showscale:false,
   xgap:3,ygap:2,
