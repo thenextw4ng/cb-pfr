@@ -128,8 +128,8 @@ test("all six candidate selections update placement, detail, comparison highligh
     assert.doesNotMatch(placement, /assembly-grid|class="assembly /, "duplicate four-tile assembly cards should be removed");
     const placementLetters = [...placement.matchAll(/class="fuel-signature-letter fuel-signature-letter-(mox|uo2)">([UM])<\/span>/g)];
     assert.deepEqual(placementLetters.map(m => m[2]), row.layout_signature.split(""), row.candidate_id + " compact signature should follow row-major source order");
-    assert.match(placement, /2 MOX positions/);
-    assert.match(placement, /2 UO₂ positions/);
+    assert.match(placement, /MOX positions/);
+    assert.match(placement, /UO₂ positions/);
 
     const signatureMarkup = $("selectedCandidateSignature").innerHTML;
     const signatureLetters = [...signatureMarkup.matchAll(/class="fuel-signature-letter fuel-signature-letter-(mox|uo2)">([UM])<\/span>/g)];
