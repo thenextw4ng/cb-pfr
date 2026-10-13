@@ -9,12 +9,26 @@ on:
       - feat/cern-workstation-integration
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   workstation-smoke:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Download the exact archived OpenMC geometry source ZIP
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl --fail --location --retry 3 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/11719691969/zip" \
+            --output /tmp/c5g7-study-640000.zip
+          echo "7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b  /tmp/c5g7-study-640000.zip" | sha256sum --check
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -23,14 +37,42 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Install headless Chromium for browser visual QA
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Install spatial evidence reader dependencies
+        run: python -m pip install h5py numpy
       - name: Static syntax checks
         run: |
-          python -m py_compile web_server.py
+          python -m py_compile web_server.py tools/export_openmc_geometry.py
           node --check web/app.js
+          node --check tests/web_candidate_ui.test.cjs
+          node --check tests/browser_visual_smoke.cjs
+      - name: Verify candidate inspector synchronization
+        run: node --test tests/web_candidate_ui.test.cjs
+      - name: Verify OpenMC geometry manifest against original XML bytes
+        env:
+          CBPFR_OPENMC_GEOMETRY_ARCHIVE: /tmp/c5g7-study-640000.zip
+        run: python tests/test_openmc_geometry_manifest.py
+      - name: Audit recovered OpenMC spatial tally sources
+        run: |
+          python -m py_compile tools/audit_spatial_tally_sources.py
+          python tools/audit_spatial_tally_sources.py \
+            --archive /tmp/c5g7-study-640000.zip \
+            --expected-sha256 7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b \
+            --json-output /tmp/spatial-tally-source-audit.json
+      - name: Verify mesh tally reader against all six audited statepoints
+        env:
+          CBPFR_MESH_TALLY_TEST_ARCHIVE: /tmp/c5g7-study-640000.zip
+        run: python tests/test_openmc_mesh_tally_reader.py
       - name: Start workstation and smoke-test API/assets
         shell: bash
         run: |
           set -euo pipefail
+          CBPFR_STATEPOINT_ARCHIVE=/tmp/c5g7-study-640000.zip \
+          CBPFR_STATEPOINT_MEMBER=c5g7-2x2-MUMU/model/2d/statepoint.5000.h5 \
+          CBPFR_STATEPOINT_BASELINE=/tmp/cb-pfr-no-baseline-for-smoke.json \
           python -u web_server.py > /tmp/cb-pfr-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
@@ -55,13 +97,119 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/ | grep -q 'Scientific Workstation'
           curl --fail --silent http://127.0.0.1:8765/styles.css | grep -q 'geometry-preview'
           curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function drawMesh'
+          curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function renderModelGeometrySvg'
+          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'selectedCandidateMetrics'
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
+          curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
+          curl --fail --silent http://127.0.0.1:8765/api/model-geometry > /tmp/cb-pfr-model-geometry.json
+          mesh_status=$(curl --silent --output /tmp/cb-pfr-mesh.json --write-out '%{http_code}' http://127.0.0.1:8765/api/mesh)
+          test "$mesh_status" = "200"
+          echo "$mesh_status" > /tmp/cb-pfr-mesh-status
           python - <<'PY'
           import json
-          for path, key in (("/tmp/cb-pfr-candidates.json", "records"), ("/tmp/cb-pfr-assembly.json", "records")):
-              with open(path, encoding="utf-8") as f:
-                  payload = json.load(f)
-              assert payload.get(key), f"{path} has no records"
-          print("Health, HTML, CSS, JS, candidate API, and assembly API passed.")
+          import math
+          with open("/tmp/cb-pfr-candidates.json", encoding="utf-8") as f:
+              candidate_payload = json.load(f)
+          with open("/tmp/cb-pfr-assembly.json", encoding="utf-8") as f:
+              assembly_payload = json.load(f)
+          candidates = candidate_payload.get("records", [])
+          assemblies = assembly_payload.get("records", [])
+          assert len(candidates) == 6, f"Expected the six recorded candidate rows, got {len(candidates)}"
+          assert len(assemblies) == 6, f"Expected six assembly proxy rows, got {len(assemblies)}"
+          candidate_ids = [str(row.get("candidate_id", "")).strip() for row in candidates]
+          assembly_ids = [str(row.get("candidate_id", "")).strip() for row in assemblies]
+          assert all(candidate_ids) and len(set(candidate_ids)) == 6, candidate_ids
+          assert all(assembly_ids) and len(set(assembly_ids)) == 6, assembly_ids
+          candidate_pairs = set()
+          for row in candidates:
+              signature = str(row.get("layout_signature", "")).strip().upper()
+              assert len(signature) == 4 and signature.count("M") == 2 and signature.count("U") == 2, row
+              candidate_pairs.add((str(row["candidate_id"]), signature))
+              for field in ("keff_mean", "keff_std_dev", "keff_relative_sd_percent", "aggregate_fission_score"):
+                  value = float(row[field])
+                  assert math.isfinite(value), (row["candidate_id"], field, value)
+          assembly_pairs = set()
+          for row in assemblies:
+              signature = str(row.get("layout_signature", "")).strip().upper()
+              assembly_pairs.add((str(row["candidate_id"]), signature))
+              for field in ("p00_fission_rate", "p01_fission_rate", "p10_fission_rate", "p11_fission_rate"):
+                  value = float(row[field])
+                  assert math.isfinite(value), (row["candidate_id"], field, value)
+          assert candidate_pairs == assembly_pairs, {"candidate_pairs": candidate_pairs, "assembly_pairs": assembly_pairs}
+          with open("/tmp/cb-pfr-geometry.json", encoding="utf-8") as f:
+              geometry = json.load(f)
+          assert isinstance(geometry.get("artifacts"), list), geometry
+          with open("/tmp/cb-pfr-model-geometry.json", encoding="utf-8") as f:
+              model_geometry = json.load(f)
+          assert model_geometry.get("schema_version") == 1, model_geometry
+          model_candidates = model_geometry.get("candidates", [])
+          assert len(model_candidates) == 6, model_geometry
+          assert all(item.get("source_matches_candidate_signature") is True for item in model_candidates), model_candidates
+          assert all(len(item.get("geometry_xml_sha256", "")) == 64 for item in model_candidates), model_candidates
+          assert model_geometry.get("core_lattice", {}).get("dimensions") == [3, 3], model_geometry
+          assert model_geometry.get("pin_geometry", {}).get("dimensions") == [17, 17], model_geometry
+          assert model_geometry.get("pin_geometry", {}).get("pitch_cm") == [1.26, 1.26], model_geometry
+          assert model_geometry.get("pin_geometry", {}).get("pin_radius_cm") == 0.54, model_geometry
+          universe_codes = model_geometry.get("assemblies", {})
+          expected_codes = {"9": "U", "11": "M", "13": "R"}
+          assert {key: value.get("code") for key, value in universe_codes.items()} == expected_codes, universe_codes
+          model_pairs = set()
+          for item in model_candidates:
+              signature = item["layout_signature"]
+              grid = item.get("core_universe_grid", [])
+              categories = item.get("assembly_grid", [])
+              assert len(grid) == 3 and all(len(row) == 3 for row in grid), item
+              mapped = [[universe_codes[str(value)]["code"] for value in row] for row in grid]
+              assert mapped == categories, item
+              derived = "".join(mapped[r][c] for r, c in ((0, 0), (0, 1), (1, 0), (1, 1)))
+              assert derived == signature == item["signature_derived_from_xml"], item
+              assert (item["candidate_id"], signature) in candidate_pairs, item
+              assert mapped[0][2] == "R" and mapped[1][2] == "R" and mapped[2] == ["R", "R", "R"], item
+              assert sum(code == "U" for row in mapped for code in row) == 2, item
+              assert sum(code == "M" for row in mapped for code in row) == 2, item
+              assert sum(code == "R" for row in mapped for code in row) == 5, item
+              model_pairs.add((item["candidate_id"], signature))
+          assert model_pairs == candidate_pairs, {"model_pairs": model_pairs, "candidate_pairs": candidate_pairs}
+          known_pin_universes = set(model_geometry.get("materials", {}).get("pin_universes", {}))
+          assert known_pin_universes == {"1", "2", "3", "4", "5", "6"}, known_pin_universes
+          for lattice_id, lattice in model_geometry.get("pin_lattices", {}).items():
+              grid = lattice.get("universe_grid", [])
+              assert len(grid) == 17 and all(len(row) == 17 for row in grid), lattice
+              assert all(str(value) in known_pin_universes for row in grid for value in row), lattice
+          boundaries = {item.get("name"): item for item in model_geometry.get("boundary_conditions", [])}
+          assert boundaries["Core x-min"]["condition"] == "reflective"
+          assert boundaries["Core x-max"]["condition"] == "vacuum"
+          assert boundaries["Core y-min"]["condition"] == "vacuum"
+          assert boundaries["Core y-max"]["condition"] == "reflective"
+          mesh_status = open("/tmp/cb-pfr-mesh-status", encoding="utf-8").read().strip()
+          if mesh_status == "200":
+              with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
+                  mesh = json.load(f)
+              tallies = mesh.get("mesh_tallies", [])
+              assert tallies, mesh
+              for tally in tallies:
+                  dims = tally.get("dimensions", [])
+                  assert len(dims) == 3 and dims[2] == 1, tally
+                  assert tally.get("scores"), tally
+                  for score, fields in tally["scores"].items():
+                      for field_name in ("mean", "std_dev"):
+                          grid = fields.get(field_name)
+                          assert isinstance(grid, list) and grid, (score, field_name, tally)
+                          assert all(isinstance(row, list) and row for row in grid), (score, field_name, tally)
+              print(f"API smoke passed; validated {len(tallies)} archived OpenMC mesh tally/tallies.")
+          else:
+              with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
+                  error = json.load(f)
+              print("Mesh archive unavailable in this CI checkout; UI must show an explicit unavailable state. " + str(error.get("error", "")))
+          print("Health, HTML, CSS, JS, all six candidate inspector tests, source manifest tests, model geometry API, candidate API, assembly API, and geometry inventory passed.")
           PY
+          node tests/browser_visual_smoke.cjs
+      - name: Upload browser visual QA screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cb-pfr-browser-visual-qa
+          path: artifacts/visual-qa/
+          if-no-files-found: warn
+          retention-days: 14

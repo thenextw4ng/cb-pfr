@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 import mimetypes
+import os
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -13,10 +14,18 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 CANDIDATE_CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
-STATEPOINT_ARCHIVE = ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip"
-# The archive may already exist on the user Desktop without being committed to GitHub.
-STATEPOINT_ARCHIVE_FALLBACK = Path.home() / "Desktop" / "OpenMC_HDF5_Evidence_2026-10-11.zip"
-STATEPOINT_MEMBER = "c5g7-run/2d/statepoint.20000.h5"
+# Explicit environment overrides let CI audit a known smoke artifact and let users point to
+# their production ZIP without renaming or copying it into the repository.
+STATEPOINT_ARCHIVE = Path(os.environ.get(
+    "CBPFR_STATEPOINT_ARCHIVE", str(ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip")
+)).expanduser()
+STATEPOINT_ARCHIVE_FALLBACK = Path(os.environ.get(
+    "CBPFR_STATEPOINT_ARCHIVE_FALLBACK",
+    str(Path.home() / "Desktop" / "OpenMC_HDF5_Evidence_2026-10-11.zip")
+)).expanduser()
+STATEPOINT_MEMBER = os.environ.get(
+    "CBPFR_STATEPOINT_MEMBER", "c5g7-run/2d/statepoint.20000.h5"
+)
 
 
 def locate_statepoint_archive():
@@ -26,8 +35,12 @@ def locate_statepoint_archive():
     raise FileNotFoundError(
         f"Statepoint archive not found at {STATEPOINT_ARCHIVE} or {STATEPOINT_ARCHIVE_FALLBACK}."
     )
-STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
+STATEPOINT_BASELINE = Path(os.environ.get(
+    "CBPFR_STATEPOINT_BASELINE",
+    str(ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json")
+)).expanduser()
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
+MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
 
 GEOMETRY_SEARCH_ROOTS = tuple(ROOT / name for name in ("plots", "plot", "geometry", "model", "c5g7-run", "evidence", "results", "artifacts"))
 GEOMETRY_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".vti", ".vtk", ".vtp", ".vtu", ".vtm", ".xdmf"}
@@ -76,6 +89,112 @@ def read_geometry_artifact(relative_path):
     raise PermissionError("Artifact path is outside approved geometry-output directories.")
 
 
+def read_model_geometry():
+    """Load and validate the committed manifest extracted from archived OpenMC XML."""
+    if not MODEL_GEOMETRY_MANIFEST.is_file():
+        raise FileNotFoundError(f"OpenMC-derived geometry manifest not found: {MODEL_GEOMETRY_MANIFEST.relative_to(ROOT)}")
+    with MODEL_GEOMETRY_MANIFEST.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("OpenMC geometry manifest has an unsupported schema.")
+
+    def valid_sha256(value):
+        return isinstance(value, str) and len(value) == 64 and all(
+            char in "0123456789abcdef" for char in value.lower()
+        )
+
+    source = payload.get("source", {})
+    if not valid_sha256(source.get("archive_sha256", "")):
+        raise ValueError("Geometry manifest source archive SHA-256 is missing or malformed.")
+
+    core = payload.get("core_lattice", {})
+    if core.get("id") != 201 or core.get("dimensions") != [3, 3]:
+        raise ValueError("Geometry manifest core lattice must be the archived 3 x 3 lattice 201.")
+    if core.get("lower_left_cm") != [-32.13, -32.13] or core.get("pitch_cm") != [21.42, 21.42]:
+        raise ValueError("Geometry manifest core dimensions differ from the archived C5G7 inputs.")
+
+    pin_geometry = payload.get("pin_geometry", {})
+    if pin_geometry.get("dimensions") != [17, 17] or pin_geometry.get("pitch_cm") != [1.26, 1.26] or pin_geometry.get("pin_radius_cm") != 0.54:
+        raise ValueError("Geometry manifest pin dimensions differ from the archived XML.")
+    pin_universes = payload.get("materials", {}).get("pin_universes", {})
+    if set(pin_universes) != {"1", "2", "3", "4", "5", "6"}:
+        raise ValueError("Geometry manifest has an incomplete pin-universe material map.")
+    material_names = payload.get("materials", {}).get("by_id", {})
+    for uid, material in pin_universes.items():
+        material_id = str(material.get("material_id", ""))
+        if material_names.get(material_id) != material.get("material_name"):
+            raise ValueError(f"Pin universe {uid} material label differs from the archived materials definition.")
+
+    expected_lattices = {"101": "UO2 Unrodded Assembly", "103": "MOX Unrodded Assembly"}
+    pin_lattices = payload.get("pin_lattices", {})
+    if set(pin_lattices) != set(expected_lattices):
+        raise ValueError("Geometry manifest must include pin lattices 101 and 103.")
+    known_pin_universes = set(pin_universes)
+    for lattice_id, expected_name in expected_lattices.items():
+        lattice = pin_lattices[lattice_id]
+        grid = lattice.get("universe_grid", [])
+        if lattice.get("name") != expected_name or lattice.get("dimensions") != [17, 17] or len(grid) != 17 or any(
+            not isinstance(row, list) or len(row) != 17 for row in grid
+        ):
+            raise ValueError(f"{expected_name} must be a 17 x 17 XML universe grid.")
+        if any(str(value) not in known_pin_universes for row in grid for value in row):
+            raise ValueError(f"{expected_name} contains an unknown pin universe.")
+
+    assemblies = payload.get("assemblies", {})
+    if {key: value.get("code") for key, value in assemblies.items()} != {"9": "U", "11": "M", "13": "R"}:
+        raise ValueError("Assembly-universe mapping differs from the archived geometry XML.")
+    if assemblies["9"].get("lattice_id") != 101 or assemblies["11"].get("lattice_id") != 103 or assemblies["13"].get("lattice_id") != 105:
+        raise ValueError("Assembly universes are not mapped to the archived lattice IDs.")
+    boundary_map = {item.get("name"): item for item in payload.get("boundary_conditions", [])}
+    expected_boundaries = {
+        "Core x-min": ("reflective", -32.13),
+        "Core x-max": ("vacuum", 32.13),
+        "Core y-min": ("vacuum", -32.13),
+        "Core y-max": ("reflective", 32.13),
+    }
+    for name, (condition, coordinate) in expected_boundaries.items():
+        record = boundary_map.get(name, {})
+        if record.get("condition") != condition or record.get("coordinate_cm") != coordinate:
+            raise ValueError(f"Boundary condition {name} differs from archived geometry XML.")
+
+    candidates = payload.get("candidates")
+    expected_layouts = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
+    if not isinstance(candidates, list) or len(candidates) != 6:
+        raise ValueError("Geometry manifest must contain exactly six candidate layouts.")
+    seen = set()
+    for candidate in candidates:
+        candidate_id = str(candidate.get("candidate_id", ""))
+        signature = str(candidate.get("layout_signature", ""))
+        if not candidate_id or candidate_id in seen:
+            raise ValueError("Geometry manifest contains an empty or duplicate candidate ID.")
+        seen.add(candidate_id)
+        if candidate_id != "c5g7-2x2-" + signature or signature not in expected_layouts:
+            raise ValueError(f"Candidate ID and layout signature disagree: {candidate_id} / {signature}.")
+        grid = candidate.get("core_universe_grid", [])
+        category_grid = candidate.get("assembly_grid", [])
+        if len(grid) != 3 or any(not isinstance(row, list) or len(row) != 3 for row in grid):
+            raise ValueError(f"Candidate {candidate_id} core universe grid must be 3 x 3.")
+        mapped = [[assemblies.get(str(value), {}).get("code", "?") for value in row] for row in grid]
+        if mapped != category_grid:
+            raise ValueError(f"Candidate {candidate_id} category grid differs from its XML universe grid.")
+        if any(code not in {"U", "M", "R"} for row in mapped for code in row):
+            raise ValueError(f"Candidate {candidate_id} contains an unmapped universe.")
+        derived = "".join(mapped[r][c] for r, c in ((0, 0), (0, 1), (1, 0), (1, 1)))
+        if derived != signature or candidate.get("signature_derived_from_xml") != signature or candidate.get("source_matches_candidate_signature") is not True:
+            raise ValueError(f"Candidate {candidate_id} failed the XML-to-signature identity check.")
+        if mapped[0][2] != "R" or mapped[1][2] != "R" or mapped[2] != ["R", "R", "R"]:
+            raise ValueError(f"Candidate {candidate_id} does not have the expected reflector footprint.")
+        if sum(code == "U" for row in mapped for code in row) != 2 or sum(code == "M" for row in mapped for code in row) != 2 or sum(code == "R" for row in mapped for code in row) != 5:
+            raise ValueError(f"Candidate {candidate_id} does not contain two UO2, two MOX, and five reflector sites.")
+        if not valid_sha256(candidate.get("geometry_xml_sha256", "")):
+            raise ValueError(f"Candidate {candidate_id} has a malformed geometry XML SHA-256.")
+        if not valid_sha256(candidate.get("materials_xml_sha256", "")):
+            raise ValueError(f"Candidate {candidate_id} has a malformed materials XML SHA-256.")
+    if {candidate.get("layout_signature") for candidate in candidates} != expected_layouts:
+        raise ValueError("Geometry manifest does not contain all six expected layouts.")
+    return payload
+
+
 def read_candidates():
     if not CANDIDATE_CSV.is_file():
         raise FileNotFoundError(f"Candidate summary not found: {CANDIDATE_CSV.relative_to(ROOT)}")
@@ -117,73 +236,173 @@ def read_assembly_evidence():
 
 
 def read_mesh_evidence():
-    """Read only the known production member from the committed statepoint archive."""
+    """Extract mesh-tally means and standard errors from an archived OpenMC statepoint."""
     archive_path = locate_statepoint_archive()
     try:
         import h5py
         import numpy as np
     except ImportError as exc:
-        raise RuntimeError("Spatial field visualization needs h5py and numpy. Install project requirements with: python -m pip install -r requirements.txt") from exc
+        raise RuntimeError(
+            "Spatial field visualization needs h5py and numpy. "
+            "Install project requirements with: python -m pip install -r requirements.txt"
+        ) from exc
 
     with zipfile.ZipFile(archive_path) as archive:
         matches = [name for name in archive.namelist() if name == STATEPOINT_MEMBER]
         if len(matches) != 1:
             raise ValueError(f"Expected exactly one {STATEPOINT_MEMBER} entry, found {len(matches)}.")
         raw_bytes = archive.read(matches[0])
+
     actual_hash = hashlib.sha256(raw_bytes).hexdigest()
     expected_hash = None
     if STATEPOINT_BASELINE.is_file():
         baseline = json.loads(STATEPOINT_BASELINE.read_text(encoding="utf-8"))
         expected_hash = baseline.get("statepoint_file_sha256")
+
     records = []
     with h5py.File(__import__("io").BytesIO(raw_bytes), "r") as handle:
         tallies = handle.get("tallies")
         if tallies is None:
             raise ValueError("Statepoint HDF5 does not contain a tallies group.")
+
         meshes = []
-        if "meshes" in tallies:
-            for name, mesh in tallies["meshes"].items():
+        mesh_group = tallies.get("meshes")
+        if mesh_group is not None:
+            for name, mesh in mesh_group.items():
                 if "dimension" not in mesh:
                     continue
                 dims = [int(v) for v in np.asarray(mesh["dimension"][()]).reshape(-1)]
-                if len(dims) == 3 and dims[2] == 1:
-                    meshes.append((name, dims))
+                if len(dims) == 3 and dims[2] == 1 and all(v > 0 for v in dims):
+                    meshes.append((name, int(mesh.attrs.get("id", name.split()[-1])), dims))
+
+        filters = {}
+        filter_group = tallies.get("filters")
+        if filter_group is not None:
+            for name, filt in filter_group.items():
+                if "type" not in filt:
+                    continue
+                raw_type = filt["type"][()]
+                if isinstance(raw_type, bytes):
+                    raw_type = raw_type.decode("utf-8", errors="replace")
+                filter_id = int(filt.attrs.get("id", name.split()[-1]))
+                filter_type = str(raw_type).strip().lower()
+                mesh_id = None
+                # In OpenMC 0.16, a MeshFilter stores the referenced mesh ID in
+                # its "bins" dataset (typically [1]), not a "mesh"/"mesh_id" dataset.
+                # Retain alternate keys for statepoint variants and older wrappers.
+                mesh_reference_keys = ("mesh", "mesh_id", "bins") if filter_type == "mesh" else ("mesh", "mesh_id")
+                for key in mesh_reference_keys:
+                    if key in filt:
+                        try:
+                            mesh_id = int(np.asarray(filt[key][()]).reshape(-1)[0])
+                            break
+                        except (TypeError, ValueError, IndexError):
+                            continue
+                filters[filter_id] = (filter_type, mesh_id)
+
         for tally_name, tally in tallies.items():
             if not tally_name.startswith("tally ") or not hasattr(tally, "keys"):
                 continue
             if "results" not in tally or "score_bins" not in tally:
                 continue
-            scores = []
+
+            score_bins = []
             for value in np.asarray(tally["score_bins"][()]).reshape(-1):
                 if isinstance(value, bytes):
-                    scores.append(value.decode("utf-8", errors="replace").rstrip("\x00"))
+                    score_bins.append(value.decode("utf-8", errors="replace").rstrip("\x00"))
                 elif hasattr(value, "item"):
                     item = value.item()
-                    scores.append(item.decode("utf-8", errors="replace").rstrip("\x00") if isinstance(item, bytes) else str(item))
+                    score_bins.append(item.decode("utf-8", errors="replace").rstrip("\x00") if isinstance(item, bytes) else str(item))
                 else:
-                    scores.append(str(value))
-            values = np.asarray(tally["results"][()])
+                    score_bins.append(str(value))
+
+            values = np.asarray(tally["results"][()], dtype=float)
             if values.ndim == 4 and values.shape[1] == 1:
                 values = values[:, 0, :, :]
-            if values.ndim != 3 or values.shape[-1] != 2 or values.shape[-2] != len(scores):
+            if values.ndim != 3 or values.shape[-1] != 2 or values.shape[-2] != len(score_bins):
                 continue
-            bins = values.shape[0]
-            matching = next((m for m in meshes if int(np.prod(m[1])) == bins), None)
+
+            tally_filter_ids = []
+            if "filters" in tally:
+                tally_filter_ids = [int(v) for v in np.asarray(tally["filters"][()]).reshape(-1)]
+            mesh_filter_ids = [
+                fid for fid in tally_filter_ids
+                if fid in filters and filters[fid][0].lower() in ("mesh", "meshsurface")
+            ]
+            matching_meshes = []
+            for mesh_name, mesh_id, dims in meshes:
+                if mesh_filter_ids:
+                    if any(filters[fid][1] == mesh_id for fid in mesh_filter_ids):
+                        matching_meshes.append((mesh_name, mesh_id, dims))
+                elif int(np.prod(dims)) == values.shape[0]:
+                    # Compatibility fallback for statepoint variants that omit explicit filter links.
+                    matching_meshes.append((mesh_name, mesh_id, dims))
+            matching = next((m for m in matching_meshes if int(np.prod(m[2])) == values.shape[0]), None)
             if matching is None:
                 continue
-            mesh_name, dims = matching
-            if dims[0] * dims[1] != bins:
+
+            mesh_name, mesh_id, dims = matching
+            if dims[0] * dims[1] != values.shape[0]:
                 continue
+
+            # OpenMC stores the realization count at the statepoint root in supported
+            # versions; tolerate alternate wrappers without silently inventing a value.
+            n_realizations = tally.attrs.get("n_realizations")
+            if n_realizations is None and "n_realizations" in tally:
+                n_realizations = tally["n_realizations"][()]
+            if n_realizations is None and "n_realizations" in tallies.attrs:
+                n_realizations = tallies.attrs["n_realizations"]
+            if n_realizations is None and "n_realizations" in handle:
+                n_realizations = handle["n_realizations"][()]
+            if n_realizations is None:
+                raise ValueError(f"Statepoint has no n_realizations field for {tally_name}; cannot calculate tally means.")
+            n_realizations = int(np.asarray(n_realizations).reshape(-1)[0])
+            if n_realizations <= 0:
+                raise ValueError(f"{tally_name} has invalid n_realizations={n_realizations}.")
+
+            # OpenMC statepoint results store accumulated sum and sum-of-squares,
+            # not ready-to-plot means and standard deviations.
+            sums = values[:, :, 0]
+            sums_sq = values[:, :, 1]
+            means = sums / n_realizations
+            if n_realizations > 1:
+                sample_variance = np.maximum(
+                    (sums_sq - (sums * sums / n_realizations)) / (n_realizations - 1),
+                    0.0,
+                )
+                std_err = np.sqrt(sample_variance / n_realizations)
+            else:
+                std_err = np.full_like(means, np.nan)
+
             mean_grid = {}
             sd_grid = {}
-            mean_values = np.asarray(values[:, :, 0], dtype=float)
-            std_values = np.asarray(values[:, :, 1], dtype=float)
-            for idx, score in enumerate(scores):
-                mean_grid[score] = mean_values[:, idx].reshape((dims[1], dims[0])).tolist()
-                sd_grid[score] = std_values[:, idx].reshape((dims[1], dims[0])).tolist()
-            records.append({"tally_name": tally_name, "mesh_name": mesh_name, "dimensions": dims, "scores": {score: {"mean": mean_grid[score], "std_dev": sd_grid[score]} for score in scores}})
+            for idx, score in enumerate(score_bins):
+                mean_grid[score] = means[:, idx].reshape((dims[1], dims[0])).tolist()
+                sd_grid[score] = std_err[:, idx].reshape((dims[1], dims[0])).tolist()
+
+            records.append({
+                "tally_name": tally_name,
+                "mesh_name": mesh_name,
+                "mesh_id": mesh_id,
+                "dimensions": dims,
+                "n_realizations": n_realizations,
+                "uncertainty_statistic": "standard_error",
+                "scores": {
+                    score: {
+                        "mean": mean_grid[score],
+                        "standard_error": sd_grid[score],
+                        # Backwards-compatible alias: std_dev historically held standard error here.
+                        "std_dev": sd_grid[score],
+                    }
+                    for score in score_bins
+                },
+            })
+
     if not records:
-        raise ValueError("No compatible 2-D OpenMC mesh tally found in archived statepoint.")
+        raise ValueError(
+            "No compatible 2-D OpenMC mesh tally was found in the archived statepoint. "
+            "Verify the tally's mesh filter, mesh dimensions, and score bins."
+        )
     return {
         "mesh_tallies": records,
         "provenance": {
@@ -191,10 +410,10 @@ def read_mesh_evidence():
             "sha256": actual_hash,
             "expected_sha256": expected_hash,
             "hash_matches": actual_hash == expected_hash if expected_hash else None,
-            "evidence_status": "recorded statepoint; no geometry-to-material mapping inferred",
+            "statepoint_member": STATEPOINT_MEMBER,
+            "evidence_status": "recorded statepoint; means and standard errors derived from accumulated tally sums and sum-of-squares",
         },
     }
-
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "CBPFRLocal/0.2"
@@ -218,6 +437,11 @@ class Handler(BaseHTTPRequestHandler):
                 payload = {"metadata": {"source": str(CANDIDATE_CSV.relative_to(ROOT)), "mode": "recorded repository evidence; no OpenMC execution"}, "records": read_candidates()}
                 return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, csv.Error) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
+        if path == "/api/model-geometry":
+            try:
+                return self._send(200, json.dumps(read_model_geometry(), allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifacts":
             try:
