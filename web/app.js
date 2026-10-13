@@ -308,11 +308,38 @@ function fieldStats(values){
   mean:finite.length?finite.reduce((a,b)=>a+b,0)/finite.length:null
  };
 }
+function meshCoordinateInfo(item){
+ const dims=item?.dimensions||[],geometry=item?.spatial_geometry||{};
+ const lower=geometry.lower_left_cm,upper=geometry.upper_right_cm;
+ const nx=Number(dims[0]),ny=Number(dims[1]);
+ const physical=geometry.coordinates_available===true&&geometry.coordinate_units==="cm"&&
+  Array.isArray(lower)&&Array.isArray(upper)&&lower.length>=2&&upper.length>=2&&
+  Number.isFinite(Number(lower[0]))&&Number.isFinite(Number(lower[1]))&&
+  Number.isFinite(Number(upper[0]))&&Number.isFinite(Number(upper[1]))&&
+  Number(upper[0])>Number(lower[0])&&Number(upper[1])>Number(lower[1])&&nx>0&&ny>0;
+ if(physical){
+  const lx=Number(lower[0]),ly=Number(lower[1]),ux=Number(upper[0]),uy=Number(upper[1]);
+  return {physical:true,
+   x:Array.from({length:nx},(_,i)=>lx+(i+0.5)*(ux-lx)/nx),
+   y:Array.from({length:ny},(_,i)=>ly+(i+0.5)*(uy-ly)/ny),
+   xRange:[lx,ux],yRange:[ly,uy],xTitle:"X position (cm)",yTitle:"Y position (cm)",
+   xHoverLabel:"X position %{x:.4g} cm",yHoverLabel:"Y position %{y:.4g} cm"};
+ }
+ return {physical:false,x:Array.from({length:nx},(_,i)=>i),y:Array.from({length:ny},(_,i)=>i),
+  xRange:null,yRange:null,xTitle:"X mesh-bin index (0-based)",yTitle:"Y mesh-bin index (0-based)",
+  xHoverLabel:"X-bin %{x}",yHoverLabel:"Y-bin %{y}"};
+}
+function niceAxisStep(span,target=6){
+ if(!Number.isFinite(span)||span<=0)return undefined;
+ const raw=span/target,power=Math.pow(10,Math.floor(Math.log10(raw))),scaled=raw/power;
+ return (scaled<=1?1:scaled<=2?2:scaled<=2.5?2.5:scaled<=5?5:10)*power;
+}
 function currentField(){
  if(!meshData||!Array.isArray(meshData.mesh_tallies)||!meshData.mesh_tallies.length)return null;
  const score=$("meshScore").value, view=$("meshView").value, scale=$("meshScale").value;
  const item=meshData.mesh_tallies[0], record=item.scores?.[score];
  if(!record)return null;
+ const coordinates=meshCoordinateInfo(item);
  const mean=record.mean;
  // "std_dev" remains as a backwards-compatible API field; in the audited reader,
  // its stored values are the Monte Carlo standard error, not sample standard deviation.
@@ -333,7 +360,7 @@ function currentField(){
   :(scale==="log"?"log₁₀(tally mean)":"Tally mean");
  const rawValues=view==="relative_sd"?relative:mean;
  return {
-  item,score,view,scale,mean,standardError,sd:standardError,relative,rawValues,values,colorTitle,
+  item,score,view,scale,mean,standardError,sd:standardError,relative,rawValues,values,colorTitle,coordinates,
   stats:fieldStats(mean),displayStats:fieldStats(values)
  };
 }
@@ -349,8 +376,8 @@ function drawMesh(){
  }
  const paletteName=$("meshPalette").value;
  const z=f.values, raw=f.rawValues, scoreLabel=f.score;
- const nx=f.item.dimensions[0], ny=f.item.dimensions[1];
- const xs=Array.from({length:nx},(_,i)=>i), ys=Array.from({length:ny},(_,i)=>i);
+ const nx=f.item.dimensions[0], ny=f.item.dimensions[1], coordinates=f.coordinates;
+ const xs=coordinates.x, ys=coordinates.y;
  const plotTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":(f.scale==="log"?"log₁₀("+scoreLabel+" tally mean)":"Recorded "+scoreLabel+" tally mean");
  const rawTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":scoreLabel+" tally mean (recorded scale)";
  const hover=(title)=>"x-bin %{x}<br>y-bin %{y}<br>"+title+" %{customdata:.6g}<extra></extra>";
@@ -360,8 +387,8 @@ function drawMesh(){
  const colorscale=paletteName;
  const heatLayout={
   autosize:true,margin:{l:62,r:30,t:18,b:58},showlegend:false,
-  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (0-based)",standoff:8}},
-  yaxis:{...yAxisStyle,...sharedAxis,title:{text:"Y mesh-bin index (0-based)",standoff:8},autorange:"reversed"}
+  xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
+  yaxis:{...yAxisStyle,...sharedAxis,title:{text:coordinates.yTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.yRange[1]-coordinates.yRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.yRange:undefined,autorange:coordinates.physical?false:"reversed"}
  };
  const finiteZ=z.flat().filter(v=>typeof v==="number"&&Number.isFinite(v));
  const zMin=finiteZ.length?Math.min(...finiteZ):0, zMax=finiteZ.length?Math.max(...finiteZ):1;
@@ -396,14 +423,14 @@ function drawMesh(){
  chart("meshSurface",[{
   type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:raw,colorscale,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:"x-bin %{x}<br>y-bin %{y}<br>"+rawTitle+" %{customdata:.6g}<br>Displayed Z %{z:.6g}<extra></extra>",
+  hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+rawTitle+" %{customdata:.6g}<br>Displayed Z %{z:.6g}<extra></extra>",
   connectgaps:false,hoverongaps:false,showscale:true,
   lighting:{ambient:0.72,diffuse:0.78,specular:0.18,roughness:0.72,fresnel:0.08},opacity:0.98
  }],{
   autosize:true,margin:{l:8,r:8,t:8,b:8},
   scene:{
-   xaxis:{title:{text:"X mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
-   yaxis:{title:{text:"Y mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
+   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.xRange:undefined},
+   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.yRange:undefined},
    zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
    bgcolor:"rgba(0,0,0,0)",aspectmode:"auto",camera:{eye:{x:1.55,y:1.55,z:1.1}}
   }
@@ -411,10 +438,10 @@ function drawMesh(){
  const centerY=Math.floor((ny-1)/2);
  const meanRow=f.mean[centerY]||[], seRow=f.standardError[centerY]||[], relativeRow=f.relative[centerY]||[];
  const profileY=f.view==="relative_sd"?relativeRow:meanRow;
- const profileCustom=xs.map(i=>[meanRow[i],seRow[i],relativeRow[i]]);
+ const profileCustom=xs.map((x,i)=>[meanRow[i],seRow[i],relativeRow[i]]);
  const profileHover=f.view==="relative_sd"
-  ?"X-bin %{x}<br>Relative Monte Carlo standard error %{y:.4g}%<extra></extra>"
-  :"X-bin %{x}<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>";
+  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<extra></extra>"
+  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>";
  const profileError=f.view==="mean"?{
   type:"data",symmetric:false,
   array:seRow.map((se,i)=>Number.isFinite(se)&&se>=0?se:0),
@@ -429,14 +456,14 @@ function drawMesh(){
   error_y:profileError,connectgaps:false,hovertemplate:profileHover
  }],{
   autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
-  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (0-based)",standoff:8},dtick:5},
-  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean",standoff:8},exponentformat:"power"},
-  annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
+  xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
+  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean"+(f.scale==="log"?" (logarithmic axis)":""),standoff:8},exponentformat:"power"},
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:coordinates.physical?"Central cut: Y = "+coordinates.y[centerY].toFixed(3)+" cm · row "+centerY:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
  });
  if($("meshContourSubtitle"))$("meshContourSubtitle").textContent=f.view==="relative_sd"
   ?"Labelled iso-contours of relative Monte Carlo standard error (%)"
   :f.scale==="log"?"Labelled iso-contours; colour levels use log₁₀(mean), hover reports the recorded mean":"Labelled iso-contours of recorded tally mean";
- if($("meshProfileSubtitle"))$("meshProfileSubtitle").textContent="Central cut at Y-bin "+centerY+" (0-based index)";
+ if($("meshProfileSubtitle"))$("meshProfileSubtitle").textContent=coordinates.physical?"Central cut at Y = "+coordinates.y[centerY].toFixed(3)+" cm (row "+centerY+")":"Central cut at Y-bin "+centerY+" (0-based index)";
  const st=f.stats,finiteDisplay=f.displayStats.finite,dimensionText=nx+" × "+ny;
  $("fieldKpis").innerHTML=[
   ["Mesh dimensions",dimensionText,"Archived 2D mesh bins"],
@@ -453,7 +480,10 @@ function drawMesh(){
   "Realizations: "+String(f.item.n_realizations??"not recorded")
  ];
  const note=$("meshSummaryNote");
- if(note)note.textContent=summary.join(" · ")+". Bin indices are not physical assembly coordinates; contour labels use the displayed scale, while hover values preserve recorded tallies.";
+ const coordinateNote=coordinates.physical
+  ?"XY axes use archived regular-mesh bounds in cm; plotted coordinates are cell centres. No fuel/reflector/assembly labels are inferred."
+  :"Physical XY bounds are unavailable; axes remain mesh-bin indices, not cm or assembly coordinates.";
+ if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" Contours and the surface use the selected display scale; hover values preserve recorded tally means.";
  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"DATA LOADED · HASH NOT CHECKED";
  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
 }
@@ -470,7 +500,11 @@ async function initMesh(){
   }
   meshData=payload;
   $("meshStatus").classList.remove("warning");
-  $("meshProvenance").textContent=meshData.provenance.source+" · "+item.dimensions.join(" × ")+" bins · tally "+item.tally_name+" · "+String(item.n_realizations??"unknown")+" realizations · SHA-256 "+meshData.provenance.sha256+". "+(meshData.provenance.hash_matches===true?"Statepoint member hash matches the recorded baseline.":meshData.provenance.hash_matches===false?"WARNING: statepoint hash differs from the recorded baseline; verify provenance before scientific comparison.":"Baseline hash was unavailable; provenance has not been hash-verified.")+" Mesh indices are not mapped to physical assembly coordinates; relative uncertainty shown below is standard error / mean.";
+  const coordinates=meshCoordinateInfo(item);
+  const coordinateProvenance=coordinates.physical
+   ?"Recorded regular-mesh bounds: X "+coordinates.xRange[0].toFixed(3)+" to "+coordinates.xRange[1].toFixed(3)+" cm; Y "+coordinates.yRange[0].toFixed(3)+" to "+coordinates.yRange[1].toFixed(3)+" cm. Plots use cell-centre coordinates."
+   :"Physical mesh bounds unavailable; spatial plots use explicit mesh-bin indices rather than assumed centimetres.";
+  $("meshProvenance").textContent=meshData.provenance.source+" · "+item.dimensions.join(" × ")+" bins · tally "+item.tally_name+" · "+String(item.n_realizations??"unknown")+" realizations · SHA-256 "+meshData.provenance.sha256+". "+(meshData.provenance.hash_matches===true?"Statepoint member hash matches the recorded baseline.":meshData.provenance.hash_matches===false?"WARNING: statepoint hash differs from the recorded baseline; verify provenance before scientific comparison.":"Baseline hash was unavailable; provenance has not been hash-verified.")+" "+coordinateProvenance+" Relative uncertainty is calculated as standard error / mean for positive tally bins.";
   const scoreSelect=$("meshScore");
   const availableScores=Object.keys(item.scores);
   scoreSelect.innerHTML=availableScores.map(k=>'<option value="'+escapeHtml(k)+'">'+escapeHtml(k)+'</option>').join("");
