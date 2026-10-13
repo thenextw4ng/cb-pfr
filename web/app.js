@@ -904,7 +904,12 @@ async function loadAxial3D(){
   $("axial3dStatus").classList.toggle("warning",hasHighLocalRse);
   const state=payload.provenance?.statepoint||{};
   const sha=payload.provenance?.sha256||"not recorded";
-  $("axial3dProvenance").textContent=payload.provenance?.source+" · mesh "+dims.join(" × ")+" · statepoint SHA-256 "+(state.sha256||"not recorded")+" · NPZ SHA-256 "+sha+". The plotted field comes from recorded 3D tally bins, not the 2D surface.";
+  const inputAudit=payload.provenance?.input_audit||{};
+  const inputManifest=payload.provenance?.input_manifest||{};
+  const sourceCandidate=inputManifest.candidate_id||inputAudit.candidate_id||"candidate not recorded";
+  const layoutSignature=inputManifest.layout_signature||"layout not recorded";
+  const auditText=inputAudit.status||"input XML audit sidecar not installed";
+  $("axial3dProvenance").textContent=payload.provenance?.source+" · candidate "+sourceCandidate+" · layout "+layoutSignature+" · input audit: "+auditText+" · mesh "+dims.join(" × ")+" · statepoint SHA-256 "+(state.sha256||"not recorded")+" · NPZ SHA-256 "+sha+". The plotted field comes from recorded 3D tally bins, not the 2D surface.";
   const zs=payload.mesh.z_centers_cm||[];
   const slider=$("axial3dSlice");
   slider.max=String(zs.length-1);
