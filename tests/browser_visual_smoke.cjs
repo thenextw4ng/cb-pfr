@@ -227,8 +227,15 @@ async function main() {
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
     await mobilePage.waitForFunction(() => document.querySelectorAll("#selectedCandidateMetrics .candidate-stat").length === 4, { timeout: 30000 });
-    await mobilePage.locator("#selectedCandidateMetrics").scrollIntoViewIfNeeded();
-    await mobilePage.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 5000 });
+    const firstMobileMetric = mobilePage.locator("#selectedCandidateMetrics .candidate-stat").first();
+    await firstMobileMetric.scrollIntoViewIfNeeded();
+    await mobilePage.waitForFunction(() => {
+      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      if (!metric) return false;
+      const rect = metric.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+    }, { timeout: 10000 });
+    await firstMobileMetric.waitFor({ state: "visible", timeout: 10000 });
     await mobilePage.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 30000 });
     await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
     await mobilePage.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
