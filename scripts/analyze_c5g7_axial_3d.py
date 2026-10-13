@@ -37,6 +37,19 @@ def read_json(path: Path) -> dict:
         raise ValueError(f"Expected JSON object in {path}")
     return value
 
+def require_canonical_reference_layout(manifest: dict) -> None:
+    """Only the canonical UMMU layout matches the published C5G7 reference case."""
+    signature = str(manifest.get("layout_signature", "")).upper()
+    if signature != "UMMU":
+        raise ValueError(
+            "The OECD/NEA C5G7 3-D scalar reference comparison is only applicable "
+            "to the canonical UMMU layout. This candidate is "
+            + repr(signature)
+            + "; preserve its transport/tally artifacts without comparing its k-effective "
+            "to the UMMU benchmark reference."
+        )
+
+
 def parse_openmc_log(path: Path) -> dict:
     try:
         raw = path.read_text(encoding="utf-8", errors="replace")
@@ -64,6 +77,7 @@ def analyze(candidate_root: Path, openmc_log: Path, output_dir: Path) -> tuple[d
     summary_path = output_root / "AXIAL_3D_STATEPOINT_SUMMARY.json"
     tally_path = output_root / "axial_tally_3d.npz"
     manifest, audit, state = read_json(manifest_path), read_json(audit_path), read_json(summary_path)
+    require_canonical_reference_layout(manifest)
     log = parse_openmc_log(openmc_log)
     if audit.get("status") != "generated_3d_inputs_passed_structural_audit":
         raise ValueError("The generated 3-D input audit did not pass.")
