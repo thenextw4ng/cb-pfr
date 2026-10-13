@@ -78,6 +78,60 @@ st.dataframe(df[[
     "particles_per_batch", "keff_mean", "keff_std_dev", "keff_relative_sd_percent",
 ]], use_container_width=True, hide_index=True)
 
+st.markdown("### Candidate trade-off space")
+st.markdown(
+    '<div class="panel-subtitle">Explore relationships between the recorded scalar metrics. '
+    'This is descriptive candidate-level context; with one seed per layout it is not a repeatability estimate or a causal relationship.</div>',
+    unsafe_allow_html=True,
+)
+metric_options = {
+    "k-effective mean": ("keff_mean", "Reported k-effective mean"),
+    "Aggregate flux score": ("aggregate_flux_score", "Aggregate flux score (units not specified)"),
+    "Aggregate fission score": ("aggregate_fission_score", "Aggregate fission score (units not specified)"),
+    "Reported relative SD (%)": ("keff_relative_sd_percent", "Reported relative SD (%)"),
+}
+axis_a, axis_b = st.columns(2)
+with axis_a:
+    x_label = st.selectbox("Horizontal metric", list(metric_options), index=0, key="mc_tradeoff_x")
+with axis_b:
+    y_label = st.selectbox("Vertical metric", list(metric_options), index=1, key="mc_tradeoff_y")
+x_key, x_title = metric_options[x_label]
+y_key, y_title = metric_options[y_label]
+trade_df = df.dropna(subset=[x_key, y_key]).copy()
+fig_trade = go.Figure()
+for is_reference, group in trade_df.groupby("canonical_reference", sort=False):
+    fig_trade.add_trace(go.Scatter(
+        x=group[x_key],
+        y=group[y_key],
+        mode="markers+text",
+        text=group["candidate_id"].str.replace("c5g7-2x2-", "", regex=False),
+        textposition="top center",
+        textfont={"size": 10},
+        marker={
+            "size": 13,
+            "color": CYAN if bool(is_reference) else ORANGE,
+            "symbol": "diamond" if bool(is_reference) else "circle",
+            "line": {"color": "#e8f1f7", "width": 0.8},
+        },
+        customdata=group[["candidate_id", "layout_signature", "seed"]].to_numpy(),
+        name="Canonical reference" if bool(is_reference) else "Other layout",
+        hovertemplate=(
+            "Candidate: %{customdata[0]}<br>Layout: %{customdata[1]}"
+            "<br>Seed: %{customdata[2]}<br>"
+            + x_title + ": %{x:.7g}<br>" + y_title + ": %{y:.7g}<extra></extra>"
+        ),
+    ))
+base_layout(fig_trade, height=465)
+fig_trade.update_layout(
+    xaxis_title=x_title,
+    yaxis_title=y_title,
+    hovermode="closest",
+    legend={"orientation": "h", "y": 1.12, "x": 0.02},
+    margin={"l": 75, "r": 30, "t": 55, "b": 70},
+)
+st.plotly_chart(fig_trade, use_container_width=True, config={"displaylogo": False}, key="mc_candidate_tradeoff")
+st.caption("Only reported means/aggregate scores are plotted. No extra physical units, confidence intervals, or candidate-specific spatial fields are inferred.")
+
 st.markdown("### What a reliability comparison still needs")
 st.write("Run every candidate at a common computational budget over multiple independent seeds; archive matching settings, logs, and statepoints; verify tally definitions and MGXS identity; then predeclare the acceptance band, objective, uncertainty treatment, and decision rule.")
 st.download_button("Export run summary CSV", df.to_csv(index=False).encode("utf-8"), "cbpfr_monte_carlo_smoke_summary.csv", "text/csv")
