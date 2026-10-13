@@ -8,7 +8,7 @@ Stage 6 provides an automated review gate for the scientific HTML workstation on
 
 | Area | Automated acceptance rule |
 |---|---|
-| Core geometry | Six candidate signatures match the OpenMC-derived manifest; 2 MOX + 2 UO₂ fuel positions are row-major P00, P01, P10, P11; the five reflector sites are invariant; pin dimensions and source hashes are present. |
+| Core geometry | Six candidate signatures match the OpenMC-derived manifest; 2 MOX + 2 UO₂ fuel locations are row-major P00, P01, P10, P11; the five reflector sites are invariant; pin dimensions and source hashes are present. When `CBPFR_TEST_ARCHIVE` is supplied, re-compute the archive SHA-256 and all six candidates’ raw `geometry.xml` and `materials.xml` SHA-256 values against the manifest. |
 | Candidate charts | Six unique candidate records load and preserve their recorded uncertainty/descriptive interpretation. The k-effective display is not treated as a physical-feasibility ranking. |
 | Assembly proxy | The view shows four discrete source values, checks exact candidate ID plus layout identity, shares one Cividis numeric scale, keeps MOX/UO₂ colors on separate material outlines, highlights the selected position, and does not interpolate a 2×2 contour. |
 | Spatial fields | Heatmap, contour, central-row profile and terrain use the same recorded 51×51 source mesh and coordinate vectors. Heatmap, contour and surface values are compared directly; hover data retain means and Monte Carlo standard error. |
@@ -21,6 +21,8 @@ Stage 6 provides an automated review gate for the scientific HTML workstation on
 Run source/data checks:
 
     python tests/test_visual_acceptance.py
+
+To enable the strict raw-source XML cross-check locally, set `CBPFR_TEST_ARCHIVE=/path/to/c5g7-study-640000.zip` before running the Python test. The Stage 6 GitHub Actions gate provides this archive automatically and fails if the full archive or any candidate XML hash differs from the committed manifest.
     node --check web/app.js
     node --check tests/browser_visual_acceptance.cjs
 
@@ -37,7 +39,7 @@ Then in a second terminal:
     npx playwright install chromium
     node tests/browser_visual_acceptance.cjs
 
-The GitHub Actions job downloads and hash-checks the recorded 2D statepoint archive, runs the Python source/data tests, starts the HTML server, runs Playwright, and uploads an artifact containing screenshots, server logs, and JSON acceptance results.
+The GitHub Actions job downloads and hash-checks the recorded study ZIP, validates the archived geometry/material XML hashes for all six candidates against the source manifest, runs the Python source/data tests, starts the HTML server, runs Playwright, and uploads an artifact containing screenshots, server logs, and JSON acceptance results. The mesh API’s `hash_matches` value is independently checked: a missing same-run baseline must remain `DATA LOADED · HASH NOT CHECKED`, never be promoted to “verified.”
 
 ## Scientific limits that must remain explicit
 
