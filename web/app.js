@@ -1260,7 +1260,7 @@ function drawAssemblyField(){
   x:assemblyPositionDefs.map(position=>position.label),
   y:matrixRows.map(item=>String(item.candidate.layout_signature||label(item.candidate))),
   z:matrixRows.map(item=>item.values),
-  text:matrixRows.map(item=>item.values.map(formatSourceProxy)),
+  text:matrixRows.map(item=>item.values.map(value=>formatSourceProxy(value))),
   texttemplate:"%{text}",textfont:{size:10,color:"#f0f3f5"},
   colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,showscale:false,
   xgap:3,ygap:2,
