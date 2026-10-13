@@ -77,7 +77,18 @@ async function main() {
           errorCount: Array.isArray(trace?.error_y?.array) ? trace.error_y.array.length : 0,
           yAxisType: el?.layout?.yaxis?.type || "linear",
           xAxisTitle: el?.layout?.xaxis?.title?.text || "",
-          yAxisTitle: el?.layout?.yaxis?.title?.text || ""
+          yAxisTitle: el?.layout?.yaxis?.title?.text || "",
+          surfaceContours: id === "meshSurface" && trace?.contours?.z ? {
+            show: trace.contours.z.show,
+            projectZ: trace.contours.z.project?.z,
+            highlightColor: trace.contours.z.highlightcolor
+          } : null,
+          surfaceCustomSample: id === "meshSurface" ? trace?.customdata?.[25]?.[25] || null : null,
+          surfaceZSample: id === "meshSurface" ? trace?.z?.[25]?.[25] ?? null : null,
+          surfaceAspectRatioZ: id === "meshSurface" ? el?.layout?.scene?.aspectratio?.z ?? null : null,
+          surfaceXAxisTitle: id === "meshSurface" ? el?.layout?.scene?.xaxis?.title?.text || "" : "",
+          surfaceYAxisTitle: id === "meshSurface" ? el?.layout?.scene?.yaxis?.title?.text || "" : "",
+          surfaceCameraEyeX: id === "meshSurface" ? el?.layout?.scene?.camera?.eye?.x ?? null : null
         }];
       }));
     });
@@ -99,6 +110,15 @@ async function main() {
     assert.equal(initialSpatialData.meshProfile.yAxisType, "log", "mean profile should use a true log axis instead of plotting log-transformed values");
     assert.equal(initialSpatialData.meshProfile.errorVisible, true, "central mean profile should show ±1 standard error");
     assert.equal(initialSpatialData.meshProfile.errorCount, 51, "central profile error bars must cover all bins");
+    assert.equal(initialSpatialData.meshSurface.surfaceContours?.show, true, "3D terrain should show isolines on its surface");
+    assert.equal(initialSpatialData.meshSurface.surfaceContours?.projectZ, true, "3D terrain isolines should also project to the lower reference plane");
+    assert.ok(initialSpatialData.meshSurface.surfaceContours?.highlightColor, "projected isolines should remain visually legible");
+    assert.match(initialSpatialData.meshSurface.surfaceXAxisTitle, /X position \\(cm\\)/, "3D surface should use archived physical X coordinates");
+    assert.match(initialSpatialData.meshSurface.surfaceYAxisTitle, /Y position \\(cm\\)/, "3D surface should use archived physical Y coordinates");
+    assert.ok(Array.isArray(initialSpatialData.meshSurface.surfaceCustomSample) && initialSpatialData.meshSurface.surfaceCustomSample.length === 3, "surface hover must carry mean, Monte Carlo standard error, and relative error from source data");
+    assert.match(initialSpatialData.meshSurface.hovertemplate, /Monte Carlo standard error/);
+    assert.match(initialSpatialData.meshSurface.hovertemplate, /Relative Monte Carlo standard error/);
+    assert.ok(initialSpatialData.meshSurface.surfaceAspectRatioZ > 0 && initialSpatialData.meshSurface.surfaceAspectRatioZ <= 0.95, "surface should use an explicit display aspect ratio");
 
     const candidateOptions = await page.locator("#candidateSelect option").evaluateAll(options =>
       options.map(option => ({ value: option.value, label: option.textContent.trim() }))
@@ -246,6 +266,42 @@ async function main() {
       document.querySelector("#meshSurface")?.data?.[0]?.z?.length === 51,
       { timeout: 15000 }
     );
+
+    // Vertical exaggeration changes only the 3D scene's aspect ratio, not source tally values.
+    const surfaceBeforeExaggeration = await page.evaluate(() => {
+      const el = document.querySelector("#meshSurface"), trace = el?.data?.[0];
+      return {
+        z: trace?.z?.[25]?.[25],
+        source: trace?.customdata?.[25]?.[25],
+        aspect: el?.layout?.scene?.aspectratio?.z
+      };
+    });
+    await page.selectOption("#meshExaggeration", "3");
+    await page.waitForFunction(() => {
+      const el = document.querySelector("#meshSurface");
+      return Math.abs((el?.layout?.scene?.aspectratio?.z || 0) - 0.9) < 0.001;
+    }, { timeout: 15000 });
+    const surfaceAfterExaggeration = await page.evaluate(() => {
+      const el = document.querySelector("#meshSurface"), trace = el?.data?.[0];
+      return {
+        z: trace?.z?.[25]?.[25],
+        source: trace?.customdata?.[25]?.[25],
+        aspect: el?.layout?.scene?.aspectratio?.z
+      };
+    });
+    assert.equal(surfaceAfterExaggeration.z, surfaceBeforeExaggeration.z, "vertical exaggeration must not transform the 51×51 Z tally values");
+    assert.deepEqual(surfaceAfterExaggeration.source, surfaceBeforeExaggeration.source, "vertical exaggeration must not change source mean/SE/relative-error hover data");
+    assert.ok(surfaceAfterExaggeration.aspect > surfaceBeforeExaggeration.aspect * 2.9, "3× vertical exaggeration should change visual aspect ratio only");
+    assert.match(await page.locator("#meshSummaryNote").innerText(), /display-only; source data unchanged/i);
+
+    // Force an alternate camera, then prove the Reset camera button restores the known default.
+    await page.evaluate(async () => window.Plotly.relayout(document.querySelector("#meshSurface"), {
+      "scene.camera": { eye: { x: 2.3, y: 0.6, z: 0.5 }, center: { x: 0, y: 0, z: 0 }, up: { x: 0, y: 0, z: 1 } }
+    }));
+    await page.waitForFunction(() => Math.abs((document.querySelector("#meshSurface")?.layout?.scene?.camera?.eye?.x || 0) - 2.3) < 0.05, { timeout: 10000 });
+    await page.click("#meshResetCamera");
+    await page.waitForFunction(() => Math.abs((document.querySelector("#meshSurface")?.layout?.scene?.camera?.eye?.x || 0) - 1.55) < 0.05, { timeout: 10000 });
+    await page.selectOption("#meshExaggeration", "1");
 
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-full.png"), fullPage: true, animations: "disabled" });
