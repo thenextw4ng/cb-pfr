@@ -242,6 +242,7 @@ jobs:
 
           # Use a fresh worktree on each attempt so PR merge-checkout files stay untouched.
           # Retry if another run advances the target branch between fetch and push.
+          published=0
           for attempt in 1 2 3; do
             git fetch origin "refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
             publish_repo="$RUNNER_TEMP/cbpfr-publish-repo-$attempt"
@@ -251,23 +252,29 @@ jobs:
             git -C "$publish_repo" add evidence/cbpfr_axial_3d/
             if git -C "$publish_repo" diff --cached --quiet; then
               echo "The published axial tally is unchanged; no evidence commit is needed."
+              published=1
               git worktree remove --force "$publish_repo" || true
-              exit 0
+              break
             fi
             git -C "$publish_repo" config user.name "github-actions[bot]"
             git -C "$publish_repo" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git -C "$publish_repo" commit -m "data: publish recorded axial 3D tally for workstation"
             if git -C "$publish_repo" push origin "HEAD:$TARGET_BRANCH"; then
               echo "Published recorded 3-D tally and provenance to $TARGET_BRANCH."
+              published=1
               git worktree remove --force "$publish_repo" || true
-              exit 0
+              break
             fi
             echo "Target branch advanced during publish attempt $attempt; retrying against its latest head."
             git worktree remove --force "$publish_repo" || true
             sleep 2
           done
-          echo "Could not publish the generated axial tally after 3 attempts." >&2
-          exit 1
+          if [[ "$published" != "1" ]]; then
+            echo "Could not publish the generated axial tally after 3 attempts." >&2
+            exit 1
+          fi
+          echo "Axial tally publication step completed."
+
 
       - name: Browser-test the actual 3D tally volume and axial slice
         if: github.event_name == 'pull_request'
