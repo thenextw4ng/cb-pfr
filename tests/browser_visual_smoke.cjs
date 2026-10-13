@@ -183,7 +183,7 @@ async function main() {
           className: typeof el.className === "string" ? el.className.slice(0, 100) : "",
           right: Math.round(rect.right * 100) / 100, width: Math.round(rect.width * 100) / 100
         };
-      }).filter(el => el.right > window.innerWidth + 0.5 && !el.closest(".geometry-preview"))
+      }).filter(el => el.right > window.innerWidth + 0.5 && !document.querySelector("#geometryPreview")?.contains(el))
         .sort((a, b) => b.right - a.right).slice(0, 16);
       return {
         viewport: window.innerWidth,
