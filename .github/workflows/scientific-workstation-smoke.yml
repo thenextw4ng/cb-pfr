@@ -70,10 +70,35 @@ jobs:
           echo "$mesh_status" > /tmp/cb-pfr-mesh-status
           python - <<'PY'
           import json
-          for path, key in (("/tmp/cb-pfr-candidates.json", "records"), ("/tmp/cb-pfr-assembly.json", "records")):
-              with open(path, encoding="utf-8") as f:
-                  payload = json.load(f)
-              assert payload.get(key), f"{path} has no records"
+          import math
+          with open("/tmp/cb-pfr-candidates.json", encoding="utf-8") as f:
+              candidate_payload = json.load(f)
+          with open("/tmp/cb-pfr-assembly.json", encoding="utf-8") as f:
+              assembly_payload = json.load(f)
+          candidates = candidate_payload.get("records", [])
+          assemblies = assembly_payload.get("records", [])
+          assert len(candidates) == 6, f"Expected the six recorded candidate rows, got {len(candidates)}"
+          assert len(assemblies) == 6, f"Expected six assembly proxy rows, got {len(assemblies)}"
+          candidate_ids = [str(row.get("candidate_id", "")).strip() for row in candidates]
+          assembly_ids = [str(row.get("candidate_id", "")).strip() for row in assemblies]
+          assert all(candidate_ids) and len(set(candidate_ids)) == 6, candidate_ids
+          assert all(assembly_ids) and len(set(assembly_ids)) == 6, assembly_ids
+          candidate_pairs = set()
+          for row in candidates:
+              signature = str(row.get("layout_signature", "")).strip().upper()
+              assert len(signature) == 4 and signature.count("M") == 2 and signature.count("U") == 2, row
+              candidate_pairs.add((str(row["candidate_id"]), signature))
+              for field in ("keff_mean", "keff_std_dev", "keff_relative_sd_percent", "aggregate_fission_score"):
+                  value = float(row[field])
+                  assert math.isfinite(value), (row["candidate_id"], field, value)
+          assembly_pairs = set()
+          for row in assemblies:
+              signature = str(row.get("layout_signature", "")).strip().upper()
+              assembly_pairs.add((str(row["candidate_id"]), signature))
+              for field in ("p00_fission_rate", "p01_fission_rate", "p10_fission_rate", "p11_fission_rate"):
+                  value = float(row[field])
+                  assert math.isfinite(value), (row["candidate_id"], field, value)
+          assert candidate_pairs == assembly_pairs, {"candidate_pairs": candidate_pairs, "assembly_pairs": assembly_pairs}
           with open("/tmp/cb-pfr-geometry.json", encoding="utf-8") as f:
               geometry = json.load(f)
           assert isinstance(geometry.get("artifacts"), list), geometry
