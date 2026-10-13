@@ -175,6 +175,9 @@ class Axial3DPreparationTests(unittest.TestCase):
             web_server.AXIAL_TALLY_NPZ = npz
             try:
                 payload = web_server.read_axial_3d_evidence("fission")
+                flux_payload = web_server.read_axial_3d_evidence("flux")
+                with self.assertRaises(ValueError):
+                    web_server.read_axial_3d_evidence("not-a-score")
             finally:
                 web_server.AXIAL_TALLY_NPZ = old_path
             self.assertTrue(payload["available"])
@@ -182,14 +185,7 @@ class Axial3DPreparationTests(unittest.TestCase):
             self.assertEqual(payload["mean"], [[[1.0, 1.0], [1.0, 1.0]]] * 3)
             self.assertEqual(payload["provenance"]["statepoint"]["n_realizations"], 25)
             self.assertEqual(payload["score"], "fission")
-            self.assertIsNone(web_server.read_axial_3d_evidence.__defaults__[0] if False else None)
-            with self.assertRaises(ValueError):
-                old_path = web_server.AXIAL_TALLY_NPZ
-                web_server.AXIAL_TALLY_NPZ = npz
-                try:
-                    web_server.read_axial_3d_evidence("not-a-score")
-                finally:
-                    web_server.AXIAL_TALLY_NPZ = old_path
+            self.assertIsNone(flux_payload["relative_error_percent"][0][0][0])
 
 
 if __name__ == "__main__":
