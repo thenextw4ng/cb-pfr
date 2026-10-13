@@ -63,7 +63,12 @@ fs.mkdirSync(outputDir, { recursive: true });
         provenance: document.getElementById("axial3dProvenance").textContent
       };
     });
-    assert.match(initial.status, /3D STATEPOINT LOADED/);
+    assert.match(initial.status, /3D STATEPOINT LOADED|SMOKE DIAGNOSTIC ONLY/);
+    if (/SMOKE DIAGNOSTIC ONLY/.test(initial.status)) {
+      assert.match(initial.status, /HIGH BINWISE RSE/, "a low-budget run must retain the high-uncertainty warning");
+      assert.match(initial.summary, /smoke-profile diagnostic/i, "the summary must explicitly bound smoke data");
+      assert.match(initial.provenance, /run class SMOKE DIAGNOSTIC ONLY/, "the provenance panel must identify smoke-only evidence");
+    }
     assert.match(initial.dims, /214\.20 cm/, "axial span should report the full recorded Z domain, including half-bin extents");
     assert.match(initial.summary, /median 56\.3%/, "smoke uncertainty should be exposed to the reviewer, not hidden");
     assert.match(initial.provenance, /layout UMMU/, "candidate/layout provenance should be visible with the spatial view");
