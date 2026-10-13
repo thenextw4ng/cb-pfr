@@ -156,10 +156,11 @@ def prepare_candidate(candidate_root: Path, archive_sha256: str) -> dict:
             "top_reflector_lattice_layers": 1,
             "bottom_z_boundary": "reflective",
             "top_z_boundary": "vacuum",
-            "note": (
-                "These are properties of the archived builder, not an independent "
-                "benchmark sign-off. Review the axial arrangement and boundary conditions "
-                "before making benchmark-acceptance claims."
+            "benchmark_alignment": (
+                "Axial extents and Z boundary conditions match OECD/NEA NEA/NSC/DOC(2003)16: "
+                "192.78 cm assembly height plus a 21.42 cm upper water reflector, reflected "
+                "bottom-Z and vacuum top-Z. This is a geometry-consistency check, not numerical "
+                "transport validation or benchmark acceptance."
             ),
         },
         "nonclaims": [
