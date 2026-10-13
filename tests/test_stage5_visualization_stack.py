@@ -27,7 +27,7 @@ class TargetedVisualizationStackTests(unittest.TestCase):
         self.assertIn("svgStackStatus", INDEX + APP)
 
     def test_existing_three_module_remains_optional_and_has_failure_path(self):
-        self.assertIn('import("three")', INDEX)
+        self.assertIn('three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js', INDEX)
         self.assertIn('import("/core_geometry_3d.js")', INDEX)
         self.assertIn("cbpfr-core3d-failed", INDEX + APP)
         self.assertIn("threeStackStatus", INDEX + APP)
