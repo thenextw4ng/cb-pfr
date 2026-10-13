@@ -98,18 +98,30 @@ jobs:
               payload = json.load(f)
           assert payload.get("status") == "ok", payload
           PY
-          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'Scientific Workstation'
-          curl --fail --silent http://127.0.0.1:8765/styles.css | grep -q 'geometry-preview'
-          curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function drawMesh'
-          curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function renderModelGeometrySvg'
-          curl --fail --silent http://127.0.0.1:8765/core_geometry_3d.js | grep -q 'createCoreViewer'
-          curl --fail --silent http://127.0.0.1:8765/core_geometry_3d.js | grep -q 'InstancedMesh'
-          curl --fail --silent http://127.0.0.1:8765/core_geometry_3d.js | grep -q 'pinRadius, pinRadius'
-          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'core3dCanvas'
-          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'coreSelectedPinMap'
-          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'coreView2d'
-          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'three@0.180.0'
-          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'selectedCandidateMetrics'
+          curl --fail --silent --show-error http://127.0.0.1:8765/ --output /tmp/cb-pfr-asset-1
+          grep -q 'Scientific Workstation' /tmp/cb-pfr-asset-1
+          curl --fail --silent --show-error http://127.0.0.1:8765/styles.css --output /tmp/cb-pfr-asset-2
+          grep -q 'geometry-preview' /tmp/cb-pfr-asset-2
+          curl --fail --silent --show-error http://127.0.0.1:8765/app.js --output /tmp/cb-pfr-asset-3
+          grep -q 'function drawMesh' /tmp/cb-pfr-asset-3
+          curl --fail --silent --show-error http://127.0.0.1:8765/app.js --output /tmp/cb-pfr-asset-4
+          grep -q 'function renderModelGeometrySvg' /tmp/cb-pfr-asset-4
+          curl --fail --silent --show-error http://127.0.0.1:8765/core_geometry_3d.js --output /tmp/cb-pfr-asset-5
+          grep -q 'createCoreViewer' /tmp/cb-pfr-asset-5
+          curl --fail --silent --show-error http://127.0.0.1:8765/core_geometry_3d.js --output /tmp/cb-pfr-asset-6
+          grep -q 'InstancedMesh' /tmp/cb-pfr-asset-6
+          curl --fail --silent --show-error http://127.0.0.1:8765/core_geometry_3d.js --output /tmp/cb-pfr-asset-7
+          grep -q 'pinRadius, pinRadius' /tmp/cb-pfr-asset-7
+          curl --fail --silent --show-error http://127.0.0.1:8765/ --output /tmp/cb-pfr-asset-8
+          grep -q 'core3dCanvas' /tmp/cb-pfr-asset-8
+          curl --fail --silent --show-error http://127.0.0.1:8765/ --output /tmp/cb-pfr-asset-9
+          grep -q 'coreSelectedPinMap' /tmp/cb-pfr-asset-9
+          curl --fail --silent --show-error http://127.0.0.1:8765/ --output /tmp/cb-pfr-asset-10
+          grep -q 'coreView2d' /tmp/cb-pfr-asset-10
+          curl --fail --silent --show-error http://127.0.0.1:8765/ --output /tmp/cb-pfr-asset-11
+          grep -q 'three@0.180.0' /tmp/cb-pfr-asset-11
+          curl --fail --silent --show-error http://127.0.0.1:8765/ --output /tmp/cb-pfr-asset-12
+          grep -q 'selectedCandidateMetrics' /tmp/cb-pfr-asset-12
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
           curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
