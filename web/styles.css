@@ -447,3 +447,18 @@
  .assembly-provenance summary{flex-wrap:wrap}
  .assembly-provenance summary span{width:100%}
 }
+
+/* Stage 5: a compact, truthful inventory of the active rendering stack. */
+.renderer-stack-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:13px 0 21px;border:1px solid var(--line);border-radius:7px;background:#081925;overflow:hidden}
+.renderer-stack-item{display:flex;min-width:0;flex-direction:column;gap:5px;padding:11px 13px;border-right:1px solid #1b3545}
+.renderer-stack-item:last-child{border-right:0}
+.renderer-stack-label{font:8px "DM Mono",monospace;letter-spacing:.9px;color:#7f9aaa}
+.renderer-stack-item strong{font:500 10px "DM Mono",monospace;letter-spacing:.1px;color:#c7d7e0;overflow-wrap:anywhere}
+.renderer-stack-item strong[data-state="ready"]{color:#7ee0bd}
+.renderer-stack-item strong[data-state="warning"]{color:var(--orange)}
+.renderer-stack-item strong[data-state="error"]{color:#ff979e}
+.renderer-stack-item strong[data-state="pending"]{color:#a4bac8}
+.renderer-stack-item small{font-size:9px;line-height:1.5;color:#8199a9}
+.renderer-stack-optional{background:rgba(255,255,255,.012)}
+@media(max-width:1100px){.renderer-stack-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.renderer-stack-item:nth-child(2){border-right:0}.renderer-stack-item:nth-child(-n+2){border-bottom:1px solid #1b3545}}
+@media(max-width:600px){.renderer-stack-strip{grid-template-columns:1fr}.renderer-stack-item{border-right:0;border-bottom:1px solid #1b3545}.renderer-stack-item:nth-child(2){border-bottom:1px solid #1b3545}.renderer-stack-item:last-child{border-bottom:0}}
