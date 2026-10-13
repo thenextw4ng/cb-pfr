@@ -13,6 +13,23 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
 LAYOUTS = ("MUMU", "MMUU", "MUUM", "UMMU", "UUMM", "UMUM")
 FILL_CODES = {"101": "U", "103": "M", "105": "R"}
+# Canonical hashes of integer universe grids, calculated directly from the six original geometry.xml files.
+EXPECTED_PIN_GRID_SHA256 = {
+    "101": "76ab78e63639ee7624672c13d908c75369b625fc509ed39e5f170e9d834c8fe5",
+    "103": "9b2d993f83ba81f714032b20bd9a66025821c2da69d2829ad5ae8dd2826a8267",
+}
+EXPECTED_CORE_GRID_SHA256 = {
+    "MUMU": "a7bff16bc5df326ea7ba7f99fa35c05591a79b921ababf9030d9d990013c1c74",
+    "MMUU": "6dea82503f68e6f48d0e80e6995e3039d763246823f462a5675e1166327a49f9",
+    "MUUM": "ef813d41e4f4c577c1cc0bbfe370d6f7da4f5056987f53c4767143c80769ce3a",
+    "UMMU": "50cf49c57d34ee26431bd2c75a705e1dc21b2bb6dae05f3758b6d7b57f05d826",
+    "UUMM": "f276dcb648b3ab0aaf82097a3b6447aab5f21d6c27d43c0ae812211e4ee946d4",
+    "UMUM": "063fddf321e2f3b148e09f235081ffb631b9547942257d02657ef280d3f9018f",
+}
+
+def grid_sha256(grid):
+    canonical = json.dumps(grid, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 def parse_universe_grid(text):
     return [[int(value) for value in line.split()] for line in text.strip().splitlines() if line.strip()]
@@ -48,6 +65,7 @@ class OpenMCGeometryManifestTests(unittest.TestCase):
             category_grid = candidate["assembly_grid"]
             self.assertEqual(len(universe_grid), 3)
             self.assertTrue(all(len(row) == 3 for row in universe_grid))
+            self.assertEqual(grid_sha256(universe_grid), EXPECTED_CORE_GRID_SHA256[candidate["layout_signature"]])
             expected = [[assemblies[str(uid)]["code"] for uid in row] for row in universe_grid]
             self.assertEqual(category_grid, expected)
             self.assertEqual("".join(category_grid[r][c] for r in range(2) for c in range(2)), candidate["layout_signature"])
@@ -65,6 +83,7 @@ class OpenMCGeometryManifestTests(unittest.TestCase):
         for lattice in self.manifest["pin_lattices"].values():
             self.assertEqual(lattice["dimensions"], [17, 17])
             grid = lattice["universe_grid"]
+            self.assertEqual(grid_sha256(grid), EXPECTED_PIN_GRID_SHA256[lattice_id])
             self.assertEqual(len(grid), 17)
             self.assertTrue(all(len(row) == 17 for row in grid))
             self.assertTrue({str(value) for row in grid for value in row}.issubset(known))
