@@ -265,6 +265,17 @@ def read_mesh_evidence():
         if tallies is None:
             raise ValueError("Statepoint HDF5 does not contain a tallies group.")
 
+        def numeric_vector(group, key):
+            if key not in group:
+                return None
+            try:
+                vector = np.asarray(group[key][()], dtype=float).reshape(-1)
+            except (TypeError, ValueError, KeyError):
+                return None
+            if vector.size < 2 or not np.all(np.isfinite(vector)):
+                return None
+            return [float(v) for v in vector]
+
         meshes = []
         mesh_group = tallies.get("meshes")
         if mesh_group is not None:
@@ -273,7 +284,36 @@ def read_mesh_evidence():
                     continue
                 dims = [int(v) for v in np.asarray(mesh["dimension"][()]).reshape(-1)]
                 if len(dims) == 3 and dims[2] == 1 and all(v > 0 for v in dims):
-                    meshes.append((name, int(mesh.attrs.get("id", name.split()[-1])), dims))
+                    raw_mesh_type = mesh["type"][()] if "type" in mesh else b"unknown"
+                    if isinstance(raw_mesh_type, bytes):
+                        mesh_type = raw_mesh_type.decode("utf-8", errors="replace").strip().lower()
+                    else:
+                        mesh_type = str(raw_mesh_type).strip().lower()
+                    lower = numeric_vector(mesh, "lower_left")
+                    upper = numeric_vector(mesh, "upper_right")
+                    spatial_geometry = {
+                        "coordinates_available": False,
+                        "mesh_type": mesh_type,
+                        "coordinate_units": None,
+                        "lower_left_cm": None,
+                        "upper_right_cm": None,
+                        "cell_width_cm": None,
+                    }
+                    # Only a regular mesh supports deriving evenly spaced cell centres
+                    # from bounds and dimensions without inventing a coordinate mapping.
+                    if mesh_type == "regular" and lower and upper:
+                        lx, ly = lower[0], lower[1]
+                        ux, uy = upper[0], upper[1]
+                        if ux > lx and uy > ly:
+                            spatial_geometry = {
+                                "coordinates_available": True,
+                                "mesh_type": mesh_type,
+                                "coordinate_units": "cm",
+                                "lower_left_cm": [lx, ly],
+                                "upper_right_cm": [ux, uy],
+                                "cell_width_cm": [(ux - lx) / dims[0], (uy - ly) / dims[1]],
+                            }
+                    meshes.append((name, int(mesh.attrs.get("id", name.split()[-1])), dims, spatial_geometry))
 
         filters = {}
         filter_group = tallies.get("filters")
@@ -330,18 +370,18 @@ def read_mesh_evidence():
                 if fid in filters and filters[fid][0].lower() in ("mesh", "meshsurface")
             ]
             matching_meshes = []
-            for mesh_name, mesh_id, dims in meshes:
+            for mesh_name, mesh_id, dims, spatial_geometry in meshes:
                 if mesh_filter_ids:
                     if any(filters[fid][1] == mesh_id for fid in mesh_filter_ids):
-                        matching_meshes.append((mesh_name, mesh_id, dims))
+                        matching_meshes.append((mesh_name, mesh_id, dims, spatial_geometry))
                 elif int(np.prod(dims)) == values.shape[0]:
                     # Compatibility fallback for statepoint variants that omit explicit filter links.
-                    matching_meshes.append((mesh_name, mesh_id, dims))
+                    matching_meshes.append((mesh_name, mesh_id, dims, spatial_geometry))
             matching = next((m for m in matching_meshes if int(np.prod(m[2])) == values.shape[0]), None)
             if matching is None:
                 continue
 
-            mesh_name, mesh_id, dims = matching
+            mesh_name, mesh_id, dims, spatial_geometry = matching
             if dims[0] * dims[1] != values.shape[0]:
                 continue
 
@@ -385,6 +425,7 @@ def read_mesh_evidence():
                 "mesh_name": mesh_name,
                 "mesh_id": mesh_id,
                 "dimensions": dims,
+                "spatial_geometry": spatial_geometry,
                 "n_realizations": n_realizations,
                 "uncertainty_statistic": "standard_error",
                 "scores": {
