@@ -1,0 +1,37 @@
+# CB-PFR Stage 4 — Physical Axial 3-D Model and Mesh Tally
+
+## Purpose
+
+Stage 4 promotes the archived C5G7 axial geometry builder to an auditable OpenMC 3-D transport input and creates a true volumetric mesh tally. The existing Stage 3 Plotly surface is a 2-D field plotted as a height surface; it is not this result.
+
+## What is reused
+
+The screening artifact c5g7-study-640000 contains six candidate source trees and a model/3d/build-xml-3d.py file for each. The builder describes a 3 x 3 x 10 assembly lattice with 21.42 cm axial pitch over z = -107.1 to +107.1 cm. The archive's actual completed statepoints are from model/2d/statepoint.5000.h5; it does not contain recorded 3-D transport statepoints.
+
+The prepared model therefore reuses the archived geometry/material/lattice source and its multi-group cross-section generation, but no 3-D outcome is inferred from the 2-D statepoint.
+
+## Stage 4 implementation
+
+- scripts/prepare_c5g7_axial_3d.py safely extracts the exact archived source package, validates the expected source anchors, redirects the 3-D builder to a dedicated tally module, and exposes batch/particle/seed controls as environment variables.
+- The generated model/tally_3d.py writes a regular mesh with 51 x 51 x 30 bins covering [-32.13, 32.13] cm in X/Y and [-107.1, 107.1] cm in Z. Each mesh bin is 1.26 x 1.26 x 7.14 cm. There are 78,030 spatial bins and three scores: flux, fission, and nu-fission.
+- A 21.42 cm axial lattice layer contains three tally bins in Z, so the volumetric tally can resolve axial variation in the stored source geometry.
+- scripts/audit_c5g7_axial_3d.py checks generated XML inputs and exports a compressed [z, y, x, score] volume plus an audit summary from the actual statepoint. Uncertainty is derived from OpenMC's stored tally sum/sum-of-squares and realization count.
+- A GitHub Actions workflow performs the structural audit and a small transport smoke run on the canonical UMMU candidate. A smoke run checks the 3-D pipeline works; it does not establish convergence or benchmark acceptance.
+
+## Important inherited geometry assumption
+
+The archived builder repeats its 3 x 3 cross-sectional arrangement for nine axial lattice layers and puts an all-reflector arrangement in the tenth/top layer. The bottom Z boundary is reflective and the top Z boundary is vacuum. Stage 4 preserves this source definition instead of silently inventing a symmetric reflector stack or new pin-height constants.
+
+This source pattern must be reviewed against the intended OECD/NEA C5G7 benchmark variant before stronger physical-validity claims are made. The geometry source is evidence of what the model encodes, not independent proof that the source model's axial interpretation is correct.
+
+## Outputs and evidence
+
+A successful workflow uploads the prepared XML files, input manifest, actual statepoint and summary, plus:
+- axial_tally_3d.npz: per-bin mean, standard error, relative error, score names, and physical X/Y/Z cell-center coordinates;
+- AXIAL_3D_STATEPOINT_SUMMARY.json: statepoint/input hashes, dimensions, scores, realization count, uncertainty method, and score-level descriptive metrics.
+
+Each file hash is retained so a later workstation integration can bind the 3-D visualization to exact source inputs and calculation outputs.
+
+## Claim boundary
+
+A smoke statepoint establishes only that the selected run completed and emitted a 3-D mesh tally. It does not prove statistical convergence, benchmark agreement, best fuel loading, a quantum advantage, absolute power normalization, reactor safety, burnup/depletion, or thermal-hydraulic behavior. The UI must not substitute the Stage 3 pseudo-height field for this data.
