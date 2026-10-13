@@ -50,6 +50,7 @@ jobs:
         run: |
           python -m py_compile web_server.py tools/export_openmc_geometry.py
           node --check web/app.js
+          node --input-type=module --check < web/core_geometry_3d.js
           node --check tests/web_candidate_ui.test.cjs
           node --check tests/browser_visual_smoke.cjs
       - name: Verify candidate inspector synchronization
@@ -101,6 +102,9 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/styles.css | grep -q 'geometry-preview'
           curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function drawMesh'
           curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function renderModelGeometrySvg'
+          curl --fail --silent http://127.0.0.1:8765/core_geometry_3d.js | grep -q 'createCoreViewer'
+          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'core3dCanvas'
+          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'three@0.180.0'
           curl --fail --silent http://127.0.0.1:8765/ | grep -q 'selectedCandidateMetrics'
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
