@@ -77,9 +77,6 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             candidate="${{ inputs.candidate }}"
             profile="${{ inputs.profile }}"
-          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            candidate="c5g7-2x2-UMMU"
-            profile="production"
           else
             candidate="c5g7-2x2-UMMU"
             profile="smoke"
