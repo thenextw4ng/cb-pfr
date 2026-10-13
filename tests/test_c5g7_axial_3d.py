@@ -182,6 +182,7 @@ class Axial3DPreparationTests(unittest.TestCase):
             summary = {
                 "status": "3d_openmc_statepoint_mesh_exported",
                 "statepoint": {"sha256": "c" * 64, "n_realizations": 25},
+                "npz": {"bytes": npz.stat().st_size, "sha256": hashlib.sha256(npz.read_bytes()).hexdigest()},
                 "mesh": {
                     "dimension_xyz": [2, 2, 3],
                     "lower_left_cm_xyz": [-1.0, -1.0, -3.0],
@@ -214,6 +215,14 @@ class Axial3DPreparationTests(unittest.TestCase):
                 flux_payload = web_server.read_axial_3d_evidence("flux")
                 with self.assertRaises(ValueError):
                     web_server.read_axial_3d_evidence("not-a-score")
+                bad_summary = dict(summary)
+                bad_summary["npz"] = dict(summary["npz"])
+                bad_summary["npz"]["sha256"] = "d" * 64
+                (root / "AXIAL_3D_STATEPOINT_SUMMARY.json").write_text(
+                    json.dumps(bad_summary), encoding="utf-8"
+                )
+                with self.assertRaisesRegex(ValueError, "SHA-256 does not match"):
+                    web_server.read_axial_3d_evidence("flux")
             finally:
                 web_server.AXIAL_TALLY_NPZ = old_path
             self.assertTrue(payload["available"])

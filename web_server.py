@@ -465,16 +465,32 @@ def read_mesh_evidence():
     }
 
 
+_AXIAL_AUTO_INSTALL_ATTEMPTED = False
+
+
 def read_axial_3d_evidence(score="flux"):
-    """Read one selected score from an actual OpenMC 3-D statepoint export."""
+    """Read a selected score from a recorded OpenMC 3-D tally, installing evidence once if absent."""
+    global _AXIAL_AUTO_INSTALL_ATTEMPTED
+    if not AXIAL_TALLY_NPZ.is_file() and not _AXIAL_AUTO_INSTALL_ATTEMPTED:
+        _AXIAL_AUTO_INSTALL_ATTEMPTED = True
+        try:
+            # Optional, lazy network operation: only try when the user opens the 3-D evidence panel
+            # and the recorded tally is not already installed. The installer accepts only a
+            # successful high-budget UMMU artifact with a verified NPZ hash and 51 x 51 x 30 mesh.
+            from tools.install_axial_3d_artifact import install_latest_production_axial_tally
+            install_latest_production_axial_tally(AXIAL_TALLY_NPZ)
+        except Exception as install_error:
+            raise FileNotFoundError(
+                "Recorded axial 3-D tally is not installed, and automatic retrieval from GitHub "
+                "Actions did not complete: " + str(install_error) + ". "
+                "Retry by restarting the server after network access returns, or run "
+                "python tools/install_axial_3d_artifact.py --target "
+                + str(AXIAL_TALLY_NPZ) + "."
+            ) from install_error
     if not AXIAL_TALLY_NPZ.is_file():
         raise FileNotFoundError(
-            "3-D axial tally export is not installed in this checkout. The Stage 4 workflow "
-            "publishes evidence/cbpfr_axial_3d/ after a successful OpenMC transport/export run. "
-            "Sync the latest feat/stage4-physical-axial-tallies branch and restart the server. "
-            "For older runs without the publisher step, download axial_tally_3d.npz and the "
-            "AXIAL_3D_STATEPOINT_SUMMARY.json sidecar from the GitHub Actions artifact, then copy "
-            "them beside the expected path: " + str(AXIAL_TALLY_NPZ) + "."
+            "Recorded axial 3-D tally is still unavailable at " + str(AXIAL_TALLY_NPZ)
+            + ". No 2-D fallback is used."
         )
     try:
         import numpy as np
@@ -493,6 +509,20 @@ def read_axial_3d_evidence(score="flux"):
         input_audit = json.loads(audit_path.read_text(encoding="utf-8"))
     if manifest_path.is_file():
         input_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    # Bind the binary data currently served to the metadata recorded alongside it.
+    # Sidecar metadata may be absent in older diagnostic fixtures; when present, its
+    # byte count and SHA-256 must match exactly before any values are returned.
+    npz_bytes = AXIAL_TALLY_NPZ.read_bytes()
+    npz_sha256 = hashlib.sha256(npz_bytes).hexdigest()
+    npz_meta = summary.get("npz", {})
+    expected_sha256 = npz_meta.get("sha256")
+    expected_bytes = npz_meta.get("bytes")
+    if expected_sha256 and expected_sha256 != npz_sha256:
+        raise ValueError("Axial NPZ SHA-256 does not match AXIAL_3D_STATEPOINT_SUMMARY.json.")
+    if expected_bytes is not None and int(expected_bytes) != len(npz_bytes):
+        raise ValueError("Axial NPZ byte count does not match AXIAL_3D_STATEPOINT_SUMMARY.json.")
+
     with np.load(AXIAL_TALLY_NPZ, allow_pickle=False) as payload:
         required = {
             "mean", "standard_error", "relative_error_percent",
@@ -543,7 +573,7 @@ def read_axial_3d_evidence(score="flux"):
         "available": True,
         "provenance": {
             "source": str(AXIAL_TALLY_NPZ),
-            "sha256": hashlib.sha256(AXIAL_TALLY_NPZ.read_bytes()).hexdigest(),
+            "sha256": npz_sha256,
             "summary_path": str(summary_path) if summary_path.is_file() else None,
             "statepoint": summary.get("statepoint", {}),
             "status": summary.get("status", "NPZ found; sidecar statepoint summary missing"),
@@ -621,7 +651,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/axial-3d":
             try:
-                score = parse_qs(urlparse(self.path).query).get("score", ["flux"])[0]
+                params = parse_qs(urlparse(self.path).query)
+                if params.get("retry", ["0"])[0] == "1":
+                    global _AXIAL_AUTO_INSTALL_ATTEMPTED
+                    _AXIAL_AUTO_INSTALL_ATTEMPTED = False
+                score = params.get("score", ["flux"])[0]
                 payload = read_axial_3d_evidence(score)
                 return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, RuntimeError, KeyError, json.JSONDecodeError) as exc:

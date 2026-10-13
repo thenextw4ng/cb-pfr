@@ -1,0 +1,111 @@
+name: Publish recorded high-budget axial tally
+
+on:
+  push:
+    branches:
+      - feat/stage5-targeted-visualization-stack
+    paths:
+      - ".github/workflows/publish-recorded-axial-evidence.yml"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish-recorded-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@v4
+
+      - name: Download archived successful production transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/thenextw4ng/cb-pfr/actions/artifacts/11814200461/zip" \
+            --output "${RUNNER_TEMP}/cbpfr-axial-production.zip"
+          test -s "${RUNNER_TEMP}/cbpfr-axial-production.zip"
+
+      - name: Validate and install only the audited 3-D field files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path.cwd()))
+          from tools.install_axial_3d_artifact import (
+              ARTIFACT_PREFIX, _validated_members, validate_evidence_files,
+          )
+
+          archive_path = Path(os.environ["RUNNER_TEMP"]) / "cbpfr-axial-production.zip"
+          archive_bytes = archive_path.read_bytes()
+          artifact_name = ARTIFACT_PREFIX + "38393987067"
+          files = _validated_members(archive_bytes, artifact_name)
+          validated = validate_evidence_files(files)
+          target = Path("evidence/cbpfr_axial_3d")
+          target.mkdir(parents=True, exist_ok=True)
+          for name, data in files.items():
+              (target / name).write_bytes(data)
+
+          provenance = {
+              "schema_version": 1,
+              "source": "GitHub Actions successful high-budget OpenMC production run",
+              "workflow_run_id": 38393987067,
+              "workflow_run_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067",
+              "artifact_id": 11814200461,
+              "artifact_name": artifact_name,
+              "artifact_zip_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+              "axial_tally_npz_sha256": validated["npz_sha256"],
+              "axial_tally_npz_bytes": validated["npz_bytes"],
+              "mesh_dimension_xyz": validated["summary"]["mesh"]["dimension_xyz"],
+              "statepoint": validated["summary"]["statepoint"],
+              "installed_at_utc": datetime.now(timezone.utc).isoformat(),
+              "nonclaims": [
+                  "Recorded source-normalized Monte Carlo tally, not absolute reactor power.",
+                  "Successful transport/export is not benchmark acceptance or safety validation.",
+                  "Inherited axial layer and boundary-condition assumptions still require review."
+              ]
+          }
+          (target / "AXIAL_3D_PROVENANCE.json").write_text(
+              json.dumps(provenance, indent=2) + "\n", encoding="utf-8"
+          )
+          readme = """# Recorded axial 3-D OpenMC tally
+
+          This directory contains a real, hash-verified 51 × 51 × 30 multi-layer mesh tally exported from a successful high-budget C5G7/OpenMC production run for the canonical UMMU layout.
+
+          - Source run: [38393987067](https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067)
+          - The NPZ checksum is recorded in the statepoint summary and provenance JSON.
+          - The input audit and input manifest record the source model and geometry assumptions.
+          - Values are source-normalized Monte Carlo tallies, not absolute reactor power or safety limits.
+          - Axial arrangement and reflective-bottom/vacuum-top boundary assumptions still need independent physics review; export success alone is not benchmark validation.
+          """
+          (target / "README.md").write_text(readme, encoding="utf-8")
+          print("Validated production volume:", validated["npz_sha256"], validated["npz_bytes"], "bytes")
+          PY
+
+      - name: Commit the verified volume to the workstation branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add evidence/cbpfr_axial_3d/
+          if git diff --cached --quiet; then
+            echo "Verified production tally is already published; nothing to update."
+            exit 0
+          fi
+          git commit -m "data: install verified high-budget axial 3D tally"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

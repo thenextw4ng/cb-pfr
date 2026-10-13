@@ -211,7 +211,7 @@ jobs:
           fi
 
       - name: Publish recorded 3-D tally for the local HTML workstation
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) && steps.prepare.outputs.candidate_root != ''
+        if: github.event_name == 'workflow_dispatch' && inputs.profile == 'production' && steps.prepare.outputs.candidate_root != ''
         shell: bash -l {0}
         env:
           CANDIDATE_ROOT: ${{ steps.prepare.outputs.candidate_root }}

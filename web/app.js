@@ -6,6 +6,8 @@ let meshData = null;
 let meshDrawRevision = 0;
 let axial3dData = null;
 let axial3dDrawRevision = 0;
+let axial3dLoadStarted = false;
+let axial3dObserver = null;
 let assemblyRecords = [];
 let selectedAssemblyPosition = "P00";
 const candidateMarkColors = { selected: "#ffffff", default: "#788d9b" };
@@ -380,9 +382,33 @@ function clearCandidateSelection(message="No candidate selected."){
 }
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
 const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d","select2d"]};
+function rendererStatus(id,text,state="ready"){
+ const el=$(id);if(!el)return;
+ el.textContent=text;el.dataset.state=state;
+}
+function updateVisualizationStackStatus(){
+ const plotly=window.Plotly;
+ if(plotly&&plotly.version)rendererStatus("plotlyStackStatus","PLOTLY.JS v"+plotly.version+" · READY","ready");
+ else if(window.CBPFRPlotlyLoadError)rendererStatus("plotlyStackStatus","CDN UNAVAILABLE · CHARTS BLOCKED","error");
+ else rendererStatus("plotlyStackStatus","PLOTLY.JS · LOADING","pending");
+ const svgReady=typeof document.createElementNS==="function"&&Boolean(document.createElementNS("http://www.w3.org/2000/svg","svg").createSVGRect||document.createElementNS("http://www.w3.org/2000/svg","svg").namespaceURI);
+ rendererStatus("svgStackStatus",svgReady?"NATIVE SVG · READY":"SVG NOT AVAILABLE",svgReady?"ready":"error");
+ const three=window.CBPFRCore3D;
+ if(three&&three.version)rendererStatus("threeStackStatus","THREE.JS r"+three.version+" · OPTIONAL","ready");
+ else if(window.CBPFRCore3DError)rendererStatus("threeStackStatus","UNAVAILABLE · SVG FALLBACK","warning");
+ else rendererStatus("threeStackStatus","OPTIONAL 3D · LOADING","pending");
+ // VTK.js is deliberately not imported: Plotly handles scalar fields, while source geometry
+ // is SVG-first and a new volume engine would duplicate current capabilities.
+ rendererStatus("vtkStackStatus","VTK.JS · NOT LOADED BY DESIGN","neutral");
+}
+if(typeof window.addEventListener==="function"){
+ window.addEventListener("cbpfr-core3d-ready",updateVisualizationStackStatus);
+ window.addEventListener("cbpfr-core3d-failed",updateVisualizationStackStatus);
+ window.addEventListener("cbpfr-plotly-failed",updateVisualizationStackStatus);
+}
 function chart(id,traces,layout={}){
  const el=$(id);if(!el)return Promise.resolve();
- if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
+ if(!window.Plotly){updateVisualizationStackStatus();el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
  try{
   return Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
    const msg=String(error?.message||error).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -462,6 +488,7 @@ function drawOtherCharts(){
 }
 function showError(message){const el=$("apiError");el.hidden=false;el.textContent=message;}
 async function init(){
+  updateVisualizationStackStatus();
  setupNavigation();
  const reloadButton=$("reloadEvidence");
  if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();await initAxial3D();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
@@ -880,12 +907,15 @@ async function initAxial3D(){
   updateButton.dataset.bound="true";
   updateButton.addEventListener("click",async()=>{
    updateButton.disabled=true;updateButton.textContent="↻ Loading…";
-   await loadAxial3D();
+   await requestAxial3DLoad(true);
    updateButton.disabled=false;updateButton.textContent="↻ Reload 3D tally";
   });
  }
  const score=$("axial3dScore"),view=$("axial3dView"),slice=$("axial3dSlice"),opacity=$("axial3dOpacity"),paletteSelect=$("axial3dPalette");
- if(score&&!score.dataset.bound){score.dataset.bound="true";score.addEventListener("change",loadAxial3D);}
+ if(score&&!score.dataset.bound){
+  score.dataset.bound="true";
+  score.addEventListener("change",()=>requestAxial3DLoad(false));
+ }
  [view,slice,opacity,paletteSelect].forEach(control=>{
   if(control&&!control.dataset.bound){
    control.dataset.bound="true";
@@ -893,12 +923,36 @@ async function initAxial3D(){
    control.addEventListener("change",drawAxial3D);
   }
  });
- await loadAxial3D();
+ // Reading and plotting 78,030 voxels is deliberately deferred until this panel
+ // nears the viewport. That keeps candidate exploration and mobile startup responsive.
+ if(axial3dLoadStarted){
+  await loadAxial3D(false);
+  return;
+ }
+ const status=$("axial3dStatus"),summary=$("axial3dSummary");
+ if(status){status.textContent="3D TALLY · LOAD ON VIEW";status.classList.remove("warning");}
+ if(summary)summary.textContent="A recorded OpenMC axial tally is loaded on demand when this panel nears the viewport. The viewer uses the source 51 × 51 × 30 bins and never substitutes the separate 2D terrain.";
+ if("IntersectionObserver" in window){
+  axial3dObserver=new IntersectionObserver(entries=>{
+   if(entries.some(entry=>entry.isIntersecting)){
+    if(axial3dObserver){axial3dObserver.disconnect();axial3dObserver=null;}
+    requestAxial3DLoad(false);
+   }
+  },{rootMargin:"240px 0px",threshold:0.01});
+  axial3dObserver.observe(panel);
+ }else{
+  await requestAxial3DLoad(false);
+ }
 }
-async function loadAxial3D(){
+function requestAxial3DLoad(forceRetry=false){
+ axial3dLoadStarted=true;
+ if(axial3dObserver){axial3dObserver.disconnect();axial3dObserver=null;}
+ return loadAxial3D(forceRetry);
+}
+async function loadAxial3D(forceRetry=false){
  try{
   const score=$("axial3dScore")?.value||"flux";
-  const response=await fetch("/api/axial-3d?score="+encodeURIComponent(score),{headers:{Accept:"application/json"}});
+  const response=await fetch("/api/axial-3d?score="+encodeURIComponent(score)+(forceRetry?"&retry=1":""),{headers:{Accept:"application/json"}});
   let payload;
   try{payload=await response.json();}catch(_){payload={error:"API returned a non-JSON response"};}
   if(!response.ok)throw new Error(payload.error||("HTTP "+response.status));
@@ -959,8 +1013,8 @@ async function loadAxial3D(){
    ["Axial bins","—","No multi-layer tally installed"],
    ["Active realisations","—","Statepoint unavailable"]
   ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
-  $("axial3dSummary").textContent="No volumetric values are fabricated. The Stage 4 workflow now publishes a true multi-layer statepoint export to evidence/cbpfr_axial_3d/ after successful transport/export. Sync the latest feature branch and restart the server if this checkout predates that evidence commit.";
-  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Axial 3D evidence awaiting branch sync</b><p>This checkout does not yet contain the exported 51 × 51 × 30 OpenMC tally. After the axial workflow completes its transport and export steps, sync the latest Stage 4 branch and restart the local server. The 2D terrain above is intentionally not used as a fallback.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a></p></div>';
+  $("axial3dSummary").textContent="No volumetric values are fabricated. The workstation attempted to retrieve the latest hash-verified high-budget UMMU production artifact from GitHub Actions. If the request failed, check network access and use Reload 3D tally to retry. The 2D terrain is not used as a fallback.";
+  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Recorded axial 3D tally unavailable</b><p>The server could not install the verified 51 × 51 × 30 production export. Check your network connection, then use Reload 3D tally to retry. No synthetic volume or 2D extrusion is generated.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a> · <a href="https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067" target="_blank" rel="noreferrer">View successful UMMU production run ↗</a></p></div>';
  }
 }
 function drawAxial3D(){
