@@ -61,8 +61,32 @@ fs.mkdirSync(outDir, { recursive: true });
     }, null, { timeout: 60000 });
     await page.waitForFunction(() => {
       const chart = document.querySelector("#candidateChart");
-      return chart && Array.isArray(chart.data) && chart.data.length > 0;
+      const distribution = document.querySelector("#distributionChart");
+      return chart && Array.isArray(chart.data) && chart.data.length > 0 &&
+        distribution && Array.isArray(distribution.data) && distribution.data.length > 0;
     }, null, { timeout: 60000 });
+
+    const candidateStats = await page.locator("#distributionChart").evaluate(el => {
+      const trace = el.data[0];
+      return {
+        x: trace.x || [],
+        y: trace.y || [],
+        sd: trace.error_y && trace.error_y.array || [],
+        hover: trace.hovertemplate || "",
+        xTitle: String(el.layout.xaxis.title && (el.layout.xaxis.title.text || el.layout.xaxis.title) || ""),
+        yTitle: String(el.layout.yaxis.title && (el.layout.yaxis.title.text || el.layout.yaxis.title) || "")
+      };
+    });
+    assert.equal(candidateStats.x.length, 6, "six candidate layouts must appear in the comparative chart");
+    assert.equal(new Set(candidateStats.x).size, 6, "candidate labels must be unique");
+    assert.equal(candidateStats.y.length, 6, "each plotted candidate needs one recorded k-effective mean");
+    assert.equal(candidateStats.sd.length, 6, "each plotted candidate needs an explicit SD bar (zero only when missing)");
+    assert.ok(candidateStats.y.every(value => Number.isFinite(Number(value))), "candidate values must be finite");
+    assert.ok(candidateStats.sd.every(value => Number.isFinite(Number(value)) && Number(value) >= 0), "recorded SD values must be nonnegative");
+    assert.match(candidateStats.hover, /k-effective mean/i);
+    assert.match(candidateStats.hover, /Reported SD/i);
+    assert.match(candidateStats.xTitle, /recorded k-effective/i);
+    assert.match(candidateStats.yTitle, /k-effective mean.*SD/i);
 
     const assemblyView = await page.evaluate(() => {
       const select = document.querySelector("#candidateSelect");
