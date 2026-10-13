@@ -55,6 +55,13 @@ jobs:
         env:
           CBPFR_OPENMC_GEOMETRY_ARCHIVE: /tmp/c5g7-study-640000.zip
         run: python tests/test_openmc_geometry_manifest.py
+      - name: Audit recovered OpenMC spatial tally sources
+        run: |
+          python -m py_compile tools/audit_spatial_tally_sources.py
+          python tools/audit_spatial_tally_sources.py \
+            --archive /tmp/c5g7-study-640000.zip \
+            --expected-sha256 7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b \
+            --json-output /tmp/spatial-tally-source-audit.json
       - name: Start workstation and smoke-test API/assets
         shell: bash
         run: |
