@@ -56,6 +56,7 @@ function makeHarness() {
     "setRecords(rows) { records = rows; }," +
     "setAssemblyRecords(rows) { assemblyRecords = rows; }," +
     "setModelGeometryData(data) { modelGeometryData = data; }," +
+    "renderModelGeometrySvg," +
     "showCandidate, drawSelectedCandidate, drawCandidateChart, layoutCells," +
     "candidateOption, validateCandidateRecords, escapeHtml," +
     "getRecords() { return records; }" +
@@ -223,4 +224,41 @@ test("invalid U/M compositions fail closed in both configuration and selected-ca
   assert.match($("selectedCandidateSignature").innerHTML, /No validated layout signature/);
   assert.match($("geometryPreview").innerHTML, /Invalid fuel composition/);
   assert.doesNotMatch($("geometryPreview").innerHTML, /<svg class="model-geometry-svg"/);
+});
+
+
+test("model geometry draws all four exact source pin lattices and includes source provenance for each candidate", () => {
+  const { hooks } = makeHarness();
+  hooks.setRecords(layouts);
+  for (const row of layouts) {
+    const svg = hooks.renderModelGeometrySvg(row);
+    const source = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "evidence", "c5g7_openmc_geometry_manifest_2026-10-13.json"), "utf8")).candidates.find(c => c.candidate_id === row.candidate_id);
+    assert.ok(source);
+    assert.equal(source.source_matches_candidate_signature, true);
+    assert.match(svg, new RegExp("layout " + row.layout_signature + " candidate " + row.candidate_id));
+    assert.ok(svg.includes(source.geometry_xml_sha256.slice(0, 16)), "the exact candidate geometry hash should be shown");
+    assert.equal((svg.match(/<title>/g) || []).length, 4 * 17 * 17, "all 1,156 pin-universe cells should be present in the material map");
+    assert.match(svg, /MOX 4\.3%/);
+    assert.match(svg, /MOX 7\.0%/);
+    assert.match(svg, /MOX 8\.7%/);
+    assert.match(svg, /Fission Chamber/);
+    assert.match(svg, /Guide Tube/);
+    assert.match(svg, /REFLECTIVE/);
+    assert.match(svg, /VACUUM/);
+  }
+});
+
+test("rendering changes when a source pin-universe grid changes; the pattern is not hardcoded in JavaScript", () => {
+  const { hooks } = makeHarness();
+  hooks.setRecords(layouts);
+  const candidate = layouts.find(row => row.layout_signature === "MUMU");
+  const original = hooks.renderModelGeometrySvg(candidate);
+  assert.match(original, /MOX 4\.3% · universe 2/);
+  const manifestPath = path.join(__dirname, "..", "evidence", "c5g7_openmc_geometry_manifest_2026-10-13.json");
+  const changed = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  changed.pin_lattices["103"].universe_grid[0][0] = 4;
+  hooks.setModelGeometryData(changed);
+  const rendered = hooks.renderModelGeometrySvg(candidate);
+  assert.match(rendered, /MOX 8\.7% · universe 4/);
+  assert.doesNotMatch(rendered.slice(0, rendered.indexOf("</svg>")), /const pinLattices/);
 });
