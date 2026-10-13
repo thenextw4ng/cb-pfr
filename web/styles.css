@@ -40,3 +40,66 @@
 .artifact-icon{display:grid;place-items:center;min-width:42px;height:38px;border-radius:6px;background:#183247;color:#55d4df;font:500 11px 'DM Mono',monospace}
 .artifact-meta{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}.artifact-meta b{overflow-wrap:anywhere;font-size:12px}.artifact-meta small{color:#91a8b9;font-size:10px;overflow-wrap:anywhere}
 .empty-state{max-width:460px;padding:20px;color:#91a8b9;font-size:12px;line-height:1.7}.empty-state b{display:block;color:#e8f1f7;margin-bottom:8px}.empty-state a{color:#55d4df;text-decoration:underline}
+
+
+/* Focused candidate inspection and evidence-linked model geometry */
+.candidate-observatory-grid{display:grid;grid-template-columns:minmax(300px,.9fr) minmax(360px,1.1fr);gap:14px}
+.candidate-chart-panel{grid-column:1/-1}
+.selected-candidate-panel{display:flex;flex-direction:column;gap:14px;padding:16px;min-width:0}
+.selected-candidate-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0 4px;border-bottom:1px solid var(--line)}
+.selected-candidate-identity{min-width:0}
+.selected-candidate-identity h4{margin:7px 0 5px;font-size:clamp(17px,1.5vw,22px);line-height:1.3;letter-spacing:-.45px;overflow-wrap:anywhere}
+.candidate-signature{display:grid;grid-template-columns:repeat(2,46px);gap:5px;flex-shrink:0}
+.signature-cell{height:45px;border:1px solid var(--line);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#102536}
+.signature-cell b{font:700 15px "DM Mono",monospace}
+.signature-cell small{font:10px "DM Mono",monospace;color:var(--muted);margin-top:2px}
+.signature-mox{border-color:#a6783f;background:rgba(244,189,98,.13);color:#f4bd62}
+.signature-uo2{border-color:#2e8390;background:rgba(81,210,223,.12);color:#51d2df}
+.selected-candidate-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.candidate-stat{display:flex;flex-direction:column;gap:6px;min-width:0;border:1px solid var(--line);background:#091a27;border-radius:8px;padding:12px}
+.candidate-stat span{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);line-height:1.45}
+.candidate-stat strong{font:600 clamp(14px,1.2vw,18px) "DM Mono",monospace;color:var(--text);overflow-wrap:anywhere}
+.candidate-stat-keff strong{color:var(--cyan)}
+.candidate-stat-uncertainty strong{color:#9bc7e4}
+.candidate-stat-proxy strong{color:#f4bd62}
+.candidate-run-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.run-meta{display:flex;flex-direction:column;gap:5px;padding:9px 8px;border-radius:6px;background:#102536;border:1px solid #1d394b;min-width:0}
+.run-meta span{font:9px "DM Mono",monospace;color:var(--muted);letter-spacing:.4px}
+.run-meta b{font:500 12px "DM Mono",monospace;color:var(--text);overflow-wrap:anywhere}
+.candidate-integrity-row{display:flex;flex-wrap:wrap;gap:7px}
+.micro-check{display:inline-flex;align-items:center;gap:6px;border:1px solid #3d5362;background:#0a1c29;border-radius:99px;padding:6px 9px;color:var(--muted);font-size:10px}
+.micro-check i{width:6px;height:6px;display:inline-block;border-radius:50%;background:#8da0ad}
+.micro-check.ok{color:#b8e6d6;border-color:#2d675e}
+.micro-check.ok i{background:var(--green);box-shadow:0 0 0 3px rgba(75,213,165,.1)}
+.candidate-interpretation{font-size:11px;line-height:1.65;color:var(--muted);margin:0;padding-top:11px;border-top:1px solid var(--line)}
+.model-geometry-grid{grid-template-columns:minmax(0,1.5fr) minmax(260px,.7fr);align-items:stretch}
+.model-geometry-grid .geometry-preview{align-items:flex-start;justify-content:flex-start;min-height:420px;padding:6px;background:#07131e}
+.model-geometry-svg{display:block;width:100%;min-width:680px;height:auto}
+.model-geometry-svg .svg-kicker{font:600 14px "DM Mono",monospace;letter-spacing:1.6px;fill:#55d4df}
+.model-geometry-svg .svg-title{font:700 19px Manrope,sans-serif;fill:#e8f1f7}
+.model-geometry-svg .svg-subtitle{font:12px Manrope,sans-serif;fill:#91a8b9}
+.model-geometry-svg .boundary-label{font:600 11px "DM Mono",monospace;letter-spacing:.5px}
+.model-geometry-svg .boundary-reflective{fill:#55d4df}
+.model-geometry-svg .boundary-vacuum{fill:#f4bd62}
+.model-geometry-svg .assembly-label{font:700 11px "DM Mono",monospace}
+.model-geometry-svg .assembly-size{font:10px "DM Mono",monospace;fill:#91a8b9}
+.model-geometry-svg .reflector-title{font:700 12px "DM Mono",monospace;fill:#c1e9f3;letter-spacing:.4px}
+.model-geometry-svg .reflector-sub{font:10px Manrope,sans-serif;fill:#91baca}
+.model-geometry-svg .legend-title{font:700 14px "DM Mono",monospace;fill:#55d4df;letter-spacing:1px}
+.model-geometry-svg .legend-text{font:12px Manrope,sans-serif;fill:#c6d8e2}
+.model-geometry-svg .meta-label{font:10px "DM Mono",monospace;fill:#91a8b9;letter-spacing:.5px}
+.model-geometry-svg .meta-value{font:12px Manrope,sans-serif;fill:#e8f1f7}
+.model-geometry-svg .source-note{font:700 10px "DM Mono",monospace;fill:#55d4df;letter-spacing:.4px}
+.model-geometry-svg .source-note-secondary{font:10px Manrope,sans-serif;fill:#91a8b9}
+@media(max-width:1100px){
+ .candidate-observatory-grid{grid-template-columns:minmax(0,1fr)}
+ .candidate-chart-panel{grid-column:auto}
+ .model-geometry-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:680px){
+ .selected-candidate-panel{padding:12px}
+ .candidate-run-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .selected-candidate-hero{align-items:center}
+ .candidate-stat strong{font-size:14px}
+ .model-geometry-grid .geometry-preview{min-height:340px}
+}
