@@ -48,160 +48,94 @@ function layoutCells(signature){
 // Pin-universe maps extracted from the archived candidate geometry.xml files (17 × 17 lattices).
 // Universe IDs 1–6 map to UO2, three MOX enrichments, fission chamber, and guide tube;
 // each pin's surrounding region is the water moderator defined in geometry.xml.
-const pinLattices={
- U:[
- "11111111111111111","11111111111111111","11111611611611111",
- "11161111111116111","11111111111111111","11611611611611611",
- "11111111111111111","11111111111111111","11611611511611611",
- "11111111111111111","11111111111111111","11611611611611611",
- "11111111111111111","11161111111116111","11111611611611111",
- "11111111111111111","11111111111111111"
- ],
- M:[
- "22222222222222222","23333333333333332","23333633633633332",
- "23363444444436332","23334444444443332","23644644644644632",
- "23344444444444332","23344444444444332","23644644544644632",
- "23344444444444332","23344444444444332","23644644644644632",
- "23334444444443332","23363444444436332","23333633633633332",
- "23333333333333332","22222222222222222"
- ]
-};
-const pinMaterials={
- "1":{name:"UO₂ fuel",color:"#51d2df"},
- "2":{name:"MOX 4.3%",color:"#f4bd62"},
- "3":{name:"MOX 7.0%",color:"#f08f62"},
- "4":{name:"MOX 8.7%",color:"#dc6f91"},
- "5":{name:"Fission chamber",color:"#c1b3ff"},
- "6":{name:"Guide tube",color:"#9cb6c8"}
-};
+const pinUniverseColors={"1":"#51d2df","2":"#f4bd62","3":"#f08f62","4":"#dc6f91","5":"#c1b3ff","6":"#9cb6c8"};
+let modelGeometryData=null;
 let geometryArtifactActive=false;
-function drawSelectedCandidate(row){
- const signature=normalizeLayoutSignature(row.layout_signature);
- const tag=$("selectedRecordTag");
- const layoutValid=isValidLayoutSignature(signature);
- const canonical=(row.canonical_reference===true||String(row.canonical_reference).toLowerCase()==="true")&&layoutValid;
- if(tag){
-  tag.textContent=!layoutValid?"INVALID LAYOUT":canonical?"CANONICAL LAYOUT REFERENCE":"LAYOUT VARIANT";
-  tag.classList.toggle("warning",!layoutValid||!canonical);
- }
- const selectedIndex=records.findIndex(item=>String(item.candidate_id)===String(row.candidate_id));
- const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
- $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
- $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
- $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
- const metrics=[
-  ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff"],
-  ["Reported SD",has(row,"keff_std_dev")?number(row.keff_std_dev,6):"Not recorded","sd"],
-  ["Relative SD",has(row,"keff_relative_sd_percent")?number(row.keff_relative_sd_percent,4)+"%":"Not recorded","uncertainty"],
-  ["Aggregate fission score · not power",has(row,"aggregate_fission_score")?number(row.aggregate_fission_score,5):"Not recorded","proxy"]
- ];
- $("selectedCandidateMetrics").innerHTML=metrics.map(([name,value,type])=>'<div class="candidate-stat candidate-stat-'+type+'"><span>'+name+'</span><strong>'+value+'</strong></div>').join("");
- const runInfo=[
-  ["SEED",displayValue(row.seed)],
-  ["BATCHES",displayValue(row.batches)],
-  ["INACTIVE",displayValue(row.inactive)],
-  ["PARTICLES / BATCH",displayValue(row.particles_per_batch)]
- ];
- $("selectedCandidateRunInfo").innerHTML=runInfo.map(([name,value])=>'<div class="run-meta"><span>'+name+'</span><b>'+escapeHtml(value)+'</b></div>').join("");
- const unchanged=has(row,"mutated_preexisting_file_count")&&Number(row.mutated_preexisting_file_count)===0;
- const mgxsStable=Boolean(row.mgxs_sha256_before_transport&&row.mgxs_sha256_before_transport===row.mgxs_sha256_after_transport);
- $("selectedCandidateChecks").innerHTML='<span class="micro-check '+(unchanged?"ok":"")+'"><i></i>'+(unchanged?"No pre-existing file mutation recorded":"Mutation check unavailable")+'</span><span class="micro-check '+(mgxsStable?"ok":"")+'"><i></i>'+(mgxsStable?"MGXS hash unchanged across recorded run":"MGXS hash comparison unavailable")+'</span>';
+
+function modelMaterialCell(universeId,x,y,pitch){
+ const key=String(universeId),source=modelGeometryData?.materials?.pin_universes?.[key];
+ if(!source)throw new Error("Unknown pin universe "+key+" in model manifest.");
+ const radius=Number(modelGeometryData.pin_geometry?.pin_radius_cm),pinPitch=Number(modelGeometryData.pin_geometry?.pitch_cm?.[0]);
+ if(!Number.isFinite(radius)||!Number.isFinite(pinPitch)||radius<=0||pinPitch<=0)throw new Error("Invalid source pin radius/pitch.");
+ const r=pitch*radius/pinPitch,cx=x+pitch/2,cy=y+pitch/2;
+ return '<rect x="'+x.toFixed(2)+'" y="'+y.toFixed(2)+'" width="'+pitch.toFixed(2)+'" height="'+pitch.toFixed(2)+'" fill="#123749" stroke="#285064" stroke-width=".38"/>'+
+ '<circle cx="'+cx.toFixed(2)+'" cy="'+cy.toFixed(2)+'" r="'+r.toFixed(2)+'" fill="'+(pinUniverseColors[key]||"#c1cbd2")+'" stroke="#06111a" stroke-width=".45"><title>'+escapeHtml(source.material_name||source.name||("Universe "+key))+' · universe '+key+'</title></circle>';
 }
-function clearCandidateSelection(message="No candidate selected."){
- $("layoutView").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>'+escapeHtml(message)+'</p></div>';
- $("layoutCaption").textContent=message;
- $("selectedRecordTag").textContent="NO SELECTION";
- $("selectedRecordTag").classList.add("warning");
- $("selectedCandidateId").textContent="No candidate selected";
- $("selectedCandidateMetaLine").textContent="Select a recorded candidate to inspect its configuration.";
- $("selectedCandidateSignature").textContent="—";
- $("selectedCandidateMetrics").innerHTML='<div class="empty-state"><b>Metrics unavailable</b><p>No candidate is selected.</p></div>';
- $("selectedCandidateRunInfo").innerHTML="";
- $("selectedCandidateChecks").innerHTML="";
- geometryArtifactActive=false;
- if($("geometryPreview"))$("geometryPreview").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to show its linked model view.</p></div>';
- if($("geometryCaption"))$("geometryCaption").textContent="No candidate selected.";
- if(records.length)drawCandidateChart();
- if(assemblyRecords.length)drawAssemblyField();
- else if($("assemblyMap"))$("assemblyMap").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to inspect recorded assembly evidence.</p></div>';
+function modelBoundaryLabel(axis,side){
+ const item=(modelGeometryData?.boundary_conditions||[]).find(b=>String(b.name||"").toLowerCase().includes("core "+axis+"-"+side));
+ return axis.toUpperCase()+" "+side.toUpperCase()+" · "+String(item?.condition||"not recorded").toUpperCase();
 }
-function materialCellSvg(code,x,y,pitch){
- const material=pinMaterials[code];
- const cx=x+pitch/2,cy=y+pitch/2,r=pitch*(0.54/1.26);
- const square='<rect x="'+x.toFixed(2)+'" y="'+y.toFixed(2)+'" width="'+pitch.toFixed(2)+'" height="'+pitch.toFixed(2)+'" fill="#123749" stroke="#285064" stroke-width=".38"/>';
- return square+'<circle cx="'+cx.toFixed(2)+'" cy="'+cy.toFixed(2)+'" r="'+r.toFixed(2)+'" fill="'+material.color+'" stroke="#06111a" stroke-width=".45"><title>'+material.name+' · moderator outside the 0.54 cm pin cylinder</title></circle>';
-}
-function renderModelGeometrySvg(signature){
- const sig=normalizeLayoutSignature(signature);
- if(!isValidLayoutSignature(sig))return '<div class="empty-state"><b>Model geometry unavailable</b><p>The selected record does not contain the required two-UO₂/two-MOX four-position signature. No default arrangement is substituted.</p></div>';
- const width=1020,height=670,x0=48,y0=92,size=170,gap=1,pinInsetX=9,pinInsetY=29,pinArea=152,pinPitch=pinArea/17,coreWidth=size*3+gap*2;
- const cells=[sig[0],sig[1],"R",sig[2],sig[3],"R","R","R","R"];
- let svg='<svg class="model-geometry-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="C5G7 2D material-resolved 3 by 3 lattice for selected layout '+sig+'">';
+function renderModelGeometrySvg(row){
+ if(!modelGeometryData)return '<div class="empty-state"><b>Model geometry unavailable</b><p>The OpenMC-derived manifest could not be loaded. No substitute geometry is drawn.</p></div>';
+ const signature=normalizeLayoutSignature(row?.layout_signature),candidateId=String(row?.candidate_id??"");
+ if(!isValidLayoutSignature(signature))return '<div class="empty-state"><b>Invalid fuel composition</b><p>A valid configuration must contain two UO₂ and two MOX positions.</p></div>';
+ const source=(modelGeometryData.candidates||[]).find(c=>String(c.candidate_id)===candidateId&&normalizeLayoutSignature(c.layout_signature)===signature);
+ if(!source)return '<div class="empty-state"><b>Model source not matched</b><p>No exact candidate ID and signature pair exists in the archived OpenMC manifest.</p></div>';
+ if(source.source_matches_candidate_signature!==true||source.signature_derived_from_xml!==signature)return '<div class="empty-state"><b>Geometry identity check failed</b><p>The signature derived from the OpenMC core lattice differs from the selected candidate.</p></div>';
+ const core=modelGeometryData.core_lattice||{},dims=core.dimensions||[],sourceGrid=source.core_universe_grid||[];
+ if(dims.length!==2||sourceGrid.length!==dims[1]||sourceGrid.some(r=>!Array.isArray(r)||r.length!==dims[0]))return '<div class="empty-state"><b>Invalid source lattice</b><p>The core dimensions do not match the archived lattice rows.</p></div>';
+ const assemblyMap=modelGeometryData.assemblies||{},grid=sourceGrid.map(r=>r.map(uid=>assemblyMap[String(uid)]?.code||"?"));
+ if(grid.some(r=>r.some(code=>!["U","M","R"].includes(code))))return '<div class="empty-state"><b>Unknown source universe</b><p>The archived core lattice references an unmapped universe.</p></div>';
+ const cols=dims[0],rows=dims[1],width=1020,height=670,x0=48,y0=92,size=Math.min(170,480/Math.max(cols,rows)),gap=2;
+ const cw=cols*size+(cols-1)*gap,ch=rows*size+(rows-1)*gap,pinDims=modelGeometryData.pin_geometry?.dimensions||[];
+ const extent=core.lower_left_cm&&core.pitch_cm?core.lower_left_cm.map((v,i)=>Number(v)+Number(core.pitch_cm[i])*Number(dims[i])):null;
+ const xwidth=extent?extent[0]-Number(core.lower_left_cm[0]):NaN,yheight=extent?extent[1]-Number(core.lower_left_cm[1]):NaN;
+ let svg='<svg class="model-geometry-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="OpenMC C5G7 material map '+escapeHtml(candidateId)+'">';
  svg+='<defs><linearGradient id="reflectorFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#13394b"/><stop offset="100%" stop-color="#0b2637"/></linearGradient><pattern id="waterPattern" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 6 Q4 2 9 6 T18 6" fill="none" stroke="#2a637a" stroke-width="1" opacity=".5"/></pattern></defs>';
- svg+='<text x="'+x0+'" y="28" class="svg-kicker">ARCHIVED OPENMC GEOMETRY.XML · 2D MATERIAL MAP</text><text x="'+x0+'" y="52" class="svg-title">C5G7 · 2 × 2 fuel block + L-shaped water reflector</text>';
- svg+='<text x="'+x0+'" y="72" class="svg-subtitle">Layout '+sig+' · model extent 64.26 × 64.26 cm · assembly pitch 21.42 cm</text>';
- svg+='<text x="'+(x0+coreWidth/2)+'" y="'+(y0-11)+'" class="boundary-label boundary-reflective" text-anchor="middle">Y MAX · REFLECTIVE</text>';
- svg+='<text x="'+(x0+coreWidth/2)+'" y="'+(y0+coreWidth+22)+'" class="boundary-label boundary-vacuum" text-anchor="middle">Y MIN · VACUUM</text>';
- svg+='<text x="'+(x0-18)+'" y="'+(y0+coreWidth/2)+'" class="boundary-label boundary-reflective" text-anchor="middle" transform="rotate(-90 '+(x0-18)+' '+(y0+coreWidth/2)+')">X MIN · REFLECTIVE</text>';
- svg+='<text x="'+(x0+coreWidth+17)+'" y="'+(y0+coreWidth/2)+'" class="boundary-label boundary-vacuum" text-anchor="middle" transform="rotate(90 '+(x0+coreWidth+17)+' '+(y0+coreWidth/2)+')">X MAX · VACUUM</text>';
- cells.forEach((code,i)=>{
-  const r=Math.floor(i/3),c=i%3,x=x0+c*(size+gap),y=y0+r*(size+gap);
+ svg+='<text x="'+x0+'" y="28" class="svg-kicker">ARCHIVED OPENMC GEOMETRY.XML · SOURCE-EXTRACTED</text><text x="'+x0+'" y="52" class="svg-title">C5G7 · '+cols+' × '+rows+' core lattice</text>';
+ svg+='<text x="'+x0+'" y="72" class="svg-subtitle">'+escapeHtml(candidateId)+' · '+signature+' · '+(Number.isFinite(xwidth)?xwidth.toFixed(2):"—")+' × '+(Number.isFinite(yheight)?yheight.toFixed(2):"—")+' cm · assembly pitch '+Number(core.pitch_cm?.[0]).toFixed(2)+' cm</text>';
+ svg+='<text x="'+(x0+cw/2)+'" y="'+(y0-11)+'" class="boundary-label boundary-reflective" text-anchor="middle">'+escapeHtml(modelBoundaryLabel("y","max"))+'</text>';
+ svg+='<text x="'+(x0+cw/2)+'" y="'+(y0+ch+22)+'" class="boundary-label boundary-vacuum" text-anchor="middle">'+escapeHtml(modelBoundaryLabel("y","min"))+'</text>';
+ svg+='<text x="'+(x0-18)+'" y="'+(y0+ch/2)+'" class="boundary-label boundary-reflective" text-anchor="middle" transform="rotate(-90 '+(x0-18)+' '+(y0+ch/2)+')">'+escapeHtml(modelBoundaryLabel("x","min"))+'</text>';
+ svg+='<text x="'+(x0+cw+17)+'" y="'+(y0+ch/2)+'" class="boundary-label boundary-vacuum" text-anchor="middle" transform="rotate(90 '+(x0+cw+17)+' '+(y0+ch/2)+')">'+escapeHtml(modelBoundaryLabel("x","max"))+'</text>';
+ grid.forEach((line,r)=>line.forEach((code,c)=>{
+  const x=x0+c*(size+gap),y=y0+r*(size+gap);
   if(code==="R"){
-   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#reflectorFill)" stroke="#3b7184" stroke-width="1.2"/><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#waterPattern)" opacity=".9"/><text x="'+(x+size/2)+'" y="'+(y+size/2-5)+'" class="reflector-title" text-anchor="middle">WATER</text><text x="'+(x+size/2)+'" y="'+(y+size/2+14)+'" class="reflector-title" text-anchor="middle">REFLECTOR</text><text x="'+(x+size/2)+'" y="'+(y+size/2+34)+'" class="reflector-sub" text-anchor="middle">21.42 cm pitch</text></g>';
+   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#reflectorFill)" stroke="#3b7184"/><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#waterPattern)"/><text x="'+(x+size/2)+'" y="'+(y+size/2-5)+'" class="reflector-title" text-anchor="middle">WATER</text><text x="'+(x+size/2)+'" y="'+(y+size/2+14)+'" class="reflector-title" text-anchor="middle">REFLECTOR</text><text x="'+(x+size/2)+'" y="'+(y+size/2+34)+'" class="reflector-sub" text-anchor="middle">'+Number(core.pitch_cm[0]).toFixed(2)+' cm pitch</text></g>';
   }else{
-   const matrix=pinLattices[code],color=code==="M"?"#f4bd62":"#51d2df";
-   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="#0a1a27" stroke="'+color+'" stroke-opacity=".72" stroke-width="1.3"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="'+(size-2)+'" height="24" rx="5" fill="'+color+'" fill-opacity=".12"/><text x="'+(x+8)+'" y="'+(y+16)+'" class="assembly-label" fill="'+color+'">'+(["p00","p01","p10","p11"][i===0?0:i===1?1:i===3?2:3])+' · '+(code==="M"?"MOX":"UO₂")+'</text>';
-   const ix=x+pinInsetX,iy=y+pinInsetY;
-   matrix.forEach((line,rr)=>{for(let cc=0;cc<17;cc++){svg+=materialCellSvg(line[cc],ix+cc*pinPitch,iy+rr*pinPitch,pinPitch);}});
-   svg+='<rect x="'+(ix-.6)+'" y="'+(iy-.6)+'" width="'+(pinArea+1.2)+'" height="'+(pinArea+1.2)+'" fill="none" stroke="#64899a" stroke-width=".7"/><text x="'+(x+size-8)+'" y="'+(y+16)+'" class="assembly-size" text-anchor="end">17 × 17</text></g>';
+   const cell=assemblyMap[String(sourceGrid[r][c])],pins=modelGeometryData.pin_lattices[String(cell.lattice_id)]?.universe_grid;
+   if(!Array.isArray(pins)||pins.length!==pinDims[1]||pins.some(pr=>!Array.isArray(pr)||pr.length!==pinDims[0]))throw new Error("Archived pin lattice "+cell.lattice_id+" does not match declared dimensions.");
+   const color=code==="M"?"#f4bd62":"#51d2df",pp=(size-18)/pinDims[0],area=pp*pinDims[0],ix=x+9,iy=y+31;
+   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="#0a1a27" stroke="'+color+'" stroke-opacity=".72"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="'+(size-2)+'" height="24" rx="5" fill="'+color+'" fill-opacity=".12"/><text x="'+(x+8)+'" y="'+(y+16)+'" class="assembly-label" fill="'+color+'">p'+r+c+' · '+(code==="M"?"MOX":"UO₂")+'</text><text x="'+(x+size-8)+'" y="'+(y+16)+'" class="assembly-size" text-anchor="end">'+pinDims[0]+' × '+pinDims[1]+'</text>';
+   pins.forEach((pr,pi)=>pr.forEach((uid,pj)=>{svg+=modelMaterialCell(uid,ix+pj*pp,iy+pi*pp,pp);}));
+   svg+='<rect x="'+(ix-.6)+'" y="'+(iy-.6)+'" width="'+(area+1.2)+'" height="'+(area+1.2)+'" fill="none" stroke="#64899a" stroke-width=".7"/></g>';
   }
- });
+ }));
  const lx=624,ly=104;
- svg+='<line x1="605" y1="82" x2="605" y2="592" stroke="#29475a" stroke-width="1"/><text x="'+lx+'" y="'+ly+'" class="legend-title">MATERIAL REGIONS</text>';
- const legend=[
-  ["square","#123749","Moderator · water around pin"],
-  ["circle",pinMaterials["1"].color,pinMaterials["1"].name],
-  ["circle",pinMaterials["2"].color,pinMaterials["2"].name],
-  ["circle",pinMaterials["3"].color,pinMaterials["3"].name],
-  ["circle",pinMaterials["4"].color,pinMaterials["4"].name],
-  ["circle",pinMaterials["5"].color,pinMaterials["5"].name],
-  ["circle",pinMaterials["6"].color,pinMaterials["6"].name],
-  ["square","#1b5268","Reflector · water"]
- ];
- legend.forEach((item,i)=>{
-  const y=ly+27+i*29;
-  if(item[0]==="circle")svg+='<circle cx="'+(lx+7)+'" cy="'+(y-4)+'" r="5.2" fill="'+item[1]+'" stroke="#b8d4df" stroke-opacity=".4"/>';
-  else svg+='<rect x="'+(lx+1)+'" y="'+(y-10)+'" width="12" height="12" rx="2" fill="'+item[1]+'" stroke="#517386" stroke-width=".6"/>';
-  svg+='<text x="'+(lx+22)+'" y="'+y+'" class="legend-text">'+item[2]+'</text>';
+ svg+='<line x1="605" y1="82" x2="605" y2="592" stroke="#29475a"/><text x="'+lx+'" y="'+ly+'" class="legend-title">PIN MATERIALS</text>';
+ Object.entries(modelGeometryData.materials.pin_universes||{}).forEach(([uid,m],i)=>{
+  const y=ly+27+i*29;svg+='<circle cx="'+(lx+7)+'" cy="'+(y-4)+'" r="5.2" fill="'+(pinUniverseColors[uid]||"#c1cbd2")+'"/><text x="'+(lx+22)+'" y="'+y+'" class="legend-text">'+escapeHtml(m.material_name||m.name||uid)+'</text>';
  });
- const my=ly+285;
- svg+='<line x1="'+lx+'" y1="'+(my-18)+'" x2="968" y2="'+(my-18)+'" stroke="#29475a"/><text x="'+lx+'" y="'+my+'" class="legend-title">MODEL PARAMETERS</text>';
- [
-  ["Model","OECD/NEA C5G7 · 2D"],
-  ["Core lattice","3 × 3 assembly sites"],
-  ["Fuel assemblies","2 × 2 · selected layout"],
-  ["Pin lattice","17 × 17 per fuel assembly"],
-  ["Pin pitch / radius","1.26 cm / 0.54 cm"],
-  ["Recorded boundary","Reflective left/top · vacuum right/bottom"]
- ].forEach((entry,i)=>{
-  const y=my+28+i*25;
-  svg+='<text x="'+lx+'" y="'+y+'" class="meta-label">'+entry[0]+'</text><text x="'+lx+'" y="'+(y+13)+'" class="meta-value">'+entry[1]+'</text>';
- });
- svg+='<rect x="'+lx+'" y="'+(my+194)+'" width="334" height="43" rx="7" fill="#102638" stroke="#2a4b5e"/><text x="'+(lx+12)+'" y="'+(my+211)+'" class="source-note">XML-DERIVED · MATERIAL / LATTICE VIEW</text><text x="'+(lx+12)+'" y="'+(my+227)+'" class="source-note-secondary">Visual renderer only · no transport calculation executed</text>';
- svg+='</svg>';
+ const my=ly+220,meta=[["Core lattice","ID "+core.id+" · "+dims.join(" × ")],["Fuel positions","2 × 2 · "+signature],["Pin lattice","IDs 101 (UO₂) / 103 (MOX)"],["Pin pitch / radius",Number(modelGeometryData.pin_geometry.pitch_cm[0]).toFixed(2)+" cm / "+Number(modelGeometryData.pin_geometry.pin_radius_cm).toFixed(2)+" cm"],["Assembly pitch",Number(core.pitch_cm[0]).toFixed(2)+" cm"],["Source","Archived geometry.xml"]];
+ svg+='<line x1="'+lx+'" y1="'+(my-18)+'" x2="968" y2="'+(my-18)+'" stroke="#29475a"/><text x="'+lx+'" y="'+my+'" class="legend-title">SOURCE PARAMETERS</text>';
+ meta.forEach((item,i)=>{const y=my+28+i*27;svg+='<text x="'+lx+'" y="'+y+'" class="meta-label">'+escapeHtml(item[0])+'</text><text x="'+lx+'" y="'+(y+13)+'" class="meta-value">'+escapeHtml(item[1])+'</text>';});
+ const hash=String(source.geometry_xml_sha256||"");
+ svg+='<rect x="'+lx+'" y="'+(my+195)+'" width="334" height="43" rx="7" fill="#102638" stroke="#2a4b5e"/><text x="'+(lx+12)+'" y="'+(my+212)+'" class="source-note">SOURCE SHA-256 · '+escapeHtml(hash.slice(0,16))+'…</text><text x="'+(lx+12)+'" y="'+(my+228)+'" class="source-note-secondary">XML-derived map · no transport run executed</text></svg>';
  return svg;
 }
 function drawModelGeometry(row){
- const preview=$("geometryPreview");
- if(!preview||!row)return;
- if(geometryArtifactActive)return;
- const signature=normalizeLayoutSignature(row.layout_signature);
- preview.innerHTML=renderModelGeometrySvg(signature);
- if(!isValidLayoutSignature(signature)){
-  $("geometryCaption").textContent="Model view unavailable · invalid fuel composition for "+displayValue(row.candidate_id,"selected candidate")+".";
-  return;
- }
- $("geometryCaption").textContent="Archived Actions artifact c5g7-study-640000 · "+String(row.candidate_id??"candidate")+" · layout "+signature+" · lattice/material map reconstructed from geometry.xml definitions; not an OpenMC transport result.";
+ const preview=$("geometryPreview");if(!preview||!row||geometryArtifactActive)return;
+ const sig=normalizeLayoutSignature(row.layout_signature);
+ preview.innerHTML=renderModelGeometrySvg(row);
+ if(!modelGeometryData){$("geometryCaption").textContent="OpenMC geometry manifest unavailable; model view not shown.";return;}
+ const source=(modelGeometryData.candidates||[]).find(c=>String(c.candidate_id)===String(row.candidate_id)&&normalizeLayoutSignature(c.layout_signature)===sig);
+ $("geometryCaption").textContent=source?"Source "+source.source_member+" · SHA-256 "+String(source.geometry_xml_sha256||"unavailable")+" · extracted from archived OpenMC geometry.xml; visualization only, not a transport result.":"No exact candidate ID and layout match exists in the source manifest.";
+}
+async function initModelGeometry(){
+ try{
+  const response=await fetch("/api/model-geometry",{headers:{Accept:"application/json"}});
+  if(!response.ok)throw new Error("HTTP "+response.status);
+  const payload=await response.json();
+  if(payload.schema_version!==1||!Array.isArray(payload.candidates)||payload.candidates.length!==6||!payload.core_lattice||!payload.pin_lattices)throw new Error("Incomplete or unsupported OpenMC geometry manifest.");
+  modelGeometryData=payload;return true;
+ }catch(error){
+  modelGeometryData=null;
+  if($("geometryStatus")){$("geometryStatus").textContent="MODEL MANIFEST UNAVAILABLE";$("geometryStatus").classList.add("warning");}
+  if($("geometryProvenance"))$("geometryProvenance").textContent="Cannot load OpenMC geometry manifest: "+String(error.message||error);
+  if($("geometryPreview"))$("geometryPreview").innerHTML='<div class="empty-state"><b>Model geometry unavailable</b><p>'+escapeHtml(error.message||error)+'</p><p>No substitute geometry is fabricated.</p></div>';
+  if($("geometryCaption"))$("geometryCaption").textContent="Geometry not shown.";
+  return false;
+}
 }
 
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
@@ -264,6 +198,7 @@ async function init(){
   const metrics=[["Candidate records",records.length.toLocaleString(),"Rows in current candidate summary"],["Unique layouts",layouts.size.toLocaleString(),"Distinct recorded signatures"],["k-effective span",ks.length?number(Math.min(...ks),5)+" – "+number(Math.max(...ks),5):"—","Reported mean values"],["Recorded seeds",seeds.size.toLocaleString(),"Distinct seed values"]];
   $("metrics").innerHTML=metrics.map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
   $("candidateSelect").innerHTML=records.map(candidateOption).join("");
+  await initModelGeometry();
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
   showCandidate();drawOtherCharts();
   await initAssembly();
