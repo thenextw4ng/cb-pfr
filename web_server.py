@@ -285,10 +285,14 @@ def read_mesh_evidence():
                 dims = [int(v) for v in np.asarray(mesh["dimension"][()]).reshape(-1)]
                 if len(dims) == 3 and dims[2] == 1 and all(v > 0 for v in dims):
                     raw_mesh_type = mesh["type"][()] if "type" in mesh else b"unknown"
-                    if isinstance(raw_mesh_type, bytes):
-                        mesh_type = raw_mesh_type.decode("utf-8", errors="replace").rstrip("\x00").strip().lower()
+                    raw_type_array = np.asarray(raw_mesh_type)
+                    if raw_type_array.dtype.kind == "S":
+                        mesh_type = b"".join(raw_type_array.reshape(-1).tolist()).decode("utf-8", errors="replace")
+                    elif raw_type_array.dtype.kind == "U":
+                        mesh_type = "".join(raw_type_array.reshape(-1).tolist())
                     else:
-                        mesh_type = str(raw_mesh_type).strip().lower()
+                        mesh_type = str(raw_mesh_type)
+                    mesh_type = mesh_type.rstrip("\x00").strip().lower()
                     lower = numeric_vector(mesh, "lower_left")
                     upper = numeric_vector(mesh, "upper_right")
                     spatial_geometry = {
