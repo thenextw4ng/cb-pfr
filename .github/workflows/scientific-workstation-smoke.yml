@@ -25,7 +25,7 @@ jobs:
           node-version: "20"
       - name: Static syntax checks
         run: |
-          python -m py_compile web_server.py
+          python -m py_compile web_server.py tools/export_openmc_geometry.py
           node --check web/app.js
       - name: Start workstation and smoke-test API/assets
         shell: bash
@@ -57,11 +57,18 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function drawMesh'
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
+          curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
+          # Mesh evidence may correctly return 503 when the private/local statepoint archive is absent.
+          mesh_status=$(curl --silent --output /tmp/cb-pfr-mesh.json --write-out '%{http_code}' http://127.0.0.1:8765/api/mesh)
+          test "$mesh_status" = "200" -o "$mesh_status" = "503"
           python - <<'PY'
           import json
           for path, key in (("/tmp/cb-pfr-candidates.json", "records"), ("/tmp/cb-pfr-assembly.json", "records")):
               with open(path, encoding="utf-8") as f:
                   payload = json.load(f)
               assert payload.get(key), f"{path} has no records"
-          print("Health, HTML, CSS, JS, candidate API, and assembly API passed.")
+          with open("/tmp/cb-pfr-geometry.json", encoding="utf-8") as f:
+              geometry = json.load(f)
+          assert isinstance(geometry.get("artifacts"), list), geometry
+          print("Health, HTML, CSS, JS, candidate API, assembly API, geometry discovery API, and mesh endpoint status passed.")
           PY
