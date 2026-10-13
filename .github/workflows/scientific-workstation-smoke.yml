@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - feat/scientific-visualization-reliability
+      - feat/stage4-physical-axial-tallies
       - refine/**
       - fix/**
   pull_request:
     branches:
       - feat/cern-workstation-integration
+      - feat/stage3-neutron-field-terrain
       - fix/**
       - refine/**
   workflow_dispatch:
