@@ -596,6 +596,10 @@ function drawMesh(){
  const yAxisStyle={...baseLayout.yaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const sharedAxis={tickfont:{size:10,color:palette.muted},titlefont:{size:11,color:palette.muted}};
  const colorscale=paletteName;
+ const spanX=coordinates.xRange?coordinates.xRange[1]-coordinates.xRange[0]:Math.max(1,nx-1);
+ const spanY=coordinates.yRange?coordinates.yRange[1]-coordinates.yRange[0]:Math.max(1,ny-1);
+ const xySpan=Math.max(spanX,spanY,1);
+ const aspectX=spanX/xySpan,aspectY=spanY/xySpan;
  const heatLayout={
   autosize:true,margin:{l:62,r:30,t:18,b:58},showlegend:false,
   xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
@@ -649,7 +653,7 @@ function drawMesh(){
    xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.xRange:undefined},
    yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.yRange:undefined},
    zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line},
-   bgcolor:"rgba(0,0,0,0)",aspectmode:"manual",aspectratio:{x:1,y:1,z:Math.min(0.95,0.30*exaggeration)},camera:meshDefaultCamera
+   bgcolor:"rgba(0,0,0,0)",aspectmode:"manual",aspectratio:{x:aspectX,y:aspectY,z:Math.min(0.95,0.30*exaggeration)},camera:JSON.parse(JSON.stringify(meshDefaultCamera))
   }
  });
  const centerY=Math.floor((ny-1)/2);
@@ -739,7 +743,7 @@ async function initMesh(){
    resetCamera.addEventListener("click",()=>{
     const plot=$("meshSurface");
     if(!window.Plotly||!plot?.data)return;
-    window.Plotly.relayout(plot,{"scene.camera":meshDefaultCamera});
+    window.Plotly.relayout(plot,{"scene.camera":JSON.parse(JSON.stringify(meshDefaultCamera))});
    });
    resetCamera.dataset.meshListenerBound="true";
   }
