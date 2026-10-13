@@ -115,10 +115,10 @@ test("all six candidate selections update placement, detail, comparison highligh
     assert.equal(comparison.marker.color.filter(color => color === "#55d4df").length, 1, "only selected candidate should be highlighted");
 
     const proxy = proxyRows.find(item => item.candidate_id === row.candidate_id && item.layout_signature === row.layout_signature);
-    assert.deepEqual(charts.get("assemblyMap").traces[0].z, [
+    assert.equal(JSON.stringify(charts.get("assemblyMap").traces[0].z), JSON.stringify([
       [proxy.p00_fission_rate, proxy.p01_fission_rate],
       [proxy.p10_fission_rate, proxy.p11_fission_rate]
-    ]);
+    ]));
     assert.equal($("selectedRecordTag").textContent, row.canonical_reference ? "CANONICAL LAYOUT REFERENCE" : "LAYOUT VARIANT");
   }
 });
