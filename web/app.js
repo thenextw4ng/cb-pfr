@@ -959,7 +959,10 @@ async function loadAxial3D(){
   axial3dData=null;
   $("axial3dStatus").textContent="3D DATA UNAVAILABLE";
   $("axial3dStatus").classList.add("warning");
-  $("axial3dProvenance").textContent=error.message||String(error);
+  const axialError=error.message||String(error);
+  $("axial3dProvenance").textContent=axialError.includes("not installed")||axialError.includes("not found")||axialError.includes("No such file")
+   ?axialError+" The GitHub Actions workflow publishes a real OpenMC 51 × 51 × 30 export to evidence/cbpfr_axial_3d/ after a successful run. After that commit appears, update this checkout with `git pull` and click Reload 3D tally."
+   :axialError;
   $("axial3dKpis").innerHTML=[
    ["Mesh dimensions","—","Awaiting 3D statepoint"],
    ["Axial span","—","No verified physical Z data"],
