@@ -246,13 +246,16 @@ async function main() {
         if (!response.ok) throw new Error("Assembly evidence API unavailable for value cross-check");
         const payload = await response.json();
         const row = (payload.records || []).find(item =>
-          String(item.candidate_id) === candidateId &&
-          String(item.layout_signature).toUpperCase() === signature.toUpperCase()
+          String(item.candidate_id).trim() === candidateId.trim() &&
+          String(item.layout_signature).trim().toUpperCase() === signature.trim().toUpperCase()
         );
-        return row ? ["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].map(key => Number(row[key])) : null;
+        return {
+          values: row ? ["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].map(key => Number(row[key])) : null,
+          pairs: (payload.records || []).map(item => [String(item.candidate_id), String(item.layout_signature)])
+        };
       }, { candidateId: option.value, signature: details.coreInfo?.layoutSignature || "" });
-      assert.ok(recordedAssembly, "the selected candidate must have an exact ID + signature proxy record");
-      assert.deepEqual(details.assemblyMapValues.flat(), recordedAssembly, "all four displayed heatmap values must be the actual CSV values in P00, P01, P10, P11 order");
+      assert.ok(recordedAssembly.values, "the selected candidate must have an exact ID + signature proxy record; selected=" + option.value + ", signature=" + String(details.coreInfo?.layoutSignature) + ", source records=" + JSON.stringify(recordedAssembly.pairs));
+      assert.deepEqual(details.assemblyMapValues.flat(), recordedAssembly.values, "all four displayed heatmap values must be the actual CSV values in P00, P01, P10, P11 order");
       assert.deepEqual(details.assemblyMapText.flat().map(text => text.split("\n")[0]), details.coreInfo.layoutSignature.split("").map((code,index) => ["P00","P01","P10","P11"][index] + " · " + (code === "M" ? "MOX" : "UO₂")), "each tile must show its matching position label and actual material category");
       assert.match(details.assemblyMapAxisMapping, /ROW 0 \(TOP\).*P00 = R0\/C0.*P11 = R1\/C1/, "the position labels must document the same row/column convention as the core map");
       assert.deepEqual(details.assemblyMapScale, details.assemblyMatrixScale, "selected map and candidate matrix must keep one shared quantitative range");
