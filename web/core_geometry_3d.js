@@ -72,7 +72,7 @@ export function createCoreViewer(container, onAssemblySelect) {
   scene.fog = new THREE.Fog("#07131e", 100, 190);
 
   const camera = new THREE.PerspectiveCamera(37, 1, 0.1, 500);
-  camera.position.set(58, 52, 70);
+  camera.position.set(72, 66.63, 88);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -156,7 +156,7 @@ export function createCoreViewer(container, onAssemblySelect) {
   function addBoundaryLabel(text, x, z, color) {
     const sprite = makeLabel(text, color, "rgba(7,19,30,0.93)");
     sprite.position.set(x, 0.18, z);
-    sprite.scale.set(10.3, 2.55, 1);
+    sprite.scale.set(8.2, 2.05, 1);
     model.add(sprite);
   }
 
@@ -371,17 +371,11 @@ export function createCoreViewer(container, onAssemblySelect) {
     addLine([[xMax, 0.01, zMin], [xMax, 0.01, zMax]], "#f4bd62");
     addBoundaryLabel("Y− VACUUM", 0, zMin - 6.5, "#f4bd62");
     addBoundaryLabel("Y+ REFLECTIVE", 0, zMax + 6.5, "#55d4df");
-    addBoundaryLabel("X− REFLECTIVE", xMin - 7.6, 0, "#55d4df");
-    addBoundaryLabel("X+ VACUUM", xMax + 7.6, 0, "#f4bd62");
+    addBoundaryLabel("X− REFLECTIVE", xMin - 3.5, 0, "#55d4df");
+    addBoundaryLabel("X+ VACUUM", xMax + 3.5, 0, "#f4bd62");
 
-    const originLabel = makeLabel("C5G7 · 3×3 CORE · " + signature, "#e8f1f7", "rgba(7,19,30,0.92)");
-    originLabel.position.set(0, 5.0, zMax + 12.3);
-    originLabel.scale.set(18, 4.5, 1);
-    model.add(originLabel);
-    const extrusionLabel = makeLabel("DISPLAY EXTRUSION ONLY · NO AXIAL DIMENSION IN SOURCE", "#f4bd62", "rgba(42,27,18,0.93)");
-    extrusionLabel.position.set(0, -0.85, zMin - 13.2);
-    extrusionLabel.scale.set(26, 6.3, 1);
-    model.add(extrusionLabel);
+    // Candidate identity and the axial-display limitation are already explicit in the HTML overlays.
+    // Avoid oversized world-space sprites that can clip or occlude the physical boundary labels.
 
     const safeRow = Math.max(0, Math.min(rows - 1, Number(focusCell?.row ?? 0)));
     const safeCol = Math.max(0, Math.min(cols - 1, Number(focusCell?.col ?? 0)));
@@ -438,7 +432,7 @@ export function createCoreViewer(container, onAssemblySelect) {
     reset() {
       controls.reset();
       controls.target.set(0, 1.63, 0);
-      camera.position.set(58, 52, 70);
+      camera.position.set(72, 66.63, 88);
       controls.update();
     },
     highlight(row, col) {
