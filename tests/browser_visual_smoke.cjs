@@ -131,7 +131,7 @@ async function main() {
     }
     await page.selectOption("#meshView", "relative_sd");
     await page.waitForFunction(() =>
-      document.querySelector("#meshHeatmap")?.data?.[0]?.hovertemplate?.includes("relative standard error"),
+      document.querySelector("#meshHeatmap")?.data?.[0]?.hovertemplate?.toLowerCase().includes("relative standard error"),
       { timeout: 15000 }
     );
     await page.selectOption("#meshScale", "linear");
