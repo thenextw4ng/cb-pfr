@@ -138,6 +138,56 @@ async function initModelGeometry(){
 }
 }
 
+function drawSelectedCandidate(row){
+ const signature=normalizeLayoutSignature(row.layout_signature);
+ const tag=$("selectedRecordTag");
+ const layoutValid=isValidLayoutSignature(signature);
+ const canonical=(row.canonical_reference===true||String(row.canonical_reference).toLowerCase()==="true")&&layoutValid;
+ if(tag){
+  tag.textContent=!layoutValid?"INVALID LAYOUT":canonical?"CANONICAL LAYOUT REFERENCE":"LAYOUT VARIANT";
+  tag.classList.toggle("warning",!layoutValid||!canonical);
+ }
+ const selectedIndex=records.findIndex(item=>String(item.candidate_id)===String(row.candidate_id));
+ const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
+ $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
+ $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
+ $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
+ const metrics=[
+  ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff"],
+  ["Reported SD",has(row,"keff_std_dev")?number(row.keff_std_dev,6):"Not recorded","sd"],
+  ["Relative SD",has(row,"keff_relative_sd_percent")?number(row.keff_relative_sd_percent,4)+"%":"Not recorded","uncertainty"],
+  ["Aggregate fission score · not power",has(row,"aggregate_fission_score")?number(row.aggregate_fission_score,5):"Not recorded","proxy"]
+ ];
+ $("selectedCandidateMetrics").innerHTML=metrics.map(([name,value,type])=>'<div class="candidate-stat candidate-stat-'+type+'"><span>'+name+'</span><strong>'+value+'</strong></div>').join("");
+ const runInfo=[
+  ["SEED",displayValue(row.seed)],
+  ["BATCHES",displayValue(row.batches)],
+  ["INACTIVE",displayValue(row.inactive)],
+  ["PARTICLES / BATCH",displayValue(row.particles_per_batch)]
+ ];
+ $("selectedCandidateRunInfo").innerHTML=runInfo.map(([name,value])=>'<div class="run-meta"><span>'+name+'</span><b>'+escapeHtml(value)+'</b></div>').join("");
+ const unchanged=has(row,"mutated_preexisting_file_count")&&Number(row.mutated_preexisting_file_count)===0;
+ const mgxsStable=Boolean(row.mgxs_sha256_before_transport&&row.mgxs_sha256_before_transport===row.mgxs_sha256_after_transport);
+ $("selectedCandidateChecks").innerHTML='<span class="micro-check '+(unchanged?"ok":"")+'"><i></i>'+(unchanged?"No pre-existing file mutation recorded":"Mutation check unavailable")+'</span><span class="micro-check '+(mgxsStable?"ok":"")+'"><i></i>'+(mgxsStable?"MGXS hash unchanged across recorded run":"MGXS hash comparison unavailable")+'</span>';
+}
+function clearCandidateSelection(message="No candidate selected."){
+ $("layoutView").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>'+escapeHtml(message)+'</p></div>';
+ $("layoutCaption").textContent=message;
+ $("selectedRecordTag").textContent="NO SELECTION";
+ $("selectedRecordTag").classList.add("warning");
+ $("selectedCandidateId").textContent="No candidate selected";
+ $("selectedCandidateMetaLine").textContent="Select a recorded candidate to inspect its configuration.";
+ $("selectedCandidateSignature").textContent="—";
+ $("selectedCandidateMetrics").innerHTML='<div class="empty-state"><b>Metrics unavailable</b><p>No candidate is selected.</p></div>';
+ $("selectedCandidateRunInfo").innerHTML="";
+ $("selectedCandidateChecks").innerHTML="";
+ geometryArtifactActive=false;
+ if($("geometryPreview"))$("geometryPreview").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to show its linked model view.</p></div>';
+ if($("geometryCaption"))$("geometryCaption").textContent="No candidate selected.";
+ if(records.length)drawCandidateChart();
+ if(assemblyRecords.length)drawAssemblyField();
+ else if($("assemblyMap"))$("assemblyMap").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to inspect recorded assembly evidence.</p></div>';
+}
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
 const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d","select2d"]};
 function chart(id,traces,layout={}){
