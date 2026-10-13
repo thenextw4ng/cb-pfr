@@ -117,73 +117,157 @@ def read_assembly_evidence():
 
 
 def read_mesh_evidence():
-    """Read only the known production member from the committed statepoint archive."""
+    """Extract mesh-tally means and standard errors from an archived OpenMC statepoint."""
     archive_path = locate_statepoint_archive()
     try:
         import h5py
         import numpy as np
     except ImportError as exc:
-        raise RuntimeError("Spatial field visualization needs h5py and numpy. Install project requirements with: python -m pip install -r requirements.txt") from exc
+        raise RuntimeError(
+            "Spatial field visualization needs h5py and numpy. "
+            "Install project requirements with: python -m pip install -r requirements.txt"
+        ) from exc
 
     with zipfile.ZipFile(archive_path) as archive:
         matches = [name for name in archive.namelist() if name == STATEPOINT_MEMBER]
         if len(matches) != 1:
             raise ValueError(f"Expected exactly one {STATEPOINT_MEMBER} entry, found {len(matches)}.")
         raw_bytes = archive.read(matches[0])
+
     actual_hash = hashlib.sha256(raw_bytes).hexdigest()
     expected_hash = None
     if STATEPOINT_BASELINE.is_file():
         baseline = json.loads(STATEPOINT_BASELINE.read_text(encoding="utf-8"))
         expected_hash = baseline.get("statepoint_file_sha256")
+
     records = []
     with h5py.File(__import__("io").BytesIO(raw_bytes), "r") as handle:
         tallies = handle.get("tallies")
         if tallies is None:
             raise ValueError("Statepoint HDF5 does not contain a tallies group.")
+
         meshes = []
-        if "meshes" in tallies:
-            for name, mesh in tallies["meshes"].items():
+        mesh_group = tallies.get("meshes")
+        if mesh_group is not None:
+            for name, mesh in mesh_group.items():
                 if "dimension" not in mesh:
                     continue
                 dims = [int(v) for v in np.asarray(mesh["dimension"][()]).reshape(-1)]
-                if len(dims) == 3 and dims[2] == 1:
-                    meshes.append((name, dims))
+                if len(dims) == 3 and dims[2] == 1 and all(v > 0 for v in dims):
+                    meshes.append((name, int(mesh.attrs.get("id", name.split()[-1])), dims))
+
+        filters = {}
+        filter_group = tallies.get("filters")
+        if filter_group is not None:
+            for name, filt in filter_group.items():
+                if "type" not in filt:
+                    continue
+                raw_type = filt["type"][()]
+                if isinstance(raw_type, bytes):
+                    raw_type = raw_type.decode("utf-8", errors="replace")
+                filter_id = int(filt.attrs.get("id", name.split()[-1]))
+                mesh_id = None
+                for key in ("mesh", "mesh_id"):
+                    if key in filt:
+                        try:
+                            mesh_id = int(np.asarray(filt[key][()]).reshape(-1)[0])
+                        except (TypeError, ValueError, IndexError):
+                            pass
+                filters[filter_id] = (str(raw_type), mesh_id)
+
         for tally_name, tally in tallies.items():
             if not tally_name.startswith("tally ") or not hasattr(tally, "keys"):
                 continue
             if "results" not in tally or "score_bins" not in tally:
                 continue
-            scores = []
+
+            score_bins = []
             for value in np.asarray(tally["score_bins"][()]).reshape(-1):
                 if isinstance(value, bytes):
-                    scores.append(value.decode("utf-8", errors="replace").rstrip("\x00"))
+                    score_bins.append(value.decode("utf-8", errors="replace").rstrip("\x00"))
                 elif hasattr(value, "item"):
                     item = value.item()
-                    scores.append(item.decode("utf-8", errors="replace").rstrip("\x00") if isinstance(item, bytes) else str(item))
+                    score_bins.append(item.decode("utf-8", errors="replace").rstrip("\x00") if isinstance(item, bytes) else str(item))
                 else:
-                    scores.append(str(value))
-            values = np.asarray(tally["results"][()])
+                    score_bins.append(str(value))
+
+            values = np.asarray(tally["results"][()], dtype=float)
             if values.ndim == 4 and values.shape[1] == 1:
                 values = values[:, 0, :, :]
-            if values.ndim != 3 or values.shape[-1] != 2 or values.shape[-2] != len(scores):
+            if values.ndim != 3 or values.shape[-1] != 2 or values.shape[-2] != len(score_bins):
                 continue
-            bins = values.shape[0]
-            matching = next((m for m in meshes if int(np.prod(m[1])) == bins), None)
+
+            tally_filter_ids = []
+            if "filters" in tally:
+                tally_filter_ids = [int(v) for v in np.asarray(tally["filters"][()]).reshape(-1)]
+            mesh_filter_ids = [
+                fid for fid in tally_filter_ids
+                if fid in filters and filters[fid][0].lower() in ("mesh", "meshsurface")
+            ]
+            matching_meshes = []
+            for mesh_name, mesh_id, dims in meshes:
+                if mesh_filter_ids:
+                    if any(filters[fid][1] == mesh_id for fid in mesh_filter_ids):
+                        matching_meshes.append((mesh_name, mesh_id, dims))
+                elif int(np.prod(dims)) == values.shape[0]:
+                    # Compatibility fallback for statepoint variants that omit explicit filter links.
+                    matching_meshes.append((mesh_name, mesh_id, dims))
+            matching = next((m for m in matching_meshes if int(np.prod(m[2])) == values.shape[0]), None)
             if matching is None:
                 continue
-            mesh_name, dims = matching
-            if dims[0] * dims[1] != bins:
+
+            mesh_name, mesh_id, dims = matching
+            if dims[0] * dims[1] != values.shape[0]:
                 continue
+
+            n_realizations = tally.attrs.get("n_realizations")
+            if n_realizations is None and "n_realizations" in tally:
+                n_realizations = tally["n_realizations"][()]
+            if n_realizations is None and "n_realizations" in tallies.attrs:
+                n_realizations = tallies.attrs["n_realizations"]
+            if n_realizations is None:
+                raise ValueError(f"{tally_name} does not record n_realizations; cannot calculate tally means.")
+            n_realizations = int(np.asarray(n_realizations).reshape(-1)[0])
+            if n_realizations <= 0:
+                raise ValueError(f"{tally_name} has invalid n_realizations={n_realizations}.")
+
+            # OpenMC statepoint results store accumulated sum and sum-of-squares,
+            # not ready-to-plot means and standard deviations.
+            sums = values[:, :, 0]
+            sums_sq = values[:, :, 1]
+            means = sums / n_realizations
+            if n_realizations > 1:
+                sample_variance = np.maximum(
+                    (sums_sq - (sums * sums / n_realizations)) / (n_realizations - 1),
+                    0.0,
+                )
+                std_err = np.sqrt(sample_variance / n_realizations)
+            else:
+                std_err = np.full_like(means, np.nan)
+
             mean_grid = {}
             sd_grid = {}
-            mean_values = np.asarray(values[:, :, 0], dtype=float)
-            std_values = np.asarray(values[:, :, 1], dtype=float)
-            for idx, score in enumerate(scores):
-                mean_grid[score] = mean_values[:, idx].reshape((dims[1], dims[0])).tolist()
-                sd_grid[score] = std_values[:, idx].reshape((dims[1], dims[0])).tolist()
-            records.append({"tally_name": tally_name, "mesh_name": mesh_name, "dimensions": dims, "scores": {score: {"mean": mean_grid[score], "std_dev": sd_grid[score]} for score in scores}})
+            for idx, score in enumerate(score_bins):
+                mean_grid[score] = means[:, idx].reshape((dims[1], dims[0])).tolist()
+                sd_grid[score] = std_err[:, idx].reshape((dims[1], dims[0])).tolist()
+
+            records.append({
+                "tally_name": tally_name,
+                "mesh_name": mesh_name,
+                "mesh_id": mesh_id,
+                "dimensions": dims,
+                "n_realizations": n_realizations,
+                "scores": {
+                    score: {"mean": mean_grid[score], "std_dev": sd_grid[score]}
+                    for score in score_bins
+                },
+            })
+
     if not records:
-        raise ValueError("No compatible 2-D OpenMC mesh tally found in archived statepoint.")
+        raise ValueError(
+            "No compatible 2-D OpenMC mesh tally was found in the archived statepoint. "
+            "Verify the tally's mesh filter, mesh dimensions, and score bins."
+        )
     return {
         "mesh_tallies": records,
         "provenance": {
@@ -191,10 +275,9 @@ def read_mesh_evidence():
             "sha256": actual_hash,
             "expected_sha256": expected_hash,
             "hash_matches": actual_hash == expected_hash if expected_hash else None,
-            "evidence_status": "recorded statepoint; no geometry-to-material mapping inferred",
+            "evidence_status": "recorded statepoint; means and standard errors derived from accumulated tally sums",
         },
     }
-
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "CBPFRLocal/0.2"
