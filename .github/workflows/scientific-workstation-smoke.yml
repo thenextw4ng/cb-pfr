@@ -32,6 +32,8 @@ jobs:
           node --check tests/web_candidate_ui.test.cjs
       - name: Verify candidate inspector synchronization
         run: node --test tests/web_candidate_ui.test.cjs
+      - name: Verify OpenMC geometry manifest
+        run: python tests/test_openmc_geometry_manifest.py
       - name: Start workstation and smoke-test API/assets
         shell: bash
         run: |
@@ -65,6 +67,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
           curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
+          curl --fail --silent http://127.0.0.1:8765/api/model-geometry > /tmp/cb-pfr-model-geometry.json
           mesh_status=$(curl --silent --output /tmp/cb-pfr-mesh.json --write-out '%{http_code}' http://127.0.0.1:8765/api/mesh)
           test "$mesh_status" = "200" -o "$mesh_status" = "503"
           echo "$mesh_status" > /tmp/cb-pfr-mesh-status
@@ -102,6 +105,15 @@ jobs:
           with open("/tmp/cb-pfr-geometry.json", encoding="utf-8") as f:
               geometry = json.load(f)
           assert isinstance(geometry.get("artifacts"), list), geometry
+          with open("/tmp/cb-pfr-model-geometry.json", encoding="utf-8") as f:
+              model_geometry = json.load(f)
+          assert model_geometry.get("schema_version") == 1, model_geometry
+          candidates = model_geometry.get("candidates", [])
+          assert len(candidates) == 6, model_geometry
+          assert all(item.get("source_matches_candidate_signature") is True for item in candidates), candidates
+          assert all(len(item.get("geometry_xml_sha256", "")) == 64 for item in candidates), candidates
+          assert model_geometry.get("core_lattice", {}).get("dimensions") == [3, 3], model_geometry
+          assert model_geometry.get("pin_geometry", {}).get("dimensions") == [17, 17], model_geometry
           mesh_status = open("/tmp/cb-pfr-mesh-status", encoding="utf-8").read().strip()
           if mesh_status == "200":
               with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
@@ -122,5 +134,5 @@ jobs:
               with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
                   error = json.load(f)
               print("Mesh archive unavailable in this CI checkout; UI must show an explicit unavailable state. " + str(error.get("error", "")))
-          print("Health, HTML, CSS, JS, selected-candidate view, XML-derived geometry renderer, candidate API, assembly API, and geometry inventory passed.")
+          print("Health, HTML, CSS, JS, all six candidate inspector tests, source manifest tests, model geometry API, candidate API, assembly API, and geometry inventory passed.")
           PY
