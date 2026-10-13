@@ -16,8 +16,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 sys.path.insert(0, str(ROOT))
-import web_server  # noqa: E402
-
 EXPECTED_ARCHIVE_SHA256 = "7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b"
 EXPECTED_SCORES = {"flux", "fission", "nu-fission"}
 
@@ -47,6 +45,10 @@ class OpenMCMeshTallyReaderTests(unittest.TestCase):
             raise AssertionError(f"Expected six audited statepoints; found {cls.statepoint_members}")
 
     def read_member(self, member: str) -> dict:
+        # Import only when the artifact-backed test actually executes. The test
+        # skips in ordinary CI when its archive fixture is not configured.
+        import importlib
+        web_server = importlib.import_module("web_server")
         original = (
             web_server.STATEPOINT_ARCHIVE,
             web_server.STATEPOINT_ARCHIVE_FALLBACK,
