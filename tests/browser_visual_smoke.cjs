@@ -209,7 +209,7 @@ async function main() {
     await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
     await page.click("#coreView2d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
-    await page.locator("#geometryPreview").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled" });
+    await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled" });
     await page.click("#coreView3d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
