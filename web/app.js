@@ -380,9 +380,31 @@ function clearCandidateSelection(message="No candidate selected."){
 }
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
 const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d","select2d"]};
+function rendererStatus(id,text,state="ready"){
+ const el=$(id);if(!el)return;
+ el.textContent=text;el.dataset.state=state;
+}
+function updateVisualizationStackStatus(){
+ const plotly=window.Plotly;
+ if(plotly&&plotly.version)rendererStatus("plotlyStackStatus","PLOTLY.JS v"+plotly.version+" · READY","ready");
+ else if(window.CBPFRPlotlyLoadError)rendererStatus("plotlyStackStatus","CDN UNAVAILABLE · CHARTS BLOCKED","error");
+ else rendererStatus("plotlyStackStatus","PLOTLY.JS · LOADING","pending");
+ const svgReady=typeof document.createElementNS==="function"&&Boolean(document.createElementNS("http://www.w3.org/2000/svg","svg").createSVGRect||document.createElementNS("http://www.w3.org/2000/svg","svg").namespaceURI);
+ rendererStatus("svgStackStatus",svgReady?"NATIVE SVG · READY":"SVG NOT AVAILABLE",svgReady?"ready":"error");
+ const three=window.CBPFRCore3D;
+ if(three&&three.version)rendererStatus("threeStackStatus","THREE.JS r"+three.version+" · OPTIONAL","ready");
+ else if(window.CBPFRCore3DError)rendererStatus("threeStackStatus","UNAVAILABLE · SVG FALLBACK","warning");
+ else rendererStatus("threeStackStatus","OPTIONAL 3D · LOADING","pending");
+ // VTK.js is deliberately not imported: Plotly handles scalar fields, while source geometry
+ // is SVG-first and a new volume engine would duplicate current capabilities.
+ rendererStatus("vtkStackStatus","VTK.JS · NOT LOADED BY DESIGN","neutral");
+}
+window.addEventListener("cbpfr-core3d-ready",updateVisualizationStackStatus);
+window.addEventListener("cbpfr-core3d-failed",updateVisualizationStackStatus);
+window.addEventListener("cbpfr-plotly-failed",updateVisualizationStackStatus);
 function chart(id,traces,layout={}){
  const el=$(id);if(!el)return Promise.resolve();
- if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
+ if(!window.Plotly){updateVisualizationStackStatus();el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
  try{
   return Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
    const msg=String(error?.message||error).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -462,6 +484,7 @@ function drawOtherCharts(){
 }
 function showError(message){const el=$("apiError");el.hidden=false;el.textContent=message;}
 async function init(){
+  updateVisualizationStackStatus();
  setupNavigation();
  const reloadButton=$("reloadEvidence");
  if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();await initAxial3D();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
