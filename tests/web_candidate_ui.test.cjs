@@ -63,20 +63,38 @@ function makeHarness() {
   return { hooks: context.__testHooks, charts, $: id => document.getElementById(id) };
 }
 
-const layouts = [
-  { candidate_id: "c5g7-2x2-MUMU", layout_signature: "MUMU", canonical_reference: false, seed: 620002, batches: 100, inactive: 10, particles_per_batch: 1000, keff_mean: 1.1383293452701768, keff_std_dev: 0.002785370997409737, keff_relative_sd_percent: 0.24468937825270973, aggregate_fission_score: 0.4272971392392261, aggregate_flux_score: 39.74046019706651, descriptive_keff_order: 1, mutated_preexisting_file_count: 0, mgxs_sha256_before_transport: "mgxs-same", mgxs_sha256_after_transport: "mgxs-same" },
-  { candidate_id: "c5g7-2x2-MMUU", layout_signature: "MMUU", canonical_reference: false, seed: 620001, batches: 100, inactive: 10, particles_per_batch: 1000, keff_mean: 1.1481094323862011, keff_std_dev: 0.002527861986856661, keff_relative_sd_percent: 0.2201760490376616, aggregate_fission_score: 0.4278613423319014, aggregate_flux_score: 39.64155656835747, descriptive_keff_order: 2, mutated_preexisting_file_count: 0, mgxs_sha256_before_transport: "mgxs-same", mgxs_sha256_after_transport: "mgxs-same" },
-  { candidate_id: "c5g7-2x2-MUUM", layout_signature: "MUUM", canonical_reference: false, seed: 620003, batches: 100, inactive: 10, particles_per_batch: 1000, keff_mean: 1.156308238717424, keff_std_dev: 0.002844248382436213, keff_relative_sd_percent: 0.24597665978675815, aggregate_fission_score: 0.4359871686226767, aggregate_flux_score: 39.83640478888248, descriptive_keff_order: 3, mutated_preexisting_file_count: 0, mgxs_sha256_before_transport: "mgxs-same", mgxs_sha256_after_transport: "mgxs-same" },
-  { candidate_id: "c5g7-2x2-UMMU", layout_signature: "UMMU", canonical_reference: true, seed: 620000, batches: 100, inactive: 10, particles_per_batch: 1000, keff_mean: 1.1881792736872105, keff_std_dev: 0.003047919927246576, keff_relative_sd_percent: 0.2565202065668202, aggregate_fission_score: 0.450971318012, aggregate_flux_score: 39.838022201673304, descriptive_keff_order: 4, mutated_preexisting_file_count: 0, mgxs_sha256_before_transport: "mgxs-same", mgxs_sha256_after_transport: "mgxs-same" },
-  { candidate_id: "c5g7-2x2-UUMM", layout_signature: "UUMM", canonical_reference: false, seed: 620005, batches: 100, inactive: 10, particles_per_batch: 1000, keff_mean: 1.2031326318901272, keff_std_dev: 0.0029574594585127694, keff_relative_sd_percent: 0.2458132528469938, aggregate_fission_score: 0.4650592683667839, aggregate_flux_score: 40.385021708641816, descriptive_keff_order: 5, mutated_preexisting_file_count: 0, mgxs_sha256_before_transport: "mgxs-same", mgxs_sha256_after_transport: "mgxs-same" },
-  { candidate_id: "c5g7-2x2-UMUM", layout_signature: "UMUM", canonical_reference: false, seed: 620004, batches: 100, inactive: 10, particles_per_batch: 1000, keff_mean: 1.2039852128698463, keff_std_dev: 0.002731549856853567, keff_relative_sd_percent: 0.2268756981111573, aggregate_fission_score: 0.46598629907395817, aggregate_flux_score: 40.61916770603346, descriptive_keff_order: 6, mutated_preexisting_file_count: 0, mgxs_sha256_before_transport: "mgxs-same", mgxs_sha256_after_transport: "mgxs-same" }
-];
+function parseCsvLine(line) {
+  const values = [];
+  let value = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (quoted && line[i + 1] === '"') { value += '"'; i++; }
+      else quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      values.push(value);
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+  values.push(value);
+  return values;
+}
 
-const proxyRows = layouts.map((row, i) => ({
-  candidate_id: row.candidate_id, layout_signature: row.layout_signature,
-  p00_fission_rate: 0.1 + i * 0.01, p01_fission_rate: 0.2 + i * 0.01,
-  p10_fission_rate: 0.3 + i * 0.01, p11_fission_rate: 0.4 + i * 0.01
-}));
+function readCsv(relativePath) {
+  const lines = fs.readFileSync(path.join(__dirname, "..", relativePath), "utf8").trimEnd().split(/\r?\n/);
+  const headers = parseCsvLine(lines.shift());
+  return lines.map(line => {
+    const values = parseCsvLine(line);
+    return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+  });
+}
+
+// Use the same repository CSVs that feed the workstation APIs, not a separate mock dataset.
+const layouts = readCsv("results/c5g7_layout_smoke_2026-10-10/candidate_summary.csv");
+const proxyRows = readCsv("results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv");
 
 test("all six candidate selections update placement, detail, comparison highlight, and matching proxy", () => {
   const { hooks, charts, $ } = makeHarness();
@@ -119,7 +137,7 @@ test("all six candidate selections update placement, detail, comparison highligh
       [proxy.p00_fission_rate, proxy.p01_fission_rate],
       [proxy.p10_fission_rate, proxy.p11_fission_rate]
     ]));
-    assert.equal($("selectedRecordTag").textContent, row.canonical_reference ? "CANONICAL LAYOUT REFERENCE" : "LAYOUT VARIANT");
+    assert.equal($("selectedRecordTag").textContent, String(row.canonical_reference).toLowerCase() === "true" ? "CANONICAL LAYOUT REFERENCE" : "LAYOUT VARIANT");
   }
 });
 
