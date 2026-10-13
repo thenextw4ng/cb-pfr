@@ -361,7 +361,7 @@ function clearCandidateSelection(message="No candidate selected."){
  geometryArtifactActive=false;
  if($("geometryPreview"))$("geometryPreview").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to show its linked model view.</p></div>';
  if($("geometryCaption"))$("geometryCaption").textContent="No candidate selected.";
- if(records.length)drawCandidateChart();
+ if(records.length){drawCandidateChart();drawOtherCharts();}
  if(assemblyRecords.length)drawAssemblyField();
  else if($("assemblyMap"))$("assemblyMap").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to inspect recorded assembly evidence.</p></div>';
 }
@@ -389,41 +389,63 @@ function showCandidate(){
  geometryArtifactActive=false;
  drawModelGeometry(row);
  drawCandidateChart();
+ drawOtherCharts();
  drawAssemblyField();
 }
 function drawCandidateChart(){
  const key=$("metricSelect").value;
  const valid=records.filter(r=>has(r,key)).sort((a,b)=>Number(a[key])-Number(b[key]));
- const selected=$("candidateSelect").value;
- if(!valid.length){$("candidateChart").innerHTML='<div class="loading">No recorded values for this metric.</div>';return;}
+ const selected=String($("candidateSelect").value||"");
+ if(!valid.length){$("candidateChart").innerHTML='<div class="empty-state"><b>Metric unavailable</b><p>No finite recorded values are available for the selected metric.</p></div>';return;}
  const isKeff=key==="keff_mean";
+ const metricName=isKeff?"Reported k-effective mean":key==="aggregate_flux_score"?"Aggregate flux score":"Aggregate fission score";
  const colors=valid.map(r=>String(r.candidate_id)===selected?palette.cyan:"#47758f");
  const trace={
-  type:"scatter",mode:"markers",name:isKeff?"Reported k-effective mean":"Recorded aggregate score",
+  type:"scatter",mode:"markers",name:metricName,
   x:valid.map(r=>Number(r[key])),y:valid.map(r=>String(r.layout_signature||label(r))),
   marker:{color:colors,size:valid.map(r=>String(r.candidate_id)===selected?13:9),symbol:valid.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:valid.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.2}},
   customdata:valid.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),
-  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Value %{x:.7g}"+(isKeff?"<br>Reported SD %{customdata[3]:.4g}":"")+"<extra></extra>"
+  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>"+metricName+" %{x:.7g}"+(isKeff?"<br>Reported SD ±%{customdata[3]:.4g}":"")+"<extra></extra>"
  };
+ const shapes=[],annotations=[];
+ let min= Math.min(...valid.map(r=>Number(r[key]))), max=Math.max(...valid.map(r=>Number(r[key])));
+ const spread=max-min, pad=spread>0?spread*0.14:Math.max(Math.abs(max)*0.01,0.001);
  if(isKeff){
   trace.error_x={type:"data",array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.4,width:5};
- }
+  // Keep the k_eff=1 reference visible, but explicitly label it as interpretive rather than a safety limit.
+  min=Math.min(1,min-pad); max+=pad;
+  shapes.push({type:"line",xref:"x",yref:"paper",x0:1,x1:1,y0:0,y1:1,line:{color:palette.orange,width:1,dash:"dash"}});
+  annotations.push({xref:"x",yref:"paper",x:1,y:1.02,text:"k_eff = 1 reference",showarrow:false,xanchor:"left",yanchor:"bottom",font:{size:9,color:palette.orange},bgcolor:"rgba(7,17,27,0.82)",borderpad:2});
+ } else { min-=pad; max+=pad; }
  chart("candidateChart",[trace],{
-  autosize:true,margin:{l:90,r:30,t:16,b:58},showlegend:false,hovermode:"closest",
-  xaxis:{...baseLayout.xaxis,title:isKeff?"Reported k-effective mean (± SD)":"Recorded repository score (units not specified)",automargin:true,gridcolor:palette.line,zeroline:false,tickangle:0,tickformat:isKeff?".3f":".4g"},
-  yaxis:{...baseLayout.yaxis,title:"Layout signature",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.55)"},
-  annotations:[]
+  autosize:true,margin:{l:70,r:25,t:isKeff?34:16,b:54},showlegend:false,hovermode:"closest",shapes,annotations,
+  xaxis:{...baseLayout.xaxis,title:isKeff?"Reported k-effective mean (± reported SD)":"Recorded "+metricName.toLowerCase()+" (source units unspecified)",automargin:true,gridcolor:palette.line,zeroline:false,tickangle:0,tickformat:isKeff?".3f":".4g",range:[min,max]},
+  yaxis:{...baseLayout.yaxis,title:"Candidate layout",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.55)"}
  });
 }
 function drawOtherCharts(){
- const vals=records.filter(r=>has(r,"keff_mean"));
- chart("distributionChart",[{type:"histogram",x:vals.map(r=>Number(r.keff_mean)),nbinsx:Math.min(18,Math.max(5,Math.ceil(Math.sqrt(vals.length)))),marker:{color:palette.blue,line:{color:palette.cyan,width:1}},hovertemplate:"k-effective %{x:.6f}<br>Records %{y}<extra></extra>"}],{bargap:.12,xaxis:{...baseLayout.xaxis,title:"Reported k-effective mean"},yaxis:{...baseLayout.yaxis,title:"Record count"}});
- const flux=records.filter(r=>has(r,"aggregate_flux_score")),fis=records.filter(r=>has(r,"aggregate_fission_score"));
- const traces=[];
- if(flux.length)traces.push({type:"bar",name:"Aggregate flux",x:flux.map(r=>String(r.candidate_id)),y:flux.map(r=>Number(r.aggregate_flux_score)),marker:{color:palette.cyan},hovertemplate:"Candidate %{x}<br>Flux score %{y:.5g}<extra></extra>"});
- if(fis.length)traces.push({type:"bar",name:"Aggregate fission",x:fis.map(r=>String(r.candidate_id)),y:fis.map(r=>Number(r.aggregate_fission_score)),marker:{color:palette.orange},hovertemplate:"Candidate %{x}<br>Fission score %{y:.5g}<extra></extra>"});
- if(!traces.length){$("aggregateChart").innerHTML='<div class="loading">No aggregate scores are present in the source dataset.</div>';return;}
- chart("aggregateChart",traces,{barmode:"group",legend:{orientation:"h",y:1.12,x:0},xaxis:{...baseLayout.xaxis,title:"Candidate ID"},yaxis:{...baseLayout.yaxis,title:"Repository score (units unspecified)"}});
+ const selected=String($("candidateSelect")?.value||"");
+ const vals=records.filter(r=>has(r,"keff_mean")).sort((a,b)=>Number(a.keff_mean)-Number(b.keff_mean));
+ if(!vals.length){
+  $("distributionChart").innerHTML='<div class="empty-state"><b>k-effective data unavailable</b><p>No finite recorded means are available.</p></div>';
+ } else {
+  const keffColors=vals.map(r=>String(r.candidate_id)===selected?palette.cyan:"#47758f");
+  const spread=Math.max(...vals.map(r=>Number(r.keff_mean)))-Math.min(...vals.map(r=>Number(r.keff_mean)));
+  const pad=spread>0?spread*0.12:0.002;
+  const trace={type:"scatter",mode:"markers",name:"Ranked candidate k-effective",x:vals.map(r=>String(r.layout_signature||label(r))),y:vals.map(r=>Number(r.keff_mean)),customdata:vals.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),marker:{color:keffColors,size:vals.map(r=>String(r.candidate_id)===selected?12:9),symbol:vals.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:vals.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.1}},error_y:{type:"data",array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.2,width:4},hovertemplate:"Ranked layout %{x}<br>Candidate %{customdata[0]}<br>Seed %{customdata[2]}<br>k-effective mean %{y:.7f}<br>Reported SD ±%{customdata[3]:.4g}<extra></extra>"};
+  chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by recorded k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Reported k-effective mean (± SD)",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:palette.orange,width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1",showarrow:false,font:{size:9,color:palette.orange},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
+ }
+ const pairs=records.filter(r=>has(r,"aggregate_flux_score")&&has(r,"aggregate_fission_score"));
+ if(!pairs.length){
+  $("aggregateChart").innerHTML='<div class="empty-state"><b>Score relationship unavailable</b><p>No candidates have both a finite aggregate flux score and aggregate fission score. The two metrics are not combined on a shared scale.</p></div>';
+  return;
+ }
+ const isSelected=r=>String(r.candidate_id)===selected;
+ const aggTrace={type:"scatter",mode:"markers+text",name:"Candidate score pair",x:pairs.map(r=>Number(r.aggregate_flux_score)),y:pairs.map(r=>Number(r.aggregate_fission_score)),text:pairs.map(r=>String(r.layout_signature||"")),textposition:"top center",textfont:{size:9,color:palette.muted},customdata:pairs.map(r=>[r.candidate_id,r.layout_signature,r.seed]),marker:{color:pairs.map(r=>isSelected(r)?palette.cyan:"#e0ad58"),size:pairs.map(r=>isSelected(r)?13:10),symbol:pairs.map(r=>isSelected(r)?"diamond":"circle"),line:{color:pairs.map(r=>isSelected(r)?palette.text:"#102536"),width:1.2}},hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Aggregate flux score %{x:.7g}<br>Aggregate fission score %{y:.7g}<extra></extra>"};
+ const xValues=pairs.map(r=>Number(r.aggregate_flux_score)),yValues=pairs.map(r=>Number(r.aggregate_fission_score));
+ const xSpan=Math.max(...xValues)-Math.min(...xValues),ySpan=Math.max(...yValues)-Math.min(...yValues);
+ const xPad=xSpan>0?xSpan*0.12:Math.max(Math.abs(xValues[0])*0.02,0.001),yPad=ySpan>0?ySpan*0.14:Math.max(Math.abs(yValues[0])*0.02,0.001);
+ chart("aggregateChart",[aggTrace],{autosize:true,margin:{l:66,r:24,t:18,b:58},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Aggregate flux score (source units unspecified)",range:[Math.min(...xValues)-xPad,Math.max(...xValues)+xPad],automargin:true,gridcolor:"rgba(38,63,82,0.55)",tickformat:".4g"},yaxis:{...baseLayout.yaxis,title:"Aggregate fission score (source units unspecified)",range:[Math.min(...yValues)-yPad,Math.max(...yValues)+yPad],automargin:true,gridcolor:"rgba(38,63,82,0.55)",tickformat:".4g"}});
 }
 function showError(message){const el=$("apiError");el.hidden=false;el.textContent=message;}
 async function init(){
@@ -789,7 +811,7 @@ async function initAssembly(){
  }
 }
 function drawAssemblyField(){
- if(!assemblyRecords.length||!$("assemblyMap")||!$("assemblyBar"))return;
+ if(!assemblyRecords.length||!$("assemblyMap")||!$("assemblyMatrix"))return;
  const selectedId=$("candidateSelect")?.value;
  const selected=records.find(r=>String(r.candidate_id)===String(selectedId));
  const row=selected?assemblyRecords.find(r=>String(r.candidate_id)===String(selected.candidate_id)&&String(r.layout_signature).toUpperCase()===String(selected.layout_signature).toUpperCase()):null;
@@ -798,10 +820,35 @@ function drawAssemblyField(){
  } else {
  const positions=[["p00_fission_rate","p01_fission_rate"],["p10_fission_rate","p11_fission_rate"]];
  const z=positions.map(line=>line.map(key=>Number(row[key])));
- chart("assemblyMap",[{type:"heatmap",x:["Column 0","Column 1"],y:["Row 0","Row 1"],z,customdata:[["p00","p01"],["p10","p11"]],colorscale:"Cividis",colorbar:{title:{text:"Fission-rate proxy",font:{size:10}}},hovertemplate:"Position %{customdata}<br>Proxy %{z:.6g}<extra></extra>"}],{margin:{l:65,r:20,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Recorded position index"},yaxis:{...baseLayout.yaxis,title:"Recorded position index",autorange:"reversed"},showlegend:false});
+ chart("assemblyMap",[{type:"heatmap",x:["Column 0","Column 1"],y:["Row 0","Row 1"],z,text:z.map(line=>line.map(value=>value.toFixed(3))),texttemplate:"%{text}",textfont:{size:11,color:"#e8f1f7"},customdata:[["P00","P01"],["P10","P11"]],colorscale:"Cividis",colorbar:{title:{text:"Fission-rate<br>proxy",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},hovertemplate:"Position %{customdata}<br>Recorded fission-rate proxy %{z:.8g}<extra></extra>"}],{margin:{l:62,r:26,t:12,b:48},xaxis:{...baseLayout.xaxis,title:"Assembly column",tickangle:0},yaxis:{...baseLayout.yaxis,title:"Assembly row",autorange:"reversed"},showlegend:false});
  }
- const keys=[["p00_fission_rate","p00"],["p01_fission_rate","p01"],["p10_fission_rate","p10"],["p11_fission_rate","p11"]];
- const candidates=assemblyRecords;
- const selectedAssemblyIndex=candidates.findIndex(r=>String(r.candidate_id)===String(selectedId));
- chart("assemblyBar",keys.map(([key,name],i)=>({type:"bar",name,x:candidates.map(r=>String(r.candidate_id)),y:candidates.map(r=>Number(r[key])),marker:{color:candidates.map(r=>String(r.candidate_id)===String(selectedId)?palette.cyan:[palette.blue,palette.orange,"#8d9ee8","#5f9d86"][i]),line:{color:candidates.map(r=>String(r.candidate_id)===String(selectedId)?"#e8f1f7":"rgba(0,0,0,0)"),width:candidates.map(r=>String(r.candidate_id)===String(selectedId)?1.5:0)}},hovertemplate:"Candidate %{x}<br>Position "+name+"<br>Proxy %{y:.6g}<extra></extra>"})),{barmode:"group",margin:{l:60,r:15,t:35,b:80},legend:{orientation:"h",y:1.15,x:0},xaxis:{...baseLayout.xaxis,title:"Candidate ID"},yaxis:{...baseLayout.yaxis,title:"Recorded fission-rate proxy (units as source)"},shapes:selectedAssemblyIndex>=0?[{type:"rect",xref:"x",yref:"paper",x0:selectedAssemblyIndex-0.5,x1:selectedAssemblyIndex+0.5,y0:0,y1:1,line:{color:"rgba(85,212,223,0.65)",width:1},fillcolor:"rgba(85,212,223,0.08)"}]:[]});
+ const positions=[["p00_fission_rate","P00"],["p01_fission_rate","P01"],["p10_fission_rate","P10"],["p11_fission_rate","P11"]];
+ // Assemble the matrix in the same candidate order as the candidate selector, using only exact ID + signature matches.
+ const matrixRows=records.slice().sort((a,b)=>{
+  const av=has(a,"keff_mean")?Number(a.keff_mean):Number.POSITIVE_INFINITY;
+  const bv=has(b,"keff_mean")?Number(b.keff_mean):Number.POSITIVE_INFINITY;
+  return av-bv;
+ }).map(candidate=>{
+  const proxy=assemblyRecords.find(item=>String(item.candidate_id)===String(candidate.candidate_id)&&String(item.layout_signature).toUpperCase()===String(candidate.layout_signature).toUpperCase());
+  if(!proxy||!positions.every(([key])=>has(proxy,key)))return null;
+  return {candidate,proxy,values:positions.map(([key])=>Number(proxy[key]))};
+ }).filter(Boolean);
+ if(!matrixRows.length){
+  $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Position matrix unavailable</b><p>No complete proxy records match the candidate IDs and layout signatures.</p></div>';
+  return;
+ }
+ const finite=matrixRows.flatMap(row=>row.values).filter(Number.isFinite);
+ const zmin=Math.min(...finite),zmax=Math.max(...finite),selectedRow=matrixRows.find(row=>String(row.candidate.candidate_id)===String(selectedId));
+ const matrixTrace={
+  type:"heatmap",name:"Recorded assembly fission-rate proxy",
+  x:positions.map(([,position])=>position),y:matrixRows.map(row=>String(row.candidate.layout_signature||label(row.candidate))),
+  z:matrixRows.map(row=>row.values),text:matrixRows.map(row=>row.values.map(value=>value.toFixed(3))),texttemplate:"%{text}",
+  textfont:{size:10,color:"#e8f1f7"},colorscale:"Cividis",zmin,zmax,showscale:true,
+  colorbar:{title:{text:"Fission-rate<br>proxy (source scale)",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},
+  customdata:matrixRows.map(row=>row.values.map((value,index)=>[row.candidate.candidate_id,row.candidate.layout_signature,positions[index][1],row.proxy.seed,row.proxy.status])),
+  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>Proxy seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
+ };
+ const traces=[matrixTrace];
+ if(selectedRow)traces.push({type:"scatter",mode:"markers",name:"Selected candidate",x:positions.map(([,position])=>position),y:positions.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),marker:{symbol:"square-open",size:37,color:"#e8f1f7",line:{width:1.5,color:"#e8f1f7"}},hoverinfo:"skip",showlegend:false});
+ chart("assemblyMatrix",traces,{autosize:true,margin:{l:64,r:34,t:18,b:48},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Fuel position",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},yaxis:{...baseLayout.yaxis,title:"Candidate layout · rows sorted by recorded k-effective",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},annotations:[{xref:"paper",yref:"paper",x:1,y:1.02,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]});
 }
