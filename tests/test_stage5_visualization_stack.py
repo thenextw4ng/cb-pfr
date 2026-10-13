@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 import unittest
 
 
@@ -8,6 +7,7 @@ INDEX = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
 APP = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
 STYLES = (ROOT / "web" / "styles.css").read_text(encoding="utf-8")
 CORE_3D = (ROOT / "web" / "core_geometry_3d.js").read_text(encoding="utf-8")
+DOCS = (ROOT / "docs" / "CBPFR_VISUALIZATION_STACK.md").read_text(encoding="utf-8")
 
 
 class TargetedVisualizationStackTests(unittest.TestCase):
@@ -21,8 +21,8 @@ class TargetedVisualizationStackTests(unittest.TestCase):
     def test_geometry_has_a_source_derived_native_svg_path(self):
         self.assertIn("function renderModelGeometrySvg(", APP)
         self.assertIn("model-geometry-svg", APP)
-        self.assertIn("coreView2d", INDEX)
-        self.assertIn("geometryPreview", INDEX)
+        self.assertIn('id="coreView2d"', INDEX)
+        self.assertIn('id="geometryPreview"', INDEX)
         self.assertIn("2D FALLBACK", APP)
         self.assertIn("svgStackStatus", INDEX + APP)
 
@@ -34,24 +34,21 @@ class TargetedVisualizationStackTests(unittest.TestCase):
         self.assertIn("renderer.dispose()", CORE_3D)
 
     def test_vtkjs_is_not_added_as_a_runtime_dependency(self):
-        runtime = "\\n".join((INDEX, APP, CORE_3D))
-        forbidden_import_patterns = (
-            r"from\\s+[\\\"'][^\\\"']*vtk(?:\\.js)?",
-            r"import\\s*\\(\\s*[\\\"'][^\\\"']*vtk",
-            r"src=[\\\"'][^\\\"']*@kitware/vtk",
-            r"@kitware/vtk\\.js",
-        )
-        for pattern in forbidden_import_patterns:
-            self.assertIsNone(re.search(pattern, runtime, flags=re.IGNORECASE), pattern)
+        runtime = " ".join((INDEX, APP, CORE_3D)).lower()
+        self.assertNotIn("@kitware/vtk.js", runtime)
+        self.assertNotIn("vtk.js/build", runtime)
+        self.assertNotIn("from 'vtk.js'", runtime)
+        self.assertNotIn('from "vtk.js"', runtime)
 
-    def test_renderer_status_strip_is_responsive_and_does_not_mix_material_with_scalar_color(self):
+    def test_renderer_status_strip_is_responsive_and_keeps_category_colors_separate(self):
         for status_id in ("plotlyStackStatus", "svgStackStatus", "threeStackStatus", "vtkStackStatus"):
             self.assertIn(f'id="{status_id}"', INDEX)
         self.assertIn(".renderer-stack-strip", STYLES)
         self.assertIn("@media(max-width:600px)", STYLES)
         self.assertIn('colorscale:"Cividis"', APP)
-        self.assertIn('const materialEdgeColor = {M:" #f4bd62"', APP.replace("#", " #") if False else APP)
-        self.assertIn("No contour, smoothing, or interpolation", (ROOT / "docs" / "CBPFR_VISUALIZATION_STACK.md").read_text(encoding="utf-8"))
+        self.assertIn('const materialEdgeColor = {M:"#f4bd62",U:"#55d4df"};', APP)
+        self.assertIn("No contour, smoothing, or interpolation", DOCS)
+        self.assertIn("51 × 51 × 30", DOCS)
 
 
 if __name__ == "__main__":
