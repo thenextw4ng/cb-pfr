@@ -130,6 +130,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
           curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
           curl --fail --silent http://127.0.0.1:8765/api/model-geometry > /tmp/cb-pfr-model-geometry.json
+          curl --fail --silent --show-error "http://127.0.0.1:8765/api/axial-3d?score=flux" > /tmp/cb-pfr-axial-3d.json
           mesh_status=$(curl --silent --output /tmp/cb-pfr-mesh.json --write-out '%{http_code}' http://127.0.0.1:8765/api/mesh)
           test "$mesh_status" = "200"
           echo "$mesh_status" > /tmp/cb-pfr-mesh-status
@@ -169,6 +170,21 @@ jobs:
           assert isinstance(geometry.get("artifacts"), list), geometry
           with open("/tmp/cb-pfr-model-geometry.json", encoding="utf-8") as f:
               model_geometry = json.load(f)
+          with open("/tmp/cb-pfr-axial-3d.json", encoding="utf-8") as f:
+              axial = json.load(f)
+          assert axial.get("available") is True, axial
+          assert axial.get("score") == "flux", axial.get("score")
+          assert axial.get("mesh", {}).get("dimension_xyz") == [51, 51, 30], axial.get("mesh", {}).get("dimension_xyz")
+          statepoint = axial.get("provenance", {}).get("statepoint", {})
+          assert statepoint.get("n_batches") == 7000, statepoint
+          assert statepoint.get("n_inactive") == 500, statepoint
+          assert statepoint.get("n_particles") == 10000, statepoint
+          assert statepoint.get("n_realizations") == 6500, statepoint
+          assert axial.get("provenance", {}).get("sha256") == "3657af9ffddceb303827c700fa0e6fce5432d655843864b12dd428b6c4c499e4", axial.get("provenance", {}).get("sha256")
+          assert axial.get("provenance", {}).get("input_manifest", {}).get("layout_signature") == "UMMU", axial.get("provenance", {}).get("input_manifest")
+          means = axial.get("mean", [])
+          assert len(means) == 30 and all(len(layer) == 51 for layer in means), (len(means), [len(layer) for layer in means[:3]])
+          assert all(len(row) == 51 for layer in means for row in layer), "Axial tally did not preserve 51 × 51 × 30 topology"
           assert model_geometry.get("schema_version") == 1, model_geometry
           model_candidates = model_geometry.get("candidates", [])
           assert len(model_candidates) == 6, model_geometry
@@ -237,7 +253,7 @@ jobs:
               with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
                   error = json.load(f)
               print("Mesh archive unavailable in this CI checkout; UI must show an explicit unavailable state. " + str(error.get("error", "")))
-          print("Health, HTML, CSS, JS, all six candidate inspector tests, source manifest tests, model geometry API, candidate API, assembly API, and geometry inventory passed.")
+          print("Health, HTML, CSS, JS, candidate inspector tests, source manifest, candidate/assembly APIs, native geometry manifest, 2-D OpenMC mesh API, and hash-verified 7,000-batch 51 × 51 × 30 axial tally passed.")
           PY
           node tests/browser_visual_smoke.cjs
       - name: Upload browser visual QA screenshots and report
