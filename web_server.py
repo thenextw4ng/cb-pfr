@@ -286,7 +286,7 @@ def read_mesh_evidence():
                 if len(dims) == 3 and dims[2] == 1 and all(v > 0 for v in dims):
                     raw_mesh_type = mesh["type"][()] if "type" in mesh else b"unknown"
                     if isinstance(raw_mesh_type, bytes):
-                        mesh_type = raw_mesh_type.decode("utf-8", errors="replace").strip().lower()
+                        mesh_type = raw_mesh_type.decode("utf-8", errors="replace").rstrip("\x00").strip().lower()
                     else:
                         mesh_type = str(raw_mesh_type).strip().lower()
                     lower = numeric_vector(mesh, "lower_left")
