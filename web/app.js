@@ -8,6 +8,7 @@ let axial3dData = null;
 let axial3dDrawRevision = 0;
 let assemblyRecords = [];
 let selectedAssemblyPosition = "P00";
+const candidateMarkColors = { selected: "#ffffff", default: "#788d9b" };
 const assemblyPositionDefs = [
  {key:"p00_fission_rate",label:"P00",row:0,col:0,index:0},
  {key:"p01_fission_rate",label:"P01",row:0,col:1,index:1},
@@ -411,7 +412,7 @@ function drawCandidateChart(){
  if(!valid.length){$("candidateChart").innerHTML='<div class="empty-state"><b>Metric unavailable</b><p>No finite recorded values are available for the selected metric.</p></div>';return;}
  const isKeff=key==="keff_mean";
  const metricName=isKeff?"Reported k-effective mean":key==="aggregate_flux_score"?"Aggregate flux score":"Aggregate fission score";
- const colors=valid.map(r=>String(r.candidate_id)===selected?palette.cyan:"#47758f");
+ const colors=valid.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
  const trace={
   type:"scatter",mode:"markers",name:metricName,
   x:valid.map(r=>Number(r[key])),y:valid.map(r=>String(r.layout_signature||label(r))),
@@ -426,8 +427,8 @@ function drawCandidateChart(){
   trace.error_x={type:"data",array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.4,width:5};
   // Keep the k_eff=1 reference visible, but explicitly label it as interpretive rather than a safety limit.
   min=Math.min(1,min-pad); max+=pad;
-  shapes.push({type:"line",xref:"x",yref:"paper",x0:1,x1:1,y0:0,y1:1,line:{color:palette.orange,width:1,dash:"dash"}});
-  annotations.push({xref:"x",yref:"paper",x:1,y:1.02,text:"k_eff = 1 · reference only",showarrow:false,xanchor:"left",yanchor:"bottom",font:{size:9,color:palette.orange},bgcolor:"rgba(7,17,27,0.82)",borderpad:2});
+  shapes.push({type:"line",xref:"x",yref:"paper",x0:1,x1:1,y0:0,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}});
+  annotations.push({xref:"x",yref:"paper",x:1,y:1.02,text:"k_eff = 1 · reference only",showarrow:false,xanchor:"left",yanchor:"bottom",font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2});
  } else { min-=pad; max+=pad; }
  chart("candidateChart",[trace],{
   autosize:true,margin:{l:70,r:25,t:isKeff?34:16,b:54},showlegend:false,hovermode:"closest",shapes,annotations,
@@ -441,11 +442,11 @@ function drawOtherCharts(){
  if(!vals.length){
   $("distributionChart").innerHTML='<div class="empty-state"><b>k-effective data unavailable</b><p>No finite recorded means are available.</p></div>';
  } else {
-  const keffColors=vals.map(r=>String(r.candidate_id)===selected?palette.cyan:"#47758f");
+  const keffColors=vals.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
   const spread=Math.max(...vals.map(r=>Number(r.keff_mean)))-Math.min(...vals.map(r=>Number(r.keff_mean)));
   const pad=spread>0?spread*0.12:0.002;
   const trace={type:"scatter",mode:"markers",name:"Ranked candidate k-effective",x:vals.map(r=>String(r.layout_signature||label(r))),y:vals.map(r=>Number(r.keff_mean)),customdata:vals.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),marker:{color:keffColors,size:vals.map(r=>String(r.candidate_id)===selected?12:9),symbol:vals.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:vals.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.1}},error_y:{type:"data",array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.2,width:4},hovertemplate:"Ranked layout %{x}<br>Candidate %{customdata[0]}<br>Seed %{customdata[2]}<br>k-effective mean %{y:.7f}<br>Reported SD ±%{customdata[3]:.4g}<extra></extra>"};
-  chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by recorded k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Reported k-effective mean (± SD)",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:palette.orange,width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1 · reference only",showarrow:false,font:{size:9,color:palette.orange},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
+  chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by recorded k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Reported k-effective mean (± SD)",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1 · reference only",showarrow:false,font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
  }
  const pairs=records.filter(r=>has(r,"aggregate_flux_score")&&has(r,"aggregate_fission_score"));
  if(!pairs.length){
@@ -453,7 +454,7 @@ function drawOtherCharts(){
   return;
  }
  const isSelected=r=>String(r.candidate_id)===selected;
- const aggTrace={type:"scatter",mode:"markers+text",name:"Candidate score pair",x:pairs.map(r=>Number(r.aggregate_flux_score)),y:pairs.map(r=>Number(r.aggregate_fission_score)),text:pairs.map(r=>String(r.layout_signature||"")),textposition:"top center",textfont:{size:9,color:palette.muted},customdata:pairs.map(r=>[r.candidate_id,r.layout_signature,r.seed]),marker:{color:pairs.map(r=>isSelected(r)?palette.cyan:"#e0ad58"),size:pairs.map(r=>isSelected(r)?13:10),symbol:pairs.map(r=>isSelected(r)?"diamond":"circle"),line:{color:pairs.map(r=>isSelected(r)?palette.text:"#102536"),width:1.2}},hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Aggregate flux score %{x:.7g}<br>Aggregate fission score %{y:.7g}<extra></extra>"};
+ const aggTrace={type:"scatter",mode:"markers+text",name:"Candidate score pair",x:pairs.map(r=>Number(r.aggregate_flux_score)),y:pairs.map(r=>Number(r.aggregate_fission_score)),text:pairs.map(r=>String(r.layout_signature||"")),textposition:"top center",textfont:{size:9,color:palette.muted},customdata:pairs.map(r=>[r.candidate_id,r.layout_signature,r.seed]),marker:{color:pairs.map(r=>isSelected(r)?candidateMarkColors.selected:candidateMarkColors.default),size:pairs.map(r=>isSelected(r)?13:10),symbol:pairs.map(r=>isSelected(r)?"diamond":"circle"),line:{color:pairs.map(r=>isSelected(r)?palette.text:"#102536"),width:1.2}},hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Aggregate flux score %{x:.7g}<br>Aggregate fission score %{y:.7g}<extra></extra>"};
  const xValues=pairs.map(r=>Number(r.aggregate_flux_score)),yValues=pairs.map(r=>Number(r.aggregate_fission_score));
  const xSpan=Math.max(...xValues)-Math.min(...xValues),ySpan=Math.max(...yValues)-Math.min(...yValues);
  const xPad=xSpan>0?xSpan*0.12:Math.max(Math.abs(xValues[0])*0.02,0.001),yPad=ySpan>0?ySpan*0.14:Math.max(Math.abs(yValues[0])*0.02,0.001);
@@ -730,8 +731,8 @@ async function drawMesh(){
  await chart("meshProfile",[{
   type:"scatter",mode:"lines+markers",name:f.view==="relative_sd"?"Relative MC standard error":"Recorded "+scoreLabel+" mean",
   x:xs,y:profileY,customdata:profileCustom,
-  line:{color:palette.cyan,width:2.5,shape:"linear"},
-  marker:{size:5,color:palette.orange,line:{color:palette.text,width:0.6}},
+  line:{color:"#c7d4dd",width:2.5,shape:"linear"},
+  marker:{size:5,color:"#8ca0ae",line:{color:palette.text,width:0.6}},
   error_y:profileError,connectgaps:false,hovertemplate:profileHover
  }],{
   autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
@@ -1175,10 +1176,12 @@ function drawAssemblyField(){
   $("assemblyPositionMaterial").className="material-chip "+(selectedPosition.materialCode==="M"?"material-chip-mox":"material-chip-uo2");
   $("assemblyPositionValue").textContent=formatSourceProxy(selectedPosition.value);
   $("assemblyPositionPicker").innerHTML=cells.map(position=>
-   '<button type="button" class="assembly-position-option '+(position.label===selectedAssemblyPosition?"selected":"")+'" data-assembly-position="'+position.label+'" aria-pressed="'+String(position.label===selectedAssemblyPosition)+'">'+
+   '<button type="button" class="assembly-position-option '+(position.materialCode==="M"?"material-mox":"material-uo2")+' '+(position.label===selectedAssemblyPosition?"selected":"")+'" data-assembly-position="'+position.label+'" aria-pressed="'+String(position.label===selectedAssemblyPosition)+'">'+
     '<span>'+position.label+'</span><b>'+position.material+'</b><strong>'+formatSourceProxy(position.value)+'</strong>'+
    '</button>'
   ).join("");
+  const scaleRange=$("assemblyScaleRange");
+  if(scaleRange)scaleRange.textContent="Shared global colour range: "+formatSourceProxy(scaleMin)+" to "+formatSourceProxy(observedMax)+" · source units not specified · not absolute power.";
   $("assemblyPositionPicker").querySelectorAll("[data-assembly-position]").forEach(button=>button.addEventListener("click",()=>{
    selectedAssemblyPosition=button.dataset.assemblyPosition;
    drawAssemblyField();
