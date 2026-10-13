@@ -1182,7 +1182,8 @@ function drawAssemblyField(){
   ).join("");
   const scaleRange=$("assemblyScaleRange");
   if(scaleRange)scaleRange.textContent="Shared global colour range: "+formatSourceProxy(scaleMin,4)+" to "+formatSourceProxy(observedMax,4)+" · source units not specified · not absolute power.";
-  $("assemblyPositionPicker").querySelectorAll("[data-assembly-position]").forEach(button=>button.addEventListener("click",()=>{
+  const positionPicker=$("assemblyPositionPicker");
+  if(positionPicker&&typeof positionPicker.querySelectorAll==="function")positionPicker.querySelectorAll("[data-assembly-position]").forEach(button=>button.addEventListener("click",()=>{
    selectedAssemblyPosition=button.dataset.assemblyPosition;
    drawAssemblyField();
   }));
