@@ -454,9 +454,9 @@ async function main() {
     await mobilePage.evaluate(() => window.scrollTo(0, 0));
     await mobilePage.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-top.png"), fullPage: false, animations: "disabled" });
     await mobilePage.addStyleTag({ content: "@media(max-width:680px){.sidebar{position:static!important;top:auto!important}}" });
-    await mobilePage.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-spatial-field-lab.png"), animations: "disabled" });
-    await mobilePage.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-candidate-inspector.png"), animations: "disabled" });
-    await mobilePage.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
+    // The desktop full-page capture already documents every scientific plot.
+    // Keep a viewport-sized mobile capture here: element-level captures of live
+    // Plotly and WebGL content can time out waiting for pixel stability.
     await mobilePage.close();
 
     assert.deepEqual(failures, [], "desktop page must not throw uncaught JavaScript errors");
