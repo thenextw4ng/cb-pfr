@@ -423,7 +423,7 @@ async function main() {
     });
     const mobileFailures = [];
     mobilePage.on("pageerror", error => mobileFailures.push("pageerror: " + error.message));
-    const mobileResponse = await mobilePage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+    const mobileResponse = await mobilePage.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
     assert.ok(mobileResponse && mobileResponse.ok(), "mobile workstation HTML should return HTTP 200");
     await mobilePage.waitForFunction(() => {
       const select = document.querySelector("#candidateSelect");
