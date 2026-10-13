@@ -24,10 +24,19 @@
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
   </script>
   <script type="module">
+    const cbpfrThreeLoadTimeout = setTimeout(() => {
+      if (!window.CBPFRCore3D && !window.CBPFRCore3DError) {
+        window.CBPFRCore3DError = "Three.js module import timed out after 12 seconds";
+        window.dispatchEvent(new Event("cbpfr-core3d-failed"));
+      }
+    }, 12000);
     import("/core_geometry_3d.js").then(module => {
+      clearTimeout(cbpfrThreeLoadTimeout);
       window.CBPFRCore3D = module;
+      window.CBPFRCore3DError = null;
       window.dispatchEvent(new Event("cbpfr-core3d-ready"));
     }).catch(error => {
+      clearTimeout(cbpfrThreeLoadTimeout);
       window.CBPFRCore3DError = String(error && (error.message || error) || "External Three.js module unavailable");
       window.dispatchEvent(new Event("cbpfr-core3d-failed"));
     });
