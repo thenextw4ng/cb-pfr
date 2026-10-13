@@ -157,6 +157,7 @@ test("missing numeric fields remain unavailable, not fabricated as zero", () => 
   assert.equal((metrics.match(/Not recorded/g) || []).length, 4);
   assert.doesNotMatch(metrics, /0\.000000|0\.0000%|0\.00000/);
   assert.match($("selectedCandidateRunInfo").innerHTML, /Not recorded/);
+  assert.match($("selectedCandidateRunInfo").innerHTML, /BATCHES<\/span><b>Not recorded<\/b>/);
   assert.match($("selectedCandidateRunInfo").innerHTML, /<b>0<\/b>/, "a real zero inactive-batch count should remain visible");
 });
 
@@ -191,4 +192,32 @@ test("candidate option markup escapes IDs and labels", () => {
   const option = hooks.candidateOption({ candidate_id: 'x" onfocus="alert(1)', layout_signature: "MMUU" });
   assert.doesNotMatch(option, /value="x" onfocus=/);
   assert.match(option, /&quot; onfocus=&quot;alert\(1\)/);
+});
+
+
+test("invalid U/M compositions fail closed in both configuration and selected-candidate status", () => {
+  const { hooks, $ } = makeHarness();
+  const invalid = {
+    candidate_id: "candidate-invalid-layout",
+    layout_signature: "MMMM",
+    canonical_reference: true,
+    keff_mean: 1.1,
+    keff_std_dev: 0.001,
+    keff_relative_sd_percent: 0.1,
+    aggregate_fission_score: 0.4,
+    seed: 1,
+    batches: 10,
+    inactive: 1,
+    particles_per_batch: 100
+  };
+  hooks.setRecords([invalid]);
+  hooks.setAssemblyRecords([]);
+  $("candidateSelect").value = invalid.candidate_id;
+  hooks.showCandidate();
+
+  assert.match($("layoutView").innerHTML, /Placement unavailable/);
+  assert.equal($("selectedRecordTag").textContent, "INVALID LAYOUT");
+  assert.match($("selectedCandidateSignature").innerHTML, /No validated layout signature/);
+  assert.match($("geometryPreview").innerHTML, /Model geometry unavailable/);
+  assert.doesNotMatch($("geometryPreview").innerHTML, /<svg class="model-geometry-svg"/);
 });
