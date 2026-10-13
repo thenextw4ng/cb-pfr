@@ -28,6 +28,19 @@ async function main() {
     await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
     await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
     await page.waitForSelector("#candidateChart svg", { timeout: 30000 });
+    // A green browser smoke run requires the actual four spatial Plotly canvases, not just empty panels.
+    for (const selector of [
+      "#meshHeatmap .js-plotly-plot",
+      "#meshContour .js-plotly-plot",
+      "#meshProfile .js-plotly-plot",
+      "#meshSurface .js-plotly-plot"
+    ]) {
+      await page.waitForSelector(selector, { timeout: 30000 });
+    }
+    await page.waitForFunction(() =>
+      !/SPATIAL DATA UNAVAILABLE/.test(document.querySelector("#meshStatus")?.textContent || ""),
+      { timeout: 10000 }
+    );
 
     const candidateOptions = await page.locator("#candidateSelect option").evaluateAll(options =>
       options.map(option => ({ value: option.value, label: option.textContent.trim() }))
@@ -77,6 +90,7 @@ async function main() {
 
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-full.png"), fullPage: true, animations: "disabled" });
     await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
+    await page.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-spatial-field-lab.png"), animations: "disabled" });
     const geometrySection = page.locator("#geometryPreview").locator("xpath=ancestor::section[1]");
     await geometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry.png"), animations: "disabled" });
 
@@ -124,6 +138,8 @@ async function main() {
       candidateCount: candidateOptions.length,
       candidateIds: candidateOptions.map(option => option.value),
       sourceGeometryPinCellCount: 4 * 17 * 17,
+      spatialPlotCount: await page.locator("#meshHeatmap .js-plotly-plot, #meshContour .js-plotly-plot, #meshProfile .js-plotly-plot, #meshSurface .js-plotly-plot").count(),
+      spatialDataStatus: await page.locator("#meshStatus").innerText(),
       desktopViewport: { width: 1440, height: 1000, ...desktopOverflow },
       mobileViewport: { width: 390, height: 844, ...mobileOverflow },
       uncaughtJavaScriptErrors: failures,
