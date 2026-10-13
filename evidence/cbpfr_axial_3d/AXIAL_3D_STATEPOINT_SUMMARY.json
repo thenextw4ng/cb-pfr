@@ -2,7 +2,7 @@
   "schema_version": 1,
   "status": "3d_openmc_statepoint_mesh_exported",
   "statepoint": {
-    "sha256": "fa5b472151c409b98c8d86902d1ad6451ab7cf6b3d1fa287458bbd4500ca67fe",
+    "sha256": "12742c6c94474de7ed6f139846dc2f8db084428cfeee979e4f5ad53264ac8a63",
     "path": "/home/runner/work/_temp/c5g7-axial-work/c5g7-2x2-UMMU/model/3d/statepoint.30.h5",
     "n_batches": 30,
     "n_inactive": 5,
@@ -47,7 +47,7 @@
       "nonzero_mean_bin_count": 43739,
       "mean_of_bin_means": 0.0005138602805404538,
       "max_bin_mean": 0.012659137905265063,
-      "mean_of_bin_standard_errors": 0.00020018141737452967,
+      "mean_of_bin_standard_errors": 0.0002001814173745297,
       "relative_error_percent_median_positive_bins": 56.25070506486124,
       "relative_error_percent_p95_positive_bins": 100.0
     },
