@@ -185,9 +185,25 @@ class Axial3DPreparationTests(unittest.TestCase):
                     "lower_left_cm_xyz": [-1.0, -1.0, -3.0],
                     "upper_right_cm_xyz": [1.0, 1.0, 3.0],
                 },
+                "score_summary": {
+                    "flux": {
+                        "relative_error_percent_median_positive_bins": 10.0,
+                        "relative_error_percent_p95_positive_bins": 18.0,
+                    },
+                    "fission": {
+                        "relative_error_percent_median_positive_bins": 28.0,
+                        "relative_error_percent_p95_positive_bins": 66.0,
+                    },
+                },
             }
             (root / "AXIAL_3D_STATEPOINT_SUMMARY.json").write_text(
                 json.dumps(summary), encoding="utf-8"
+            )
+            (root / "AXIAL_3D_INPUT_AUDIT.json").write_text(
+                json.dumps({"status": "generated_3d_inputs_passed_structural_audit"}), encoding="utf-8"
+            )
+            (root / "AXIAL_3D_INPUT_MANIFEST.json").write_text(
+                json.dumps({"source": {"archive_sha256": "a" * 64}}), encoding="utf-8"
             )
             old_path = web_server.AXIAL_TALLY_NPZ
             web_server.AXIAL_TALLY_NPZ = npz
@@ -202,6 +218,9 @@ class Axial3DPreparationTests(unittest.TestCase):
             self.assertEqual(payload["mesh"]["dimension_xyz"], [2, 2, 3])
             self.assertEqual(payload["mean"], [[[1.0, 1.0], [1.0, 1.0]]] * 3)
             self.assertEqual(payload["provenance"]["statepoint"]["n_realizations"], 25)
+            self.assertEqual(payload["provenance"]["score_summary"]["relative_error_percent_median_positive_bins"], 28.0)
+            self.assertEqual(payload["provenance"]["input_audit"]["status"], "generated_3d_inputs_passed_structural_audit")
+            self.assertEqual(payload["provenance"]["input_manifest"]["source"]["archive_sha256"], "a" * 64)
             self.assertEqual(payload["score"], "fission")
             self.assertIsNone(flux_payload["relative_error_percent"][0][0][0])
 
