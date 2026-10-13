@@ -103,7 +103,11 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function drawMesh'
           curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function renderModelGeometrySvg'
           curl --fail --silent http://127.0.0.1:8765/core_geometry_3d.js | grep -q 'createCoreViewer'
+          curl --fail --silent http://127.0.0.1:8765/core_geometry_3d.js | grep -q 'InstancedMesh'
+          curl --fail --silent http://127.0.0.1:8765/core_geometry_3d.js | grep -q 'pinRadius, pinRadius'
           curl --fail --silent http://127.0.0.1:8765/ | grep -q 'core3dCanvas'
+          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'coreSelectedPinMap'
+          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'coreView2d'
           curl --fail --silent http://127.0.0.1:8765/ | grep -q 'three@0.180.0'
           curl --fail --silent http://127.0.0.1:8765/ | grep -q 'selectedCandidateMetrics'
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
