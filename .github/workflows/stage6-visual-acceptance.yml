@@ -54,7 +54,7 @@ jobs:
           echo "7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b  $RUNNER_TEMP/c5g7-study-640000.zip" | sha256sum --check
 
       - name: Check scientific data and visualization contracts
-        run: python tests/test_visual_acceptance.py
+        run: CBPFR_TEST_ARCHIVE="$RUNNER_TEMP/c5g7-study-640000.zip" python tests/test_visual_acceptance.py
 
       - name: Static-check workstation JavaScript
         run: node --check web/app.js && node --check tests/browser_visual_acceptance.cjs
