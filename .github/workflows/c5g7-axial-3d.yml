@@ -194,11 +194,17 @@ jobs:
           PY
           cp "$CANDIDATE_ROOT/AXIAL_3D_INPUT_MANIFEST.json" "$CANDIDATE_ROOT/model/3d/axial-3d-export/AXIAL_3D_INPUT_MANIFEST.json"
           cp "$CANDIDATE_ROOT/AXIAL_3D_INPUT_AUDIT.json" "$CANDIDATE_ROOT/model/3d/axial-3d-export/AXIAL_3D_INPUT_AUDIT.json"
-          python scripts/analyze_c5g7_axial_3d.py \
-            --candidate-root "$CANDIDATE_ROOT" \
-            --openmc-log "$CANDIDATE_ROOT/model/3d/openmc.log" \
-            --output-dir "$CANDIDATE_ROOT/model/3d/axial-3d-export" \
-            > "$CANDIDATE_ROOT/model/3d/axial-benchmark-check.log"
+          layout="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["layout_signature"])' "$CANDIDATE_ROOT/AXIAL_3D_INPUT_MANIFEST.json")"
+          if [[ "$layout" == "UMMU" ]]; then
+            python scripts/analyze_c5g7_axial_3d.py \
+              --candidate-root "$CANDIDATE_ROOT" \
+              --openmc-log "$CANDIDATE_ROOT/model/3d/openmc.log" \
+              --output-dir "$CANDIDATE_ROOT/model/3d/axial-3d-export" \
+              > "$CANDIDATE_ROOT/model/3d/axial-benchmark-check.log"
+          else
+            printf 'No OECD/NEA scalar reference comparison was generated for layout %s. The published scalar reference check is restricted to the canonical UMMU layout; retain this candidate output for candidate-to-candidate analysis only.\\n' "$layout" \
+              > "$CANDIDATE_ROOT/model/3d/axial-benchmark-check.log"
+          fi
 
       - name: Browser-test the actual 3D tally volume and axial slice
         if: github.event_name == 'pull_request'
