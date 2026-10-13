@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 import mimetypes
+import os
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -13,10 +14,18 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 CANDIDATE_CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
-STATEPOINT_ARCHIVE = ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip"
-# The archive may already exist on the user Desktop without being committed to GitHub.
-STATEPOINT_ARCHIVE_FALLBACK = Path.home() / "Desktop" / "OpenMC_HDF5_Evidence_2026-10-11.zip"
-STATEPOINT_MEMBER = "c5g7-run/2d/statepoint.20000.h5"
+# Explicit environment overrides let CI audit a known smoke artifact and let users point to
+# their production ZIP without renaming or copying it into the repository.
+STATEPOINT_ARCHIVE = Path(os.environ.get(
+    "CBPFR_STATEPOINT_ARCHIVE", str(ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip")
+)).expanduser()
+STATEPOINT_ARCHIVE_FALLBACK = Path(os.environ.get(
+    "CBPFR_STATEPOINT_ARCHIVE_FALLBACK",
+    str(Path.home() / "Desktop" / "OpenMC_HDF5_Evidence_2026-10-11.zip")
+)).expanduser()
+STATEPOINT_MEMBER = os.environ.get(
+    "CBPFR_STATEPOINT_MEMBER", "c5g7-run/2d/statepoint.20000.h5"
+)
 
 
 def locate_statepoint_archive():
@@ -26,7 +35,10 @@ def locate_statepoint_archive():
     raise FileNotFoundError(
         f"Statepoint archive not found at {STATEPOINT_ARCHIVE} or {STATEPOINT_ARCHIVE_FALLBACK}."
     )
-STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
+STATEPOINT_BASELINE = Path(os.environ.get(
+    "CBPFR_STATEPOINT_BASELINE",
+    str(ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json")
+)).expanduser()
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
 MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
 
@@ -273,14 +285,20 @@ def read_mesh_evidence():
                 if isinstance(raw_type, bytes):
                     raw_type = raw_type.decode("utf-8", errors="replace")
                 filter_id = int(filt.attrs.get("id", name.split()[-1]))
+                filter_type = str(raw_type).strip().lower()
                 mesh_id = None
-                for key in ("mesh", "mesh_id"):
+                # In OpenMC 0.16, a MeshFilter stores the referenced mesh ID in
+                # its "bins" dataset (typically [1]), not a "mesh"/"mesh_id" dataset.
+                # Retain alternate keys for statepoint variants and older wrappers.
+                mesh_reference_keys = ("mesh", "mesh_id", "bins") if filter_type == "mesh" else ("mesh", "mesh_id")
+                for key in mesh_reference_keys:
                     if key in filt:
                         try:
                             mesh_id = int(np.asarray(filt[key][()]).reshape(-1)[0])
+                            break
                         except (TypeError, ValueError, IndexError):
-                            pass
-                filters[filter_id] = (str(raw_type), mesh_id)
+                            continue
+                filters[filter_id] = (filter_type, mesh_id)
 
         for tally_name, tally in tallies.items():
             if not tally_name.startswith("tally ") or not hasattr(tally, "keys"):
@@ -386,7 +404,8 @@ def read_mesh_evidence():
             "sha256": actual_hash,
             "expected_sha256": expected_hash,
             "hash_matches": actual_hash == expected_hash if expected_hash else None,
-            "evidence_status": "recorded statepoint; means and standard errors derived from accumulated tally sums",
+            "statepoint_member": STATEPOINT_MEMBER,
+            "evidence_status": "recorded statepoint; means and standard errors derived from accumulated tally sums and sum-of-squares",
         },
     }
 
