@@ -145,20 +145,23 @@ function drawSelectedCandidate(row){
  const canonical=(row.canonical_reference===true||String(row.canonical_reference).toLowerCase()==="true")&&layoutValid;
  if(tag){
   tag.textContent=!layoutValid?"INVALID LAYOUT":canonical?"CANONICAL LAYOUT REFERENCE":"LAYOUT VARIANT";
-  tag.classList.toggle("warning",!layoutValid||!canonical);
+  // A valid non-canonical layout is a candidate variant, not a failed integrity check.
+  tag.classList.toggle("warning",!layoutValid);
+  tag.classList.toggle("reference",canonical);
  }
  const selectedIndex=records.findIndex(item=>String(item.candidate_id)===String(row.candidate_id));
  const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
  $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
  $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
  $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
+ const keffSd=has(row,"keff_std_dev")?"Reported SD ± "+number(row.keff_std_dev,6)+"; not a confidence interval":"Reported SD not recorded";
  const metrics=[
-  ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff"],
-  ["Reported SD",has(row,"keff_std_dev")?number(row.keff_std_dev,6):"Not recorded","sd"],
-  ["Relative SD",has(row,"keff_relative_sd_percent")?number(row.keff_relative_sd_percent,4)+"%":"Not recorded","uncertainty"],
-  ["Aggregate fission score · not power",has(row,"aggregate_fission_score")?number(row.aggregate_fission_score,5):"Not recorded","proxy"]
+  ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff",keffSd],
+  ["Relative SD",has(row,"keff_relative_sd_percent")?number(row.keff_relative_sd_percent,4)+"%":"Not recorded","uncertainty","Relative spread recorded in candidate summary"],
+  ["Aggregate flux score",has(row,"aggregate_flux_score")?number(row.aggregate_flux_score,5):"Not recorded","flux","Repository score; units not specified"],
+  ["Aggregate fission score",has(row,"aggregate_fission_score")?number(row.aggregate_fission_score,5):"Not recorded","proxy","Not absolute power"]
  ];
- $("selectedCandidateMetrics").innerHTML=metrics.map(([name,value,type])=>'<div class="candidate-stat candidate-stat-'+type+'"><span>'+name+'</span><strong>'+value+'</strong></div>').join("");
+ $("selectedCandidateMetrics").innerHTML=metrics.map(([name,value,type,detail])=>'<div class="candidate-stat candidate-stat-'+type+'"><span>'+name+'</span><strong>'+value+'</strong><small>'+detail+'</small></div>').join("");
  const runInfo=[
   ["SEED",displayValue(row.seed)],
   ["BATCHES",displayValue(row.batches)],
@@ -219,8 +222,24 @@ function drawCandidateChart(){
  const valid=records.filter(r=>has(r,key)).sort((a,b)=>Number(a[key])-Number(b[key]));
  const selected=$("candidateSelect").value;
  if(!valid.length){$("candidateChart").innerHTML='<div class="loading">No recorded values for this metric.</div>';return;}
- const error=key==="keff_mean"?"keff_std_dev":null;
- chart("candidateChart",[{type:"bar",x:valid.map(label),y:valid.map(r=>Number(r[key])),marker:{color:valid.map(r=>String(r.candidate_id)===selected?palette.cyan:"#31536a")},error_y:error?{type:"data",array:valid.map(r=>has(r,error)?Number(r[error]):0),visible:true,color:palette.muted,thickness:1.2,width:3}:undefined,customdata:valid.map(r=>[r.candidate_id,r.layout_signature,r.seed]),hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Value %{y:.7g}<extra></extra>"}],{yaxis:{...baseLayout.yaxis,title:key==="keff_mean"?"Reported k-effective mean":"Repository score (units not specified)"},xaxis:{...baseLayout.xaxis,title:"Candidate / layout"}});
+ const isKeff=key==="keff_mean";
+ const colors=valid.map(r=>String(r.candidate_id)===selected?palette.cyan:"#47758f");
+ const trace={
+  type:"scatter",mode:"markers",name:isKeff?"Reported k-effective mean":"Recorded aggregate score",
+  x:valid.map(r=>Number(r[key])),y:valid.map(r=>String(r.layout_signature||label(r))),
+  marker:{color:colors,size:valid.map(r=>String(r.candidate_id)===selected?13:9),symbol:valid.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:valid.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.2}},
+  customdata:valid.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),
+  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Value %{x:.7g}"+(isKeff?"<br>Reported SD %{customdata[3]:.4g}":"")+"<extra></extra>"
+ };
+ if(isKeff){
+  trace.error_x={type:"data",array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.4,width:5};
+ }
+ chart("candidateChart",[trace],{
+  autosize:true,margin:{l:90,r:30,t:16,b:58},showlegend:false,hovermode:"closest",
+  xaxis:{...baseLayout.xaxis,title:isKeff?"Reported k-effective mean (± SD)":"Recorded repository score (units not specified)",automargin:true,gridcolor:palette.line,zeroline:false},
+  yaxis:{...baseLayout.yaxis,title:"Layout signature",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.55)"},
+  shapes:[{type:"line",xref:"paper",x0:0,x1:1,yref:"y",y0:""+valid.find(r=>String(r.candidate_id)===selected)?.layout_signature,y1:""+valid.find(r=>String(r.candidate_id)===selected)?.layout_signature,line:{color:"rgba(81,210,223,0.28)",width:1,dash:"dot"}}]
+ });
 }
 function drawOtherCharts(){
  const vals=records.filter(r=>has(r,"keff_mean"));
@@ -330,10 +349,10 @@ function drawMesh(){
  }
  const paletteName=$("meshPalette").value;
  const z=f.values, raw=f.rawValues, scoreLabel=f.score;
- const xs=Array.from({length:f.item.dimensions[0]},(_,i)=>i);
- const ys=Array.from({length:f.item.dimensions[1]},(_,i)=>i);
+ const nx=f.item.dimensions[0], ny=f.item.dimensions[1];
+ const xs=Array.from({length:nx},(_,i)=>i), ys=Array.from({length:ny},(_,i)=>i);
  const plotTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":(f.scale==="log"?"log₁₀("+scoreLabel+" tally mean)":"Recorded "+scoreLabel+" tally mean");
- const rawTitle=f.view==="relative_sd"?"Relative standard error (%)":scoreLabel+" tally mean (source units)";
+ const rawTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":scoreLabel+" tally mean (recorded scale)";
  const hover=(title)=>"x-bin %{x}<br>y-bin %{y}<br>"+title+" %{customdata:.6g}<extra></extra>";
  const axisStyle={...baseLayout.xaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const yAxisStyle={...baseLayout.yaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
@@ -341,9 +360,20 @@ function drawMesh(){
  const colorscale=paletteName;
  const heatLayout={
   autosize:true,margin:{l:62,r:30,t:18,b:58},showlegend:false,
-  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index",standoff:8}},
-  yaxis:{...yAxisStyle,...sharedAxis,title:{text:"Y mesh-bin index",standoff:8},autorange:"reversed"}
+  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (0-based)",standoff:8}},
+  yaxis:{...yAxisStyle,...sharedAxis,title:{text:"Y mesh-bin index (0-based)",standoff:8},autorange:"reversed"}
  };
+ const finiteZ=z.flat().filter(v=>typeof v==="number"&&Number.isFinite(v));
+ const zMin=finiteZ.length?Math.min(...finiteZ):0, zMax=finiteZ.length?Math.max(...finiteZ):1;
+ const zSpan=zMax-zMin;
+ const rawStep=zSpan>0?zSpan/8:Math.max(Math.abs(zMin)*0.05,0.1);
+ const power=Math.pow(10,Math.floor(Math.log10(rawStep)));
+ const scaled=rawStep/power;
+ const niceFactor=scaled<=1?1:scaled<=2?2:scaled<=2.5?2.5:scaled<=5?5:10;
+ const contourStep=niceFactor*power;
+ const contourStart=Math.floor(zMin/contourStep)*contourStep;
+ let contourEnd=Math.ceil(zMax/contourStep)*contourStep;
+ if(contourEnd<=contourStart)contourEnd=contourStart+contourStep;
  const colorbar={title:{text:plotTitle,font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}};
  chart("meshHeatmap",[{
   type:"heatmap",x:xs,y:ys,z:z,customdata:raw,colorscale,
@@ -352,7 +382,14 @@ function drawMesh(){
  }],heatLayout);
  chart("meshContour",[{
   type:"contour",x:xs,y:ys,z:z,customdata:raw,colorscale,
-  contours:{coloring:"heatmap",showlines:true,showlabels:false},ncontours:12,
+  autocontour:false,
+  contours:{
+   coloring:"heatmap",showlines:true,showlabels:true,
+   start:contourStart,end:contourEnd,size:contourStep,
+   labelfont:{size:10,color:palette.text},
+   labelformat:f.view==="relative_sd"?".1f":".2f"
+  },
+  line:{width:1,color:"rgba(7,17,27,0.72)"},
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(rawTitle),connectgaps:false,hoverongaps:false
  }],heatLayout);
@@ -371,33 +408,52 @@ function drawMesh(){
    bgcolor:"rgba(0,0,0,0)",aspectmode:"auto",camera:{eye:{x:1.55,y:1.55,z:1.1}}
   }
  });
- const cy=Math.floor(z.length/2),profileY=z[cy]||[],profileRaw=raw[cy]||[];
+ const centerY=Math.floor((ny-1)/2);
+ const meanRow=f.mean[centerY]||[], seRow=f.standardError[centerY]||[], relativeRow=f.relative[centerY]||[];
+ const profileY=f.view==="relative_sd"?relativeRow:meanRow;
+ const profileCustom=xs.map(i=>[meanRow[i],seRow[i],relativeRow[i]]);
+ const profileHover=f.view==="relative_sd"
+  ?"X-bin %{x}<br>Relative Monte Carlo standard error %{y:.4g}%<extra></extra>"
+  :"X-bin %{x}<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>";
+ const profileError=f.view==="mean"?{
+  type:"data",symmetric:false,
+  array:seRow.map((se,i)=>Number.isFinite(se)&&se>=0?se:0),
+  arrayminus:seRow.map((se,i)=>Number.isFinite(se)&&se>=0&&Number.isFinite(meanRow[i])?Math.min(se,Math.max(0,meanRow[i]*0.999999)):0),
+  visible:true,color:palette.muted,thickness:1,width:3
+ }:{visible:false};
  chart("meshProfile",[{
-  type:"scatter",mode:"lines+markers",name:plotTitle,x:xs,y:profileY,customdata:profileRaw,
+  type:"scatter",mode:"lines+markers",name:f.view==="relative_sd"?"Relative MC standard error":"Recorded "+scoreLabel+" mean",
+  x:xs,y:profileY,customdata:profileCustom,
   line:{color:palette.cyan,width:2.5,shape:"linear"},
-  marker:{size:4,color:palette.orange,line:{width:0}},
-  connectgaps:false,hovertemplate:"X bin %{x}<br>"+rawTitle+" %{customdata:.6g}<br>Displayed value %{y:.6g}<extra></extra>"
+  marker:{size:5,color:palette.orange,line:{color:palette.text,width:0.6}},
+  error_y:profileError,connectgaps:false,hovertemplate:profileHover
  }],{
-  autosize:true,margin:{l:66,r:18,t:18,b:58},showlegend:false,
-  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (central row)",standoff:8}},
-  yaxis:{...yAxisStyle,...sharedAxis,title:{text:plotTitle,standoff:8}}
+  autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
+  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (0-based)",standoff:8},dtick:5},
+  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean",standoff:8},exponentformat:"power"},
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
  });
- const st=f.stats,finiteDisplay=f.displayStats.finite,dimensionText=f.item.dimensions[0]+" × "+f.item.dimensions[1];
+ if($("meshContourSubtitle"))$("meshContourSubtitle").textContent=f.view==="relative_sd"
+  ?"Labelled iso-contours of relative Monte Carlo standard error (%)"
+  :f.scale==="log"?"Labelled iso-contours; colour levels use log₁₀(mean), hover reports the recorded mean":"Labelled iso-contours of recorded tally mean";
+ if($("meshProfileSubtitle"))$("meshProfileSubtitle").textContent="Central cut at Y-bin "+centerY+" (0-based index)";
+ const st=f.stats,finiteDisplay=f.displayStats.finite,dimensionText=nx+" × "+ny;
  $("fieldKpis").innerHTML=[
   ["Mesh dimensions",dimensionText,"Archived 2D mesh bins"],
   ["Finite bins",finiteDisplay.toLocaleString(),"Valid bins in selected view"],
   ["Positive mean bins",st.positive.toLocaleString(),"Positive recorded mean values"],
-  ["Maximum mean",st.max===null?"—":st.max.toExponential(4),"Recorded "+scoreLabel+" tally · source units"]
+  ["Maximum mean",st.max===null?"—":st.max.toExponential(4),"Recorded "+scoreLabel+" tally · source scale"]
  ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
  const summary=[
   "Score: "+scoreLabel,
   "View: "+(f.view==="relative_sd"?"relative Monte Carlo standard error":"recorded tally mean"),
   "Scale: "+(f.view==="relative_sd"?"ratio-derived percentage":f.scale),
   "Mesh: "+dimensionText+" bins",
+  "Central cut: Y-bin "+centerY,
   "Realizations: "+String(f.item.n_realizations??"not recorded")
  ];
  const note=$("meshSummaryNote");
- if(note)note.textContent=summary.join(" · ")+". Bin indices are not physical assembly coordinates.";
+ if(note)note.textContent=summary.join(" · ")+". Bin indices are not physical assembly coordinates; contour labels use the displayed scale, while hover values preserve recorded tallies.";
  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"DATA LOADED · HASH NOT CHECKED";
  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
 }
