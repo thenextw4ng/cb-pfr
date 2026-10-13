@@ -179,6 +179,10 @@ async function main() {
         assemblyMapType: document.querySelector("#assemblyMap")?.data?.[0]?.type,
         assemblyMapTraceCount: document.querySelector("#assemblyMap")?.data?.length || 0,
         assemblyMapPositions: (document.querySelector("#assemblyMap")?.data?.[0]?.customdata || []).flat().map(cell => cell?.[0]),
+        assemblyMapValues: (document.querySelector("#assemblyMap")?.data?.[0]?.z || []).flat(),
+        assemblyMapText: (document.querySelector("#assemblyMap")?.data?.[0]?.text || []).flat(),
+        assemblyMapAxisMapping: document.querySelector("#assemblyMap")?.layout?.annotations?.[0]?.text || "",
+        assemblyMapPalette: document.querySelector("#assemblyMap")?.data?.[0]?.colorscale || "",
         assemblyMapScale: [document.querySelector("#assemblyMap")?.data?.[0]?.zmin, document.querySelector("#assemblyMap")?.data?.[0]?.zmax],
         assemblyMatrixScale: [document.querySelector("#assemblyMatrix")?.data?.[0]?.zmin, document.querySelector("#assemblyMatrix")?.data?.[0]?.zmax],
         assemblyMapColorbarTitle: document.querySelector("#assemblyMap")?.data?.[0]?.colorbar?.title?.text || "",
@@ -237,8 +241,22 @@ async function main() {
       assert.equal(details.assemblyMapType, "heatmap", "assembly proxy must remain a discrete 2 × 2 map, never a continuous contour");
       assert.equal(details.assemblyMapTraceCount, 3, "map should contain one quantitative field, one material-category outline, and one selected-position outline");
       assert.deepEqual(details.assemblyMapPositions, ["P00","P01","P10","P11"], "map labels must follow row-major geometry positions");
+      const recordedAssembly = await page.evaluate(async ({candidateId, signature}) => {
+        const response = await fetch("/api/assembly");
+        if (!response.ok) throw new Error("Assembly evidence API unavailable for value cross-check");
+        const payload = await response.json();
+        const row = (payload.records || []).find(item =>
+          String(item.candidate_id) === candidateId &&
+          String(item.layout_signature).toUpperCase() === signature.toUpperCase()
+        );
+        return row ? ["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].map(key => Number(row[key])) : null;
+      }, { candidateId: option.value, signature: details.signature.trim() });
+      assert.ok(recordedAssembly, "the selected candidate must have an exact ID + signature proxy record");
+      assert.deepEqual(details.assemblyMapValues.flat(), recordedAssembly, "all four displayed heatmap values must be the actual CSV values in P00, P01, P10, P11 order");
+      assert.deepEqual(details.assemblyMapText.flat().map(text => text.split("\n")[0]), details.signature.trim().split("").map((code,index) => ["P00","P01","P10","P11"][index] + " · " + (code === "M" ? "MOX" : "UO₂")), "each tile must show its matching position label and actual material category");
+      assert.match(details.assemblyMapAxisMapping, /ROW 0 \(TOP\).*P00 = R0\/C0.*P11 = R1\/C1/, "the position labels must document the same row/column convention as the core map");
       assert.deepEqual(details.assemblyMapScale, details.assemblyMatrixScale, "selected map and candidate matrix must keep one shared quantitative range");
-      assert.match(details.assemblyMapColorbarTitle, /source units not specified/i);
+      assert.match(details.assemblyMapColorbarTitle, /CSV unit not documented/i, "do not invent a physical unit that the source CSV does not record");
       assert.deepEqual(details.assemblyMapMaterialEdgeColors, details.coreInfo?.layoutSignature?.split("").map(code => code === "M" ? "#f4bd62" : "#55d4df") || [], "material edge colours must follow selected layout signature, not fixed spatial slots");
       assert.equal(details.assemblyMapSelectedPosition, "P00", "selected position should have a synchronized outline");
       assert.equal(details.assemblyPositionTitle, "P00");
@@ -384,7 +402,9 @@ async function main() {
     // provides one faithful capture without falsely failing on live canvas motion.
     await page.click("#coreView2d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
-    await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled" });
+    // Capture the stable, source-derived SVG directly. A full viewport screenshot can
+    // time out in Chromium while Plotly/WebGL canvases elsewhere on the page repaint.
+    await page.locator("#geometryPreview svg.model-geometry-svg").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled", timeout: 15000 });
     await page.click("#coreView3d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
