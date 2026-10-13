@@ -5,6 +5,7 @@
     "repository": "thenextw4ng/cb-pfr",
     "workflow_run_id": 38182056526,
     "artifact_id": 11719691969,
+    "archive_sha256": "7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b",
     "artifact_name": "c5g7-study-640000",
     "archive_file": "c5g7-study-640000.zip",
     "source_member_pattern": "c5g7-2x2-{LAYOUT}/model/2d/geometry.xml",
@@ -854,6 +855,7 @@
       "layout_signature": "MUMU",
       "source_member": "c5g7-2x2-MUMU/model/2d/geometry.xml",
       "geometry_xml_sha256": "bdeddfe5152cc43bdb1805331e0690a0b374757f5862366ce1dc1f3d46866133",
+    "materials_xml_sha256": "21e231eca419f24de03d52eede2fd1042aaab1d109f353a4ace28a1019c95ad5",
       "core_universe_grid": [
         [
           11,
@@ -896,6 +898,7 @@
       "layout_signature": "MMUU",
       "source_member": "c5g7-2x2-MMUU/model/2d/geometry.xml",
       "geometry_xml_sha256": "66f26679887c5d93e0d7ade8a52ac76af5d0da031042db2e0972d880d5fdffaa",
+    "materials_xml_sha256": "e7dba1df04a49fa9060bc970ab0ab5075ddfcbefd74a3b145304a706df34b257",
       "core_universe_grid": [
         [
           11,
@@ -938,6 +941,7 @@
       "layout_signature": "MUUM",
       "source_member": "c5g7-2x2-MUUM/model/2d/geometry.xml",
       "geometry_xml_sha256": "0b869b7cddab57f16c8a5645f71493b590b9519d6d181c9dff3e42482bdbe83c",
+    "materials_xml_sha256": "b6d77f3ad77880fd36027c8c4c75f30f1a1cb10130a927adee161437b0359359",
       "core_universe_grid": [
         [
           11,
@@ -980,6 +984,7 @@
       "layout_signature": "UMMU",
       "source_member": "c5g7-2x2-UMMU/model/2d/geometry.xml",
       "geometry_xml_sha256": "f71a6c422b2f1d4d8342334824007a20f1471141f5330d0d1ca0b51e9dfe5f33",
+    "materials_xml_sha256": "7dfcf52a746b86a69b402e5b35ff5e4a61d57a27e8a33b1b84b859c7c93d7895",
       "core_universe_grid": [
         [
           9,
@@ -1022,6 +1027,7 @@
       "layout_signature": "UUMM",
       "source_member": "c5g7-2x2-UUMM/model/2d/geometry.xml",
       "geometry_xml_sha256": "762c0ba7d0ea1db09bca05feb76d3f190424e1eed876a485fa872d912d1b6c55",
+    "materials_xml_sha256": "fc1e90fe5ad08cbcc16ecde8f86bc725302f4694595cea1f1ed341c9a0e2bd3e",
       "core_universe_grid": [
         [
           9,
@@ -1064,6 +1070,7 @@
       "layout_signature": "UMUM",
       "source_member": "c5g7-2x2-UMUM/model/2d/geometry.xml",
       "geometry_xml_sha256": "c5e7b6db010d21ec872c2a675a1a5d9ef28fdb5fc1c31f5f9a39fcae45444923",
+    "materials_xml_sha256": "673dabfafb38c6391280c2b931178b033807daaac2e698c07165bb1aa6eaed59",
       "core_universe_grid": [
         [
           9,
