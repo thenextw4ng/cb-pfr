@@ -55,11 +55,14 @@ function makeHarness() {
     "globalThis.__testHooks = {" +
     "setRecords(rows) { records = rows; }," +
     "setAssemblyRecords(rows) { assemblyRecords = rows; }," +
+    "setModelGeometryData(data) { modelGeometryData = data; }," +
     "showCandidate, drawSelectedCandidate, drawCandidateChart, layoutCells," +
     "candidateOption, validateCandidateRecords, escapeHtml," +
     "getRecords() { return records; }" +
     "};";
   vm.runInContext(appSource + "\n" + testHooks, context, { filename: "web/app.js" });
+  const manifestPath = path.join(__dirname, "..", "evidence", "c5g7_openmc_geometry_manifest_2026-10-13.json");
+  context.__testHooks.setModelGeometryData(JSON.parse(fs.readFileSync(manifestPath, "utf8")));
   return { hooks: context.__testHooks, charts, $: id => document.getElementById(id) };
 }
 
@@ -218,6 +221,6 @@ test("invalid U/M compositions fail closed in both configuration and selected-ca
   assert.match($("layoutView").innerHTML, /Placement unavailable/);
   assert.equal($("selectedRecordTag").textContent, "INVALID LAYOUT");
   assert.match($("selectedCandidateSignature").innerHTML, /No validated layout signature/);
-  assert.match($("geometryPreview").innerHTML, /Model geometry unavailable/);
+  assert.match($("geometryPreview").innerHTML, /Invalid fuel composition/);
   assert.doesNotMatch($("geometryPreview").innerHTML, /<svg class="model-geometry-svg"/);
 });
