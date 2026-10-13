@@ -137,7 +137,7 @@ class ScientificVisualAcceptance(unittest.TestCase):
         self.assertIn('type:"volume"', self.js)
         self.assertIn("statepoint SHA-256", self.js)
         self.assertIn("input XML audit", self.js)
-        self.assertIn("This plot will never reuse or extrude the 2D terrain above.", self.html)
+        self.assertIn("This plot never reuses or extrudes the 2D terrain above.", self.html)
         nonclaims = " ".join(audit.get("nonclaims", [])) + " " + " ".join(str(v) for v in manifest.get("inherited_axial_assumptions", {}).values())
         self.assertTrue("boundary" in nonclaims.lower() or "benchmark" in nonclaims.lower())
 
