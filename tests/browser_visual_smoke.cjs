@@ -25,13 +25,7 @@ async function main() {
       const select = document.querySelector("#candidateSelect");
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
-    await page.waitForSelector("#selectedCandidateMetrics .candidate-metric", { timeout: 30000 }).catch(async () => {
-      // Keep the assertion below informative if the CSS class differs; the actual record must load.
-      await page.waitForFunction(() => {
-        const el = document.querySelector("#selectedCandidateMetrics");
-        return el && !/Loading recorded candidate metrics/.test(el.textContent);
-      }, { timeout: 15000 });
-    });
+    await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
     await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
     await page.waitForSelector("#candidateChart svg", { timeout: 30000 });
 
