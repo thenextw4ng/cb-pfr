@@ -77,18 +77,7 @@ class AxialProductionArtifactInstallerTests(unittest.TestCase):
             "expires_at": "2026-10-27T12:33:20Z",
         }
 
-        def fake_json(url):
-            if "/workflows/" in url and url.endswith("/runs?per_page=25"):
-                return {"workflow_runs": [{"id": 234, "conclusion": "success", "html_url": artifact["run_url"]}]}
-            if url.endswith("/actions/runs/234/artifacts"):
-                return {"artifacts": [{"id": 991, "name": artifact["artifact_name"], "expired": False}]}
-            raise AssertionError("Unexpected GitHub API URL: " + url)
-
-        with tempfile.TemporaryDirectory() as tmp:
-            target = Path(tmp) / "evidence" / "axial_tally_3d.npz"
-            with patch.object(installer, "_get_json", side_effect=fake_json), patch.object(
-                installer, "_get_bytes", return_value=archive_bytes
-            ):
+        def fake_json(url):,            if url.endswith("/actions/artifacts/991"):,                return {,                    "id": 991, "name": artifact["artifact_name"], "expired": False,,                    "created_at": artifact["created_at"], "expires_at": artifact["expires_at"],,                    "workflow_run": {"id": 234, "html_url": artifact["run_url"]},,                },            raise AssertionError("Unexpected GitHub API URL: " + url),,        with tempfile.TemporaryDirectory() as tmp:,            target = Path(tmp) / "evidence" / "axial_tally_3d.npz",            with patch.object(installer, "KNOWN_PRODUCTION_ARTIFACT_ID", 991), patch.object(,                installer, "_get_json", side_effect=fake_json,            ), patch.object(installer, "_get_bytes", return_value=archive_bytes):
                 result = installer.install_latest_production_axial_tally(target)
 
             self.assertEqual(target.read_bytes(), npz_bytes)
