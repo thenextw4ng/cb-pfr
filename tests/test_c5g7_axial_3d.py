@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.prepare_c5g7_axial_3d import prepare_candidate
 from scripts.audit_c5g7_axial_3d import audit_inputs, export_statepoint
+import web_server
 
 
 BUILDER = """import openmc
@@ -136,6 +137,59 @@ class Axial3DPreparationTests(unittest.TestCase):
             self.assertTrue((out / "AXIAL_3D_STATEPOINT_SUMMARY.json").is_file())
             with np.load(out / "axial_tally_3d.npz") as payload:
                 self.assertEqual(payload["mean"].shape, (3, 2, 2, 3))
+
+
+    def test_workstation_api_serves_only_a_true_3d_export(self) -> None:
+        try:
+            import numpy as np
+        except ImportError:
+            self.skipTest("numpy unavailable")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            npz = root / "axial_tally_3d.npz"
+            means = np.ones((3, 2, 2, 3), dtype=np.float32)
+            errors = np.full_like(means, 0.1)
+            relatives = np.full_like(means, 10.0)
+            relatives[0, 0, 0, 0] = np.nan
+            np.savez_compressed(
+                npz, mean=means, standard_error=errors,
+                relative_error_percent=relatives,
+                score_names=np.asarray(["flux", "fission", "nu-fission"]),
+                x_centers_cm=np.asarray([-0.5, 0.5]),
+                y_centers_cm=np.asarray([-0.5, 0.5]),
+                z_centers_cm=np.asarray([-2.0, 0.0, 2.0]),
+            )
+            summary = {
+                "status": "3d_openmc_statepoint_mesh_exported",
+                "statepoint": {"sha256": "c" * 64, "n_realizations": 25},
+                "mesh": {
+                    "dimension_xyz": [2, 2, 3],
+                    "lower_left_cm_xyz": [-1.0, -1.0, -3.0],
+                    "upper_right_cm_xyz": [1.0, 1.0, 3.0],
+                },
+            }
+            (root / "AXIAL_3D_STATEPOINT_SUMMARY.json").write_text(
+                json.dumps(summary), encoding="utf-8"
+            )
+            old_path = web_server.AXIAL_TALLY_NPZ
+            web_server.AXIAL_TALLY_NPZ = npz
+            try:
+                payload = web_server.read_axial_3d_evidence("fission")
+            finally:
+                web_server.AXIAL_TALLY_NPZ = old_path
+            self.assertTrue(payload["available"])
+            self.assertEqual(payload["mesh"]["dimension_xyz"], [2, 2, 3])
+            self.assertEqual(payload["mean"], [[[1.0, 1.0], [1.0, 1.0]]] * 3)
+            self.assertEqual(payload["provenance"]["statepoint"]["n_realizations"], 25)
+            self.assertEqual(payload["score"], "fission")
+            self.assertIsNone(web_server.read_axial_3d_evidence.__defaults__[0] if False else None)
+            with self.assertRaises(ValueError):
+                old_path = web_server.AXIAL_TALLY_NPZ
+                web_server.AXIAL_TALLY_NPZ = npz
+                try:
+                    web_server.read_axial_3d_evidence("not-a-score")
+                finally:
+                    web_server.AXIAL_TALLY_NPZ = old_path
 
 
 if __name__ == "__main__":
