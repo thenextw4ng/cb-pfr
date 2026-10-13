@@ -123,13 +123,19 @@ test("all six candidate selections update placement, detail, comparison highligh
     assert.match($("selectedCandidateRunInfo").innerHTML, /1000/);
 
     const placement = $("layoutView").innerHTML;
-    const placementCells = [...placement.matchAll(/<div class="assembly[^"]*">([^<]+)<small>(p\d\d) · \d<\/small><\/div>/g)];
-    assert.equal(placementCells.length, 4, row.candidate_id + " should show four cells");
-    assert.deepEqual(placementCells.map(m => [m[1], m[2]]), row.layout_signature.split("").map((fuel, i) => [fuel === "M" ? "MOX" : "UO₂", ["p00", "p01", "p10", "p11"][i]]));
+    assert.match(placement, /fuel-signature-summary/, row.candidate_id + " should show the compact source-recorded fuel signature");
+    assert.match(placement, /p00 → p01 → p10 → p11/, "signature ordering must be explicit");
+    assert.doesNotMatch(placement, /assembly-grid|class="assembly /, "duplicate four-tile assembly cards should be removed");
+    const placementLetters = [...placement.matchAll(/class="fuel-signature-letter fuel-signature-letter-(mox|uo2)">([UM])<\/span>/g)];
+    assert.deepEqual(placementLetters.map(m => m[2]), row.layout_signature.split(""), row.candidate_id + " compact signature should follow row-major source order");
+    assert.match(placement, /2 MOX positions/);
+    assert.match(placement, /2 UO₂ positions/);
 
-    const signatureCells = [...$("selectedCandidateSignature").innerHTML.matchAll(/<b>([UM])<\/b><small>(p\d\d)<\/small>/g)];
-    assert.equal(signatureCells.length, 4);
-    assert.deepEqual(signatureCells.map(m => [m[1], m[2]]), row.layout_signature.split("").map((fuel, i) => [fuel, ["p00", "p01", "p10", "p11"][i]]));
+    const signatureMarkup = $("selectedCandidateSignature").innerHTML;
+    const signatureLetters = [...signatureMarkup.matchAll(/class="fuel-signature-letter fuel-signature-letter-(mox|uo2)">([UM])<\/span>/g)];
+    assert.deepEqual(signatureLetters.map(m => m[2]), row.layout_signature.split(""));
+    assert.match(signatureMarkup, /2 MOX · 2 UO₂/);
+    assert.doesNotMatch(signatureMarkup, /signature-cell|<small>p\d\d<\/small>/, "duplicate four-box signature strip should be removed");
 
     assert.match($("geometryPreview").innerHTML, new RegExp("layout " + row.layout_signature));
     const comparison = charts.get("candidateChart").traces[0];
