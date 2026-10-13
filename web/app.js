@@ -16,7 +16,7 @@ const assemblyPositionDefs = [
  {key:"p11_fission_rate",label:"P11",row:1,col:1,index:3}
 ];
 const materialEdgeColor = {M:"#f4bd62",U:"#55d4df"};
-const formatSourceProxy = value => Number.isFinite(Number(value)) ? Number(value).toPrecision(6) : "—";
+const formatSourceProxy = (value, precision=8) => Number.isFinite(Number(value)) ? Number(value).toPrecision(precision) : "—";
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => {
  if(!row || typeof row!=="object")return false;
@@ -1150,7 +1150,7 @@ function drawAssemblyField(){
   title:{text:"Fission-rate proxy<br>(source units not specified)",font:{size:10,color:palette.text}},
   thickness:13,outlinewidth:0,tickfont:{size:9,color:palette.muted},
   tickmode:"array",tickvals:[scaleMin,mid,scaleMax],
-  ticktext:[formatSourceProxy(scaleMin),formatSourceProxy(mid),formatSourceProxy(scaleMax)],
+  ticktext:[formatSourceProxy(scaleMin,4),formatSourceProxy(mid,4),formatSourceProxy(scaleMax,4)],
   ticks:"outside",len:0.78
  };
 
@@ -1181,7 +1181,7 @@ function drawAssemblyField(){
    '</button>'
   ).join("");
   const scaleRange=$("assemblyScaleRange");
-  if(scaleRange)scaleRange.textContent="Shared global colour range: "+formatSourceProxy(scaleMin)+" to "+formatSourceProxy(observedMax)+" · source units not specified · not absolute power.";
+  if(scaleRange)scaleRange.textContent="Shared global colour range: "+formatSourceProxy(scaleMin,4)+" to "+formatSourceProxy(observedMax,4)+" · source units not specified · not absolute power.";
   $("assemblyPositionPicker").querySelectorAll("[data-assembly-position]").forEach(button=>button.addEventListener("click",()=>{
    selectedAssemblyPosition=button.dataset.assemblyPosition;
    drawAssemblyField();
@@ -1235,7 +1235,7 @@ function drawAssemblyField(){
    showlegend:false,hovermode:"closest",
    xaxis:{...baseLayout.xaxis,title:{text:"Core-map column",standoff:9},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
    yaxis:{...baseLayout.yaxis,title:{text:"Core-map row · row 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
-   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"P00 → P01 / P10 → P11 · row-major",font:{size:9,color:palette.muted}}]
+   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"Row 0: P00, P01 · Row 1: P10, P11",font:{size:9,color:palette.muted}}]
   }).then(()=>{
    if(!mapEl||typeof mapEl.on!=="function"||mapEl.dataset.positionClickBound)return;
    mapEl.on("plotly_click",event=>{
