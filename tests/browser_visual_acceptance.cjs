@@ -70,7 +70,7 @@ fs.mkdirSync(outDir, { recursive: true });
       const matrix = document.querySelector("#assemblyMatrix");
       return {
         selectedId: select.value,
-        map: plot.data.map(trace => ({ type: trace.type, z: trace.z, colorbar: trace.colorbar, colorscale: trace.colorscale, lineColor: trace.marker && trace.marker.line && trace.marker.line.color })),
+        map: plot.data.map(trace => ({ type: trace.type, z: trace.z, text: trace.text, colorbar: trace.colorbar, colorscale: trace.colorscale, lineColor: trace.marker && trace.marker.line && trace.marker.line.color })),
         annotation: (plot.layout.annotations || []).map(item => item.text).join(" "),
         matrixZ: matrix.data[0].z,
         matrixShowscale: matrix.data[0].showscale,
@@ -92,7 +92,8 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.equal(assemblyView.matrixZ[0].length, 4);
     assert.equal(assemblyView.matrixShowscale, false);
     assert.match(assemblyView.mapNote, /not absolute power/i);
-    assert.match(assemblyView.annotation, /P00.*P01.*P10.*P11/);
+    assert.match(JSON.stringify(assemblyView.map[0].text), /P00.*P01.*P10.*P11/);
+    assert.ok(!assemblyView.annotation.includes("ROW 0 (TOP)"), "dense geometry annotation should stay out of the plot canvas");
     await page.locator('#assemblyPositionPicker [data-assembly-position="P11"]').click();
     await page.waitForFunction(() => document.querySelector("#assemblyPositionTitle").textContent === "P11");
     await page.locator("#candidateSelect").selectOption("c5g7-2x2-UMMU");
