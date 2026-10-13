@@ -469,10 +469,12 @@ def read_axial_3d_evidence(score="flux"):
     """Read one selected score from an actual OpenMC 3-D statepoint export."""
     if not AXIAL_TALLY_NPZ.is_file():
         raise FileNotFoundError(
-            "3-D axial tally export is not installed. Download axial_tally_3d.npz from the "
-            "CB-PFR axial-3D GitHub Actions artifact and copy it to "
-            + str(AXIAL_TALLY_NPZ)
-            + " (or set CBPFR_AXIAL_TALLY_NPZ to its path)."
+            "3-D axial tally export is not installed in this checkout. The Stage 4 workflow "
+            "publishes evidence/cbpfr_axial_3d/ after a successful OpenMC transport/export run. "
+            "Sync the latest feat/stage4-physical-axial-tallies branch and restart the server. "
+            "For older runs without the publisher step, download axial_tally_3d.npz and the "
+            "AXIAL_3D_STATEPOINT_SUMMARY.json sidecar from the GitHub Actions artifact, then copy "
+            "them beside the expected path: " + str(AXIAL_TALLY_NPZ) + "."
         )
     try:
         import numpy as np
