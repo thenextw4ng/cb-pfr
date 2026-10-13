@@ -116,7 +116,9 @@ test("all six candidate selections update placement, detail, comparison highligh
     assert.match($("selectedCandidateMetaLine").textContent, new RegExp("Candidate " + (layouts.indexOf(row) + 1) + " of 6"));
     assert.match($("selectedCandidateMetrics").innerHTML, new RegExp(Number(row.keff_mean).toFixed(6)));
     assert.match($("selectedCandidateMetrics").innerHTML, new RegExp(Number(row.keff_std_dev).toFixed(6)));
-    assert.match($("selectedCandidateMetrics").innerHTML, /Aggregate fission score · not power/);
+    assert.match($("selectedCandidateMetrics").innerHTML, /Aggregate fission score/);
+    assert.match($("selectedCandidateMetrics").innerHTML, /Not absolute power/);
+    assert.match($("selectedCandidateMetrics").innerHTML, /Aggregate flux score/);
     assert.match($("selectedCandidateRunInfo").innerHTML, new RegExp(String(row.seed)));
     assert.match($("selectedCandidateRunInfo").innerHTML, /1000/);
 
