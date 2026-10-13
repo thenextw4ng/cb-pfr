@@ -220,13 +220,17 @@ def read_mesh_evidence():
             if dims[0] * dims[1] != values.shape[0]:
                 continue
 
+            # OpenMC stores the realization count at the statepoint root in supported
+            # versions; tolerate alternate wrappers without silently inventing a value.
             n_realizations = tally.attrs.get("n_realizations")
             if n_realizations is None and "n_realizations" in tally:
                 n_realizations = tally["n_realizations"][()]
             if n_realizations is None and "n_realizations" in tallies.attrs:
                 n_realizations = tallies.attrs["n_realizations"]
+            if n_realizations is None and "n_realizations" in handle:
+                n_realizations = handle["n_realizations"][()]
             if n_realizations is None:
-                raise ValueError(f"{tally_name} does not record n_realizations; cannot calculate tally means.")
+                raise ValueError(f"Statepoint has no n_realizations field for {tally_name}; cannot calculate tally means.")
             n_realizations = int(np.asarray(n_realizations).reshape(-1)[0])
             if n_realizations <= 0:
                 raise ValueError(f"{tally_name} has invalid n_realizations={n_realizations}.")
