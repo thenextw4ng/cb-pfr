@@ -9,12 +9,38 @@ on:
       - feat/cern-workstation-integration
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   workstation-smoke:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Download the archived OpenMC geometry source
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 38182056526
+          name: c5g7-study-640000
+          path: /tmp/cbpfr-geometry-source
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Repackage source members for XML-level checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          root = Path("/tmp/cbpfr-geometry-source")
+          archive = Path("/tmp/c5g7-study-640000-repacked.zip")
+          files = sorted(path for path in root.rglob("*") if path.is_file())
+          assert files, f"No files downloaded from the archived geometry artifact: {root}"
+          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
+              for path in files:
+                  output.write(path, path.relative_to(root).as_posix())
+          print(f"Repacked {len(files)} archived source members for XML fidelity checks.")
+          PY
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -32,7 +58,9 @@ jobs:
           node --check tests/web_candidate_ui.test.cjs
       - name: Verify candidate inspector synchronization
         run: node --test tests/web_candidate_ui.test.cjs
-      - name: Verify OpenMC geometry manifest
+      - name: Verify OpenMC geometry manifest against original XML bytes
+        env:
+          CBPFR_OPENMC_GEOMETRY_ARCHIVE: /tmp/c5g7-study-640000-repacked.zip
         run: python tests/test_openmc_geometry_manifest.py
       - name: Start workstation and smoke-test API/assets
         shell: bash
@@ -108,12 +136,45 @@ jobs:
           with open("/tmp/cb-pfr-model-geometry.json", encoding="utf-8") as f:
               model_geometry = json.load(f)
           assert model_geometry.get("schema_version") == 1, model_geometry
-          candidates = model_geometry.get("candidates", [])
-          assert len(candidates) == 6, model_geometry
-          assert all(item.get("source_matches_candidate_signature") is True for item in candidates), candidates
-          assert all(len(item.get("geometry_xml_sha256", "")) == 64 for item in candidates), candidates
+          model_candidates = model_geometry.get("candidates", [])
+          assert len(model_candidates) == 6, model_geometry
+          assert all(item.get("source_matches_candidate_signature") is True for item in model_candidates), model_candidates
+          assert all(len(item.get("geometry_xml_sha256", "")) == 64 for item in model_candidates), model_candidates
           assert model_geometry.get("core_lattice", {}).get("dimensions") == [3, 3], model_geometry
           assert model_geometry.get("pin_geometry", {}).get("dimensions") == [17, 17], model_geometry
+          assert model_geometry.get("pin_geometry", {}).get("pitch_cm") == [1.26, 1.26], model_geometry
+          assert model_geometry.get("pin_geometry", {}).get("pin_radius_cm") == 0.54, model_geometry
+          universe_codes = model_geometry.get("assemblies", {})
+          expected_codes = {"9": "U", "11": "M", "13": "R"}
+          assert {key: value.get("code") for key, value in universe_codes.items()} == expected_codes, universe_codes
+          model_pairs = set()
+          for item in model_candidates:
+              signature = item["layout_signature"]
+              grid = item.get("core_universe_grid", [])
+              categories = item.get("assembly_grid", [])
+              assert len(grid) == 3 and all(len(row) == 3 for row in grid), item
+              mapped = [[universe_codes[str(value)]["code"] for value in row] for row in grid]
+              assert mapped == categories, item
+              derived = "".join(mapped[r][c] for r, c in ((0, 0), (0, 1), (1, 0), (1, 1)))
+              assert derived == signature == item["signature_derived_from_xml"], item
+              assert (item["candidate_id"], signature) in candidate_pairs, item
+              assert mapped[0][2] == "R" and mapped[1][2] == "R" and mapped[2] == ["R", "R", "R"], item
+              assert sum(code == "U" for row in mapped for code in row) == 2, item
+              assert sum(code == "M" for row in mapped for code in row) == 2, item
+              assert sum(code == "R" for row in mapped for code in row) == 5, item
+              model_pairs.add((item["candidate_id"], signature))
+          assert model_pairs == candidate_pairs, {"model_pairs": model_pairs, "candidate_pairs": candidate_pairs}
+          known_pin_universes = set(model_geometry.get("materials", {}).get("pin_universes", {}))
+          assert known_pin_universes == {"1", "2", "3", "4", "5", "6"}, known_pin_universes
+          for lattice_id, lattice in model_geometry.get("pin_lattices", {}).items():
+              grid = lattice.get("universe_grid", [])
+              assert len(grid) == 17 and all(len(row) == 17 for row in grid), lattice
+              assert all(str(value) in known_pin_universes for row in grid for value in row), lattice
+          boundaries = {item.get("name"): item for item in model_geometry.get("boundary_conditions", [])}
+          assert boundaries["Core x-min"]["condition"] == "reflective"
+          assert boundaries["Core x-max"]["condition"] == "vacuum"
+          assert boundaries["Core y-min"]["condition"] == "vacuum"
+          assert boundaries["Core y-max"]["condition"] == "reflective"
           mesh_status = open("/tmp/cb-pfr-mesh-status", encoding="utf-8").read().strip()
           if mesh_status == "200":
               with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
