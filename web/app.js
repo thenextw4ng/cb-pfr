@@ -913,17 +913,19 @@ async function loadAxial3D(){
   const scoreQuality=payload.provenance?.score_summary||{};
   const medianRse=Number(scoreQuality.relative_error_percent_median_positive_bins);
   const p95Rse=Number(scoreQuality.relative_error_percent_p95_positive_bins);
-  const hasHighLocalRse=Number.isFinite(medianRse)&&medianRse>25;
-  $("axial3dStatus").textContent="3D STATEPOINT LOADED"+(hasHighLocalRse?" · HIGH BINWISE RSE":"");
-  $("axial3dStatus").classList.toggle("warning",hasHighLocalRse);
   const state=payload.provenance?.statepoint||{};
+  const hasHighLocalRse=Number.isFinite(medianRse)&&medianRse>25;
+  const smokeBudget=Number(state.n_batches||0)<=30&&Number(state.n_particles||0)<=500;
+  const runEvidenceLabel=smokeBudget?"SMOKE DIAGNOSTIC ONLY":"3D STATEPOINT LOADED";
+  $("axial3dStatus").textContent=runEvidenceLabel+(hasHighLocalRse?" · HIGH BINWISE RSE":"");
+  $("axial3dStatus").classList.toggle("warning",smokeBudget||hasHighLocalRse);
   const sha=payload.provenance?.sha256||"not recorded";
   const inputAudit=payload.provenance?.input_audit||{};
   const inputManifest=payload.provenance?.input_manifest||{};
   const sourceCandidate=inputManifest.candidate_id||inputAudit.candidate_id||"candidate not recorded";
   const layoutSignature=inputManifest.layout_signature||"layout not recorded";
   const auditText=inputAudit.status||"input XML audit sidecar not installed";
-  $("axial3dProvenance").textContent=payload.provenance?.source+" · candidate "+sourceCandidate+" · layout "+layoutSignature+" · input audit: "+auditText+" · mesh "+dims.join(" × ")+" · statepoint SHA-256 "+(state.sha256||"not recorded")+" · NPZ SHA-256 "+sha+". The plotted field comes from recorded 3D tally bins, not the 2D surface.";
+  $("axial3dProvenance").textContent=payload.provenance?.source+" · candidate "+sourceCandidate+" · layout "+layoutSignature+" · run class "+(smokeBudget?"SMOKE DIAGNOSTIC ONLY":"recorded transport run")+" · batches "+(state.n_batches??"not recorded")+" · inactive "+(state.n_inactive??"not recorded")+" · particles/batch "+(state.n_particles??"not recorded")+" · active realizations "+(state.n_realizations??"not recorded")+" · input audit: "+auditText+" · mesh "+dims.join(" × ")+" · statepoint SHA-256 "+(state.sha256||"not recorded")+" · NPZ SHA-256 "+sha+". The plotted field comes from recorded 3D tally bins, not the 2D surface.";
   const zs=payload.mesh.z_centers_cm||[];
   const slider=$("axial3dSlice");
   slider.max=String(zs.length-1);
@@ -943,7 +945,8 @@ async function loadAxial3D(){
   const rseNote=Number.isFinite(medianRse)
    ?" Positive-mean voxel relative MC standard error: median "+medianRse.toFixed(1)+"%"+(Number.isFinite(p95Rse)?", 95th percentile "+p95Rse.toFixed(1)+"%":"")+". These are descriptive spatial uncertainty statistics, not a formal acceptance threshold."
    :" Spatial relative-error summary is not present in the sidecar.";
-  $("axial3dSummary").textContent="Selected score: "+score+". Axial layers: "+dims[2]+". The volume is an OpenMC mesh-tally estimate; each voxel retains Monte Carlo uncertainty. Relative standard errors in zero-mean bins are undefined and shown as missing."+rseNote+" Input/model hashes and the full statepoint summary are retained in the artifact.";
+  const smokeNote=smokeBudget?" This is a smoke-profile diagnostic ("+(state.n_batches??"—")+" total batches, "+(state.n_inactive??"—")+" inactive, "+(state.n_particles??"—")+" particles/batch). Do not interpret its spatial values as converged or physically validated. ":"";
+  $("axial3dSummary").textContent="Selected score: "+score+". Axial layers: "+dims[2]+". The volume is an OpenMC mesh-tally estimate; each voxel retains Monte Carlo uncertainty. Relative standard errors in zero-mean bins are undefined and shown as missing."+smokeNote+rseNote+" Input/model hashes and the full statepoint summary are retained in the artifact.";
   drawAxial3D();
  }catch(error){
   axial3dData=null;
