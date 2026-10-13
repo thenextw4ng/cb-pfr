@@ -7,7 +7,8 @@ Stage 3 refines only the existing Plotly.js surface within the HTML workstation'
 ## Surface rendering
 
 - The selected recorded 2D mesh is drawn as an interactive surface, with improved directional lighting, shading, and a dark technical scene background.
-- Z isolines are drawn on the surface and projected to the lower reference plane. The projected lines are a visual aid for reading topology; they are not another tally or a physical reactor boundary.
+- Z isolines are computed from the selected tally grid using marching-squares segments and drawn as 3D line overlays on the surface and projected to the lower reference plane. This avoids expensive automatic projection of a dense contour mesh during score changes while preserving the recorded field as the only source.
+- The projected lines are a visual aid for reading topology; they are not another tally or a physical reactor boundary.
 - X/Y axes use the archived regular-mesh lower/upper bounds in cm and cell-centre coordinates when the API says those coordinates are available. Otherwise the labels explicitly remain zero-based mesh-bin indices.
 - The camera is initialized to a documented default, remains user-interactive, and can be reset with the surface-panel button.
 - Scene aspect ratio retains the relative X/Y extent of the recorded mesh.
