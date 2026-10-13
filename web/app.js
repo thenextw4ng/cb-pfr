@@ -476,8 +476,12 @@ async function init(){
   const metrics=[["Candidate records",records.length.toLocaleString(),"Rows in current candidate summary"],["Unique layouts",layouts.size.toLocaleString(),"Distinct recorded signatures"],["k-effective span",ks.length?number(Math.min(...ks),5)+" – "+number(Math.max(...ks),5):"—","Reported mean values"],["Recorded seeds",seeds.size.toLocaleString(),"Distinct seed values"]];
   $("metrics").innerHTML=metrics.map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
   $("candidateSelect").innerHTML=records.map(candidateOption).join("");
-  await initModelGeometry();
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
+  // Render the recorded candidate's scalar details immediately. Geometry manifest
+  // parsing/network access is slower and should not block the core evidence card.
+  showCandidate();drawOtherCharts();
+  await initModelGeometry();
+  // Re-bind the detailed model view now that XML-derived geometry is available.
   showCandidate();drawOtherCharts();
   await initAssembly();
   await initGeometry();
