@@ -480,9 +480,17 @@ def read_axial_3d_evidence(score="flux"):
         raise RuntimeError("3-D axial volume needs numpy; install project requirements.") from exc
 
     summary_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_STATEPOINT_SUMMARY.json")
+    audit_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_INPUT_AUDIT.json")
+    manifest_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_INPUT_MANIFEST.json")
     summary = {}
+    input_audit = {}
+    input_manifest = {}
     if summary_path.is_file():
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if audit_path.is_file():
+        input_audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    if manifest_path.is_file():
+        input_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     with np.load(AXIAL_TALLY_NPZ, allow_pickle=False) as payload:
         required = {
             "mean", "standard_error", "relative_error_percent",
@@ -538,6 +546,11 @@ def read_axial_3d_evidence(score="flux"):
             "statepoint": summary.get("statepoint", {}),
             "status": summary.get("status", "NPZ found; sidecar statepoint summary missing"),
             "uncertainty_method": summary.get("uncertainty_method"),
+            "score_summary": summary.get("score_summary", {}).get(score, {}),
+            "input_audit": input_audit,
+            "input_manifest": input_manifest,
+            "input_audit_path": str(audit_path) if audit_path.is_file() else None,
+            "input_manifest_path": str(manifest_path) if manifest_path.is_file() else None,
             "nonclaims": summary.get("nonclaims", [
                 "Tally values are not absolute-power normalized.",
                 "Presence of a statepoint is not benchmark acceptance or convergence."
