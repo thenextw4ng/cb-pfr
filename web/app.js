@@ -399,9 +399,11 @@ function updateVisualizationStackStatus(){
  // is SVG-first and a new volume engine would duplicate current capabilities.
  rendererStatus("vtkStackStatus","VTK.JS · NOT LOADED BY DESIGN","neutral");
 }
-window.addEventListener("cbpfr-core3d-ready",updateVisualizationStackStatus);
-window.addEventListener("cbpfr-core3d-failed",updateVisualizationStackStatus);
-window.addEventListener("cbpfr-plotly-failed",updateVisualizationStackStatus);
+if(typeof window.addEventListener==="function"){
+ window.addEventListener("cbpfr-core3d-ready",updateVisualizationStackStatus);
+ window.addEventListener("cbpfr-core3d-failed",updateVisualizationStackStatus);
+ window.addEventListener("cbpfr-plotly-failed",updateVisualizationStackStatus);
+}
 function chart(id,traces,layout={}){
  const el=$(id);if(!el)return Promise.resolve();
  if(!window.Plotly){updateVisualizationStackStatus();el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
