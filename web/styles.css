@@ -360,3 +360,31 @@
  #spatial .surface-panel .section-actions{width:100%;justify-content:space-between}
  #spatial .surface-chart{height:390px}
 }
+
+
+/* Stage 4: distinguish source-backed volumetric tally from the Stage 3 2-D terrain. */
+#spatial .axial3d-panel{margin-top:16px}
+#spatial .axial3d-panel .panel-head{align-items:center;flex-wrap:wrap;gap:12px}
+#spatial .axial3d-panel .section-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#spatial .axial3d-controls{grid-template-columns:repeat(5,minmax(0,1fr));align-items:end}
+#spatial .axial3d-controls .control label{min-height:22px;line-height:1.45}
+#spatial .axial3d-controls input[type=range]{width:100%;accent-color:var(--cyan);margin-top:7px}
+#spatial .axial3d-controls small{display:block;margin-top:3px;color:var(--muted);font:10px "DM Mono",monospace}
+#spatial .axial3d-kpis .metric{min-height:95px}
+#axial3dPlot{height:650px}
+#spatial .axial3d-panel .panel-footnote{min-height:0}
+@media(max-width:1120px){
+ #spatial .axial3d-controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #axial3dPlot{height:560px}
+}
+@media(max-width:1000px){
+ #spatial .axial3d-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #axial3dPlot{height:500px}
+}
+@media(max-width:680px){
+ #spatial .axial3d-controls{grid-template-columns:minmax(0,1fr)}
+ #spatial .axial3d-controls .control label{min-height:0}
+ #spatial .axial3d-panel .panel-head{align-items:flex-start}
+ #spatial .axial3d-panel .section-actions{width:100%;justify-content:space-between}
+ #axial3dPlot{height:420px}
+}
