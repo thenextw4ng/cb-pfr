@@ -121,6 +121,7 @@ function currentField(){
 }
 function drawMesh(){
  if(!meshData)return;
+ const scale=$("meshScale").value;
  const f=currentField();
  if(!f){$("meshStatus").textContent="SCORE UNAVAILABLE";return;}
  const paletteName=$("meshPalette").value;
