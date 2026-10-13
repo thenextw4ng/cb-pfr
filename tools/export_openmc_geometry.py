@@ -4,8 +4,7 @@
 This runs OpenMC in plotting mode only; it does not run neutron transport.
 Usage: python tools/export_openmc_geometry.py --model-dir path/to/model-inputs
 Requires an OpenMC executable and geometry.xml + materials.xml (+ settings.xml).
-Outputs are written into <model-dir>/cbpfr_geometry/ for the HTML workstation to discover
-when that directory is within a scanned repository folder.
+Outputs are written into <repository-root>/geometry/cbpfr_geometry/ for the HTML workstation to discover.
 """
 from __future__ import annotations
 
@@ -67,7 +66,7 @@ def main() -> int:
         parser.error("--width values must be positive.")
 
     output = Path(__file__).resolve().parents[1] / "geometry" / "cbpfr_geometry"
-    output.mkdir(exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
     plots_xml = ET.Element("plots")
     plot = ET.SubElement(plots_xml, "plot", id="1", filename="cbpfr_geometry_xy", type="slice", color_by="material")
     ET.SubElement(plot, "basis").text = "xy"
