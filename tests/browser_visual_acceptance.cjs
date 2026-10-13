@@ -306,7 +306,6 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.match(axial.summary, /95th percentile/i);
     assert.equal(axial.pointCount, 51 * 51 * 30);
     assert.equal(api.axial.score, "flux");
-    assert.equal(api.axial.provenance.npz_sha256, api.axial.provenance.npz_sha256);
     assert.match(axial.provenance, new RegExp("NPZ SHA-256 " + api.axial.provenance.npz_sha256));
     assert.match(axial.provenance, new RegExp("statepoint SHA-256 " + api.axial.provenance.statepoint_sha256));
     const expectedAxisSamples = api.axial.mesh.axis_samples;
@@ -367,7 +366,6 @@ fs.mkdirSync(outDir, { recursive: true });
       field_heatmap_contour_surface_values_match: true,
       hover_preserves_mean_and_error: true,
       candidate_chart_values_match_source: true,
-      source_xml_hashes_verified: true,
       spatial_field_values_match_source: true,
       spatial_coordinates_match_recorded_mesh: true,
       spatial_hash_status: api.mesh.provenance.hash_matches === true ? "verified" : api.mesh.provenance.hash_matches === false ? "mismatch" : "not-checked",
