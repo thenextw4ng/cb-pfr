@@ -959,8 +959,8 @@ async function loadAxial3D(){
    ["Axial bins","—","No multi-layer tally installed"],
    ["Active realisations","—","Statepoint unavailable"]
   ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
-  $("axial3dSummary").textContent="No volumetric data are fabricated. Install axial_tally_3d.npz and its AXIAL_3D_STATEPOINT_SUMMARY.json sidecar from the CB-PFR axial-3D Actions artifact under evidence/cbpfr_axial_3d/, or set CBPFR_AXIAL_TALLY_NPZ to the NPZ path and restart the local server.";
-  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Recorded 3D tally not installed</b><p>The physical axial volume will appear here when a true multi-layer OpenMC statepoint export is available. The 2D terrain above is intentionally not used as a fallback.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a></p></div>';
+  $("axial3dSummary").textContent="No volumetric values are fabricated. The Stage 4 workflow now publishes a true multi-layer statepoint export to evidence/cbpfr_axial_3d/ after successful transport/export. Sync the latest feature branch and restart the server if this checkout predates that evidence commit.";
+  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Axial 3D evidence awaiting branch sync</b><p>This checkout does not yet contain the exported 51 × 51 × 30 OpenMC tally. After the axial workflow completes its transport and export steps, sync the latest Stage 4 branch and restart the local server. The 2D terrain above is intentionally not used as a fallback.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a></p></div>';
  }
 }
 function drawAxial3D(){
