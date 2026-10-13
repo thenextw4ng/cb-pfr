@@ -260,7 +260,23 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    import traceback
+
     host, port = "127.0.0.1", 8765
-    print(f"CB-PFR HTML workstation: http://{host}:{port}")
-    print("Evidence mode: archived OpenMC statepoint + checked-in candidate summary; no OpenMC execution.")
-    ThreadingHTTPServer((host, port), Handler).serve_forever()
+    print(f"CB-PFR HTML workstation: http://{host}:{port}", flush=True)
+    print("Evidence mode: archived OpenMC statepoint + checked-in candidate summary; no OpenMC execution.", flush=True)
+    print(f"Repository root: {ROOT}", flush=True)
+    print(f"Frontend directory: {WEB_ROOT} (exists={WEB_ROOT.is_dir()})", flush=True)
+    try:
+        server = ThreadingHTTPServer((host, port), Handler)
+        print("Server is listening. Keep this terminal open; press Ctrl+C to stop.", flush=True)
+        server.serve_forever()
+    except OSError as exc:
+        print(f"CB-PFR server could not bind to {host}:{port}: {exc}", flush=True)
+        print("If port 8765 is already in use, stop the old process or inspect it before retrying.", flush=True)
+        raise
+    except KeyboardInterrupt:
+        print("\nCB-PFR server stopped by user.", flush=True)
+    except Exception:
+        traceback.print_exc()
+        raise
