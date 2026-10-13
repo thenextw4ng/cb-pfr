@@ -289,7 +289,7 @@ def vtk_plane_html(
             zlabel="mesh plane",
         )
         plotter.view_isometric()
-        exported = plotter.trame.export_html()
+        exported = plotter.trame.export_html(None)
         if hasattr(exported, "getvalue"):
             html = exported.getvalue()
         else:
