@@ -238,7 +238,7 @@ function drawCore3DForCandidate(row){
  if(!window.CBPFRCore3D){
   const status=$("core3dStatus");
   if(status)status.textContent=window.CBPFRCore3DError?"THREE.JS CDN UNAVAILABLE":"CONNECTING THREE.JS CDN…";
-  if(!window.CBPFRCore3DError&&!host.children.length)host.innerHTML='<div class="core3d-loading"><span></span><b>Loading Three.js scientific renderer…</b><small>The source SVG map is available in 2D source map mode.</small></div>';
+  if(!window.CBPFRCore3DError&&host.children&&!host.children.length&&"innerHTML" in host)host.innerHTML='<div class="core3d-loading"><span></span><b>Loading Three.js scientific renderer…</b><small>The source SVG map is available in 2D source map mode.</small></div>';
   return;
  }
  try{
