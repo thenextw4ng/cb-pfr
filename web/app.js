@@ -132,8 +132,8 @@ function materialCellSvg(code,x,y,pitch){
  return square+'<circle cx="'+cx.toFixed(2)+'" cy="'+cy.toFixed(2)+'" r="'+r.toFixed(2)+'" fill="'+material.color+'" stroke="#06111a" stroke-width=".45"><title>'+material.name+' · moderator outside the 0.54 cm pin cylinder</title></circle>';
 }
 function renderModelGeometrySvg(signature){
- const sig=String(signature??"").trim().toUpperCase();
- if(!/^[UM]{4}$/.test(sig))return '<div class="empty-state"><b>Model geometry unavailable</b><p>The selected record does not contain a valid four-position U/M signature. No default configuration is substituted.</p></div>';
+ const sig=normalizeLayoutSignature(signature);
+ if(!isValidLayoutSignature(sig))return '<div class="empty-state"><b>Model geometry unavailable</b><p>The selected record does not contain the required two-UO₂/two-MOX four-position signature. No default arrangement is substituted.</p></div>';
  const width=1020,height=670,x0=48,y0=92,size=170,gap=1,pinInsetX=9,pinInsetY=29,pinArea=152,pinPitch=pinArea/17,coreWidth=size*3+gap*2;
  const cells=[sig[0],sig[1],"R",sig[2],sig[3],"R","R","R","R"];
  let svg='<svg class="model-geometry-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="C5G7 2D material-resolved 3 by 3 lattice for selected layout '+sig+'">';
