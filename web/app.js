@@ -13,7 +13,8 @@ function layoutCells(signature){
     return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate does not contain a validated four-position U/M signature. No default arrangement is substituted.</p></div>';
   }
   const cells=raw.split("");
-  return '<div class="assembly-grid">'+cells.map((c,i)=>'<div class="assembly '+(c==="M"?"mox-cell":"")+'">'+(c==="M"?"MOX":"UO₂")+'<small>POSITION '+(i+1)+'</small></div>').join("")+'</div>';
+  const positions=["p00","p01","p10","p11"];
+  return '<div class="assembly-grid">'+cells.map((c,i)=>'<div class="assembly '+(c==="M"?"mox-cell":"")+'">'+(c==="M"?"MOX":"UO₂")+'<small>'+positions[i]+' · '+(i+1)+'</small></div>').join("")+'</div>';
 }
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
 const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d","select2d"]};
@@ -209,7 +210,7 @@ async function initAssembly(){
   assemblyRecords=(payload.records||[]).filter(r=>["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].every(k=>Number.isFinite(Number(r[k]))));
   if(!assemblyRecords.length)throw new Error("No complete 2×2 assembly proxy records.");
   $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
-  $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility.";
+  $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of the candidate-summary seeds; do not compare as paired runs.";
   drawAssemblyField();
  }catch(error){
   $("assemblyFieldStatus").textContent="ASSEMBLY DATA UNAVAILABLE";
@@ -221,7 +222,8 @@ async function initAssembly(){
 function drawAssemblyField(){
  if(!assemblyRecords.length||!$("assemblyMap")||!$("assemblyBar"))return;
  const selectedId=$("candidateSelect")?.value;
- const row=assemblyRecords.find(r=>String(r.candidate_id)===String(selectedId));
+ const selected=records.find(r=>String(r.candidate_id)===String(selectedId));
+ const row=selected?assemblyRecords.find(r=>String(r.candidate_id)===String(selected.candidate_id)&&String(r.layout_signature).toUpperCase()===String(selected.layout_signature).toUpperCase()):null;
  if(!row){
   $("assemblyMap").innerHTML='<div class="empty-state"><b>No matching assembly evidence</b><p>The selected candidate has no matching 2 × 2 proxy record. Values are not borrowed from another candidate.</p></div>';
  } else {
