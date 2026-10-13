@@ -668,7 +668,7 @@ function waitForCoreGeometryReady(timeoutMs=3000){
   timer=window.setTimeout(finish,timeoutMs);
  });
 }
-const meshDefaultCamera={eye:{x:1.55,y:1.55,z:1.1},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
+const meshDefaultCamera={eye:{x:1.25,y:1.25,z:0.9},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
 async function drawMesh(){
  if(!meshData)return;
  const drawRevision=++meshDrawRevision;
