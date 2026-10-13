@@ -66,7 +66,7 @@ def main() -> int:
     if any(v <= 0 for v in width):
         parser.error("--width values must be positive.")
 
-    output = model_dir / "cbpfr_geometry"
+    output = Path(__file__).resolve().parents[1] / "geometry" / "cbpfr_geometry"
     output.mkdir(exist_ok=True)
     plots_xml = ET.Element("plots")
     plot = ET.SubElement(plots_xml, "plot", id="1", filename="cbpfr_geometry_xy", type="slice", color_by="material")
