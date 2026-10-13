@@ -337,3 +337,26 @@
  .candidate-signature{min-width:86px;padding:8px}
  .signature-summary-code{font-size:14px}
 }
+
+/* Stage 3: scientific terrain surface controls and camera tools. */
+#spatial .field-controls{grid-template-columns:repeat(5,minmax(0,1fr));align-items:end}
+#spatial .field-controls .control label{min-height:22px;line-height:1.45}
+#spatial .surface-panel .panel-head{align-items:center;flex-wrap:wrap;gap:12px}
+#spatial .surface-panel .section-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#spatial .surface-panel .action-button{white-space:nowrap}
+#spatial .surface-panel .panel-footnote{min-height:0}
+#spatial .surface-chart{height:540px}
+@media(max-width:1120px){
+ #spatial .field-controls{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #spatial .surface-chart{height:470px}
+}
+@media(max-width:1000px){
+ #spatial .field-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:680px){
+ #spatial .field-controls{grid-template-columns:minmax(0,1fr)}
+ #spatial .field-controls .control label{min-height:0}
+ #spatial .surface-panel .panel-head{align-items:flex-start}
+ #spatial .surface-panel .section-actions{width:100%;justify-content:space-between}
+ #spatial .surface-chart{height:390px}
+}
