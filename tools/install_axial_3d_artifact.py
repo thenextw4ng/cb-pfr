@@ -157,6 +157,19 @@ def validate_evidence_files(files: dict[str, bytes]) -> dict:
         raise AxialArtifactError("Axial NPZ byte count does not match the source summary.")
     if actual_sha != npz_meta.get("sha256"):
         raise AxialArtifactError("Axial NPZ SHA-256 does not match the source summary.")
+    try:
+        with zipfile.ZipFile(io.BytesIO(npz_bytes)) as npz_archive:
+            npz_members = set(npz_archive.namelist())
+    except (zipfile.BadZipFile, OSError) as exc:
+        raise AxialArtifactError(f"Axial tally export is not a valid NumPy NPZ archive: {exc}") from exc
+    required_arrays = {
+        "mean.npy", "standard_error.npy", "relative_error_percent.npy", "score_names.npy",
+        "x_centers_cm.npy", "y_centers_cm.npy", "z_centers_cm.npy",
+    }
+    if not required_arrays.issubset(npz_members):
+        raise AxialArtifactError(
+            "Axial NPZ is missing required arrays: " + ", ".join(sorted(required_arrays - npz_members))
+        )
     return {
         "summary": summary,
         "audit": audit,
