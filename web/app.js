@@ -3,6 +3,7 @@ const palette = {text:"#e8f1f7",muted:"#91a8b9",line:"#263f52",cyan:"#55d4df",bl
 let records = [];
 let metadata = {};
 let meshData = null;
+let meshDrawRevision = 0;
 let assemblyRecords = [];
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => {
@@ -368,14 +369,14 @@ function clearCandidateSelection(message="No candidate selected."){
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
 const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d","select2d"]};
 function chart(id,traces,layout={}){
- const el=$(id);if(!el)return;
- if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return;}
+ const el=$(id);if(!el)return Promise.resolve();
+ if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
  try{
-  Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
-   const msg=String(error?.message||error).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  return Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
+   const msg=String(error?.message||error).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
    el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+msg+'</p></div>';
   });
- }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';}
+ }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';return Promise.resolve();}
 }
 function showCandidate(){
  const selector=$("candidateSelect");
@@ -560,8 +561,72 @@ function currentField(){
   stats:fieldStats(mean),displayStats:fieldStats(values)
  };
 }
-function drawMesh(){
+function buildSurfaceContourLines(z,xs,ys,levels,baseZ){
+ const surface={x:[],y:[],z:[]},base={x:[],y:[],z:[]};
+ const rows=z.length,cols=z[0]?.length||0;
+ const append=(a,b)=>{
+  surface.x.push(a.x,b.x,null);surface.y.push(a.y,b.y,null);surface.z.push(a.z,b.z,null);
+  base.x.push(a.x,b.x,null);base.y.push(a.y,b.y,null);base.z.push(baseZ,baseZ,null);
+ };
+ const interpolate=(a,b,level)=>{
+  const delta=b.v-a.v;
+  const t=delta===0?0.5:Math.max(0,Math.min(1,(level-a.v)/delta));
+  return {x:a.x+t*(b.x-a.x),y:a.y+t*(b.y-a.y),z:level};
+ };
+ for(const level of levels){
+  if(!Number.isFinite(level))continue;
+  for(let row=0;row<rows-1;row++){
+   for(let col=0;col<cols-1;col++){
+    const corners=[
+     {x:xs[col],y:ys[row],v:z[row][col]},
+     {x:xs[col+1],y:ys[row],v:z[row][col+1]},
+     {x:xs[col+1],y:ys[row+1],v:z[row+1][col+1]},
+     {x:xs[col],y:ys[row+1],v:z[row+1][col]}
+    ];
+    if(corners.some(p=>typeof p.v!=="number"||!Number.isFinite(p.v)))continue;
+    const edges=[[0,1],[1,2],[2,3],[3,0]],points=[];
+    for(const [ai,bi] of edges){
+     const a=corners[ai],b=corners[bi];
+     if((a.v<level&&b.v>=level)||(a.v>=level&&b.v<level)){
+      const point=interpolate(a,b,level);
+      if(!points.some(p=>Math.abs(p.x-point.x)<1e-10&&Math.abs(p.y-point.y)<1e-10))points.push(point);
+     }
+    }
+    if(points.length===2)append(points[0],points[1]);
+    else if(points.length===4){
+     const center=(corners[0].v+corners[1].v+corners[2].v+corners[3].v)/4;
+     if(center>=level){append(points[0],points[1]);append(points[2],points[3]);}
+     else {append(points[0],points[3]);append(points[1],points[2]);}
+    }
+   }
+  }
+ }
+ return {surface,base,segments:surface.z.filter(value=>value!==null).length/2};
+}
+function waitForCoreGeometryReady(timeoutMs=3000){
+ const status=$("core3dStatus")?.textContent||"";
+ const canvas=$("core3dCanvas")?.querySelector("canvas.core3d-canvas");
+ if(canvas||core3dLoadFailed||/WEBGL READY|2D FALLBACK|UNAVAILABLE/i.test(status))return Promise.resolve();
+ return new Promise(resolve=>{
+  let done=false;
+  let timer=null;
+  const finish=()=>{
+   if(done)return;
+   done=true;
+   if(timer!==null)window.clearTimeout(timer);
+   window.removeEventListener("cbpfr-core3d-ready",finish);
+   window.removeEventListener("cbpfr-core3d-failed",finish);
+   resolve();
+  };
+  window.addEventListener("cbpfr-core3d-ready",finish,{once:true});
+  window.addEventListener("cbpfr-core3d-failed",finish,{once:true});
+  timer=window.setTimeout(finish,timeoutMs);
+ });
+}
+const meshDefaultCamera={eye:{x:1.55,y:1.55,z:1.1},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
+async function drawMesh(){
  if(!meshData)return;
+ const drawRevision=++meshDrawRevision;
  const f=currentField();
  if(!f){
   $("meshStatus").textContent="SCORE UNAVAILABLE";
@@ -571,16 +636,34 @@ function drawMesh(){
   return;
  }
  const paletteName=$("meshPalette").value;
- const z=f.values, raw=f.rawValues, scoreLabel=f.score;
+ const z=f.values, scoreLabel=f.score;
  const nx=f.item.dimensions[0], ny=f.item.dimensions[1], coordinates=f.coordinates;
  const xs=coordinates.x, ys=coordinates.y;
+ const exaggeration=Math.max(0.5,Math.min(3,Number($("meshExaggeration")?.value||1)));
  const plotTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":(f.scale==="log"?"log₁₀("+scoreLabel+" tally mean)":"Recorded "+scoreLabel+" tally mean");
  const rawTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":scoreLabel+" tally mean (recorded scale)";
- const hover=(title)=>coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+title+" %{customdata:.6g}<extra></extra>";
+ const sourceCustomData=f.mean.map((row,y)=>row.map((mean,x)=>[
+  Number.isFinite(mean)?mean:null,
+  Number.isFinite(f.standardError[y]?.[x])?f.standardError[y][x]:null,
+  Number.isFinite(f.relative[y]?.[x])?f.relative[y][x]:null
+ ]));
+ const sourceHover=f.view==="relative_sd"
+  ?"<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%<br>Recorded tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}"
+  :"<br>Recorded "+scoreLabel+" tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%";
+ const displayHover=f.view==="mean"&&f.scale==="log"
+  ?"<br>Display Z: log₁₀(mean) = %{z:.5g}"
+  :f.view==="relative_sd"
+   ?"<br>Display Z: relative MC standard error = %{z:.4g}%"
+   :"<br>Display Z: recorded mean = %{z:.6g}";
+ const hover=(title)=>coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+title+sourceHover+"<extra></extra>";
  const axisStyle={...baseLayout.xaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const yAxisStyle={...baseLayout.yaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const sharedAxis={tickfont:{size:10,color:palette.muted},titlefont:{size:11,color:palette.muted}};
  const colorscale=paletteName;
+ const spanX=coordinates.xRange?coordinates.xRange[1]-coordinates.xRange[0]:Math.max(1,nx-1);
+ const spanY=coordinates.yRange?coordinates.yRange[1]-coordinates.yRange[0]:Math.max(1,ny-1);
+ const xySpan=Math.max(spanX,spanY,1);
+ const aspectX=spanX/xySpan,aspectY=spanY/xySpan;
  const heatLayout={
   autosize:true,margin:{l:62,r:30,t:18,b:58},showlegend:false,
   xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
@@ -598,13 +681,14 @@ function drawMesh(){
  let contourEnd=Math.ceil(zMax/contourStep)*contourStep;
  if(contourEnd<=contourStart)contourEnd=contourStart+contourStep;
  const colorbar={title:{text:plotTitle,font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}};
- chart("meshHeatmap",[{
-  type:"heatmap",x:xs,y:ys,z:z,customdata:raw,colorscale,
+ await chart("meshHeatmap",[{
+  type:"heatmap",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:hover(rawTitle),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
- }],heatLayout);
- chart("meshContour",[{
-  type:"contour",x:xs,y:ys,z:z,customdata:raw,colorscale,
+  hovertemplate:hover(""),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
+}],heatLayout);
+ if(drawRevision!==meshDrawRevision)return;
+ await chart("meshContour",[{
+  type:"contour",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
   autocontour:false,
   contours:{
    coloring:"heatmap",showlines:true,showlabels:true,
@@ -614,37 +698,23 @@ function drawMesh(){
   },
   line:{width:1,color:"rgba(7,17,27,0.72)"},
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:hover(rawTitle),connectgaps:false,hoverongaps:false
- }],heatLayout);
- chart("meshSurface",[{
-  type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:raw,colorscale,
-  colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+rawTitle+" %{customdata:.6g}<br>Displayed Z %{z:.6g}<extra></extra>",
-  connectgaps:false,hoverongaps:false,showscale:true,
-  lighting:{ambient:0.72,diffuse:0.78,specular:0.18,roughness:0.72,fresnel:0.08},opacity:0.98
- }],{
-  autosize:true,margin:{l:8,r:8,t:8,b:8},
-  scene:{
-   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.xRange:undefined},
-   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.yRange:undefined},
-   zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
-   bgcolor:"rgba(0,0,0,0)",aspectmode:"auto",camera:{eye:{x:1.55,y:1.55,z:1.1}}
-  }
- });
+  hovertemplate:hover(""),connectgaps:false,hoverongaps:false
+}],heatLayout);
+ if(drawRevision!==meshDrawRevision)return;
  const centerY=Math.floor((ny-1)/2);
  const meanRow=f.mean[centerY]||[], seRow=f.standardError[centerY]||[], relativeRow=f.relative[centerY]||[];
  const profileY=f.view==="relative_sd"?relativeRow:meanRow;
  const profileCustom=xs.map((x,i)=>[meanRow[i],seRow[i],relativeRow[i]]);
  const profileHover=f.view==="relative_sd"
-  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<extra></extra>"
-  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>";
+  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<br>Recorded tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>"
+  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%<extra></extra>";
  const profileError=f.view==="mean"?{
   type:"data",symmetric:false,
   array:seRow.map((se,i)=>Number.isFinite(se)&&se>=0?se:0),
   arrayminus:seRow.map((se,i)=>Number.isFinite(se)&&se>=0&&Number.isFinite(meanRow[i])?Math.min(se,Math.max(0,meanRow[i]*0.999999)):0),
   visible:true,color:palette.muted,thickness:1,width:3
  }:{visible:false};
- chart("meshProfile",[{
+ await chart("meshProfile",[{
   type:"scatter",mode:"lines+markers",name:f.view==="relative_sd"?"Relative MC standard error":"Recorded "+scoreLabel+" mean",
   x:xs,y:profileY,customdata:profileCustom,
   line:{color:palette.cyan,width:2.5,shape:"linear"},
@@ -656,6 +726,45 @@ function drawMesh(){
   yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean"+(f.scale==="log"?" (logarithmic axis)":""),standoff:8},exponentformat:"power"},
   annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:coordinates.physical?"Central cut: Y = "+coordinates.y[centerY].toFixed(3)+" cm · row "+centerY:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
  });
+ if(drawRevision!==meshDrawRevision)return;
+  const surfaceContourCount=Math.min(6,Math.max(0,Math.floor(zSpan/Math.max(contourStep,1e-12))));
+ const contourLevels=zSpan>0
+  ?Array.from({length:surfaceContourCount},(_,index)=>zMin+(index+1)*zSpan/(surfaceContourCount+1))
+  :finiteZ.length?[zMin]:[];
+ const baseZ=zMin-Math.max(zSpan*0.08,Math.abs(zMin)*0.001,1e-6);
+ const contourLines=buildSurfaceContourLines(z,xs,ys,contourLevels,baseZ);
+ const surfaceTraces=[{
+  type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:sourceCustomData,colorscale,
+  colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
+  hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+sourceHover+displayHover+"<extra></extra>",
+  connectgaps:false,hoverongaps:false,showscale:true,
+  lighting:{ambient:0.42,diffuse:0.92,specular:0.26,roughness:0.46,fresnel:0.12},
+  lightposition:{x:1200,y:1000,z:1800},opacity:1
+ }];
+ const surfaceLayout={
+  autosize:true,margin:{l:8,r:8,t:8,b:8},
+  scene:{
+   uirevision:"cbpfr-neutron-field-camera-v1",
+   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.xRange:undefined},
+   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.yRange:undefined},
+   zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line},
+   bgcolor:"rgba(0,0,0,0)",aspectmode:"manual",aspectratio:{x:aspectX,y:aspectY,z:Math.min(0.95,0.30*exaggeration)},camera:JSON.parse(JSON.stringify(meshDefaultCamera))
+  }
+ };
+ if(contourLines.segments>0){
+  surfaceTraces.push({
+   type:"scatter3d",mode:"lines",name:"Surface isolines",x:contourLines.surface.x,y:contourLines.surface.y,z:contourLines.surface.z,
+   line:{color:"rgba(232,241,247,0.88)",width:2},hoverinfo:"skip",showlegend:false,connectgaps:false
+  });
+  surfaceTraces.push({
+   type:"scatter3d",mode:"lines",name:"Projected base-plane isolines",x:contourLines.base.x,y:contourLines.base.y,z:contourLines.base.z,
+   line:{color:"rgba(85,212,223,0.56)",width:2},hoverinfo:"skip",showlegend:false,connectgaps:false
+  });
+ }
+ await waitForCoreGeometryReady();
+ if(drawRevision!==meshDrawRevision)return;
+ await chart("meshSurface",surfaceTraces,surfaceLayout);
+ if(drawRevision!==meshDrawRevision)return;
  if($("meshContourSubtitle"))$("meshContourSubtitle").textContent=f.view==="relative_sd"
   ?"Labelled iso-contours of relative Monte Carlo standard error (%)"
   :f.scale==="log"?"Labelled iso-contours; colour levels use log₁₀(mean), hover reports the recorded mean":"Labelled iso-contours of recorded tally mean";
@@ -671,6 +780,7 @@ function drawMesh(){
   "Score: "+scoreLabel,
   "View: "+(f.view==="relative_sd"?"relative Monte Carlo standard error":"recorded tally mean"),
   "Scale: "+(f.view==="relative_sd"?"ratio-derived percentage":f.scale),
+  "Vertical exaggeration: "+exaggeration.toFixed(1)+"× (display-only; source data unchanged)",
   "Mesh: "+dimensionText+" bins",
   "Central cut: "+(coordinates.physical?"Y = "+coordinates.y[centerY].toFixed(3)+" cm (row "+centerY+")":"Y-bin "+centerY),
   "Realizations: "+String(f.item.n_realizations??"not recorded")
@@ -679,7 +789,7 @@ function drawMesh(){
  const coordinateNote=coordinates.physical
   ?"XY axes use archived regular-mesh bounds in cm; plotted coordinates are cell centres. No fuel/reflector/assembly labels are inferred."
   :"Physical XY bounds are unavailable; axes remain mesh-bin indices, not cm or assembly coordinates.";
- if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" Heatmap, contours, profile, and surface reflect the selected display scale; hover values preserve recorded tally means.";
+ if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" The Z dimension is vertically exaggerated through plot aspect ratio only; the tally matrix and hover values are unchanged. Contour projection on the lower reference plane is a display aid.";
  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"DATA LOADED · HASH NOT CHECKED";
  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
 }
@@ -705,13 +815,22 @@ async function initMesh(){
   const availableScores=Object.keys(item.scores);
   scoreSelect.innerHTML=availableScores.map(k=>'<option value="'+escapeHtml(k)+'">'+escapeHtml(k)+'</option>').join("");
   if(!availableScores.includes(scoreSelect.value))scoreSelect.value=availableScores[0]||"";
-  ["meshScore","meshView","meshScale","meshPalette"].forEach(id=>{
+  ["meshScore","meshView","meshScale","meshPalette","meshExaggeration"].forEach(id=>{
    const control=$(id);
    if(control&&!control.dataset.meshListenerBound){
     control.addEventListener("change",drawMesh);
     control.dataset.meshListenerBound="true";
    }
   });
+  const resetCamera=$("meshResetCamera");
+  if(resetCamera&&!resetCamera.dataset.meshListenerBound){
+   resetCamera.addEventListener("click",()=>{
+    const plot=$("meshSurface");
+    if(!window.Plotly||!plot?.data)return;
+    window.Plotly.relayout(plot,{"scene.camera":JSON.parse(JSON.stringify(meshDefaultCamera))});
+   });
+   resetCamera.dataset.meshListenerBound="true";
+  }
   drawMesh();
   const resizePlots=()=>{
    if(!window.Plotly||!window.Plotly.Plots)return;
