@@ -34,11 +34,22 @@ GEOMETRY_XML = """<?xml version="1.0"?>
   <surface id="18" type="z-plane" boundary="reflective" coeffs="-107.1" name="Big Core z-min"/>
   <surface id="19" type="z-plane" boundary="vacuum" coeffs="107.1" name="Big Core z-max"/>
   <cell id="20" name="Core" fill="201"/>
+  <lattice id="101" name="UO2 Unrodded Assembly"><dimension>17 17</dimension><pitch>1.26 1.26</pitch><lower_left>-10.71 -10.71</lower_left><universes>1</universes></lattice>
+  <lattice id="103" name="MOX Unrodded Assembly"><dimension>17 17</dimension><pitch>1.26 1.26</pitch><lower_left>-10.71 -10.71</lower_left><universes>2</universes></lattice>
+  <lattice id="105" name="Reflector Unrodded Assembly"><dimension>1 1</dimension><pitch>21.42 21.42</pitch><lower_left>-10.71 -10.71</lower_left><universes>8</universes></lattice>
   <lattice id="201" name="3x3 core lattice">
     <dimension>3 3 10</dimension><lower_left>-32.13 -32.13 -107.1</lower_left><pitch>21.42 21.42 21.42</pitch>
-    <universes>1 2 3</universes>
+    <universes>UNIVERSE_GRID</universes>
   </lattice>
 </geometry>
+"""
+MATERIALS_XML = """<?xml version="1.0"?>
+<materials>
+<material id="1" name="UO2"/><material id="2" name="MOX 4.3%"/>
+<material id="3" name="MOX 7.0%"/><material id="4" name="MOX 8.7%"/>
+<material id="5" name="Fission Chamber"/><material id="6" name="Guide Tube"/>
+<material id="7" name="Water"/><material id="8" name="Control Rod"/>
+</materials>
 """
 TALLIES_XML = """<?xml version="1.0"?>
 <tallies>
@@ -59,6 +70,12 @@ class Axial3DPreparationTests(unittest.TestCase):
         (model / "3d").mkdir(parents=True)
         (model / "2d").mkdir(parents=True)
         (model / "3d" / "build-xml-3d.py").write_text(BUILDER, encoding="utf-8")
+        active_layer = [9, 11, 13, 11, 9, 13, 13, 13, 13]
+        universe_grid = " ".join(str(value) for _ in range(9) for value in active_layer)
+        universe_grid += " " + " ".join(["13"] * 9)
+        (model / "3d" / "geometry.xml").write_text(
+            GEOMETRY_XML.replace("UNIVERSE_GRID", universe_grid), encoding="utf-8"
+        )
         for name in ("materials.py", "lattices.py", "surfaces.py"):
             (model / name).write_text("# archived source fixture\n", encoding="utf-8")
         return candidate
@@ -91,8 +108,8 @@ class Axial3DPreparationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             candidate = self._fixture(Path(tmp))
             model3d = candidate / "model/3d"
-            (model3d / "geometry.xml").write_text(GEOMETRY_XML, encoding="utf-8")
-            (model3d / "materials.xml").write_text("<materials/>", encoding="utf-8")
+            (model3d / "geometry.xml").write_text((model3d / "geometry.xml").read_text(encoding="utf-8"), encoding="utf-8")
+            (model3d / "materials.xml").write_text(MATERIALS_XML, encoding="utf-8")
             (model3d / "settings.xml").write_text(SETTINGS_XML, encoding="utf-8")
             (model3d / "tallies.xml").write_text(TALLIES_XML, encoding="utf-8")
             (model3d / "mgxs.h5").write_bytes(b"test fixture only")
