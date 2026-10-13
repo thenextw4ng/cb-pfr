@@ -36,14 +36,23 @@ function candidateOption(row){
  const id=String(row.candidate_id??"");
  return '<option value="'+escapeHtml(id)+'">'+escapeHtml(label(row))+'</option>';
 }
+function signatureLettersHtml(signature){
+ const raw=normalizeLayoutSignature(signature);
+ return raw.split("").map(code=>'<span class="fuel-signature-letter '+(code==="M"?"fuel-signature-letter-mox":"fuel-signature-letter-uo2")+'">'+code+'</span>').join("");
+}
 function layoutCells(signature){
-  const raw=normalizeLayoutSignature(signature);
-  if(!isValidLayoutSignature(raw)){
-    return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate must contain exactly two UO₂ and two MOX positions. No default arrangement is substituted.</p></div>';
-  }
-  const cells=raw.split("");
-  const positions=["p00","p01","p10","p11"];
-  return '<div class="assembly-grid">'+cells.map((c,i)=>'<div class="assembly '+(c==="M"?"mox-cell":"")+'">'+(c==="M"?"MOX":"UO₂")+'<small>'+positions[i]+' · '+(i+1)+'</small></div>').join("")+'</div>';
+ const raw=normalizeLayoutSignature(signature);
+ if(!isValidLayoutSignature(raw)){
+  return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate must contain exactly two UO₂ and two MOX positions. No default composition is substituted.</p></div>';
+ }
+ const mox=raw.split("").filter(code=>code==="M").length;
+ const uo2=raw.split("").filter(code=>code==="U").length;
+ return '<div class="fuel-signature-summary" role="img" aria-label="Fuel loading signature '+escapeHtml(raw)+' in p00, p01, p10, p11 order">'+
+  '<div class="fuel-signature-kicker">LAYOUT SIGNATURE</div>'+
+  '<div class="fuel-signature-code">'+signatureLettersHtml(raw)+'</div>'+
+  '<div class="fuel-signature-counts"><span><b>'+mox+'</b> MOX positions</span><i></i><span><b>'+uo2+'</b> UO₂ positions</span></div>'+
+  '<div class="fuel-signature-order">p00 → p01 → p10 → p11 · row-major order</div>'+
+  '</div>';
 }
 // Pin-universe maps extracted from the archived candidate geometry.xml files (17 × 17 lattices).
 // Universe IDs 1–6 map to UO2, three MOX enrichments, fission chamber, and guide tube;
@@ -318,7 +327,7 @@ function drawSelectedCandidate(row){
  const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
  $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
  $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
- $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
+ $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?'<span class="signature-summary-code">'+signatureLettersHtml(signature)+'</span><span class="signature-summary-caption">2 MOX · 2 UO₂</span>':'<span class="muted">No validated layout signature</span>';
  const keffSd=has(row,"keff_std_dev")?"Reported SD ± "+number(row.keff_std_dev,6)+"; not a confidence interval":"Reported SD unavailable";
  const metrics=[
   ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff",keffSd],
