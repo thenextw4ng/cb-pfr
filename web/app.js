@@ -60,7 +60,7 @@ function layoutCells(signature){
  }
  const mox=raw.split("").filter(code=>code==="M").length;
  const uo2=raw.split("").filter(code=>code==="U").length;
- return '<div class="fuel-signature-summary" role="img" aria-label="Fuel loading signature '+escapeHtml(raw)+' in p00, p01, p10, p11 order">'+
+ return '<div class="fuel-signature-summary" role="img" aria-label="Fuel loading signature '+escapeHtml(raw)+' in P00, P01, P10, P11 order">'+
   '<div class="fuel-signature-kicker">LAYOUT SIGNATURE</div>'+
   '<div class="fuel-signature-code">'+signatureLettersHtml(raw)+'</div>'+
   '<div class="fuel-signature-counts"><span><b>'+mox+'</b> MOX positions</span><i></i><span><b>'+uo2+'</b> UO₂ positions</span></div>'+
