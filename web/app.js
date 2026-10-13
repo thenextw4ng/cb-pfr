@@ -822,7 +822,7 @@ function drawAssemblyField(){
  const z=positions.map(line=>line.map(key=>Number(row[key])));
  chart("assemblyMap",[{type:"heatmap",x:["Column 0","Column 1"],y:["Row 0","Row 1"],z,text:z.map(line=>line.map(value=>value.toFixed(3))),texttemplate:"%{text}",textfont:{size:11,color:"#e8f1f7"},customdata:[["P00","P01"],["P10","P11"]],colorscale:"Cividis",colorbar:{title:{text:"Fission-rate<br>proxy",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},hovertemplate:"Position %{customdata}<br>Recorded fission-rate proxy %{z:.8g}<extra></extra>"}],{margin:{l:62,r:26,t:12,b:48},xaxis:{...baseLayout.xaxis,title:"Assembly column",tickangle:0},yaxis:{...baseLayout.yaxis,title:"Assembly row",autorange:"reversed"},showlegend:false});
  }
- const positions=[["p00_fission_rate","P00"],["p01_fission_rate","P01"],["p10_fission_rate","P10"],["p11_fission_rate","P11"]];
+ const matrixPositions=[["p00_fission_rate","P00"],["p01_fission_rate","P01"],["p10_fission_rate","P10"],["p11_fission_rate","P11"]];
  // Assemble the matrix in the same candidate order as the candidate selector, using only exact ID + signature matches.
  const matrixRows=records.slice().sort((a,b)=>{
   const av=has(a,"keff_mean")?Number(a.keff_mean):Number.POSITIVE_INFINITY;
@@ -830,8 +830,8 @@ function drawAssemblyField(){
   return av-bv;
  }).map(candidate=>{
   const proxy=assemblyRecords.find(item=>String(item.candidate_id)===String(candidate.candidate_id)&&String(item.layout_signature).toUpperCase()===String(candidate.layout_signature).toUpperCase());
-  if(!proxy||!positions.every(([key])=>has(proxy,key)))return null;
-  return {candidate,proxy,values:positions.map(([key])=>Number(proxy[key]))};
+  if(!proxy||!matrixPositions.every(([key])=>has(proxy,key)))return null;
+  return {candidate,proxy,values:matrixPositions.map(([key])=>Number(proxy[key]))};
  }).filter(Boolean);
  if(!matrixRows.length){
   $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Position matrix unavailable</b><p>No complete proxy records match the candidate IDs and layout signatures.</p></div>';
@@ -841,14 +841,14 @@ function drawAssemblyField(){
  const zmin=Math.min(...finite),zmax=Math.max(...finite),selectedRow=matrixRows.find(row=>String(row.candidate.candidate_id)===String(selectedId));
  const matrixTrace={
   type:"heatmap",name:"Recorded assembly fission-rate proxy",
-  x:positions.map(([,position])=>position),y:matrixRows.map(row=>String(row.candidate.layout_signature||label(row.candidate))),
+  x:matrixPositions.map(([,position])=>position),y:matrixRows.map(row=>String(row.candidate.layout_signature||label(row.candidate))),
   z:matrixRows.map(row=>row.values),text:matrixRows.map(row=>row.values.map(value=>value.toFixed(3))),texttemplate:"%{text}",
   textfont:{size:10,color:"#e8f1f7"},colorscale:"Cividis",zmin,zmax,showscale:true,
   colorbar:{title:{text:"Fission-rate<br>proxy (source scale)",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},
-  customdata:matrixRows.map(row=>row.values.map((value,index)=>[row.candidate.candidate_id,row.candidate.layout_signature,positions[index][1],row.proxy.seed,row.proxy.status])),
+  customdata:matrixRows.map(row=>row.values.map((value,index)=>[row.candidate.candidate_id,row.candidate.layout_signature,matrixPositions[index][1],row.proxy.seed,row.proxy.status])),
   hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>Proxy seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
  };
  const traces=[matrixTrace];
- if(selectedRow)traces.push({type:"scatter",mode:"markers",name:"Selected candidate",x:positions.map(([,position])=>position),y:positions.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),marker:{symbol:"square-open",size:37,color:"#e8f1f7",line:{width:1.5,color:"#e8f1f7"}},hoverinfo:"skip",showlegend:false});
+ if(selectedRow)traces.push({type:"scatter",mode:"markers",name:"Selected candidate",x:matrixPositions.map(([,position])=>position),y:matrixPositions.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),marker:{symbol:"square-open",size:37,color:"#e8f1f7",line:{width:1.5,color:"#e8f1f7"}},hoverinfo:"skip",showlegend:false});
  chart("assemblyMatrix",traces,{autosize:true,margin:{l:64,r:34,t:18,b:48},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Fuel position",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},yaxis:{...baseLayout.yaxis,title:"Candidate layout · rows sorted by recorded k-effective",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},annotations:[{xref:"paper",yref:"paper",x:1,y:1.02,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]});
 }
