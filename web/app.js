@@ -130,7 +130,7 @@ function renderModelGeometrySvg(row){
  grid.forEach((line,r)=>line.forEach((code,c)=>{
   const x=x0+c*(size+gap),y=y0+r*(size+gap);
   if(code==="R"){
-   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#reflectorFill)" stroke="#3b7184"/><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#waterPattern)"/><text x="'+(x+size/2)+'" y="'+(y+size/2-5)+'" class="reflector-title" text-anchor="middle">WATER</text><text x="'+(x+size/2)+'" y="'+(y+size/2+14)+'" class="reflector-title" text-anchor="middle">REFLECTOR</text><text x="'+(x+size/2)+'" y="'+(y+size/2+34)+'" class="reflector-sub" text-anchor="middle">'+Number(core.pitch_cm[0]).toFixed(2)+' cm pitch</text></g>';
+   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#reflectorFill)" stroke="#858e98"/><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#waterPattern)"/><text x="'+(x+size/2)+'" y="'+(y+size/2-5)+'" class="reflector-title" text-anchor="middle">WATER</text><text x="'+(x+size/2)+'" y="'+(y+size/2+14)+'" class="reflector-title" text-anchor="middle">REFLECTOR</text><text x="'+(x+size/2)+'" y="'+(y+size/2+34)+'" class="reflector-sub" text-anchor="middle">'+Number(core.pitch_cm[0]).toFixed(2)+' cm pitch</text></g>';
   }else{
    const cell=assemblyMap[String(sourceGrid[r][c])],pins=modelGeometryData.pin_lattices[String(cell.lattice_id)]?.universe_grid;
    if(!Array.isArray(pins)||pins.length!==pinDims[1]||pins.some(pr=>!Array.isArray(pr)||pr.length!==pinDims[0]))throw new Error("Archived pin lattice "+cell.lattice_id+" does not match declared dimensions.");
