@@ -80,7 +80,7 @@ class OpenMCGeometryManifestTests(unittest.TestCase):
         self.assertAlmostEqual(geometry["pin_radius_cm"], 0.54)
         self.assertEqual(set(self.manifest["pin_lattices"]), {"101", "103"})
         known = set(self.manifest["materials"]["pin_universes"])
-        for lattice in self.manifest["pin_lattices"].values():
+        for lattice_id, lattice in self.manifest["pin_lattices"].items():
             self.assertEqual(lattice["dimensions"], [17, 17])
             grid = lattice["universe_grid"]
             self.assertEqual(grid_sha256(grid), EXPECTED_PIN_GRID_SHA256[lattice_id])
