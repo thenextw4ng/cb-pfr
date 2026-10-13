@@ -807,7 +807,7 @@ async function initAssembly(){
   $("assemblyFieldStatus").textContent="ASSEMBLY DATA UNAVAILABLE";
   $("assemblyFieldStatus").classList.add("warning");
   $("assemblyFieldProvenance").textContent="Could not load assembly evidence: "+error.message;
-  ["assemblyMap","assemblyBar"].forEach(id=>{if($(id))$(id).innerHTML='<div class="loading">No assembly values displayed; no data are fabricated.</div>';});
+  ["assemblyMap","assemblyMatrix"].forEach(id=>{if($(id))$(id).innerHTML='<div class="loading">No assembly values displayed; no data are fabricated.</div>';});
  }
 }
 function drawAssemblyField(){
@@ -838,7 +838,7 @@ function drawAssemblyField(){
   return;
  }
  const finite=matrixRows.flatMap(row=>row.values).filter(Number.isFinite);
- const zmin=Math.min(...finite),zmax=Math.max(...finite),selectedRow=matrixRows.find(row=>String(row.candidate.candidate_id)===String(selectedId));
+ const observedMin=Math.min(...finite),observedMax=Math.max(...finite),zmin=observedMin,zmax=observedMax>observedMin?observedMax:observedMin+Math.max(Math.abs(observedMin)*0.01,1e-9),selectedRow=matrixRows.find(row=>String(row.candidate.candidate_id)===String(selectedId));
  const matrixTrace={
   type:"heatmap",name:"Recorded assembly fission-rate proxy",
   x:matrixPositions.map(([,position])=>position),y:matrixRows.map(row=>String(row.candidate.layout_signature||label(row.candidate))),
