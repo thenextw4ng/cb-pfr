@@ -286,6 +286,10 @@ async function main() {
 
     assert.deepEqual(failures, [], "desktop page must not throw uncaught JavaScript errors");
     assert.deepEqual(mobileFailures, [], "mobile page must not throw uncaught JavaScript errors");
+    const coreGeometryReport = await page.evaluate(() => ({
+      renderer: document.querySelector("#core3dCanvas canvas.core3d-canvas") ? "Three.js WebGL" : "fallback",
+      evidence: window.CBPFRCore3DInfo || null
+    }));
     const report = {
       baseUrl: BASE_URL,
       result: "passed",
@@ -294,8 +298,8 @@ async function main() {
       sourceGeometryPinCellCount: 4 * 17 * 17,
       spatialPlotCount: await page.locator("#meshHeatmap.js-plotly-plot, #meshContour.js-plotly-plot, #meshProfile.js-plotly-plot, #meshSurface.js-plotly-plot").count(),
       spatialDataStatus: await page.locator("#meshStatus").innerText(),
-      coreGeometryRenderer: document.querySelector("#core3dCanvas canvas.core3d-canvas") ? "Three.js WebGL" : "fallback",
-      coreGeometryEvidence: window.CBPFRCore3DInfo || null,
+      coreGeometryRenderer: coreGeometryReport.renderer,
+      coreGeometryEvidence: coreGeometryReport.evidence,
       coreGeometryStatus: await page.locator("#core3dStatus").innerText(),
       desktopViewport: { width: 1440, height: 1000, ...desktopOverflow },
       mobileViewport: { width: 390, height: 844, ...mobileOverflow },
