@@ -7,7 +7,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js';"></script>
+  <script>
+    window.CBPFRPlotlyLoadError = false;
+    window.cbpfrPlotlyFallback = function (script) {
+      if (!script.dataset.fallbackTried) {
+        script.dataset.fallbackTried = "true";
+        script.src = "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js";
+        return;
+      }
+      window.CBPFRPlotlyLoadError = true;
+      window.dispatchEvent(new Event("cbpfr-plotly-failed"));
+    };
+  </script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" onerror="window.cbpfrPlotlyFallback(this)"></script>
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
   </script>
@@ -39,6 +51,12 @@
     <main class="main" id="overview">
       <header class="topbar"><div><div class="eyebrow">RESEARCH CONTROL ROOM / 01</div><h1>Physical Feasibility <span>Ranking Workbench</span></h1><p class="lede">Inspect candidate configurations, recorded transport indicators, uncertainty, and evidence integrity in one scientific workspace.</p></div><div class="status-pill"><i></i> EXPLORATORY</div></header>
       <div class="notice"><b>SCIENTIFIC BOUNDARY</b><span>This dashboard displays recorded evidence. It does not launch OpenMC, infer missing spatial fields, or certify a physical design.</span></div>
+      <div class="renderer-stack-strip" role="group" aria-label="Visualization renderer status">
+        <div class="renderer-stack-item"><span class="renderer-stack-label">NUMERIC PLOTS</span><strong id="plotlyStackStatus">Plotly.js · CHECKING</strong><small>Charts, heatmaps, contours, profiles and terrain surfaces</small></div>
+        <div class="renderer-stack-item"><span class="renderer-stack-label">SOURCE GEOMETRY</span><strong id="svgStackStatus">SVG · CHECKING</strong><small>XML-derived 3 × 3 core and 17 × 17 pin maps</small></div>
+        <div class="renderer-stack-item"><span class="renderer-stack-label">INTERACTIVE CORE</span><strong id="threeStackStatus">OPTIONAL 3D · CHECKING</strong><small>Existing Three.js viewport; SVG remains available as fallback</small></div>
+        <div class="renderer-stack-item renderer-stack-optional"><span class="renderer-stack-label">VOLUME ENGINE</span><strong id="vtkStackStatus">VTK.js · NOT LOADED</strong><small>Intentionally omitted; Plotly volume uses recorded OpenMC bins</small></div>
+      </div>
       <section class="metrics" id="metrics"><article class="metric"><label>Candidate records</label><strong>—</strong><small>Loading repository data</small></article><article class="metric"><label>Unique layouts</label><strong>—</strong><small>Distinct signatures</small></article><article class="metric"><label>k-effective span</label><strong>—</strong><small>Recorded mean values</small></article><article class="metric"><label>Recorded seeds</label><strong>—</strong><small>Distinct seed values</small></article></section>
       <section class="section" id="candidates"><div class="section-head"><div><div class="eyebrow">01 / CANDIDATE OBSERVATORY</div><h2>Configuration inspector</h2><p>Compare the six recorded candidates with quantitative point estimates; uncertainty is shown where the source reports it.</p></div><div class="control"><label for="candidateSelect">SELECT CANDIDATE</label><select id="candidateSelect" aria-controls="layoutView selectedCandidateMetrics candidateChart" aria-describedby="candidateSelectionHelp"><option>Loading…</option></select><small id="candidateSelectionHelp" class="control-hint">Selection updates the configuration, candidate metrics, and comparison highlight together.</small></div></div>
         <div class="candidate-observatory-grid">
