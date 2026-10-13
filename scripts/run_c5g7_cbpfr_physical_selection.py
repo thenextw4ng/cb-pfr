@@ -12,6 +12,7 @@ import csv
 import itertools
 import json
 import math
+import re
 import statistics
 from collections import defaultdict
 from pathlib import Path
@@ -38,6 +39,11 @@ def _finite(row: dict, key: str, line: int) -> float:
 
 def load_and_validate(path: Path, *, min_batches: int, min_particles: int,
                       min_replicates: int) -> tuple[list[dict], dict]:
+    for name, value in (("min_batches", min_batches), ("min_particles", min_particles), ("min_replicates", min_replicates)):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+    if min_replicates < 3:
+        raise ValueError("min_replicates must be at least 3 for the declared repeated-run screen")
     with path.open(newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
         missing = REQUIRED - set(reader.fieldnames or ())
@@ -46,8 +52,6 @@ def load_and_validate(path: Path, *, min_batches: int, min_particles: int,
         raw = list(reader)
     if not raw:
         raise ValueError("run-level CSV is empty")
-    if min_replicates < 3:
-        raise ValueError("min_replicates must be at least 3 for the declared repeated-run screen")
     rows = []
     for line, row in enumerate(raw, start=2):
         sig = row["layout_signature"].strip()
@@ -55,19 +59,28 @@ def load_and_validate(path: Path, *, min_batches: int, min_particles: int,
             raise ValueError(f"line {line}: candidate ID/signature is not one of the six declared layouts")
         if row["group_structure_audit"] != "PASS" or row["mgxs_energy_group_boundaries_eV"] != GROUP_EDGES:
             raise ValueError(f"line {line}: corrected standard C5G7 group structure audit failed")
-        if not row["statepoint_sha256"].strip() or not row["mgxs_sha256"].strip():
-            raise ValueError(f"line {line}: missing statepoint or MGXS SHA-256")
+        for hash_field in ("statepoint_sha256", "mgxs_sha256"):
+            if not re.fullmatch(r"[0-9a-f]{64}", row[hash_field].strip()):
+                raise ValueError(f"line {line}: {hash_field} must be a 64-character lowercase SHA-256")
+        try:
+            integer_fields = {
+                "seed_i": int(row["seed"]),
+                "batches_i": int(row["batches"]),
+                "inactive_i": int(row["inactive"]),
+                "particles_i": int(row["particles_per_batch"]),
+                "threads_i": int(row["threads"]),
+            }
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"line {line}: seed and compute settings must be integers") from exc
         item = {
             **row,
-            "seed_i": int(row["seed"]),
-            "batches_i": int(row["batches"]),
-            "inactive_i": int(row["inactive"]),
-            "particles_i": int(row["particles_per_batch"]),
-            "threads_i": int(row["threads"]),
+            **integer_fields,
             "keff": _finite(row, "keff_mean", line),
             "keff_sd": _finite(row, "keff_std_dev", line),
             "fpeak": _finite(row, "fission_rate_peaking_factor", line),
         }
+        if item["seed_i"] < 0:
+            raise ValueError(f"line {line}: seed must be a nonnegative integer")
         if item["keff"] <= 0 or item["keff_sd"] <= 0 or item["fpeak"] <= 0:
             raise ValueError(f"line {line}: keff, its reported SD, and fission-peaking factor must be positive")
         if item["batches_i"] < min_batches or item["particles_i"] < min_particles:
@@ -85,6 +98,9 @@ def load_and_validate(path: Path, *, min_batches: int, min_particles: int,
     hashes = [r["statepoint_sha256"] for r in rows]
     if len(hashes) != len(set(hashes)):
         raise ValueError("statepoint hashes must be unique across all runs")
+    all_seeds = [r["seed_i"] for r in rows]
+    if len(all_seeds) != len(set(all_seeds)):
+        raise ValueError("random seeds must be unique across all candidate runs")
     mgxs = {r["mgxs_sha256"] for r in rows}
     if len(mgxs) != 1:
         raise ValueError("all candidates and repeats must use the same MGXS hash")

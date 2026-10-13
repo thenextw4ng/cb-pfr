@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "CBPFR-C5G7-canonical-confirmation-7000x10000-v1",
+  "purpose": "Higher-budget, three-seed numerical confirmation for the canonical UMMU C5G7 reference arrangement only.",
+  "status": "EXECUTED_NUMERICAL_SCREEN_PASS_VALIDATION_BLOCKED",
+  "model": {
+    "benchmark": "2D seven-group C5G7",
+    "candidate_id": "c5g7-2x2-UMMU",
+    "layout_signature": "UMMU",
+    "upstream_repository": "https://github.com/mit-crpg/benchmarks.git",
+    "upstream_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+    "openmc_version": "0.16.0",
+    "energy_group_boundaries_eV": [
+      0.00001,
+      0.0635,
+      10,
+      100,
+      1000,
+      500000,
+      1000000,
+      20000000
+    ]
+  },
+  "compute": {
+    "batches_total": 7000,
+    "inactive_batches": 500,
+    "active_batches": 6500,
+    "particles_per_batch": 10000,
+    "threads": 1,
+    "independent_seed_bases": [
+      720000,
+      730000,
+      740000
+    ],
+    "runs": 3,
+    "nominal_histories_per_run": 70000000,
+    "nominal_active_histories_per_run": 65000000,
+    "nominal_histories_total": 210000000,
+    "nominal_active_histories_total": 195000000,
+    "max_parallel_runs": 3,
+    "workflow_timeout_minutes": 360
+  },
+  "planning_rationale": {
+    "previous_profile": {
+      "batches_total": 5000,
+      "inactive_batches": 500,
+      "particles_per_batch": 5000,
+      "threads": 2,
+      "nominal_histories_per_run": 25000000,
+      "nominal_active_histories_per_run": 22500000,
+      "observed_mean_within_run_keff_sd_pcm_approx": 16.4
+    },
+    "active_histories_multiplier_approx": 2.8888888889,
+    "idealized_uncertainty_scaling": "sigma_new ~= sigma_old * sqrt(old_active_histories / new_active_histories)",
+    "idealized_expected_within_run_sd_pcm_approx": 9.65,
+    "caveat": "This is a budget-planning estimate only. It is not a guarantee of convergence or of meeting the 10 pcm screen."
+  },
+  "predeclared_project_screens": {
+    "reference_keff": 1.18655,
+    "reference_standard_uncertainty": 0.000095,
+    "absolute_difference_pcm_max": 100,
+    "combined_uncertainty_z_abs_max": 2,
+    "per_run_reported_keff_sd_pcm_max": 10,
+    "minimum_independent_seeds": 3,
+    "official_benchmark_acceptance": false
+  },
+  "required_diagnostics": [
+    "raw HDF5 statepoint audit",
+    "batch-wise k-generation and Shannon entropy traces",
+    "assembly fission-rate proxy extraction with uncertainty caveat",
+    "statepoint and MGXS SHA-256 provenance",
+    "same-profile settings and unique-seed check",
+    "aggregate numerical screen and explicit non-certification status"
+  ],
+  "decision_policy": {
+    "if_numerical_screen_passes": "Record the scalar screen as passed, but keep full benchmark validation blocked until primary-specification review and benchmark-compatible spatial tally comparison are independently completed.",
+    "if_numerical_screen_fails": "Report the failed criterion and diagnose model identity, source convergence, and Monte Carlo uncertainty before deciding whether another run or model correction is justified.",
+    "never": [
+      "Do not call this reactor-safety certification.",
+      "Do not choose a material-placement winner from the canonical run.",
+      "Do not infer physical convergence from a scalar k-effective match alone."
+    ]
+  },
+  "execution": {
+    "date_utc": "2026-10-12",
+    "source_workflow_run_id": 38196703024,
+    "recovery_analysis_workflow_run_id": 38222690312,
+    "recovery_artifact_id": 11735016906,
+    "recovery_artifact_sha256": "bc6f81587d5914b78bffebbb098e74e44e35bfcab6ebd3fa8a24731cbc064715",
+    "seed_bases": [
+      720000,
+      730000,
+      740000
+    ],
+    "run_count": 3,
+    "aggregate_status": "NUMERICAL_SCREEN_PASS_FULL_BENCHMARK_STILL_BLOCKED",
+    "physical_validation_status": "BLOCKED",
+    "blocking_reasons": [
+      "independent primary C5G7 specification review/sign-off remains pending",
+      "source/eigenvalue convergence diagnostics remain review-required; post-hoc trend analysis is not an acceptance test",
+      "assembly fission-rate proxy versus published assembly-power comparability and uncertainty covariance require independent review",
+      "this canonical confirmation does not transport-validate all six candidate layouts"
+    ]
+  }
+}

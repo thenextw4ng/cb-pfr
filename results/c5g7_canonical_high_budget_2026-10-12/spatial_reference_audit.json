@@ -1,0 +1,85 @@
+{
+  "candidate_id": "c5g7-2x2-UMMU",
+  "interpretation": "Normalized assembly fission-rate fractions are compared with published normalized C5G7 assembly-power fractions. This is a spatial-shape screen only; the fission tally is not absolute power in watts.",
+  "layout_signature": "UMMU",
+  "maximum_absolute_relative_difference_percent": 0.17900574218343568,
+  "nonclaims": [
+    "not absolute power normalization in watts",
+    "not flux validation",
+    "not official OECD/NEA benchmark acceptance",
+    "not source-convergence certification",
+    "not reactor-safety certification"
+  ],
+  "positions": {
+    "p00": {
+      "between_run_fraction_sd": 0.0003681605885896108,
+      "between_run_fraction_standard_error": 0.00021255761492722285,
+      "material": "UO2",
+      "mean_integrated_fission_rate": 0.21131433106876132,
+      "observed_normalized_fraction": 0.46691399613651646,
+      "published_reference_relative_uncertainty_percent": 0.1,
+      "reference_normalized_fraction": 0.4666666666666667,
+      "relative_difference_percent": 0.05299917211067928,
+      "within_published_reference_uncertainty": true
+    },
+    "p01": {
+      "between_run_fraction_sd": 0.00006249108425857853,
+      "between_run_fraction_standard_error": 0.0000360792443186419,
+      "material": "MOX",
+      "mean_integrated_fission_rate": 0.09076078425171305,
+      "observed_normalized_fraction": 0.2005423875092598,
+      "published_reference_relative_uncertainty_percent": 0.18,
+      "reference_normalized_fraction": 0.20047348484848485,
+      "relative_difference_percent": 0.03436996210597343,
+      "within_published_reference_uncertainty": true
+    },
+    "p10": {
+      "between_run_fraction_sd": 0.00016651581870428717,
+      "between_run_fraction_standard_error": 0.00009613795275325112,
+      "material": "MOX",
+      "mean_integrated_fission_rate": 0.09069373250026393,
+      "observed_normalized_fraction": 0.20039423191063702,
+      "published_reference_relative_uncertainty_percent": 0.18,
+      "reference_normalized_fraction": 0.20047348484848485,
+      "relative_difference_percent": -0.039532877830561475,
+      "within_published_reference_uncertainty": true
+    },
+    "p11": {
+      "between_run_fraction_sd": 0.0002625847110027696,
+      "between_run_fraction_standard_error": 0.0001516033535825291,
+      "material": "UO2",
+      "mean_integrated_fission_rate": 0.05980771406706849,
+      "observed_normalized_fraction": 0.1321493844435867,
+      "published_reference_relative_uncertainty_percent": 0.2,
+      "reference_normalized_fraction": 0.13238636363636364,
+      "relative_difference_percent": -0.17900574218343568,
+      "within_published_reference_uncertainty": true
+    }
+  },
+  "reference": {
+    "assembly_power_values": {
+      "p00": 492.8,
+      "p01": 211.7,
+      "p10": 211.7,
+      "p11": 139.8
+    },
+    "position_mapping": {
+      "p00": "inner UO2 assembly",
+      "p01": "MOX assembly",
+      "p10": "MOX assembly",
+      "p11": "outer UO2 assembly"
+    },
+    "relative_uncertainty_percent": {
+      "p00": 0.1,
+      "p01": 0.18,
+      "p10": 0.18,
+      "p11": 0.2
+    },
+    "source": "Song et al., Frontiers in Energy Research (2020), Table 1",
+    "url": "https://doi.org/10.3389/fenrg.2020.00124"
+  },
+  "run_count": 3,
+  "schema_version": "1.0",
+  "score": "fission",
+  "status": "NORMALIZED_SPATIAL_SHAPE_SCREEN_PASS"
+}

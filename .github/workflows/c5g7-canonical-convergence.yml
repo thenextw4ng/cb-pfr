@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       batches:
-        description: "Active+inactive total batch count"
+        description: "Total batch count per independent run"
         required: true
         default: "7000"
       inactive:
-        description: "Inactive batches"
+        description: "Inactive batches per run"
         required: true
         default: "500"
       particles:
@@ -21,13 +21,19 @@ permissions:
 
 jobs:
   canonical-screen:
+    name: Canonical UMMU seed ${{ matrix.seed_base }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        seed_base: [720000, 730000, 740000]
     env:
       BATCHES: ${{ inputs.batches || '7000' }}
       INACTIVE: ${{ inputs.inactive || '500' }}
       PARTICLES: ${{ inputs.particles || '10000' }}
-      SEED_BASES: "720000 730000 740000"
+      PROFILE: config/benchmarks/c5g7_canonical_confirmation_profile.json
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned OpenMC 0.16.0
@@ -38,40 +44,143 @@ jobs:
             python=3.12
             openmc=0.16.0
           cache-environment: true
+      - name: Validate run settings against the predeclared profile
+        shell: bash -el {0}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          profile = json.loads(Path(os.environ["PROFILE"]).read_text(encoding="utf-8"))
+          compute = profile["compute"]
+          actual = {
+              "batches_total": int(os.environ["BATCHES"]),
+              "inactive_batches": int(os.environ["INACTIVE"]),
+              "particles_per_batch": int(os.environ["PARTICLES"]),
+              "threads": 1,
+              "independent_seed_bases": [720000, 730000, 740000],
+          }
+          expected = {
+              "batches_total": compute["batches_total"],
+              "inactive_batches": compute["inactive_batches"],
+              "particles_per_batch": compute["particles_per_batch"],
+              "threads": compute["threads"],
+              "independent_seed_bases": compute["independent_seed_bases"],
+          }
+          if actual != expected:
+              raise SystemExit(f"workflow inputs differ from predeclared profile: actual={actual}; expected={expected}")
+          if actual["inactive_batches"] >= actual["batches_total"]:
+              raise SystemExit("inactive batches must be smaller than total batches")
+          if compute["active_batches"] != actual["batches_total"] - actual["inactive_batches"]:
+              raise SystemExit("profile active batch count is inconsistent")
+          if compute["nominal_histories_per_run"] != actual["batches_total"] * actual["particles_per_batch"]:
+              raise SystemExit("profile nominal history count is inconsistent")
+          if compute["nominal_active_histories_per_run"] != (actual["batches_total"] - actual["inactive_batches"]) * actual["particles_per_batch"]:
+              raise SystemExit("profile active history count is inconsistent")
+          if compute["runs"] != len(actual["independent_seed_bases"]):
+              raise SystemExit("profile run count and seed count differ")
+          if compute["nominal_histories_total"] != compute["nominal_histories_per_run"] * compute["runs"]:
+              raise SystemExit("profile total history count is inconsistent")
+          if compute["nominal_active_histories_total"] != compute["nominal_active_histories_per_run"] * compute["runs"]:
+              raise SystemExit("profile total active history count is inconsistent")
+          print(json.dumps({"profile_id": profile["profile_id"], "settings": actual,
+                            "nominal_histories_total": compute["nominal_histories_total"],
+                            "nominal_active_histories_total": compute["nominal_active_histories_total"]}, indent=2))
+          PY
       - name: Prepare pinned upstream C5G7 model
         shell: bash -el {0}
         run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
-      - name: Run three independent canonical UMMU cases and raw HDF5 audits
+      - name: Run one independent canonical UMMU case and audit raw HDF5
         shell: bash -el {0}
         run: |
           set -euo pipefail
-          OUT=/tmp/c5g7-canonical-convergence
+          OUT="$RUNNER_TEMP/c5g7-canonical-convergence/seed_${{ matrix.seed_base }}"
           mkdir -p "$OUT"
-          for SEED in $SEED_BASES; do
-            ROUND="$OUT/seed_$SEED"
-            python scripts/run_c5g7_layout_study.py \
-              --source-root /tmp/mit-crpg-benchmarks \
-              --design-space config/benchmarks/c5g7_2x2_design_space.json \
-              --output "$ROUND" \
-              --mode run --candidate-ids c5g7-2x2-UMMU \
-              --batches "$BATCHES" --inactive "$INACTIVE" --particles "$PARTICLES" \
-              --threads 1 --seed-base "$SEED"
-            python scripts/audit_c5g7_smoke_statepoints.py \
-              --study-summary "$ROUND/STUDY_SUMMARY.json" \
-              --out "$ROUND/analysis/raw_hdf5_audit.json" \
-              --expected-candidates 1
-            CASE_DIR="$ROUND/c5g7-2x2-UMMU"
-            STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
-            python scripts/analyze_c5g7_assembly_fission.py \
-              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
-              --candidate-id c5g7-2x2-UMMU --layout-signature UMMU \
-              --out "$ROUND/analysis/assembly_fission.json"
-            python scripts/audit_c5g7_source_convergence.py \
-              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
-              --out-json "$ROUND/analysis/source_convergence.json" \
-              --out-csv "$ROUND/analysis/source_convergence.csv"
-          done
-      - name: Aggregate canonical numerical gates
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$OUT" \
+            --mode run --candidate-ids c5g7-2x2-UMMU \
+            --batches "$BATCHES" --inactive "$INACTIVE" --particles "$PARTICLES" \
+            --threads 1 --seed-base "${{ matrix.seed_base }}"
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary "$OUT/STUDY_SUMMARY.json" \
+            --out "$OUT/analysis/raw_hdf5_audit.json" \
+            --expected-candidates 1
+          CASE_DIR="$OUT/c5g7-2x2-UMMU"
+          STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+          python scripts/analyze_c5g7_assembly_fission.py \
+            --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+            --candidate-id c5g7-2x2-UMMU --layout-signature UMMU \
+            --out "$OUT/analysis/assembly_fission.json"
+          python scripts/audit_c5g7_source_convergence.py \
+            --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+            --out-json "$OUT/analysis/source_convergence.json" \
+            --out-csv "$OUT/analysis/source_convergence.csv"
+      - name: Preserve canonical statepoint and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed_${{ matrix.seed_base }}
+          path: ${{ runner.temp }}/c5g7-canonical-convergence/seed_${{ matrix.seed_base }}/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 1
+
+  aggregate:
+    name: Aggregate canonical numerical gates
+    runs-on: ubuntu-latest
+    needs: canonical-screen
+    if: always() && needs.canonical-screen.result == 'success'
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC analysis runtime
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-canonical-screen
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Download three independent seed artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: seed_*
+          path: /tmp/c5g7-canonical-convergence
+          merge-multiple: false
+      - name: Verify complete independent evidence set
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          root = Path("/tmp/c5g7-canonical-convergence")
+          expected = {"seed_720000", "seed_730000", "seed_740000"}
+          actual = {p.name for p in root.iterdir() if p.is_dir()}
+          if actual != expected:
+              raise SystemExit(f"expected seed artifacts {sorted(expected)}, found {sorted(actual)}")
+          for name in sorted(expected):
+              d = root / name
+              for rel in ("STUDY_SUMMARY.json", "analysis/raw_hdf5_audit.json",
+                          "analysis/source_convergence.json", "analysis/assembly_fission.json"):
+                  if not (d / rel).is_file():
+                      raise SystemExit(f"{name}: missing {rel}")
+              summary = json.loads((d / "STUDY_SUMMARY.json").read_text())
+              if summary.get("status") != "all_runs_completed_needs_independent_validation":
+                  raise SystemExit(f"{name}: run status is {summary.get('status')}")
+          print("Three complete independent canonical evidence bundles are present.")
+          PY
+      - name: Audit normalized spatial distribution against published C5G7 reference
+        shell: bash -el {0}
+        run: |
+          python scripts/audit_c5g7_spatial_reference.py \
+            --run-json /tmp/c5g7-canonical-convergence/seed_720000/analysis/assembly_fission.json \
+            --run-json /tmp/c5g7-canonical-convergence/seed_730000/analysis/assembly_fission.json \
+            --run-json /tmp/c5g7-canonical-convergence/seed_740000/analysis/assembly_fission.json \
+            --out /tmp/c5g7-canonical-convergence/spatial_reference_audit.json
+          cat /tmp/c5g7-canonical-convergence/spatial_reference_audit.json
+      - name: Aggregate provisional numerical screens
         shell: bash -el {0}
         run: |
           python scripts/analyze_c5g7_canonical_convergence.py \
@@ -79,10 +188,11 @@ jobs:
             --out-json /tmp/c5g7-canonical-convergence/canonical_convergence_analysis.json \
             --out-md /tmp/c5g7-canonical-convergence/canonical_convergence_analysis.md
           cat /tmp/c5g7-canonical-convergence/canonical_convergence_analysis.md
-      - name: Preserve canonical statepoints, audits, and numerical analysis
+      - name: Preserve aggregate report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: c5g7-canonical-high-budget-screen-${{ inputs.batches || '7000' }}-${{ inputs.particles || '10000' }}
+          name: c5g7-canonical-confirmation-aggregate
           path: /tmp/c5g7-canonical-convergence/
           if-no-files-found: error
+          retention-days: 90

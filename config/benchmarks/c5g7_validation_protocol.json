@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "protocol_id": "CBPFR-C5G7-validation-gates-2026-10-11",
-  "status": "CORRECTED_STANDARD_GROUP_STRUCTURE_RUN_REQUIRED",
+  "status": "STANDARD_GROUP_STRUCTURE_RUNS_PRESENT_PRIMARY_SPECIFICATION_REVIEW_PENDING",
   "scope": {
     "benchmark_case": "2D seven-group C5G7",
     "canonical_layout_signature": "UMMU",
@@ -19,10 +19,11 @@
         "Explain and resolve production-versus-smoke materials XML differences.",
         "Record OpenMC version and all runtime settings.",
         "Use the official C5G7 seven-group energy boundaries [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV; reject nonstandard log-spaced boundaries.",
-        "Verify the generated MGXS HDF5 root group-structure attribute against the official boundary list before transport."
+        "Confirm the generated MGXS HDF5 root group-structure attribute against the official boundary list in the archived 18-run evidence and canonical confirmation run.",
+        "Do not describe a standard-group rerun as still pending when its run-level evidence is present; the outstanding blocker is primary-specification review and sign-off."
       ],
-      "pass_condition": "Independent reviewer signs a machine-readable model-identity manifest.",
-      "status": "BLOCKED_PENDING_STANDARD_GROUP_STRUCTURE_RERUN_AND_PRIMARY_SPECIFICATION_REVIEW"
+      "pass_condition": "Independent reviewer signs a machine-readable model-identity manifest after reviewing the pinned model inputs against the primary specification; the standard seven-group structure is already recorded as passing in the 18-run evidence set.",
+      "status": "BLOCKED_PENDING_PRIMARY_SPECIFICATION_REVIEW_AND_INDEPENDENT_MODEL_IDENTITY_SIGNOFF"
     },
     {
       "id": "G1-canonical-keff",
@@ -53,7 +54,11 @@
         "rms_relative_error_percent_max": 2,
         "max_absolute_relative_error_percent_max": 5
       },
-      "warning": "Limits are provisional project screens until the selected primary benchmark's prescribed comparison metric is transcribed and reviewed."
+      "warning": "Limits are provisional project screens until the selected primary benchmark's prescribed comparison metric is transcribed and reviewed.",
+      "initial_screen": {
+        "canonical_confirmation_profile": "config/benchmarks/c5g7_canonical_confirmation_profile.json",
+        "status": "EXECUTED_NORMALIZED_SHAPE_SCREEN_PASS_INDEPENDENT_MAPPING_AND_UNCERTAINTY_REVIEW_PENDING"
+      }
     },
     {
       "id": "G3-candidate-repeatability",
@@ -97,6 +102,7 @@
     "Passing these project screens is not reactor-safety certification.",
     "A numerical match alone does not prove model identity.",
     "The four-variable UO2/MOX QUBO is a new assembly-placement encoding, not the legacy burnup-state QUBO.",
-    "The proposed intermediate compute profile is not represented as executed or converged."
+    "The proposed intermediate compute profile is not represented as executed or converged.",
+    "The canonical high-budget confirmation was executed in three independent runs; its scalar numerical screen passed, while physical acceptance remains blocked by source-convergence review, independent primary-specification sign-off, and spatial-tally comparability."
   ]
 }
