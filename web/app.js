@@ -51,6 +51,21 @@ function layoutCells(signature){
 const pinUniverseColors={"1":"#51d2df","2":"#f4bd62","3":"#f08f62","4":"#dc6f91","5":"#c1b3ff","6":"#9cb6c8"};
 let modelGeometryData=null;
 let geometryArtifactActive=false;
+let core3dViewer=null;
+let coreGeometryMode="3d";
+let core3dLoadFailed=false;
+let currentGeometryRow=null;
+let selectedCorePosition={row:0,col:0};
+window.addEventListener("cbpfr-core3d-ready",()=>{
+ core3dLoadFailed=false;
+ if(currentGeometryRow&&!geometryArtifactActive)drawModelGeometry(currentGeometryRow);
+});
+window.addEventListener("cbpfr-core3d-failed",()=>{
+ core3dLoadFailed=true;
+ const status=$("core3dStatus");
+ if(status)status.textContent="THREE.JS CDN UNAVAILABLE · 2D FALLBACK";
+ if(currentGeometryRow&&!geometryArtifactActive)selectCoreView("2d");
+});
 
 function modelMaterialCell(universeId,x,y,pitch){
  const key=String(universeId),source=modelGeometryData?.materials?.pin_universes?.[key];
@@ -113,29 +128,174 @@ function renderModelGeometrySvg(row){
  svg+='<rect x="'+lx+'" y="'+(my+195)+'" width="334" height="43" rx="7" fill="#102638" stroke="#2a4b5e"/><text x="'+(lx+12)+'" y="'+(my+212)+'" class="source-note">SOURCE SHA-256 · '+escapeHtml(hash.slice(0,16))+'…</text><text x="'+(lx+12)+'" y="'+(my+228)+'" class="source-note-secondary">XML-derived map · no transport run executed</text></svg>';
  return svg;
 }
+function sourceGeometryForCandidate(row){
+ const signature=normalizeLayoutSignature(row?.layout_signature);
+ return (modelGeometryData?.candidates||[]).find(item=>
+  String(item.candidate_id)===String(row?.candidate_id)&&normalizeLayoutSignature(item.layout_signature)===signature);
+}
+function materialNameForUniverse(universeId){
+ const material=modelGeometryData?.materials?.pin_universes?.[String(universeId)];
+ return material?.material_name||material?.name||("Universe "+universeId);
+}
+function renderSelectedPinMapSvg(pins){
+ const dims=modelGeometryData?.pin_geometry?.dimensions||[];
+ if(!Array.isArray(pins)||pins.length!==17||pins.some(line=>!Array.isArray(line)||line.length!==17)){
+  $("corePinLegend").innerHTML="";
+  $("corePinMapBadge").textContent="NOT IN SOURCE";
+  return '<div class="empty-state"><b>Pin-resolved map unavailable</b><p>The archived manifest does not provide a complete 17 × 17 pin-universe grid for this position. No pin pattern is fabricated.</p></div>';
+ }
+ const cell=14.2,x0=22,y0=20,size=cell*17,counts={};
+ let svg='<svg class="core-pin-map-svg" viewBox="0 0 292 292" role="img" aria-label="Source-derived 17 by 17 pin universe lattice"><rect x="0" y="0" width="292" height="292" rx="9" fill="#07131e"/>';
+ svg+='<text x="22" y="12" class="core-pin-map-axis">17 × 17 · SOURCE UNIVERSE GRID</text>';
+ pins.forEach((line,r)=>line.forEach((uid,c)=>{
+  const key=String(uid),color=pinUniverseColors[key]||"#8b9aa4";
+  counts[key]=(counts[key]||0)+1;
+  const x=x0+c*cell,y=y0+r*cell;
+  svg+='<g><title>Pin r'+r+' c'+c+' · Universe '+escapeHtml(key)+' · '+escapeHtml(materialNameForUniverse(key))+'</title><rect x="'+(x+.5).toFixed(2)+'" y="'+(y+.5).toFixed(2)+'" width="'+(cell-1).toFixed(2)+'" height="'+(cell-1).toFixed(2)+'" rx="1.6" fill="'+color+'" stroke="#0b1b28" stroke-width=".65"/></g>';
+ }));
+ svg+='<rect x="'+x0+'" y="'+y0+'" width="'+size+'" height="'+size+'" fill="none" stroke="#a9c1ce" stroke-opacity=".65" stroke-width="1.2"/>';
+ svg+='<text x="'+(x0+size/2)+'" y="276" text-anchor="middle" class="core-pin-map-axis">PITCH '+number(modelGeometryData.pin_geometry?.pitch_cm?.[0],2)+' cm · RADIUS '+number(modelGeometryData.pin_geometry?.pin_radius_cm,2)+' cm</text></svg>';
+ $("corePinLegend").innerHTML=Object.entries(counts).map(([uid,count])=>'<span class="core-pin-legend-item"><i style="background:'+pinUniverseColors[uid]+'"></i><b>'+escapeHtml(materialNameForUniverse(uid))+'</b><small>'+count+' pins</small></span>').join("");
+ $("corePinMapBadge").textContent=dims.join(" × ");
+ return svg;
+}
+function updateCoreInspector(row,gridRow=selectedCorePosition.row,gridCol=selectedCorePosition.col){
+ const title=$("coreSelectionTitle"),sub=$("coreSelectionSubtitle"),badge=$("coreAssemblyBadge"),facts=$("coreSelectedFacts"),pinMap=$("coreSelectedPinMap"),pinTitle=$("corePinMapTitle"),pinSub=$("corePinMapSubtitle");
+ if(!modelGeometryData||!row||!title||!facts||!pinMap)return;
+ const source=sourceGeometryForCandidate(row);
+ if(!source){title.textContent="No matching source geometry";sub.textContent="Candidate identity check failed";facts.innerHTML='<div class="empty-state"><b>Geometry not matched</b><p>No exact candidate/signature pair exists in the XML-derived manifest.</p></div>';pinMap.innerHTML="";return;}
+ const r=Math.max(0,Math.min(2,Number(gridRow)||0)),c=Math.max(0,Math.min(2,Number(gridCol)||0));
+ selectedCorePosition={row:r,col:c};
+ const uid=String(source.core_universe_grid?.[r]?.[c]??"");
+ const code=String(source.assembly_grid?.[r]?.[c]||modelGeometryData.assemblies?.[uid]?.code||"");
+ const assembly=modelGeometryData.assemblies?.[uid]||{};
+ const position="p"+r+c, fuel=code==="M"||code==="U";
+ const signature=normalizeLayoutSignature(row.layout_signature);
+ const positionCode=(r<2&&c<2)?signature[r*2+c]:code;
+ const material=code==="M"?"MOX fuel":code==="U"?"UO₂ fuel":"Water reflector";
+ title.textContent=material+" · "+position;
+ sub.textContent=String(row.candidate_id)+" · source universe "+uid;
+ badge.textContent=position.toUpperCase();
+ const core=modelGeometryData.core_lattice||{},pinsMeta=modelGeometryData.pin_geometry||{};
+ const factsRows=[
+  ["Core position",position+" · row "+r+" / col "+c],
+  ["Fuel assignment",fuel?(positionCode==="M"?"MOX":"UO₂")+" · candidate signature "+signature:"Invariant reflector"],
+  ["OpenMC universe",uid+" · "+displayValue(assembly.name,material)],
+  ["Lattice ID",fuel?String(assembly.lattice_id??"not recorded"):"Reflector universe; no pin grid supplied"],
+  ["Assembly pitch",number(core.pitch_cm?.[0],2)+" × "+number(core.pitch_cm?.[1],2)+" cm"],
+  ["Pin pitch / radius",fuel?number(pinsMeta.pitch_cm?.[0],2)+" / "+number(pinsMeta.pin_radius_cm,2)+" cm":"Not resolved for reflector"],
+  ["Source identity",String(source.geometry_xml_sha256||"unavailable").slice(0,18)+"…"]
+ ];
+ facts.innerHTML=factsRows.map(([labelText,value])=>'<div class="core-fact"><span>'+escapeHtml(labelText)+'</span><b>'+escapeHtml(value)+'</b></div>').join("");
+ if(fuel){
+  const lattice=modelGeometryData.pin_lattices?.[String(assembly.lattice_id)]?.universe_grid;
+  pinTitle.textContent="Fuel pin material map";
+  pinSub.textContent="Actual universe IDs from archived geometry.xml · categorical material map, not neutron flux";
+  pinMap.innerHTML=renderSelectedPinMapSvg(lattice);
+ }else{
+  pinTitle.textContent="Reflector source detail";
+  pinSub.textContent="The geometry manifest has no pin-resolved reflector universe grid";
+  pinMap.innerHTML='<div class="core-reflector-detail"><span class="core-reflector-icon">R</span><div><b>Water / reflector universe '+escapeHtml(uid)+'</b><p>The archived manifest identifies this core position as reflector but does not provide a pin-resolved 17 × 17 grid for it. No internal material cells are invented.</p></div></div>';
+  $("corePinMapBadge").textContent="SOURCE-LIMITED";
+  $("corePinLegend").innerHTML='<span class="core-pin-legend-item"><i style="background:#17495d"></i><b>Water reflector</b><small>Assembly universe</small></span>';
+ }
+}
+function setCoreGeometryMode(mode){
+ if(mode==="3d"&&core3dLoadFailed)mode="2d";
+ coreGeometryMode=mode==="2d"?"2d":"3d";
+ const view3d=$("core3dViewport"),map2d=$("geometryPreview");
+ if(view3d)view3d.hidden=coreGeometryMode!=="3d";
+ if(map2d)map2d.hidden=coreGeometryMode!=="2d";
+ const b3=$("coreView3d"),b2=$("coreView2d");
+ if(b3){b3.classList.toggle("active",coreGeometryMode==="3d");b3.setAttribute("aria-pressed",String(coreGeometryMode==="3d"));}
+ if(b2){b2.classList.toggle("active",coreGeometryMode==="2d");b2.setAttribute("aria-pressed",String(coreGeometryMode==="2d"));}
+ if(coreGeometryMode==="3d"){
+  if(!window.CBPFRCore3D){
+   const status=$("core3dStatus");
+   if(status)status.textContent=window.CBPFRCore3DError?"THREE.JS CDN UNAVAILABLE":"CONNECTING THREE.JS CDN…";
+   if(window.CBPFRCore3DError){core3dLoadFailed=true;setCoreGeometryMode("2d");}
+   else if($("core3dCanvas")&&!$("core3dCanvas").children.length)$("core3dCanvas").innerHTML='<div class="core3d-loading"><span></span><b>Loading Three.js scientific renderer…</b><small>The source SVG map remains available in 2D source map mode.</small></div>';
+  }else if(currentGeometryRow&&!geometryArtifactActive){
+   drawCore3DForCandidate(currentGeometryRow);
+  }
+ }else{
+  const status=$("core3dStatus");
+  if(status)status.textContent=core3dLoadFailed?"2D SOURCE FALLBACK":"2D XML MAP · SOURCE GEOMETRY";
+ }
+}
+function selectCoreAssembly(cell){
+ if(!cell||!Number.isFinite(Number(cell.row))||!Number.isFinite(Number(cell.col)))return;
+ selectedCorePosition={row:Number(cell.row),col:Number(cell.col)};
+ if(currentGeometryRow)updateCoreInspector(currentGeometryRow,selectedCorePosition.row,selectedCorePosition.col);
+ if(core3dViewer)core3dViewer.highlight(selectedCorePosition.row,selectedCorePosition.col);
+}
+function drawCore3DForCandidate(row){
+ if(!row||!modelGeometryData||coreGeometryMode!=="3d")return;
+ const host=$("core3dCanvas");
+ if(!host)return;
+ if(!window.CBPFRCore3D){
+  const status=$("core3dStatus");
+  if(status)status.textContent=window.CBPFRCore3DError?"THREE.JS CDN UNAVAILABLE":"CONNECTING THREE.JS CDN…";
+  return;
+ }
+ try{
+  if(!core3dViewer)core3dViewer=window.CBPFRCore3D.createCoreViewer(host,selectCoreAssembly);
+  const info=core3dViewer.update(modelGeometryData,row,selectedCorePosition);
+  const status=$("core3dStatus");
+  if(status){status.classList.remove("warning");status.textContent="WEBGL READY · THREE.JS R"+info.libraryVersion+" · "+info.pinCount.toLocaleString()+" PIN INSTANCES";}
+  const pitch=info.corePitchCm||[21.42,21.42],dims=info.coreDimensions||[3,3];
+  if($("coreModelDimensions"))$("coreModelDimensions").textContent=dims.join(" × ")+" CORE · "+number(pitch[0]*dims[0],2)+" × "+number(pitch[1]*dims[1],2)+" cm · PITCH "+number(pitch[0],2)+" cm";
+  if($("coreSourceBadge"))$("coreSourceBadge").textContent="XML SOURCE · IDENTITY MATCHED";
+ }catch(error){
+  core3dLoadFailed=true;
+  const status=$("core3dStatus");
+  if(status){status.classList.add("warning");status.textContent="WEBGL UNAVAILABLE · 2D SOURCE MAP";}
+  if($("core3dCanvas"))$("core3dCanvas").innerHTML='<div class="core3d-loading"><b>3D renderer unavailable</b><small>'+escapeHtml(error.message||error)+'</small><small>The source-derived SVG map is available in 2D source map mode.</small></div>';
+  setCoreGeometryMode("2d");
+ }
+}
+function setupCoreGeometryControls(){
+ const b3=$("coreView3d"),b2=$("coreView2d"),reset=$("coreResetView");
+ if(b3&&!b3.dataset.bound){b3.dataset.bound="true";b3.addEventListener("click",()=>{geometryArtifactActive=false;const row=records.find(item=>String(item.candidate_id)===String($("candidateSelect")?.value));if(row){currentGeometryRow=row;const preview=$("geometryPreview");if(preview)preview.innerHTML=renderModelGeometrySvg(row);updateCoreInspector(row); }setCoreGeometryMode("3d");});}
+ if(b2&&!b2.dataset.bound){b2.dataset.bound="true";b2.addEventListener("click",()=>{if(currentGeometryRow&&!geometryArtifactActive){const preview=$("geometryPreview");if(preview)preview.innerHTML=renderModelGeometrySvg(currentGeometryRow);}setCoreGeometryMode("2d");});}
+ if(reset&&!reset.dataset.bound){reset.dataset.bound="true";reset.addEventListener("click",()=>{if(core3dViewer)core3dViewer.reset();});}
+}
 function drawModelGeometry(row){
  const preview=$("geometryPreview");if(!preview||!row||geometryArtifactActive)return;
+ currentGeometryRow=row;
  const sig=normalizeLayoutSignature(row.layout_signature);
  preview.innerHTML=renderModelGeometrySvg(row);
  if(!modelGeometryData){$("geometryCaption").textContent="OpenMC geometry manifest unavailable; model view not shown.";return;}
- const source=(modelGeometryData.candidates||[]).find(c=>String(c.candidate_id)===String(row.candidate_id)&&normalizeLayoutSignature(c.layout_signature)===sig);
- $("geometryCaption").textContent=source?"Source "+source.source_member+" · SHA-256 "+String(source.geometry_xml_sha256||"unavailable")+" · extracted from archived OpenMC geometry.xml; visualization only, not a transport result.":"No exact candidate ID and layout match exists in the source manifest.";
+ const source=sourceGeometryForCandidate(row);
+ if(!source){$("geometryCaption").textContent="No exact candidate ID and layout match exists in the source manifest.";return;}
+ $("geometryCaption").textContent="SOURCE "+source.source_member+" · GEOMETRY.XML SHA-256 "+String(source.geometry_xml_sha256||"unavailable")+" · exact candidate/signature match confirmed · visualization only, not a transport result.";
+ updateCoreInspector(row,selectedCorePosition.row,selectedCorePosition.col);
+ if(coreGeometryMode==="3d")drawCore3DForCandidate(row);
 }
+
 async function initModelGeometry(){
+ setupCoreGeometryControls();
  try{
   const response=await fetch("/api/model-geometry",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("HTTP "+response.status);
   const payload=await response.json();
   if(payload.schema_version!==1||!Array.isArray(payload.candidates)||payload.candidates.length!==6||!payload.core_lattice||!payload.pin_lattices)throw new Error("Incomplete or unsupported OpenMC geometry manifest.");
-  modelGeometryData=payload;return true;
+  modelGeometryData=payload;
+  $("geometryStatus").textContent="XML SOURCE MATCHED";
+  $("geometryStatus").classList.remove("warning");
+  $("geometryProvenance").textContent="Manifest schema v"+payload.schema_version+" · "+payload.candidates.length+" candidate geometry.xml records · "+payload.core_lattice.dimensions.join(" × ")+" core lattice · 17 × 17 fuel-pin grids · material universe map and boundary conditions from archived input XML. Three.js "+(window.CBPFRCore3D?"loaded":"loading")+" from jsDelivr; axial dimensions are not present in this 2D manifest.";
+  $("coreSourceBadge").textContent="XML-DERIVED";
+  if(window.CBPFRCore3DError){core3dLoadFailed=true;setCoreGeometryMode("2d");}
+  return true;
  }catch(error){
   modelGeometryData=null;
   if($("geometryStatus")){$("geometryStatus").textContent="MODEL MANIFEST UNAVAILABLE";$("geometryStatus").classList.add("warning");}
   if($("geometryProvenance"))$("geometryProvenance").textContent="Cannot load OpenMC geometry manifest: "+String(error.message||error);
   if($("geometryPreview"))$("geometryPreview").innerHTML='<div class="empty-state"><b>Model geometry unavailable</b><p>'+escapeHtml(error.message||error)+'</p><p>No substitute geometry is fabricated.</p></div>';
   if($("geometryCaption"))$("geometryCaption").textContent="Geometry not shown.";
+  if($("core3dCanvas"))$("core3dCanvas").innerHTML='<div class="empty-state"><b>No source geometry</b><p>Three-dimensional geometry is blocked until the archived manifest loads.</p></div>';
   return false;
-}
+ }
 }
 
 function drawSelectedCandidate(row){
@@ -540,7 +700,14 @@ async function initMesh(){
 /* Displays existing external geometry artifacts only; never synthesizes a reactor layout. */
 async function initGeometry(){
  const refresh=$("reloadGeometry");
- if(refresh)refresh.addEventListener("click",async()=>{refresh.disabled=true;refresh.textContent="↻ Scanning…";await loadGeometryArtifacts();refresh.disabled=false;refresh.textContent="↻ Refresh artifacts";});
+ if(refresh&&!refresh.dataset.bound){refresh.dataset.bound="true";refresh.addEventListener("click",async()=>{
+  refresh.disabled=true;refresh.textContent="↻ Refreshing…";
+  const ok=await initModelGeometry();
+  const selected=records.find(item=>String(item.candidate_id)===String($("candidateSelect")?.value));
+  if(ok&&selected){geometryArtifactActive=false;drawModelGeometry(selected);}
+  await loadGeometryArtifacts();
+  refresh.disabled=false;refresh.textContent="↻ Refresh source";
+ });}
  await loadGeometryArtifacts();
 }
 async function loadGeometryArtifacts(){
@@ -550,8 +717,8 @@ async function loadGeometryArtifacts(){
   const payload=await response.json(),items=payload.artifacts||[];
   const list=$("geometryArtifactList");
   if(!items.length){
-   $("geometryStatus").textContent="XML VIEW READY · NO PLOT FILE";
-   $("geometryStatus").classList.remove("warning");
+   $("geometryArtifactStatus").textContent="NO FILES FOUND";
+   $("geometryArtifactStatus").classList.remove("warning");
    $("geometryProvenance").textContent="The candidate-linked material map is reconstructed from archived OpenMC geometry.xml lattice/material definitions. No separate native PNG/VTK/VTI plot is checked into scanned output folders.";
    list.innerHTML='<div class="empty-state"><b>No separate OpenMC plot artifact found</b><p>The main panel still renders the archived model lattice and pin-material regions for the selected candidate.</p><p>Native PNG/VTK/VTI artifacts can be inspected here when present.</p></div>';
    geometryArtifactActive=false;
@@ -559,8 +726,8 @@ async function loadGeometryArtifacts(){
    drawModelGeometry(selected);
    return;
   }
-  $("geometryStatus").textContent=items.length+" EXTERNAL ARTIFACT(S) FOUND";
-  $("geometryStatus").classList.remove("warning");
+  $("geometryArtifactStatus").textContent=items.length+" FILE(S) FOUND";
+  $("geometryArtifactStatus").classList.remove("warning");
   $("geometryProvenance").textContent="Found "+items.length+" existing geometry file(s). The candidate-linked XML material map remains primary; select an item below to inspect a separate native artifact.";
   list.innerHTML=items.map((item,i)=>'<button class="artifact-item" type="button" data-artifact-index="'+i+'"><span class="artifact-icon">'+(item.kind==="image"?"IMG":"3D")+'</span><span class="artifact-meta"><b>'+escapeHtml(item.name)+'</b><small>'+escapeHtml(item.path)+' · '+item.format+' · '+formatBytes(item.size_bytes)+'</small></span><span class="tag">'+item.kind.toUpperCase()+'</span></button>').join("");
   list.querySelectorAll("[data-artifact-index]").forEach(button=>button.addEventListener("click",()=>showGeometryArtifact(items[Number(button.dataset.artifactIndex)])));
@@ -576,6 +743,7 @@ async function loadGeometryArtifacts(){
 function showGeometryArtifact(item){
  if(!item)return;
  geometryArtifactActive=true;
+ setCoreGeometryMode("2d");
  document.querySelectorAll(".artifact-item").forEach(el=>el.classList.remove("active"));
  // Mark the selected source by matching its path text, avoiding assumptions about array order after refresh.
  document.querySelectorAll(".artifact-item").forEach(el=>{if(el.textContent.includes(item.name))el.classList.add("active");});
