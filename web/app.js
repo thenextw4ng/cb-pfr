@@ -8,17 +8,29 @@ const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(d
 const has = (row,key) => row[key] !== null && row[key] !== undefined && row[key] !== "" && Number.isFinite(Number(row[key]));
 function label(row){return String(row.candidate_id ?? "Candidate") + " · " + String(row.layout_signature ?? "layout");}
 function layoutCells(signature){
-  const chars=String(signature??"").toUpperCase().replace(/[^UM]/g,"");
-  const cells=(chars.length>=4?chars.slice(0,4):"UMUM").split("");
+  const raw=String(signature??"").trim().toUpperCase();
+  if(!/^[UM]{4}$/.test(raw)){
+    return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate does not contain a validated four-position U/M signature. No default arrangement is substituted.</p></div>';
+  }
+  const cells=raw.split("");
   return '<div class="assembly-grid">'+cells.map((c,i)=>'<div class="assembly '+(c==="M"?"mox-cell":"")+'">'+(c==="M"?"MOX":"UO₂")+'<small>POSITION '+(i+1)+'</small></div>').join("")+'</div>';
 }
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
 const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d","select2d"]};
-function chart(id,traces,layout={}){if(window.Plotly)Plotly.react($(id),traces,{...baseLayout,...layout},config);else $(id).innerHTML='<div class="loading">Plotly.js failed to load. Check your internet connection.</div>';}
+function chart(id,traces,layout={}){
+ const el=$(id);if(!el)return;
+ if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return;}
+ try{
+  Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
+   const msg=String(error?.message||error).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+   el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+msg+'</p></div>';
+  });
+ }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';}
+}
 function showCandidate(){
  const id=$("candidateSelect").value,row=records.find(r=>String(r.candidate_id)===id);if(!row)return;
  $("layoutView").innerHTML=layoutCells(row.layout_signature);
- $("layoutCaption").textContent=label(row)+" · seed "+(row.seed??"not recorded");
+ $("layoutCaption").textContent=label(row)+" · seed "+(row.seed??"not recorded")+" · signature "+(row.layout_signature??"not recorded");
  drawCandidateChart();
  drawAssemblyField();
 }
@@ -140,7 +152,7 @@ async function initMesh(){
   $("meshStatus").textContent="SPATIAL DATA UNAVAILABLE";
   $("meshStatus").classList.add("warning");
   $("meshProvenance").textContent="The archived spatial tally could not be loaded: "+error.message;
-  ["meshHeatmap","meshContour","meshSurface"].forEach(id=>$(id).innerHTML='<div class="loading">No spatial values displayed. No scientific data have been fabricated.</div>');
+  ["meshHeatmap","meshContour","meshProfile","meshSurface"].forEach(id=>$(id).innerHTML='<div class="empty-state"><b>Spatial data unavailable</b><p>'+String(error.message||error)+'</p><p>No scientific values have been fabricated.</p></div>');
  }
 }
 
@@ -208,10 +220,14 @@ async function initAssembly(){
 function drawAssemblyField(){
  if(!assemblyRecords.length||!$("assemblyMap")||!$("assemblyBar"))return;
  const selectedId=$("candidateSelect")?.value;
- const row=assemblyRecords.find(r=>String(r.candidate_id)===String(selectedId))||assemblyRecords[0];
+ const row=assemblyRecords.find(r=>String(r.candidate_id)===String(selectedId));
+ if(!row){
+  $("assemblyMap").innerHTML='<div class="empty-state"><b>No matching assembly evidence</b><p>The selected candidate has no matching 2 × 2 proxy record. Values are not borrowed from another candidate.</p></div>';
+ } else {
  const positions=[["p00_fission_rate","p01_fission_rate"],["p10_fission_rate","p11_fission_rate"]];
  const z=positions.map(line=>line.map(key=>Number(row[key])));
  chart("assemblyMap",[{type:"heatmap",x:["Column 0","Column 1"],y:["Row 0","Row 1"],z,customdata:[["p00","p01"],["p10","p11"]],colorscale:"Cividis",colorbar:{title:{text:"Fission-rate proxy",font:{size:10}}},hovertemplate:"Position %{customdata}<br>Proxy %{z:.6g}<extra></extra>"}],{margin:{l:65,r:20,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Recorded position index"},yaxis:{...baseLayout.yaxis,title:"Recorded position index",autorange:"reversed"},showlegend:false});
+ }
  const keys=[["p00_fission_rate","p00"],["p01_fission_rate","p01"],["p10_fission_rate","p10"],["p11_fission_rate","p11"]];
  const candidates=assemblyRecords;
  chart("assemblyBar",keys.map(([key,name],i)=>({type:"bar",name,x:candidates.map(r=>String(r.candidate_id)),y:candidates.map(r=>Number(r[key])),marker:{color:[palette.cyan,palette.blue,palette.orange,"#8d9ee8"][i]},hovertemplate:"Candidate %{x}<br>Position "+name+"<br>Proxy %{y:.6g}<extra></extra>"})),{barmode:"group",margin:{l:60,r:15,t:35,b:80},legend:{orientation:"h",y:1.15,x:0},xaxis:{...baseLayout.xaxis,title:"Candidate ID"},yaxis:{...baseLayout.yaxis,title:"Recorded fission-rate proxy (units as source)"},shapes:[{type:"rect",xref:"x",yref:"paper",x0:-0.5,x1:candidates.findIndex(r=>String(r.candidate_id)===String(selectedId))+0.5,y0:0,y1:1,line:{width:0},fillcolor:"rgba(85,212,223,0.07)"}]});
