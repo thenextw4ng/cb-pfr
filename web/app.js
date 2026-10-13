@@ -640,7 +640,7 @@ function drawMesh(){
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   contours:{
    x:{show:false},y:{show:false},
-   z:{show:true,usecolormap:false,highlightcolor:"#e8f1f7",width:1.15,project:{z:true}}
+   z:{show:true,usecolormap:false,start:contourStart,end:contourEnd,size:contourStep,highlightcolor:"#e8f1f7",width:1.15,project:{z:true}}
   },
   hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+sourceHover+displayHover+"<extra></extra>",
   connectgaps:false,hoverongaps:false,showscale:true,
