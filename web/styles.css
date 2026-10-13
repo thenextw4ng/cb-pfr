@@ -178,3 +178,7 @@
  #spatial .field-panel:nth-child(2) .panel-footnote,
  #spatial .field-panel:nth-child(3) .panel-footnote{min-height:0}
 }
+
+@media(max-width:680px){
+ #meshContour.js-plotly-plot .contourlabels text{font-size:8px!important;stroke-width:1.4px}
+}
