@@ -28,8 +28,8 @@
 }
 
 .field-chart{min-height:280px}
-#assemblyMap,#assemblyBar{height:390px}
-@media(max-width:680px){#assemblyMap,#assemblyBar{height:320px}}
+#assemblyMap,#assemblyMatrix{height:390px}
+@media(max-width:680px){#assemblyMap,#assemblyMatrix{height:320px}}
 
 /* External scientific geometry artifact viewer */
 .geometry-preview{min-height:320px;display:flex;align-items:center;justify-content:center;padding:12px;background:#07111b;border:1px solid #1e3545;border-radius:10px;overflow:auto}
