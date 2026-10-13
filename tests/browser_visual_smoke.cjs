@@ -169,14 +169,30 @@ async function main() {
         rankedMode: document.querySelector("#distributionChart")?.data?.[0]?.mode,
         rankedCount: document.querySelector("#distributionChart")?.data?.[0]?.y?.length || 0,
         rankedErrorVisible: document.querySelector("#distributionChart")?.data?.[0]?.error_y?.visible === true,
-        rankedSelectedColorCount: (document.querySelector("#distributionChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#55d4df").length,
+        rankedSelectedColorCount: (document.querySelector("#distributionChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#ffffff").length,
         rankedOrder: document.querySelector("#distributionChart")?.data?.[0]?.x || [],
         aggregateTraceCount: document.querySelector("#aggregateChart")?.data?.length || 0,
         aggregateType: document.querySelector("#aggregateChart")?.data?.[0]?.type,
         aggregateXTitle: document.querySelector("#aggregateChart")?.layout?.xaxis?.title?.text || "",
         aggregateYTitle: document.querySelector("#aggregateChart")?.layout?.yaxis?.title?.text || "",
-        aggregateSelectedColorCount: (document.querySelector("#aggregateChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#55d4df").length,
+        aggregateSelectedColorCount: (document.querySelector("#aggregateChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#ffffff").length,
+        assemblyMapType: document.querySelector("#assemblyMap")?.data?.[0]?.type,
+        assemblyMapTraceCount: document.querySelector("#assemblyMap")?.data?.length || 0,
+        assemblyMapPositions: (document.querySelector("#assemblyMap")?.data?.[0]?.customdata || []).flat().map(cell => cell?.[0]),
+        assemblyMapScale: [document.querySelector("#assemblyMap")?.data?.[0]?.zmin, document.querySelector("#assemblyMap")?.data?.[0]?.zmax],
+        assemblyMatrixScale: [document.querySelector("#assemblyMatrix")?.data?.[0]?.zmin, document.querySelector("#assemblyMatrix")?.data?.[0]?.zmax],
+        assemblyMapColorbarTitle: document.querySelector("#assemblyMap")?.data?.[0]?.colorbar?.title?.text || "",
+        assemblyMapMaterialEdgeColors: document.querySelector("#assemblyMap")?.data?.[1]?.marker?.color || [],
+        assemblyMapSelectedPosition: document.querySelector("#assemblyMap")?.data?.[2]?.customdata?.[0] || "",
+        assemblyPositionTitle: document.querySelector("#assemblyPositionTitle")?.textContent || "",
+        assemblyPositionMaterial: document.querySelector("#assemblyPositionMaterial")?.textContent || "",
+        assemblyPositionValue: document.querySelector("#assemblyPositionValue")?.textContent || "",
+        assemblyScaleRange: document.querySelector("#assemblyScaleRange")?.textContent || "",
+        assemblyProvenanceOpen: document.querySelector(".assembly-provenance")?.open ?? null,
+        assemblyMapColorbarCount: (document.querySelector("#assemblyMap")?.data || []).filter(trace => trace.colorbar || trace.showscale === true).length +
+          (document.querySelector("#assemblyMatrix")?.data || []).filter(trace => trace.colorbar || trace.showscale === true).length,
         matrixType: document.querySelector("#assemblyMatrix")?.data?.[0]?.type,
+        matrixColorbarVisible: document.querySelector("#assemblyMatrix")?.data?.[0]?.showscale,
         matrixRows: document.querySelector("#assemblyMatrix")?.data?.[0]?.z?.length || 0,
         matrixColumns: document.querySelector("#assemblyMatrix")?.data?.[0]?.z?.[0]?.length || 0,
         matrixPositions: document.querySelector("#assemblyMatrix")?.data?.[0]?.x || [],
@@ -218,10 +234,40 @@ async function main() {
       assert.equal(details.matrixRows, 6, "matrix should include all six exact candidate matches");
       assert.equal(details.matrixColumns, 4, "matrix should include all four assembly positions");
       assert.deepEqual(details.matrixPositions, ["P00","P01","P10","P11"]);
-      assert.equal(details.matrixTraceCount, 2, "matrix should have one colour-bearing heatmap and one selected-row outline");
+      assert.equal(details.assemblyMapType, "heatmap", "assembly proxy must remain a discrete 2 × 2 map, never a continuous contour");
+      assert.equal(details.assemblyMapTraceCount, 3, "map should contain one quantitative field, one material-category outline, and one selected-position outline");
+      assert.deepEqual(details.assemblyMapPositions, ["P00","P01","P10","P11"], "map labels must follow row-major geometry positions");
+      assert.deepEqual(details.assemblyMapScale, details.assemblyMatrixScale, "selected map and candidate matrix must keep one shared quantitative range");
+      assert.match(details.assemblyMapColorbarTitle, /source units not specified/i);
+      assert.deepEqual(details.assemblyMapMaterialEdgeColors, details.signature.trim().split("").map(code => code === "M" ? "#f4bd62" : "#55d4df"), "material edge colours must follow selected layout signature, not fixed spatial slots");
+      assert.equal(details.assemblyMapSelectedPosition, "P00", "selected position should have a synchronized outline");
+      assert.equal(details.assemblyPositionTitle, "P00");
+      assert.equal(details.assemblyPositionMaterial, details.signature.trim()[0] === "M" ? "MOX" : "UO₂");
+      assert.match(details.assemblyPositionValue, /^0\.\d{3,}|^\d/);
+      assert.match(details.assemblyScaleRange, /Shared global colour range/);
+      assert.equal(details.assemblyProvenanceOpen, false, "verbose provenance should be collapsed by default");
+      assert.equal(details.assemblyMapColorbarCount, 1, "only the selected-candidate map should display the shared quantitative colorbar");
+      assert.equal(details.matrixColorbarVisible, false, "candidate matrix must reuse the map scale without duplicating its colorbar");
+      assert.equal(details.matrixTraceCount, 2, "matrix should have one quantitative heatmap and one selected-row outline");
       assert.equal(details.matrixSelectedLayout, details.coreInfo?.layoutSignature, "outlined matrix row should follow the selected candidate");
       assert.match(details.keffAndSdText, /Reported SD ±/);
     }
+
+    // Position controls and click events must stay synchronized with the 2 × 2 field.
+    await page.click('#assemblyPositionPicker [data-assembly-position="P11"]');
+    await page.waitForFunction(() =>
+      document.querySelector("#assemblyPositionTitle")?.textContent === "P11" &&
+      document.querySelector("#assemblyMap")?.data?.[2]?.customdata?.[0] === "P11"
+    );
+    await page.evaluate(() => {
+      const map = document.querySelector("#assemblyMap");
+      const cell = map?.data?.[0]?.customdata?.[1]?.[0];
+      map?.emit?.("plotly_click", { points: [{ curveNumber: 0, customdata: cell }] });
+    });
+    await page.waitForFunction(() =>
+      document.querySelector("#assemblyPositionTitle")?.textContent === "P10" &&
+      document.querySelector("#assemblyMap")?.data?.[2]?.customdata?.[0] === "P10"
+    );
 
     // Prove a 3D assembly click updates the selected-position inspector.
     const coreCanvas = page.locator("#core3dCanvas canvas.core3d-canvas");
