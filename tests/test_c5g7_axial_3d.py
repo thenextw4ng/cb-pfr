@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.prepare_c5g7_axial_3d import prepare_candidate
 from scripts.audit_c5g7_axial_3d import audit_inputs, export_statepoint
 import web_server
+from scripts.analyze_c5g7_axial_3d import analyze
 
 
 BUILDER = """import openmc
@@ -223,6 +225,93 @@ class Axial3DPreparationTests(unittest.TestCase):
             self.assertEqual(payload["provenance"]["input_manifest"]["source"]["archive_sha256"], "a" * 64)
             self.assertEqual(payload["score"], "fission")
             self.assertIsNone(flux_payload["relative_error_percent"][0][0][0])
+
+
+    def test_scalar_reference_report_marks_smoke_as_nonconclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "c5g7-2x2-UMMU"
+            model3d = root / "model" / "3d"
+            exports = model3d / "axial-3d-export"
+            exports.mkdir(parents=True)
+            (exports / "axial_tally_3d.npz").write_bytes(b"test-volume-bytes")
+            manifest = {
+                "candidate_id": "c5g7-2x2-UMMU",
+                "layout_signature": "UMMU",
+                "source": {"archive_sha256": "a" * 64},
+            }
+            audit = {
+                "status": "generated_3d_inputs_passed_structural_audit",
+                "candidate_id": "c5g7-2x2-UMMU",
+                "settings": {"batches": 30, "inactive": 5, "active_batches": 25,
+                             "particles_per_batch": 500, "seed": 640000},
+                "model_files": {
+                    name: {"sha256": hashlib.sha256(name.encode()).hexdigest()}
+                    for name in ("geometry.xml", "materials.xml", "settings.xml", "tallies.xml", "mgxs.h5")
+                },
+            }
+            summary = {
+                "status": "3d_openmc_statepoint_mesh_exported",
+                "statepoint": {"n_batches": 30, "n_inactive": 5, "n_particles": 500,
+                               "n_realizations": 25, "seed": 640000, "sha256": "b" * 64},
+                "mesh": {"dimension_xyz": [51, 51, 30]},
+                "score_summary": {
+                    score: {
+                        "nonzero_mean_bin_count": 100,
+                        "relative_error_percent_median_positive_bins": 56.0,
+                        "relative_error_percent_p95_positive_bins": 100.0,
+                    } for score in ("flux", "fission", "nu-fission")
+                },
+            }
+            (root / "AXIAL_3D_INPUT_MANIFEST.json").write_text(json.dumps(manifest), encoding="utf-8")
+            (root / "AXIAL_3D_INPUT_AUDIT.json").write_text(json.dumps(audit), encoding="utf-8")
+            (exports / "AXIAL_3D_STATEPOINT_SUMMARY.json").write_text(json.dumps(summary), encoding="utf-8")
+            log = model3d / "openmc.log"
+            log.write_text(
+                "Combined k-effective = 1.16195 +/- 0.00512\nLeakage Fraction = 0.00288 +/- 0.00054\n",
+                encoding="utf-8",
+            )
+            report, _ = analyze(root, log, exports)
+            self.assertEqual(report["status"], "smoke_only_no_benchmark_conclusion")
+            self.assertEqual(report["candidate"]["layout_signature"], "UMMU")
+            self.assertEqual(report["run"]["total_active_histories"], 12500)
+            self.assertFalse(report["comparison"]["approx_95pct_interval_includes_zero"] is False)
+            self.assertTrue((exports / "AXIAL_3D_BENCHMARK_CHECK.json").is_file())
+            self.assertTrue((exports / "AXIAL_3D_BENCHMARK_CHECK.md").is_file())
+
+    def test_scalar_reference_report_flags_high_budget_difference_for_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "c5g7-2x2-UMMU"
+            model3d = root / "model" / "3d"
+            exports = model3d / "axial-3d-export"
+            exports.mkdir(parents=True)
+            (exports / "axial_tally_3d.npz").write_bytes(b"test-volume-bytes")
+            manifest = {"candidate_id": "c5g7-2x2-UMMU", "layout_signature": "UMMU",
+                        "source": {"archive_sha256": "a" * 64}}
+            audit = {
+                "status": "generated_3d_inputs_passed_structural_audit",
+                "candidate_id": "c5g7-2x2-UMMU",
+                "settings": {"batches": 7000, "inactive": 500, "active_batches": 6500,
+                             "particles_per_batch": 10000, "seed": 640000},
+                "model_files": {
+                    name: {"sha256": hashlib.sha256(name.encode()).hexdigest()}
+                    for name in ("geometry.xml", "materials.xml", "settings.xml", "tallies.xml", "mgxs.h5")
+                },
+            }
+            summary = {
+                "status": "3d_openmc_statepoint_mesh_exported",
+                "statepoint": {"n_batches": 7000, "n_inactive": 500, "n_particles": 10000,
+                               "n_realizations": 6500, "seed": 640000, "sha256": "b" * 64},
+                "mesh": {"dimension_xyz": [51, 51, 30]},
+                "score_summary": {"fission": {"nonzero_mean_bin_count": 200, "relative_error_percent_median_positive_bins": 2.0, "relative_error_percent_p95_positive_bins": 6.0}},
+            }
+            (root / "AXIAL_3D_INPUT_MANIFEST.json").write_text(json.dumps(manifest), encoding="utf-8")
+            (root / "AXIAL_3D_INPUT_AUDIT.json").write_text(json.dumps(audit), encoding="utf-8")
+            (exports / "AXIAL_3D_STATEPOINT_SUMMARY.json").write_text(json.dumps(summary), encoding="utf-8")
+            log = model3d / "openmc.log"
+            log.write_text("Combined k-effective = 1.19000 +/- 0.00010\nLeakage Fraction = 0.00187 +/- 0.00001\n", encoding="utf-8")
+            report, _ = analyze(root, log, exports)
+            self.assertEqual(report["status"], "scalar_difference_requires_review")
+            self.assertGreater(abs(report["comparison"]["difference_in_combined_sd_approx"]), 2.0)
 
 
 if __name__ == "__main__":
