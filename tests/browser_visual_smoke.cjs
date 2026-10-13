@@ -413,12 +413,14 @@ async function main() {
     await page.click("#coreView3d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
-    // Use a fresh browser page so Plotly initializes at mobile width, not by shrinking desktop SVGs.
-    // Reuse the desktop page's browser context so already-loaded scientific
-    // visualization libraries are cached; this keeps the mobile pass focused on
-    // responsive layout instead of making a second cold request to the Plotly CDN.
-    const mobilePage = await context.newPage();
-    await mobilePage.setViewportSize({ width: 390, height: 844 });
+    // A Chromium convenience page owns a single-page context; create the mobile
+    // page through Browser.newPage so it gets an independent mobile-sized context.
+    // This also ensures Plotly initializes at the mobile width instead of shrinking
+    // desktop SVGs after they have already been laid out.
+    const mobilePage = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 1
+    });
     const mobileFailures = [];
     mobilePage.on("pageerror", error => mobileFailures.push("pageerror: " + error.message));
     const mobileResponse = await mobilePage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
