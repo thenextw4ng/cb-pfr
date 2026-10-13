@@ -28,6 +28,7 @@ def locate_statepoint_archive():
     )
 STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
+MODEL_GEOMETRY_MANIFEST = ROOT / "geometry" / "c5g7_model_geometry.json"
 MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
 
 GEOMETRY_SEARCH_ROOTS = tuple(ROOT / name for name in ("plots", "plot", "geometry", "model", "c5g7-run", "evidence", "results", "artifacts"))
@@ -91,6 +92,61 @@ def read_model_geometry():
     ids = [str(item.get("candidate_id", "")) for item in candidates]
     if not all(ids) or len(set(ids)) != len(ids):
         raise ValueError("Geometry manifest contains empty or duplicate candidate IDs.")
+    return payload
+
+
+def read_model_geometry_manifest():
+    """Load and structurally validate the XML-derived C5G7 geometry snapshot."""
+    if not MODEL_GEOMETRY_MANIFEST.is_file():
+        raise FileNotFoundError(f"Model geometry manifest not found: {MODEL_GEOMETRY_MANIFEST.relative_to(ROOT)}")
+    with MODEL_GEOMETRY_MANIFEST.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("Model geometry manifest has an unsupported schema.")
+    provenance = payload.get("provenance", {})
+    archive_sha = provenance.get("archive_sha256", "")
+    if len(archive_sha) != 64 or any(char not in "0123456789abcdef" for char in archive_sha.lower()):
+        raise ValueError("Model geometry manifest archive SHA-256 is missing or malformed.")
+    model = payload.get("model")
+    if not isinstance(model, dict):
+        raise ValueError("Model geometry manifest has no model metadata.")
+    for key in ("U", "M"):
+        lattice = model.get("pin_lattices", {}).get(key, {})
+        rows = lattice.get("universe_rows", [])
+        if lattice.get("dimension") != [17, 17] or len(rows) != 17 or any(
+            not isinstance(row, str) or len(row) != 17 for row in rows
+        ):
+            raise ValueError(f"Model geometry manifest has an invalid {key} 17 x 17 pin lattice.")
+    candidates = payload.get("candidates")
+    expected = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
+    if not isinstance(candidates, list) or len(candidates) != 6:
+        raise ValueError("Model geometry manifest must contain exactly six candidates.")
+    seen = set()
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            raise ValueError("Model geometry candidate is not an object.")
+        candidate_id = str(candidate.get("candidate_id", ""))
+        signature = str(candidate.get("layout_signature", ""))
+        if not candidate_id or candidate_id in seen:
+            raise ValueError("Model geometry candidate IDs are empty or duplicated.")
+        seen.add(candidate_id)
+        core = candidate.get("core_lattice", {})
+        rows = core.get("layout_rows", [])
+        if core.get("dimension") != [3, 3] or len(rows) != 3 or any(
+            not isinstance(row, str) or len(row) != 3 for row in rows
+        ):
+            raise ValueError(f"Candidate {candidate_id} has an invalid 3 x 3 core lattice.")
+        actual = rows[0][0] + rows[0][1] + rows[1][0] + rows[1][1]
+        if actual != signature or signature not in expected or candidate_id.endswith("-" + signature) is False:
+            raise ValueError(f"Candidate {candidate_id} does not match its XML-derived layout signature.")
+        if rows[0][2] != "R" or rows[1][2] != "R" or rows[2] != "RRR":
+            raise ValueError(f"Candidate {candidate_id} does not have the expected reflector lattice.")
+        for source_key in ("geometry_sha256", "materials_sha256"):
+            digest = candidate.get("source", {}).get(source_key, "")
+            if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
+                raise ValueError(f"Candidate {candidate_id} has a malformed {source_key}.")
+    if {str(candidate.get("layout_signature")) for candidate in candidates} != expected:
+        raise ValueError("Model geometry manifest does not include all six expected layouts.")
     return payload
 
 
@@ -333,6 +389,12 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 return self._send(200, json.dumps(list_geometry_artifacts(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
+        if path == "/api/model-geometry":
+            try:
+                payload = read_model_geometry_manifest()
+                return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifact":
             try:
