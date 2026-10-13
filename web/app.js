@@ -1214,10 +1214,10 @@ function drawAssemblyField(){
  const mid=(scaleMin+scaleMax)/2;
  const colorbar={
   title:{text:"Fission-rate proxy<br>(CSV unit not documented)",font:{size:10,color:palette.text}},
-  thickness:13,outlinewidth:0,tickfont:{size:9,color:palette.muted},
+  thickness:10,outlinewidth:0,tickfont:{size:8,color:palette.muted},
   tickmode:"array",tickvals:[scaleMin,mid,scaleMax],
   ticktext:[formatSourceProxy(scaleMin,4),formatSourceProxy(mid,4),formatSourceProxy(scaleMax,4)],
-  ticks:"outside",len:0.78
+  ticks:"outside",len:0.68
  };
 
  if(!row){
@@ -1264,7 +1264,7 @@ function drawAssemblyField(){
   ].map(line=>line.map(position=>[
    position.label,position.material,row.candidate_id,signature,row.seed,row.status,position.row,position.col
   ]));
-  const textValues=cells.map(position=>position.label+" · "+position.material+"\n"+formatSourceProxy(position.value));
+  const textValues=cells.map(position=>position.label+" · "+position.material+"<br>"+formatSourceProxy(position.value,4));
   const heatmap={
    type:"heatmap",name:"Assembly-integrated fission-rate proxy",
    x:["Column 0","Column 1"],y:["Row 0","Row 1"],
@@ -1280,8 +1280,8 @@ function drawAssemblyField(){
   // follow each tile, while the selected-position frame remains clearly larger.
   const mapWidth=mapEl?.clientWidth||560,mapHeight=mapEl?.clientHeight||410;
   const tileFootprint=Math.min(Math.max(140,mapWidth-170)/2,Math.max(160,mapHeight-66)/2);
-  const materialOutlineSize=Math.max(32,Math.min(144,Math.floor(tileFootprint*0.72)));
-  const selectedOutlineSize=Math.max(40,Math.min(156,Math.floor(tileFootprint*0.86)));
+  const materialOutlineSize=Math.max(24,Math.min(112,Math.floor(tileFootprint*0.54)));
+  const selectedOutlineSize=Math.max(30,Math.min(124,Math.floor(tileFootprint*0.66)));
   const materialOutline={
    type:"scatter",mode:"markers",name:"Material category outline",
    x:cells.map(position=>position.col===0?"Column 0":"Column 1"),
@@ -1304,11 +1304,11 @@ function drawAssemblyField(){
    hoverinfo:"skip",showlegend:false
   };
   chart("assemblyMap",[heatmap,materialOutline,selectionOutline],{
-   autosize:true,margin:{l:58,r:112,t:14,b:52},
+   autosize:true,margin:{l:42,r:78,t:10,b:44},
    showlegend:false,hovermode:"closest",
-   xaxis:{...baseLayout.xaxis,title:{text:"Core-map column",standoff:9},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
-   yaxis:{...baseLayout.yaxis,title:{text:"Core-map row · row 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
-   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"ROW 0 (TOP): P00 = R0/C0 · P01 = R0/C1    |    ROW 1: P10 = R1/C0 · P11 = R1/C1",font:{size:9,color:palette.muted}}]
+   xaxis:{...baseLayout.xaxis,title:{text:"Column index",standoff:8},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickvals:["Column 0","Column 1"],ticktext:["0","1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   yaxis:{...baseLayout.yaxis,title:{text:"Row index · 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],tickvals:["Row 0","Row 1"],ticktext:["0","1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   annotations:[]
   }).then(()=>{
    if(!mapEl||typeof mapEl.on!=="function"||mapEl.dataset.positionClickBound)return;
    mapEl.on("plotly_click",event=>{
@@ -1354,7 +1354,7 @@ function drawAssemblyField(){
  chart("assemblyMatrix",traces,{
   autosize:true,margin:{l:62,r:20,t:16,b:50},showlegend:false,hovermode:"closest",
   xaxis:{...baseLayout.xaxis,title:{text:"Fuel position · row-major",standoff:10},type:"category",categoryorder:"array",categoryarray:["P00","P01","P10","P11"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},
-  yaxis:{...baseLayout.yaxis,title:{text:"Candidate layout · descriptive k-effective order",standoff:8},type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},
+  yaxis:{...baseLayout.yaxis,title:{text:"Layout signature",standoff:8},type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},
   annotations:[{xref:"paper",yref:"paper",x:1,y:1.07,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]
  });
 }
