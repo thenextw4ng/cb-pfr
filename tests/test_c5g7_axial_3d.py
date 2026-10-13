@@ -274,7 +274,7 @@ class Axial3DPreparationTests(unittest.TestCase):
             self.assertEqual(report["status"], "smoke_only_no_benchmark_conclusion")
             self.assertEqual(report["candidate"]["layout_signature"], "UMMU")
             self.assertEqual(report["run"]["total_active_histories"], 12500)
-            self.assertFalse(report["comparison"]["approx_95pct_interval_includes_zero"] is False)
+            self.assertFalse(report["comparison"]["approx_95pct_interval_includes_zero"])
             self.assertTrue((exports / "AXIAL_3D_BENCHMARK_CHECK.json").is_file())
             self.assertTrue((exports / "AXIAL_3D_BENCHMARK_CHECK.md").is_file())
 
