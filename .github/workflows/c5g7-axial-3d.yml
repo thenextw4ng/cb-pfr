@@ -193,6 +193,29 @@ jobs:
           print("3-D statepoint exported. This is a transport smoke/production run, not a convergence or benchmark acceptance statement.")
           PY
 
+      - name: Browser-test the actual 3D tally volume and axial slice
+        if: github.event_name == 'pull_request'
+        shell: bash -l {0}
+        env:
+          CANDIDATE_ROOT: ${{ steps.prepare.outputs.candidate_root }}
+          CBPFR_AXIAL_TALLY_NPZ: ${{ steps.prepare.outputs.candidate_root }}/model/3d/axial-3d-export/axial_tally_3d.npz
+          CBPFR_STATEPOINT_ARCHIVE: ${{ runner.temp }}/c5g7-study-640000.zip
+          CBPFR_STATEPOINT_MEMBER: c5g7-2x2-UMMU/model/2d/statepoint.5000.h5
+        run: |
+          set -euo pipefail
+          node --check tests/browser_axial_3d.cjs
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+          python web_server.py > "$RUNNER_TEMP/cbpfr-web-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8765/api/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent "http://127.0.0.1:8765/api/axial-3d?score=flux" > "$RUNNER_TEMP/axial-3d-api.json"
+          node tests/browser_axial_3d.cjs
+
       - name: Upload reproducible axial input, statepoint, and volumetric tally
         if: always() && steps.prepare.outputs.candidate_root != ''
         uses: actions/upload-artifact@v4
@@ -214,3 +237,5 @@ jobs:
             ${{ steps.prepare.outputs.candidate_root }}/model/3d/openmc.log
             ${{ steps.prepare.outputs.candidate_root }}/model/3d/axial-3d-export/**
             ${{ steps.prepare.outputs.candidate_root }}/model/3d/axial-statepoint-export.log
+            artifacts/axial-3d-browser-qa/**
+            ${{ runner.temp }}/cbpfr-web-server.log
