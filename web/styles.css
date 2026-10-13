@@ -150,3 +150,6 @@
  #spatial .section-actions{display:flex;flex-wrap:wrap;min-width:0}
  #spatial .notice{min-width:0;max-width:100%}
 }
+
+#spatial .field-grid>.panel:nth-child(3){grid-column:1/-1}
+@media(max-width:680px){#spatial .field-grid>.panel:nth-child(3){grid-column:auto}}
