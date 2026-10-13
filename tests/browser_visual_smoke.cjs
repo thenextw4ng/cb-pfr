@@ -250,10 +250,10 @@ async function main() {
           String(item.layout_signature).toUpperCase() === signature.toUpperCase()
         );
         return row ? ["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].map(key => Number(row[key])) : null;
-      }, { candidateId: option.value, signature: details.signature.trim() });
+      }, { candidateId: option.value, signature: details.coreInfo?.layoutSignature || "" });
       assert.ok(recordedAssembly, "the selected candidate must have an exact ID + signature proxy record");
       assert.deepEqual(details.assemblyMapValues.flat(), recordedAssembly, "all four displayed heatmap values must be the actual CSV values in P00, P01, P10, P11 order");
-      assert.deepEqual(details.assemblyMapText.flat().map(text => text.split("\n")[0]), details.signature.trim().split("").map((code,index) => ["P00","P01","P10","P11"][index] + " · " + (code === "M" ? "MOX" : "UO₂")), "each tile must show its matching position label and actual material category");
+      assert.deepEqual(details.assemblyMapText.flat().map(text => text.split("\n")[0]), details.coreInfo.layoutSignature.split("").map((code,index) => ["P00","P01","P10","P11"][index] + " · " + (code === "M" ? "MOX" : "UO₂")), "each tile must show its matching position label and actual material category");
       assert.match(details.assemblyMapAxisMapping, /ROW 0 \(TOP\).*P00 = R0\/C0.*P11 = R1\/C1/, "the position labels must document the same row/column convention as the core map");
       assert.deepEqual(details.assemblyMapScale, details.assemblyMatrixScale, "selected map and candidate matrix must keep one shared quantitative range");
       assert.match(details.assemblyMapColorbarTitle, /CSV unit not documented/i, "do not invent a physical unit that the source CSV does not record");
