@@ -124,7 +124,7 @@ test("all six candidate selections update placement, detail, comparison highligh
 
     const placement = $("layoutView").innerHTML;
     assert.match(placement, /fuel-signature-summary/, row.candidate_id + " should show the compact source-recorded fuel signature");
-    assert.match(placement, /p00 → p01 → p10 → p11/, "signature ordering must be explicit");
+    assert.match(placement, /P00 → P01 → P10 → P11/, "signature ordering must be explicit and consistent with the geometry map");
     assert.doesNotMatch(placement, /assembly-grid|class="assembly /, "duplicate four-tile assembly cards should be removed");
     const placementLetters = [...placement.matchAll(/class="fuel-signature-letter fuel-signature-letter-(mox|uo2)">([UM])<\/span>/g)];
     assert.deepEqual(placementLetters.map(m => m[2]), row.layout_signature.split(""), row.candidate_id + " compact signature should follow row-major source order");
