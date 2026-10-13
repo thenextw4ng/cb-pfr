@@ -240,10 +240,22 @@ async function main() {
     // Validate control synchronization on desktop without resizing initialized Plotly SVGs.
     for (const score of ["fission", "nu-fission", "flux"]) {
       await page.selectOption("#meshScore", score);
-      await page.waitForFunction(expected => {
-        const el = document.querySelector("#meshHeatmap");
-        return el?.data?.[0]?.hovertemplate?.includes(expected + " tally mean");
-      }, score, { timeout: 15000 });
+      try {
+        await page.waitForFunction(expected => {
+          const el = document.querySelector("#meshHeatmap");
+          return el?.data?.[0]?.hovertemplate?.includes(expected + " tally mean");
+        }, score, { timeout: 15000 });
+      } catch (error) {
+        const state = await page.evaluate(() => ({
+          selectedScore: document.querySelector("#meshScore")?.value,
+          selectedView: document.querySelector("#meshView")?.value,
+          meshStatus: document.querySelector("#meshStatus")?.textContent,
+          hovertemplate: document.querySelector("#meshHeatmap")?.data?.[0]?.hovertemplate || "",
+          chartError: document.querySelector("#meshHeatmap")?.innerText || "",
+          summary: document.querySelector("#meshSummaryNote")?.textContent || ""
+        }));
+        throw new Error("Mesh score control did not redraw the recorded hover field for " + score + ": " + JSON.stringify(state) + "; " + error.message);
+      }
     }
     await page.selectOption("#meshView", "relative_sd");
     await page.waitForFunction(() =>
