@@ -83,7 +83,7 @@ async function main() {
     assert.equal(initialSpatialData.meshContour.contours?.showlabels, true, "contour isolines should be numerically labeled");
     assert.ok(initialSpatialData.meshContour.contours?.size > 0, "contour levels must have an explicit interval");
     assert.ok(initialSpatialData.meshContour.contours?.end > initialSpatialData.meshContour.contours?.start, "contour interval must span the observed field");
-    assert.match(initialSpatialData.meshProfile.xAxisTitle, /X mesh-bin index/);
+    assert.match(initialSpatialData.meshProfile.xAxisTitle, /X position \(cm\)/, "verified regular-mesh bounds should put the profile on physical X coordinates");
     assert.match(initialSpatialData.meshProfile.yAxisTitle, /Recorded flux tally mean/);
     assert.equal(initialSpatialData.meshProfile.yAxisType, "log", "mean profile should use a true log axis instead of plotting log-transformed values");
     assert.equal(initialSpatialData.meshProfile.errorVisible, true, "central mean profile should show ±1 standard error");
