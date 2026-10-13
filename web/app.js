@@ -1103,7 +1103,7 @@ async function initAssembly(){
   if(!response.ok){let detail="HTTP "+response.status;try{detail=(await response.json()).error||detail}catch(_){}throw new Error(detail)}
   const payload=await response.json();
   assemblyRecords=(payload.records||[]).filter(r=>assemblyPositionDefs.some(position=>has(r,position.key)));
-  if(!assemblyRecords.length)throw new Error("No complete 2×2 assembly proxy records.");
+  if(!assemblyRecords.length)throw new Error("No finite assembly-integrated proxy values are available.");
   $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
   $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of the candidate-summary seeds; do not compare as paired runs.";
   drawAssemblyField();
