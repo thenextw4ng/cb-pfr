@@ -429,7 +429,15 @@ async function main() {
     await mobilePage.waitForFunction(() => document.querySelectorAll("#selectedCandidateMetrics .candidate-stat").length === 4, { timeout: 30000 });
     await mobilePage.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 30000 });
     await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
-    await mobilePage.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
+    await mobilePage.waitForFunction(() => {
+      const status = document.querySelector("#core3dStatus")?.textContent || "";
+      const fallback = /2D SOURCE FALLBACK|WEBGL UNAVAILABLE|THREE.JS CDN UNAVAILABLE.*2D FALLBACK/i.test(status);
+      const svg = document.querySelector("#geometryPreview");
+      const active2d = document.querySelector("#coreView2d")?.getAttribute("aria-pressed") === "true";
+      // Three.js is optional. If its CDN or WebGL is unavailable, require the
+      // source SVG to be visible and the 2-D mode button to be active instead.
+      return /WEBGL READY/.test(status) || (fallback && svg && svg.hidden === false && active2d);
+    }, { timeout: 20000 });
     // Desktop QA above checks all four Plotly spatial views fully. On mobile,
     // focus this pass on the Stage 1 core renderer, position inspector, and overflow;
     // don't initialize/wait for a second full set of heavyweight Plotly SVGs.
