@@ -29,7 +29,6 @@ def locate_statepoint_archive():
 STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
 MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
-MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
 
 GEOMETRY_SEARCH_ROOTS = tuple(ROOT / name for name in ("plots", "plot", "geometry", "model", "c5g7-run", "evidence", "results", "artifacts"))
 GEOMETRY_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".vti", ".vtk", ".vtp", ".vtu", ".vtm", ".xdmf"}
@@ -79,26 +78,9 @@ def read_geometry_artifact(relative_path):
 
 
 def read_model_geometry():
-    """Return model geometry normalized from archived OpenMC geometry.xml inputs."""
-    if not MODEL_GEOMETRY_MANIFEST.is_file():
-        raise FileNotFoundError(f"OpenMC-derived geometry manifest not found: {MODEL_GEOMETRY_MANIFEST}")
-    with MODEL_GEOMETRY_MANIFEST.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
-    if payload.get("schema_version") != 1:
-        raise ValueError("Unsupported OpenMC geometry manifest schema version.")
-    candidates = payload.get("candidates")
-    if not isinstance(candidates, list) or len(candidates) != 6:
-        raise ValueError("Geometry manifest must contain the six recorded C5G7 layout variants.")
-    ids = [str(item.get("candidate_id", "")) for item in candidates]
-    if not all(ids) or len(set(ids)) != len(ids):
-        raise ValueError("Geometry manifest contains empty or duplicate candidate IDs.")
-    return payload
-
-
-def read_model_geometry_manifest():
     """Load and validate the committed manifest extracted from archived OpenMC XML."""
     if not MODEL_GEOMETRY_MANIFEST.is_file():
-        raise FileNotFoundError(f"OpenMC geometry manifest not found: {MODEL_GEOMETRY_MANIFEST.relative_to(ROOT)}")
+        raise FileNotFoundError(f"OpenMC-derived geometry manifest not found: {MODEL_GEOMETRY_MANIFEST.relative_to(ROOT)}")
     with MODEL_GEOMETRY_MANIFEST.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict) or payload.get("schema_version") != 1:
@@ -135,7 +117,7 @@ def read_model_geometry_manifest():
     for lattice_id, expected_name in expected_lattices.items():
         lattice = pin_lattices[lattice_id]
         grid = lattice.get("universe_grid", [])
-        if lattice.get("dimensions") != [17, 17] or len(grid) != 17 or any(
+        if lattice.get("name") != expected_name or lattice.get("dimensions") != [17, 17] or len(grid) != 17 or any(
             not isinstance(row, list) or len(row) != 17 for row in grid
         ):
             raise ValueError(f"{expected_name} must be a 17 x 17 XML universe grid.")
@@ -191,7 +173,7 @@ def read_model_geometry_manifest():
         if not valid_sha256(candidate.get("geometry_xml_sha256", "")):
             raise ValueError(f"Candidate {candidate_id} has a malformed geometry XML SHA-256.")
     if {candidate.get("layout_signature") for candidate in candidates} != expected_layouts:
-        raise ValueError("Geometry manifest does not contain each of the six expected layouts.")
+        raise ValueError("Geometry manifest does not contain all six expected layouts.")
     return payload
 
 
@@ -434,12 +416,6 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 return self._send(200, json.dumps(list_geometry_artifacts(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError) as exc:
-                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
-        if path == "/api/model-geometry":
-            try:
-                payload = read_model_geometry_manifest()
-                return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
-            except (OSError, ValueError, json.JSONDecodeError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifact":
             try:
