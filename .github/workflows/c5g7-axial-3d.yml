@@ -251,7 +251,7 @@ jobs:
             git -C "$publish_repo" add evidence/cbpfr_axial_3d/
             if git -C "$publish_repo" diff --cached --quiet; then
               echo "The published axial tally is unchanged; no evidence commit is needed."
-              git worktree remove --force "$publish_repo"
+              git worktree remove --force "$publish_repo" || true
               exit 0
             fi
             git -C "$publish_repo" config user.name "github-actions[bot]"
@@ -259,11 +259,11 @@ jobs:
             git -C "$publish_repo" commit -m "data: publish recorded axial 3D tally for workstation"
             if git -C "$publish_repo" push origin "HEAD:$TARGET_BRANCH"; then
               echo "Published recorded 3-D tally and provenance to $TARGET_BRANCH."
-              git worktree remove --force "$publish_repo"
+              git worktree remove --force "$publish_repo" || true
               exit 0
             fi
             echo "Target branch advanced during publish attempt $attempt; retrying against its latest head."
-            git worktree remove --force "$publish_repo"
+            git worktree remove --force "$publish_repo" || true
             sleep 2
           done
           echo "Could not publish the generated axial tally after 3 attempts." >&2
