@@ -430,7 +430,7 @@ function drawMesh(){
  }],{
   autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
   xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (0-based)",standoff:8},dtick:5},
-  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean",standoff:8},exponentformat:"power"},
+  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean",standoff:8},exponentformat:"power"},
   annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
  });
  if($("meshContourSubtitle"))$("meshContourSubtitle").textContent=f.view==="relative_sd"
