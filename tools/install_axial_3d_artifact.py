@@ -21,6 +21,9 @@ REPOSITORY = "thenextw4ng/cb-pfr"
 WORKFLOW_FILE = "c5g7-axial-3d.yml"
 API_ROOT = f"https://api.github.com/repos/{REPOSITORY}"
 ARTIFACT_PREFIX = "cbpfr-axial-3d-c5g7-2x2-UMMU-production-"
+# Bootstrap to the verified production run currently available in public Actions.
+# Once this artifact expires, discovery falls back to the latest successful workflow runs.
+KNOWN_PRODUCTION_ARTIFACT_ID = 11814200461
 REQUIRED_MEMBERS = {
     "model/3d/axial-3d-export/axial_tally_3d.npz": "axial_tally_3d.npz",
     "model/3d/axial-3d-export/AXIAL_3D_STATEPOINT_SUMMARY.json": "AXIAL_3D_STATEPOINT_SUMMARY.json",
@@ -59,14 +62,46 @@ def _get_json(url: str) -> dict:
 
 def find_latest_production_artifact() -> dict:
     """Find a successful, non-expired UMMU production artifact from this workflow."""
+    # Prefer the exact verified run first. This avoids serially paging through many old
+    # smoke/diagnostic runs on every new local checkout. The ID is only a bootstrap: after
+    # it expires, discovery below selects a newer successful production artifact.
+    known_url = f"{API_ROOT}/actions/artifacts/{KNOWN_PRODUCTION_ARTIFACT_ID}"
+    try:
+        known = _get_json(known_url)
+    except AxialArtifactError as exc:
+        message = str(exc)
+        if "HTTP Error 404" not in message and "HTTP Error 410" not in message:
+            raise
+        known = {}
+    if (
+        isinstance(known, dict)
+        and str(known.get("name", "")).startswith(ARTIFACT_PREFIX)
+        and known.get("expired") is False
+    ):
+        workflow_run = known.get("workflow_run") or {}
+        run_id = workflow_run.get("id", 38393987067)
+        return {
+            "artifact_id": known["id"],
+            "artifact_name": str(known["name"]),
+            "artifact_url": f"{API_ROOT}/actions/artifacts/{known['id']}/zip",
+            "run_id": run_id,
+            "run_url": str(workflow_run.get("html_url", "https://github.com/thenextw4ng/cb-pfr/actions/runs/" + str(run_id))),
+            "created_at": str(known.get("created_at", "")),
+            "expires_at": str(known.get("expires_at", "")),
+        }
+
     workflow_url = f"{API_ROOT}/actions/workflows/{WORKFLOW_FILE}/runs?per_page=25"
     runs = _get_json(workflow_url).get("workflow_runs", [])
     if not isinstance(runs, list):
         raise AxialArtifactError("GitHub workflow response has no valid workflow_runs list.")
 
+    inspected_runs = 0
     for run in runs:
         if not isinstance(run, dict) or run.get("conclusion") != "success":
             continue
+        inspected_runs += 1
+        if inspected_runs > 10:
+            break
         run_id = run.get("id")
         if not isinstance(run_id, int):
             continue
