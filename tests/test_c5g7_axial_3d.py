@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 from scripts.prepare_c5g7_axial_3d import prepare_candidate
 from scripts.audit_c5g7_axial_3d import audit_inputs, export_statepoint
 import web_server
-from scripts.analyze_c5g7_axial_3d import analyze
+from scripts.analyze_c5g7_axial_3d import analyze, require_canonical_reference_layout
 
 
 BUILDER = """import openmc
@@ -226,6 +226,13 @@ class Axial3DPreparationTests(unittest.TestCase):
             self.assertEqual(payload["score"], "fission")
             self.assertIsNone(flux_payload["relative_error_percent"][0][0][0])
 
+
+    def test_scalar_reference_guard_rejects_noncanonical_candidate_layouts(self) -> None:
+        require_canonical_reference_layout({"layout_signature": "UMMU"})
+        for signature in ("MMUU", "MUMU", "MUUM", "UMUM", "UUMM", ""):
+            with self.subTest(signature=signature):
+                with self.assertRaisesRegex(ValueError, "only applicable to the canonical UMMU"):
+                    require_canonical_reference_layout({"layout_signature": signature})
 
     def test_scalar_reference_report_marks_smoke_as_nonconclusive(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
