@@ -151,7 +151,7 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.match(sourceMap, /P11/);
     const pinMap = await page.locator("#coreSelectedPinMap").innerText();
     assert.match(pinMap, /17|pin|universe/i);
-    await page.screenshot({ path: path.join(outDir, "core-geometry-source-map.png") });
+    await page.locator(".core-geometry-layout").screenshot({ path: path.join(outDir, "core-geometry-source-map.png") });
 
     await page.locator('.nav-item[data-target="spatial"]').click();
     await page.waitForFunction(() => ["meshHeatmap", "meshContour", "meshProfile", "meshSurface"].every(id => {
@@ -212,7 +212,7 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.match(axial.provenance, /active realizations 6500/);
     assert.match(axial.summary, /95th percentile/i);
     assert.equal(axial.pointCount, 51 * 51 * 30);
-    await page.screenshot({ path: path.join(outDir, "axial-3d-volume-desktop.png") });
+    await page.locator("#axial3dPanel").screenshot({ path: path.join(outDir, "axial-3d-volume-desktop.png") });
 
     await page.setViewportSize({ width: 390, height: 844 });
     if (page.evaluate) await page.evaluate(() => {
