@@ -1,259 +1,155 @@
-"""ReactorQ Studio: transparent dashboard for QUBO/CB-PFR research experiments.
-
-The bundled demo estimates are synthetic. This application does not claim to run
-OpenMC unless a separately configured, validated OpenMC model is supplied.
-"""
+"""CB-PFR scientific workstation overview: recorded evidence only."""
 from __future__ import annotations
 
-import json
-import math
-from datetime import datetime, timezone
-from pathlib import Path
-
-import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from cbpfr.integration import rank_candidate_batch, ranking_to_records
-from cbpfr.openmc import preflight_openmc
-from cbpfr.qubo import CoreSpec, build_usmanov_style_qubo, enumerate_feasible_candidates
-from cbpfr.ranking import MetricLimit, PhysicalEstimate
-from cbpfr.repeatability import summarize_repeated_rankings
-
-st.set_page_config(page_title="ReactorQ Studio", page_icon="⚛️", layout="wide")
-st.markdown("""
-<style>
-.block-container {padding-top: 1.5rem; max-width: 1440px;}
-.hero {padding: 1.5rem 1.8rem; border: 1px solid rgba(128,128,128,.25);
-       border-radius: 18px; background: linear-gradient(120deg, rgba(40,90,150,.13), rgba(35,160,130,.08));}
-.muted {color: #8b949e;}
-</style>
-<div class="hero">
-  <h1>⚛️ ReactorQ Studio</h1>
-  <p>QUBO optimization · uncertainty-aware ranking · OpenMC readiness</p>
-  <p class="muted">Research prototype — demo data is synthetic, not reactor simulation evidence.</p>
-</div>
-""", unsafe_allow_html=True)
-
-st.page_link("pages/01_C5G7_Layout_Explorer.py", label="Open CB-PFR Scientific Workstation", icon="🌐")
-st.page_link("pages/06_High_Budget_Evidence.py", label="Open High-Budget Evidence Workstation", icon="📊")
-st.markdown("### Archived C5G7 high-budget study")
-evidence_path = Path(__file__).resolve().parent / "results" / "c5g7_high_budget_2026-10-12" / "run_level_evidence.json"
-if not evidence_path.is_file():
-    st.warning("The committed high-budget run-level evidence file is not available.")
-else:
-    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
-    run_df = pd.DataFrame(evidence["runs"])
-    t_critical_df2 = 4.3026527299
-    summary_rows = []
-    for signature, group in run_df.groupby("layout_signature"):
-        row = {"layout_signature": signature, "n_runs": len(group)}
-        for metric in ("keff_mean", "fission_rate_peaking_factor"):
-            values = pd.to_numeric(group[metric], errors="raise")
-            mean = float(values.mean())
-            sd = float(values.std(ddof=1))
-            half_width = t_critical_df2 * sd / math.sqrt(len(values))
-            row[f"{metric}_mean"] = mean
-            row[f"{metric}_ci_low"] = mean - half_width
-            row[f"{metric}_ci_high"] = mean + half_width
-        summary_rows.append(row)
-    visual_df = pd.DataFrame(summary_rows).sort_values("layout_signature").reset_index(drop=True)
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Archived runs", len(run_df))
-    k2.metric("Candidate layouts", run_df["layout_signature"].nunique())
-    k3.metric("Independent runs / layout", "3")
-    k4.metric("Nominal histories / run", "25.0M")
-    st.caption("Source: archived high-budget OpenMC evidence. Error bars are descriptive 95% Student-t intervals across three independent seed runs per layout (df = 2), not convergence certificates.")
-    left, right = st.columns(2, gap="large")
-    with left:
-        st.markdown("**Fission-rate peaking proxy**")
-        fig = go.Figure(go.Scatter(
-            x=visual_df["layout_signature"],
-            y=visual_df["fission_rate_peaking_factor_mean"],
-            mode="markers",
-            marker={"size": 12, "color": "#58d7df", "line": {"color": "#dceaff", "width": 0.8}},
-            error_y={
-                "type": "data",
-                "array": visual_df["fission_rate_peaking_factor_ci_high"] - visual_df["fission_rate_peaking_factor_mean"],
-                "arrayminus": visual_df["fission_rate_peaking_factor_mean"] - visual_df["fission_rate_peaking_factor_ci_low"],
-                "visible": True, "color": "#91a9c2", "thickness": 1.4, "width": 4,
-            },
-            customdata=visual_df[["n_runs", "keff_mean_mean"]].to_numpy(),
-            hovertemplate="Layout %{x}<br>Mean peaking proxy %{y:.6f}<br>Runs %{customdata[0]}<br>Mean k-effective %{customdata[1]:.7f}<extra></extra>",
-        ))
-        fig.update_layout(template="plotly_dark", height=340, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin={"l": 45, "r": 15, "t": 15, "b": 40}, xaxis_title="2×2 material layout", yaxis_title="Fission-rate peaking proxy")
-        fig.update_yaxes(gridcolor="#26364a")
-        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
-    with right:
-        st.markdown("**k-effective by layout**")
-        fig_k = go.Figure(go.Scatter(
-            x=visual_df["layout_signature"],
-            y=visual_df["keff_mean_mean"],
-            mode="markers",
-            marker={"size": 12, "color": "#7ba8ff", "line": {"color": "#dceaff", "width": 0.8}},
-            error_y={
-                "type": "data",
-                "array": visual_df["keff_mean_ci_high"] - visual_df["keff_mean_mean"],
-                "arrayminus": visual_df["keff_mean_mean"] - visual_df["keff_mean_ci_low"],
-                "visible": True, "color": "#91a9c2", "thickness": 1.4, "width": 4,
-            },
-            customdata=visual_df[["n_runs", "fission_rate_peaking_factor_mean"]].to_numpy(),
-            hovertemplate="Layout %{x}<br>Mean k-effective %{y:.7f}<br>Runs %{customdata[0]}<br>Mean peaking proxy %{customdata[1]:.6f}<extra></extra>",
-        ))
-        fig_k.update_layout(template="plotly_dark", height=340, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin={"l": 55, "r": 15, "t": 15, "b": 40}, xaxis_title="2×2 material layout", yaxis_title="Reported k-effective mean")
-        fig_k.update_yaxes(gridcolor="#26364a")
-        st.plotly_chart(fig_k, use_container_width=True, config={"displaylogo": False})
-    st.warning("Evidence integrity passed, but physical validation and convergence remain uncertified. No layout is selected as a winner; the current peaking value is a relative proxy, not absolute power or a safety metric.")
-
-with st.sidebar:
-    st.header("Experiment setup")
-    run_mode = st.radio("Data source", ["Synthetic demo", "OpenMC preflight"], index=0)
-    st.caption("Synthetic demo illustrates the pipeline only. It does not invoke OpenMC.")
-    candidate_count = st.slider("Candidates to rank", min_value=4, max_value=20, value=12, step=4)
-    uncertainty = st.slider("Demo uncertainty", min_value=0.0, max_value=0.15, value=0.02, step=0.005)
-    margin = st.slider("Uniform comparison margin", min_value=0.0, max_value=0.2, value=0.04, step=0.01)
-    model_dir = st.text_input("OpenMC model directory", value="openmc_model")
-    run = st.button("Run experiment", type="primary", use_container_width=True)
-
-@st.cache_data
-def build_demo():
-    spec = CoreSpec(
-        name="abstract-seven-position-demo",
-        positions=tuple(f"p{i}" for i in range(7)),
-        boundary=frozenset({f"p{i}" for i in range(1, 7)}),
-        inner=frozenset({"p0"}),
-        edges=tuple((f"p{i}", f"p{1 + (i % 6)}") for i in range(1, 7)),
-        inventory=(3, 3, 1),
-        description="Abstract topology for software demonstration; not a reactor geometry.",
-    )
-    model = build_usmanov_style_qubo(spec)
-    candidates = enumerate_feasible_candidates(model)
-    return spec, model, candidates
-
-spec, model, candidates = build_demo()
-tab_overview, tab_rank, tab_repeatability, tab_openmc, tab_export = st.tabs(
-    ["Overview", "Candidate ranking", "Repeatability", "OpenMC status", "Export & provenance"]
+from cbpfr.dashboard_ui import (
+    BG, BLUE, CYAN, LINE, MUTED, ORANGE, PANEL, TEXT,
+    apply_workstation_style, base_layout, candidate_label, layout_figure,
+    load_smoke, render_header, render_workspace_sidebar,
 )
 
-with tab_overview:
-    st.subheader("Experiment overview")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Core positions", len(spec.positions))
-    c2.metric("QUBO variables", model.variable_count)
-    c3.metric("Feasible candidates", len(candidates))
-    c4.metric("Execution mode", "Demo" if run_mode == "Synthetic demo" else "Preflight")
-    st.warning("The built-in seven-position model is an abstract software fixture. It is not a validated reactor model and its labels are not mapped to OpenMC materials.")
-    st.markdown("**Pipeline**")
-    st.code("QUBO model → feasible candidates → evaluation records → four ranking baselines → CSV/JSON export", language="text")
-    st.markdown("**Evidence boundary**")
-    st.write("- Demo estimates are generated in-app and labelled synthetic.")
-    st.write("- A green OpenMC preflight means required runtime/files are present; it does not validate model physics.")
-    st.write("- keff, flux, and power distribution are not invented or populated from demo values.")
+st.set_page_config(
+    page_title="CB-PFR | Scientific Workstation",
+    page_icon="⚛️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+apply_workstation_style()
+evidence = load_smoke().sort_values("candidate_id").reset_index(drop=True)
+render_workspace_sidebar("Overview", evidence)
+render_header("Overview", "C5G7 TRANSPORT · EVIDENCE-AWARE MODE")
 
-with tab_rank:
-    st.subheader("Compare candidate selection methods")
-    if run or "records" not in st.session_state:
-        if run_mode == "OpenMC preflight":
-            st.info("Preflight only: this action checks readiness. It does not run a transport simulation.")
-            st.session_state["records"] = []
-            st.session_state["run_metadata"] = {"mode": "openmc_preflight", "timestamp_utc": datetime.now(timezone.utc).isoformat()}
-        else:
-            selected = candidates[:candidate_count]
-            # Deterministic fixture values for repeatable UI demonstrations, not physical estimates.
-            estimates = {
-                c.candidate_id: PhysicalEstimate(
-                    c.candidate_id,
-                    {"demo_response": (0.88 + ((i * 7) % 13) / 100, uncertainty * (1 + (i % 3) / 2))},
-                )
-                for i, c in enumerate(selected)
-            }
-            metric = MetricLimit(
-                name="demo_response", upper=1.0, z=1.0, scale=1.0,
-                uncertainty_kind="synthetic_fixture", units="arbitrary demo units",
-                bound_kind="operational_heuristic",
-            )
-            rankings = rank_candidate_batch(model, selected, estimates, [metric], {"demo_response": margin})
-            records = ranking_to_records(rankings, data_kind="synthetic")
-            st.session_state["records"] = records
-            st.session_state["run_metadata"] = {
-                "mode": "synthetic_demo",
-                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                "candidate_count": len(selected),
-                "metric": "demo_response",
-                "uncertainty": uncertainty,
-                "uniform_margin": margin,
-                "physical_simulation_performed": False,
-            }
-    records = st.session_state.get("records", [])
-    if records:
-        df = pd.DataFrame(records)
-        st.caption("All rows below are synthetic software-demo rankings, not OpenMC results.")
-        methods = list(df["method"].drop_duplicates())
-        selected_method = st.selectbox("Method", methods, index=methods.index("cb_pfr") if "cb_pfr" in methods else 0)
-        view = df[df["method"] == selected_method].copy()
-        view["candidate_vector"] = view["candidate_vector"].apply(lambda v: str(v))
-        st.dataframe(view[["rank", "candidate_id", "qubo_feasible", "qubo_energy", "candidate_vector", "data_kind"]], use_container_width=True, hide_index=True)
-        summary = df.groupby("method", as_index=False).agg(candidates=("candidate_id", "count"), best_energy=("qubo_energy", "min"))
-        st.markdown("**Method coverage**")
-        st.dataframe(summary, use_container_width=True, hide_index=True)
-    else:
-        st.info("Click Run experiment in the sidebar to generate demo rankings or check OpenMC readiness.")
+st.markdown(
+    f"""
+    <section class="cbpfr-hero">
+      <div class="hero-eyebrow">RESEARCH CONTROL ROOM / 01</div>
+      <div class="hero-title">Physical Feasibility<br><span>Ranking Workbench</span></div>
+      <div class="hero-copy">A traceable workspace for inspecting C5G7 candidate configurations,
+      recorded transport indicators, uncertainty, and evidence integrity.</div>
+      <div class="hero-meta"><span>MODEL · C5G7 2×2 STUDY</span><span>DATA · RECORDED REPOSITORY EVIDENCE</span><span>MODE · EXPLORATORY</span></div>
+    </section>
+    """,
+    unsafe_allow_html=True,
+)
+st.warning(
+    "EVIDENCE GATE · Values below are read from the checked-in candidate summary. "
+    "This dashboard does not launch OpenMC, infer missing spatial fields, or approve a physical design."
+)
 
+k1, k2, k3, k4 = st.columns(4, gap="medium")
+k1.metric("Candidate records", f"{len(evidence):,}", help="Rows in the current candidate-summary dataset.")
+k2.metric("Unique layouts", f'{evidence["layout_signature"].nunique():,}')
+k3.metric("k-effective span", f'{evidence["keff_mean"].min():.5f} – {evidence["keff_mean"].max():.5f}')
+k4.metric("Distinct recorded seeds", f'{evidence["seed"].nunique():,}')
+st.markdown('<div class="section-kicker">01 / CANDIDATE OBSERVATORY</div>', unsafe_allow_html=True)
 
-with tab_repeatability:
-    st.subheader("Repeated-run consistency")
-    st.write("Paste ordered candidate IDs from independent optimizer runs as a JSON array of arrays. Each inner array is ranked best-first. This analysis does not run an optimizer.")
-    st.info("The prefilled rankings are synthetic examples for demonstrating the interface, not experimental results. Replace them with recorded optimizer runs before using the summary in research.")
-    default_runs = '[["candidate_A", "candidate_B", "candidate_C"], ["candidate_A", "candidate_C", "candidate_B"], ["candidate_B", "candidate_A", "candidate_C"]]'
-    raw_runs = st.text_area("Run rankings (JSON)", value=default_runs, height=140)
-    top_k = st.number_input("Top-k set size", min_value=1, max_value=100, value=2, step=1)
-    if st.button("Analyze repeatability"):
-        # Never leave an earlier successful summary visible after a failed re-analysis.
-        st.session_state.pop("repeatability_summary", None)
-        st.session_state.pop("repeatability_input", None)
-        try:
-            parsed_runs = json.loads(raw_runs)
-            if not isinstance(parsed_runs, list) or any(not isinstance(row, list) for row in parsed_runs):
-                raise ValueError("Input must be a JSON array of arrays of candidate IDs.")
-            summary = summarize_repeated_rankings(parsed_runs, top_k=int(top_k))
-            st.session_state["repeatability_summary"] = summary
-            st.session_state["repeatability_input"] = parsed_runs
-        except (json.JSONDecodeError, TypeError, ValueError) as exc:
-            st.error(f"Could not analyze rankings: {exc}")
-    summary = st.session_state.get("repeatability_summary")
-    if summary:
-        st.caption("Descriptive stability statistics only; results depend on the supplied runs.")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Runs", summary["run_count"])
-        m2.metric("Top-1 dominance", f'{summary["top1_dominance"]:.1%}')
-        m3.metric("Mean top-k Jaccard", f'{summary["mean_pairwise_top_k_jaccard"]:.3f}')
-        st.markdown("**Top-1 selection frequencies**")
-        st.dataframe(pd.DataFrame([{"candidate_id": key, "count": summary["top1_selection_counts"][key], "frequency": value} for key, value in summary["top1_selection_frequencies"].items()]), use_container_width=True, hide_index=True)
-        st.markdown("**Top-k selection frequencies**")
-        st.dataframe(pd.DataFrame([{"candidate_id": key, "count": summary["top_k_selection_counts"][key], "frequency": value} for key, value in summary["top_k_selection_frequencies"].items()]), use_container_width=True, hide_index=True)
-        st.download_button("Download repeatability summary JSON", json.dumps({"runs": st.session_state.get("repeatability_input", []), "summary": summary}, indent=2).encode("utf-8"), "reactorq_repeatability.json", "application/json")
-        st.warning(summary["interpretation"])
+left, right = st.columns([0.82, 1.55], gap="large")
+with left:
+    with st.container(border=True):
+        st.markdown("#### Configuration inspector")
+        candidate_id = st.selectbox(
+            "Select recorded candidate",
+            evidence["candidate_id"].tolist(),
+            format_func=lambda value: candidate_label(evidence.loc[evidence["candidate_id"] == value].iloc[0]),
+            key="overview_candidate",
+        )
+        selected = evidence.loc[evidence["candidate_id"] == candidate_id].iloc[0]
+        st.plotly_chart(
+            layout_figure(str(selected["layout_signature"]), height=310),
+            use_container_width=True,
+            config={"displaylogo": False, "scrollZoom": False},
+            key="overview_layout_plot",
+        )
+        a, b = st.columns(2)
+        a.metric("k-effective mean", f'{float(selected["keff_mean"]):.7f}')
+        b.metric("Reported within-run σ", f'{float(selected["keff_std_dev"]):.2e}')
+        st.markdown(
+            f'<div class="candidate-metadata"><span>ID</span><b>{selected["candidate_id"]}</b>'
+            f'<span>LAYOUT</span><b>{selected["layout_signature"]}</b>'
+            f'<span>SEED</span><b>{int(selected["seed"])}</b></div>',
+            unsafe_allow_html=True,
+        )
+        st.caption("Categorical 2×2 schematic only; not a pin-resolved geometry reconstruction.")
 
-with tab_openmc:
-    st.subheader("OpenMC runtime and model preflight")
-    preflight = preflight_openmc(Path(model_dir))
-    if preflight.runnable:
-        st.success("Runtime preflight ready — model still requires scientific validation.")
-    else:
-        st.error("OpenMC preflight blocked")
-    st.json(preflight.to_dict())
-    st.markdown("Required XML inputs: materials.xml, geometry.xml, settings.xml, plus an installed OpenMC executable and valid OPENMC_CROSS_SECTIONS path.")
-    st.warning("This prototype intentionally does not convert abstract burnup labels into materials. No transport simulation is started from this dashboard.")
+with right:
+    with st.container(border=True):
+        st.markdown("#### Transport response · candidate comparison")
+        st.caption("Points show recorded means. Whiskers show reported within-run standard deviation, not between-seed confidence intervals.")
+        ordered = evidence.sort_values("keff_mean").reset_index(drop=True)
+        labels = [candidate_label(row) for _, row in ordered.iterrows()]
+        colors = [CYAN if value == candidate_id else "#638197" for value in ordered["candidate_id"]]
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=ordered["keff_mean"], y=labels, mode="markers",
+            marker={"size": 12, "color": colors, "line": {"color": "#dceaf2", "width": 0.8}},
+            error_x={"type": "data", "array": ordered["keff_std_dev"], "visible": True,
+                     "color": MUTED, "thickness": 1.3, "width": 5},
+            customdata=ordered[["candidate_id", "layout_signature", "seed", "canonical_reference"]].to_numpy(),
+            hovertemplate=("<b>%{customdata[0]}</b><br>Layout %{customdata[1]}<br>"
+                           "Seed %{customdata[2]}<br>Reference %{customdata[3]}<br>"
+                           "k-effective %{x:.7f}<extra></extra>"),
+        ))
+        base_layout(fig, height=410)
+        fig.update_layout(
+            xaxis_title="Reported k-effective mean", yaxis_title="Candidate",
+            showlegend=False, margin={"l": 85, "r": 22, "t": 12, "b": 52},
+        )
+        fig.update_xaxes(showgrid=True, gridcolor=LINE, zeroline=False, tickformat=".5f")
+        fig.update_yaxes(showgrid=False, automargin=True)
+        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False}, key="overview_keff_chart")
 
-with tab_export:
-    st.subheader("Reproducibility and exports")
-    metadata = st.session_state.get("run_metadata", {"mode": "not_run", "physical_simulation_performed": False})
-    st.json(metadata)
-    records = st.session_state.get("records", [])
-    if records:
-        df = pd.DataFrame(records)
-        st.download_button("Download rankings CSV", df.to_csv(index=False).encode("utf-8"), "reactorq_rankings.csv", "text/csv")
-        st.download_button("Download rankings JSON", json.dumps({"metadata": metadata, "records": records}, indent=2).encode("utf-8"), "reactorq_experiment.json", "application/json")
-    else:
-        st.caption("Run the synthetic demo to enable ranking exports.")
-    st.caption("Reproducibility note: the UI demo uses deterministic fixture estimates. It is not a stochastic solver study or physical validation.")
+        # The aggregate scores are shown as supplied; this is explicitly not a physical ranking.
+        score = evidence[["candidate_id", "aggregate_flux_score", "aggregate_fission_score"]].copy()
+        score["candidate"] = score["candidate_id"].map(lambda x: candidate_label({"candidate_id": x}))
+        score = score.sort_values("aggregate_flux_score")
+        score_fig = go.Figure()
+        score_fig.add_trace(go.Bar(
+            x=score["aggregate_flux_score"], y=score["candidate"], orientation="h",
+            marker={"color": "#287f9b", "line": {"color": "#70d8df", "width": 0.5}},
+            customdata=score[["aggregate_fission_score"]].to_numpy(),
+            hovertemplate="Candidate %{y}<br>Recorded aggregate flux score %{x:.5g}<br>"
+                          "Recorded aggregate fission score %{customdata[0]:.5g}<extra></extra>",
+        ))
+        base_layout(score_fig, height=255)
+        score_fig.update_layout(
+            title={"text": "Recorded aggregate flux score", "x": 0.02, "xanchor": "left", "font": {"size": 13}},
+            xaxis_title="Source-reported score · units require verification",
+            yaxis_title="", margin={"l": 80, "r": 18, "t": 40, "b": 48},
+        )
+        score_fig.update_yaxes(showgrid=False)
+        st.plotly_chart(score_fig, use_container_width=True, config={"displaylogo": False}, key="overview_flux_score")
+
+st.markdown('<div class="section-kicker">02 / WORKSPACE MODULES</div>', unsafe_allow_html=True)
+st.caption("Each module opens a focused inspection workflow. Spatial results appear only when source tally arrays are available.")
+cards = [
+    ("01", "Geometry Explorer", "Material assignment and candidate layouts.", "pages/01_C5G7_Layout_Explorer.py", "Open geometry"),
+    ("02", "Physics Fields", "Archived mesh tallies and relative statistical uncertainty.", "pages/02_Physics_Field_Explorer.py", "Inspect fields"),
+    ("03", "Monte Carlo", "Reported run settings, uncertainty, and seed coverage.", "pages/03_Monte_Carlo_Reliability.py", "Inspect runs"),
+    ("04", "QUBO / Optimization", "Discrete energy landscape and feasibility enumeration.", "pages/04_QUBO_Optimization.py", "Explore QUBO"),
+    ("05", "Provenance & Validation", "Input hashes, evidence lineage, and blocked validation gates.", "pages/05_Provenance_Validation.py", "Open audit"),
+    ("06", "Decision Workspace", "Candidate trade-offs and traceable review export.", "pages/06_Decision_Workspace.py", "Review evidence"),
+]
+for start in range(0, len(cards), 3):
+    cols = st.columns(3, gap="medium")
+    for col, item in zip(cols, cards[start:start + 3]):
+        num, title, desc, page, action = item
+        with col:
+            with st.container(border=True):
+                st.markdown(f'<div class="module-number">{num} / MODULE</div>', unsafe_allow_html=True)
+                st.markdown(f"#### {title}")
+                st.markdown(f'<div class="module-copy">{desc}</div>', unsafe_allow_html=True)
+                st.page_link(page, label=action, use_container_width=True)
+
+hash_columns = {"mgxs_sha256_before_transport", "mgxs_sha256_after_transport"}
+hash_consistent = hash_columns.issubset(evidence.columns) and (
+    evidence["mgxs_sha256_before_transport"].astype(str)
+    == evidence["mgxs_sha256_after_transport"].astype(str)
+).all()
+st.markdown('<div class="section-kicker">03 / DATA INTEGRITY</div>', unsafe_allow_html=True)
+a, b, c = st.columns(3, gap="medium")
+a.metric("Candidate rows", len(evidence))
+b.metric("Distinct layouts", evidence["layout_signature"].nunique())
+c.metric("Recorded MGXS hash consistency", "MATCHED" if hash_consistent else "REVIEW")
+st.caption("Matching recorded hashes support input-integrity review only. They do not certify the model, transport solution, or physical feasibility.")

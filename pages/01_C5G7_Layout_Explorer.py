@@ -11,37 +11,21 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
 
+from cbpfr.dashboard_ui import (
+    apply_workstation_style, load_smoke, render_header, render_page_intro,
+    render_workspace_sidebar,
+)
+
 st.set_page_config(page_title="CB-PFR | C5G7 Layout", page_icon="⚛️", layout="wide")
-
-st.markdown("""
-<style>
-.block-container {max-width: 1600px; padding-top: 1.1rem; padding-bottom: 2.4rem;}
-[data-testid="stMetric"] {background: linear-gradient(145deg,rgba(18,36,54,.9),rgba(10,20,32,.9)); border:1px solid #294056; padding:15px 17px; border-radius:10px;}
-[data-testid="stMetricLabel"] p {font-size:.75rem; letter-spacing:.07em; text-transform:uppercase;}
-.report-kicker {font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#59d8df;font-weight:700;margin-bottom:.25rem}
-.report-title {font-size:2.15rem;font-weight:750;letter-spacing:-.04em;margin:.1rem 0 .25rem}
-.report-sub {color:#9eb0c3;max-width:900px;font-size:.95rem}
-.evidence-note {border:1px solid #65543a;background:rgba(107,77,32,.15);border-radius:8px;padding:13px 16px;margin:.8rem 0 1.2rem}
-.small-muted {color:#91a4b7;font-size:.82rem}
-</style>
-""", unsafe_allow_html=True)
-
-with st.sidebar:
-    st.markdown("## ⚛️ CB·PFR")
-    st.caption("COMPUTATIONAL REACTOR LAB")
-    st.divider()
-    st.page_link("pages/01_C5G7_Layout_Explorer.py", label="01 · C5G7 Layout", icon="🧩")
-    st.page_link("pages/02_Physics_Field_Explorer.py", label="02 · Physics Field", icon="🌐")
-    st.page_link("pages/03_Monte_Carlo_Reliability.py", label="03 · Monte Carlo", icon="🎲")
-    st.page_link("pages/04_QUBO_Optimization.py", label="04 · QUBO Lab", icon="⚙️")
-    st.page_link("pages/05_Provenance_Validation.py", label="05 · Provenance", icon="🔎")
-    st.divider()
-    st.caption("DATA MODE: REPOSITORY CSV")
-    st.caption("MODEL STATUS: SCHEMATIC / PARTIAL EVIDENCE")
-
-st.markdown('<div class="report-kicker">RESEARCH MODULE / 01 · CORE CONFIGURATION STUDY</div>', unsafe_allow_html=True)
-st.markdown('<div class="report-title">C5G7 Core <span style="color:#7ba8ff">Layout Explorer</span></div>', unsafe_allow_html=True)
-st.markdown('<div class="report-sub">Interactive inspection of recorded 2 × 2 material-assignment candidates and their transport-summary statistics.</div>', unsafe_allow_html=True)
+apply_workstation_style()
+df_nav = load_smoke()
+render_header("Geometry Explorer", "RECORDED C5G7 CANDIDATE EVIDENCE")
+render_workspace_sidebar("C5G7 Layout Explorer", df_nav)
+render_page_intro(
+    "RESEARCH MODULE / 01 · CORE CONFIGURATION STUDY",
+    "C5G7 Core Layout Explorer",
+    "Interactive inspection of recorded 2 × 2 material-assignment candidates and their transport-summary statistics.",
+)
 
 st.markdown("""
 <div class="evidence-note">

@@ -1,4 +1,4 @@
-"""High-budget C5G7 repeated-run evidence viewer for ReactorQ Studio."""
+"""CB-PFR high-budget C5G7 repeated-run evidence workstation."""
 from __future__ import annotations
 
 import hashlib

@@ -8,3 +8,6 @@ plotly>=5.22,<7
 
 # HDF5 reader for verified OpenMC statepoint tally visualization
 h5py>=3.10,<4
+
+# 3-D scientific mesh visualization (PyVista embeds a VTK scene in Streamlit)
+pyvista>=0.44,<1
