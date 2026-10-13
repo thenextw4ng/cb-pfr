@@ -46,6 +46,9 @@ fs.mkdirSync(outputDir, { recursive: true });
     assert.equal(api.score, "flux");
     assert.equal(api.zCount, 30);
 
+    // The production volume is intentionally lazy-loaded only when its panel is near the viewport.
+    // Scroll to that panel before asserting that Plotly has rendered its real volume trace.
+    await page.locator("#axial3dPanel").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
       const el = document.getElementById("axial3dPlot");
       return el && el.data && el.data.some(trace => trace.type === "volume");
