@@ -42,12 +42,13 @@ def _decode_h5_text(value):
 
 
 def _read_mesh_statepoint(data: bytes):
-    """Read tally values and available mesh coordinate metadata from HDF5."""
+    """Read mesh tallies only when their HDF5 mesh-filter association is explicit."""
     with h5py.File(io.BytesIO(data), "r") as handle:
         if "tallies" not in handle:
             raise ValueError("The HDF5 file has no OpenMC tallies group.")
         tallies = handle["tallies"]
-        meshes = []
+        mesh_by_id = {}
+
         if "meshes" in tallies:
             for name, mesh in tallies["meshes"].items():
                 if "dimension" not in mesh:
@@ -55,21 +56,78 @@ def _read_mesh_statepoint(data: bytes):
                 dims = [int(v) for v in np.asarray(mesh["dimension"][()]).reshape(-1)]
                 if len(dims) != 3:
                     continue
-                metadata = {"name": name, "dimensions": dims}
+
+                mesh_id = None
+                if "id" in mesh.attrs:
+                    try:
+                        mesh_id = int(mesh.attrs["id"])
+                    except (TypeError, ValueError):
+                        pass
+                if mesh_id is None and "id" in mesh:
+                    try:
+                        mesh_id = int(np.asarray(mesh["id"][()]).item())
+                    except (TypeError, ValueError):
+                        pass
+                if mesh_id is None:
+                    try:
+                        mesh_id = int(name.rsplit(" ", 1)[-1])
+                    except (ValueError, IndexError):
+                        continue
+
+                metadata = {"id": mesh_id, "name": name, "dimensions": dims}
                 for attr in ("lower_left", "upper_right", "width"):
                     if attr in mesh:
                         try:
                             metadata[attr] = np.asarray(mesh[attr][()], dtype=float).reshape(-1).tolist()
                         except (TypeError, ValueError):
                             pass
-                meshes.append(metadata)
+                mesh_by_id[mesh_id] = metadata
+
+        # A mesh-shaped array by itself is not enough to identify the physical
+        # mesh. Resolve the tally's filter IDs to the mesh filter's declared ID.
+        filter_groups = tallies.get("filters")
+        filter_to_mesh_id = {}
+        if filter_groups is not None:
+            for filter_name, filter_group in filter_groups.items():
+                if not filter_name.startswith("filter ") or not hasattr(filter_group, "keys"):
+                    continue
+                if "type" not in filter_group or "bins" not in filter_group:
+                    continue
+                filter_type = _decode_h5_text(filter_group["type"][()])
+                if filter_type != "mesh":
+                    continue
+                bins = np.asarray(filter_group["bins"][()]).reshape(-1)
+                if bins.size != 1:
+                    continue
+                try:
+                    filter_to_mesh_id[int(filter_name.rsplit(" ", 1)[-1])] = int(bins[0])
+                except (ValueError, IndexError, TypeError):
+                    continue
 
         records = []
         for name, tally in tallies.items():
             if not name.startswith("tally ") or not hasattr(tally, "keys"):
                 continue
-            if "results" not in tally or "score_bins" not in tally:
+            if "results" not in tally or "score_bins" not in tally or "filters" not in tally:
                 continue
+
+            tally_filter_ids = [
+                int(value) for value in np.asarray(tally["filters"][()]).reshape(-1)
+            ]
+            associated_mesh_ids = {
+                filter_to_mesh_id[filter_id]
+                for filter_id in tally_filter_ids
+                if filter_id in filter_to_mesh_id
+            }
+            # A unique mesh-filter link is mandatory; do not infer a mesh by
+            # matching only the number of bins.
+            if len(associated_mesh_ids) != 1:
+                continue
+            mesh_id = next(iter(associated_mesh_ids))
+            matching_mesh = mesh_by_id.get(mesh_id)
+            if matching_mesh is None:
+                continue
+
             scores = [
                 _decode_h5_text(value)
                 for value in np.asarray(tally["score_bins"][()]).reshape(-1)
@@ -79,19 +137,16 @@ def _read_mesh_statepoint(data: bytes):
                 raw = raw[:, 0, :, :]
             if raw.ndim != 3 or raw.shape[-1] != 2 or raw.shape[-2] != len(scores):
                 continue
+
             n_bins = raw.shape[0]
-            matching_mesh = next(
-                (mesh for mesh in meshes if int(np.prod(mesh["dimensions"])) == n_bins),
-                None,
-            )
-            if matching_mesh is None:
-                continue
             dims = matching_mesh["dimensions"]
-            if dims[2] != 1 or dims[0] * dims[1] != n_bins:
+            if int(np.prod(dims)) != n_bins or dims[2] != 1 or dims[0] * dims[1] != n_bins:
                 continue
+
             records.append({
                 "tally_name": name,
                 "mesh_name": matching_mesh["name"],
+                "mesh_id": mesh_id,
                 "mesh_metadata": matching_mesh,
                 "dimensions": dims,
                 "scores": scores,
@@ -100,7 +155,10 @@ def _read_mesh_statepoint(data: bytes):
             })
 
         if not records:
-            raise ValueError("No 2-D mesh tally with a recognized OpenMC results layout was found.")
+            raise ValueError(
+                "No 2-D mesh tally could be linked to a declared OpenMC mesh filter. "
+                "The reader will not guess a mesh from dimensions alone."
+            )
 
         keff = None
         if "k_combined" in handle:
