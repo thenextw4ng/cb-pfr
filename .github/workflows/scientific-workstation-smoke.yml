@@ -58,9 +58,8 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
           curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
-          # Mesh evidence may correctly return 503 when the private/local statepoint archive is absent.
           mesh_status=$(curl --silent --output /tmp/cb-pfr-mesh.json --write-out '%{http_code}' http://127.0.0.1:8765/api/mesh)
-          test "$mesh_status" = "200" -o "$mesh_status" = "503"
+          test "$mesh_status" = "200"
           python - <<'PY'
           import json
           for path, key in (("/tmp/cb-pfr-candidates.json", "records"), ("/tmp/cb-pfr-assembly.json", "records")):
@@ -70,5 +69,18 @@ jobs:
           with open("/tmp/cb-pfr-geometry.json", encoding="utf-8") as f:
               geometry = json.load(f)
           assert isinstance(geometry.get("artifacts"), list), geometry
-          print("Health, HTML, CSS, JS, candidate API, assembly API, geometry discovery API, and mesh endpoint status passed.")
+          with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
+              mesh = json.load(f)
+          tallies = mesh.get("mesh_tallies", [])
+          assert tallies, mesh
+          for tally in tallies:
+              dims = tally.get("dimensions", [])
+              assert len(dims) == 3 and dims[2] == 1, tally
+              assert tally.get("scores"), tally
+              for score, fields in tally["scores"].items():
+                  for field_name in ("mean", "std_dev"):
+                      grid = fields.get(field_name)
+                      assert isinstance(grid, list) and grid, (score, field_name, tally)
+                      assert all(isinstance(row, list) and row for row in grid), (score, field_name, tally)
+          print(f"Health, HTML, CSS, JS, candidate API, assembly API, geometry discovery, and {len(tallies)} archived OpenMC mesh tally/tallies passed.")
           PY
