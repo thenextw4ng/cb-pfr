@@ -1330,7 +1330,7 @@ function drawAssemblyField(){
  const matrixTrace={
   type:"heatmap",name:"Recorded assembly fission-rate proxy",
   x:assemblyPositionDefs.map(position=>position.label),
-  y:matrixRows.map(item=>String(item.candidate.layout_signature||label(item.candidate))),
+  y:matrixRows.map(item=>{const signature=String(item.candidate.layout_signature||label(item.candidate));const isSelected=String(item.candidate.candidate_id)===selectedId&&signature.toUpperCase()===String(selected?.layout_signature||"").toUpperCase();return signature+(isSelected?"  ◂":"");}),
   z:matrixRows.map(item=>item.values),
   text:matrixRows.map(item=>item.values.map(value=>formatSourceProxy(value))),
   texttemplate:"%{text}",textfont:{size:10,color:"#f0f3f5"},
@@ -1343,18 +1343,10 @@ function drawAssemblyField(){
   hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>CSV unit not documented · not absolute power<br>Proxy-run seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
  };
  const selectedRow=matrixRows.find(item=>String(item.candidate.candidate_id)===selectedId&&String(item.candidate.layout_signature).toUpperCase()===String(selected?.layout_signature||"").toUpperCase());
- const traces=[matrixTrace];
- if(selectedRow)traces.push({
-  type:"scatter",mode:"markers",name:"Selected candidate",
-  x:assemblyPositionDefs.map(position=>position.label),
-  y:assemblyPositionDefs.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),
-  marker:{symbol:"square-open",size:34,color:"#ffffff",line:{width:1.8,color:"#ffffff"}},
-  hoverinfo:"skip",showlegend:false
- });
- chart("assemblyMatrix",traces,{
-  autosize:true,margin:{l:62,r:20,t:16,b:50},showlegend:false,hovermode:"closest",
+ chart("assemblyMatrix",[matrixTrace],{
+  autosize:true,margin:{l:62,r:20,t:24,b:50},showlegend:false,hovermode:"closest",
   xaxis:{...baseLayout.xaxis,title:{text:"Fuel position · row-major",standoff:10},type:"category",categoryorder:"array",categoryarray:["P00","P01","P10","P11"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},
   yaxis:{...baseLayout.yaxis,title:{text:"Layout signature",standoff:8},type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},
-  annotations:[{xref:"paper",yref:"paper",x:1,y:1.07,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.07,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Selected layout: "+selectedRow.candidate.layout_signature:"No matching candidate selected",font:{size:9,color:palette.muted}}]
  });
 }
