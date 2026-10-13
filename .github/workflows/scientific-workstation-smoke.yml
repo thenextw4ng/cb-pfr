@@ -1,0 +1,67 @@
+name: Scientific workstation smoke test
+
+on:
+  push:
+    branches:
+      - feat/scientific-visualization-reliability
+  pull_request:
+    branches:
+      - feat/cern-workstation-integration
+  workflow_dispatch:
+
+jobs:
+  workstation-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Static syntax checks
+        run: |
+          python -m py_compile web_server.py
+          node --check web/app.js
+      - name: Start workstation and smoke-test API/assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u web_server.py > /tmp/cb-pfr-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8765/api/health > /tmp/cb-pfr-health.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/cb-pfr-server.log
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          with open("/tmp/cb-pfr-health.json", encoding="utf-8") as f:
+              payload = json.load(f)
+          assert payload.get("status") == "ok", payload
+          PY
+          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'Scientific Workstation'
+          curl --fail --silent http://127.0.0.1:8765/styles.css | grep -q 'geometry-preview'
+          curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function drawMesh'
+          curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
+          curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
+          python - <<'PY'
+          import json
+          for path, key in (("/tmp/cb-pfr-candidates.json", "records"), ("/tmp/cb-pfr-assembly.json", "records")):
+              with open(path, encoding="utf-8") as f:
+                  payload = json.load(f)
+              assert payload.get(key), f"{path} has no records"
+          print("Health, HTML, CSS, JS, candidate API, and assembly API passed.")
+          PY
