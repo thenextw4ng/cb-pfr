@@ -78,14 +78,17 @@ async function main() {
           yAxisType: el?.layout?.yaxis?.type || "linear",
           xAxisTitle: el?.layout?.xaxis?.title?.text || "",
           yAxisTitle: el?.layout?.yaxis?.title?.text || "",
-          surfaceContours: id === "meshSurface" && trace?.contours?.z ? {
-            show: trace.contours.z.show,
-            projectZ: trace.contours.z.project?.z,
-            start: trace.contours.z.start,
-            end: trace.contours.z.end,
-            size: trace.contours.z.size,
-            highlightColor: trace.contours.z.highlightcolor
-          } : null,
+          surfaceContourTraces: id === "meshSurface" ? (el?.data || []).slice(1).map(lineTrace => {
+            const finiteLineZ = (lineTrace.z || []).filter(value => typeof value === "number" && Number.isFinite(value));
+            return {
+              type: lineTrace.type,
+              mode: lineTrace.mode,
+              name: lineTrace.name,
+              hoverinfo: lineTrace.hoverinfo,
+              pointCount: (lineTrace.x || []).filter(value => value !== null && value !== undefined).length,
+              zUniqueCount: new Set(finiteLineZ).size
+            };
+          }) : [],
           surfaceCustomSample: id === "meshSurface" ? trace?.customdata?.[25]?.[25] || null : null,
           surfaceZSample: id === "meshSurface" ? trace?.z?.[25]?.[25] ?? null : null,
           surfaceAspectRatioZ: id === "meshSurface" ? el?.layout?.scene?.aspectratio?.z ?? null : null,
@@ -113,11 +116,17 @@ async function main() {
     assert.equal(initialSpatialData.meshProfile.yAxisType, "log", "mean profile should use a true log axis instead of plotting log-transformed values");
     assert.equal(initialSpatialData.meshProfile.errorVisible, true, "central mean profile should show ±1 standard error");
     assert.equal(initialSpatialData.meshProfile.errorCount, 51, "central profile error bars must cover all bins");
-    assert.equal(initialSpatialData.meshSurface.surfaceContours?.show, true, "3D terrain should show isolines on its surface");
-    assert.equal(initialSpatialData.meshSurface.surfaceContours?.projectZ, true, "3D terrain isolines should also project to the lower reference plane");
-    assert.ok(initialSpatialData.meshSurface.surfaceContours?.highlightColor, "projected isolines should remain visually legible");
-    assert.ok(initialSpatialData.meshSurface.surfaceContours?.size > 0, "3D projected isolines should use an explicit field-derived interval");
-    assert.ok(initialSpatialData.meshSurface.surfaceContours?.end > initialSpatialData.meshSurface.surfaceContours?.start, "3D projected isoline levels should span the field values");
+    const terrainLines = initialSpatialData.meshSurface.surfaceContourTraces;
+    assert.equal(terrainLines.length, 2, "3D terrain should overlay source-derived surface isolines and projected base-plane isolines");
+    const surfaceLines = terrainLines.find(line => line.name === "Surface isolines");
+    const projectedLines = terrainLines.find(line => line.name === "Projected base-plane isolines");
+    assert.equal(surfaceLines?.type, "scatter3d", "surface contours should render as 3D lines computed from the selected field");
+    assert.equal(surfaceLines?.mode, "lines");
+    assert.ok(surfaceLines?.pointCount > 0, "surface isolines should contain contour segments derived from the tally grid");
+    assert.equal(surfaceLines?.hoverinfo, "skip", "decorative contour lines must not replace source tally hover values");
+    assert.equal(projectedLines?.type, "scatter3d");
+    assert.ok(projectedLines?.pointCount > 0, "isolines should project to the lower reference plane");
+    assert.equal(projectedLines?.zUniqueCount, 1, "base-plane contour coordinates should share one projected Z level");
     assert.match(initialSpatialData.meshSurface.surfaceXAxisTitle, /X position \(cm\)/, "3D surface should use archived physical X coordinates");
     assert.match(initialSpatialData.meshSurface.surfaceYAxisTitle, /Y position \(cm\)/, "3D surface should use archived physical Y coordinates");
     assert.ok(Array.isArray(initialSpatialData.meshSurface.surfaceCustomSample) && initialSpatialData.meshSurface.surfaceCustomSample.length === 3, "surface hover must carry mean, Monte Carlo standard error, and relative error from source data");
