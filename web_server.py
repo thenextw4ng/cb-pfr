@@ -637,7 +637,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/axial-3d":
             try:
-                score = parse_qs(urlparse(self.path).query).get("score", ["flux"])[0]
+                params = parse_qs(urlparse(self.path).query)
+                if params.get("retry", ["0"])[0] == "1":
+                    global _AXIAL_AUTO_INSTALL_ATTEMPTED
+                    _AXIAL_AUTO_INSTALL_ATTEMPTED = False
+                score = params.get("score", ["flux"])[0]
                 payload = read_axial_3d_evidence(score)
                 return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, RuntimeError, KeyError, json.JSONDecodeError) as exc:
