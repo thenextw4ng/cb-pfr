@@ -58,10 +58,15 @@ fs.mkdirSync(outputDir, { recursive: true });
         types: plot.data.map(trace => trace.type),
         names: plot.data.map(trace => trace.name),
         zLabel: document.getElementById("axial3dSliceLabel").textContent,
-        dims: document.getElementById("axial3dKpis").innerText
+        dims: document.getElementById("axial3dKpis").innerText,
+        summary: document.getElementById("axial3dSummary").textContent,
+        provenance: document.getElementById("axial3dProvenance").textContent
       };
     });
     assert.match(initial.status, /3D STATEPOINT LOADED/);
+    assert.match(initial.dims, /214\.20 cm/, "axial span should report the full recorded Z domain, including half-bin extents");
+    assert.match(initial.summary, /median 56\.3%/, "smoke uncertainty should be exposed to the reviewer, not hidden");
+    assert.match(initial.provenance, /layout UMMU/, "candidate/layout provenance should be visible with the spatial view");
     assert.ok(initial.types.includes("volume"), "the plot must include a true Plotly 3-D volume trace");
     assert.ok(initial.types.includes("surface"), "the plot must include a separate selected physical Z slice");
 
