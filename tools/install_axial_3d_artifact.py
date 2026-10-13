@@ -249,8 +249,11 @@ def install_latest_production_axial_tally(target_npz: str | Path) -> dict:
     files["AXIAL_3D_INPUT_AUDIT.json"] = json.dumps(validation["audit"], indent=2).encode("utf-8") + b"\n"
     files["AXIAL_3D_INPUT_MANIFEST.json"] = json.dumps(validation["manifest"], indent=2).encode("utf-8") + b"\n"
 
+    npz_payload = files.pop("axial_tally_3d.npz")
     target_names = dict(files)
-    target_names["axial_tally_3d.npz"] = files.pop("axial_tally_3d.npz")
+    # Install the NPZ last, so its presence is the final marker that all sidecars
+    # have been validated and written for readers serving concurrent HTTP requests.
+    target_names["axial_tally_3d.npz"] = npz_payload
     installed = []
     temporary = []
     try:
