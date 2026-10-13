@@ -218,34 +218,96 @@ def base_layout(fig: go.Figure, height: int = 340, **kwargs) -> go.Figure:
 
 
 def layout_figure(signature: str, height: int = 330) -> go.Figure:
-    """Categorical 2x2 assembly-placement schematic; not pin-resolved geometry."""
+    """Coordinate-labelled 2x2 material map; explicitly a layout schematic."""
     if len(signature) != 4 or any(ch not in "UM" for ch in signature):
         signature = "UMMU"
-    chars = [signature[0], signature[1], signature[2], signature[3]]
-    z = [[0 if chars[0] == "U" else 1, 0 if chars[1] == "U" else 1],
-         [0 if chars[2] == "U" else 1, 0 if chars[3] == "U" else 1]]
-    labels = [["UO₂" if c == "U" else "MOX" for c in row] for row in [chars[:2], chars[2:]]]
-    positions = [["P00", "P10"], ["P01", "P11"]]
-    custom = [[positions[r][c] for c in range(2)] for r in range(2)]
-    fig = go.Figure(go.Heatmap(
-        z=z, x=["Column 0", "Column 1"], y=["Row 0", "Row 1"],
-        zmin=0, zmax=1,
-        colorscale=[[0, BLUE], [0.499, BLUE], [0.5, ORANGE], [1, ORANGE]],
-        showscale=False, text=labels, texttemplate="%{text}",
-        customdata=custom,
-        hovertemplate="Position %{customdata}<br>Material: %{text}<extra></extra>",
-        xgap=8, ygap=8,
-    ))
-    fig.update_layout(
-        height=height, paper_bgcolor=BG, plot_bgcolor=PANEL,
-        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
-        margin={"l": 52, "r": 18, "t": 24, "b": 45},
-        xaxis={"side": "top", "fixedrange": True},
-        yaxis={"autorange": "reversed", "fixedrange": True},
-    )
-    fig.update_traces(textfont={"size": 18, "color": "#ffffff"})
-    return fig
 
+    cells = [
+        {"position": "P00", "material": "UO₂" if signature[0] == "U" else "MOX", "row": 0, "col": 0},
+        {"position": "P10", "material": "UO₂" if signature[1] == "U" else "MOX", "row": 0, "col": 1},
+        {"position": "P01", "material": "UO₂" if signature[2] == "U" else "MOX", "row": 1, "col": 0},
+        {"position": "P11", "material": "UO₂" if signature[3] == "U" else "MOX", "row": 1, "col": 1},
+    ]
+    z = [
+        [0 if signature[0] == "U" else 1, 0 if signature[1] == "U" else 1],
+        [0 if signature[2] == "U" else 1, 0 if signature[3] == "U" else 1],
+    ]
+    custom = [
+        [cells[0]["position"], cells[1]["position"]],
+        [cells[2]["position"], cells[3]["position"]],
+    ]
+    fig = go.Figure(go.Heatmap(
+        z=z,
+        x=[0, 1],
+        y=[0, 1],
+        zmin=0,
+        zmax=1,
+        colorscale=[[0, BLUE], [0.499, BLUE], [0.5, ORANGE], [1, ORANGE]],
+        showscale=False,
+        customdata=custom,
+        xgap=5,
+        ygap=5,
+        hovertemplate=(
+            "Assembly position: %{customdata}<br>"
+            "Material: %{z}<extra></extra>"
+        ),
+        hoverlabel={"namelength": 0},
+    ))
+    for cell in cells:
+        fig.add_annotation(
+            x=cell["col"],
+            y=cell["row"],
+            xref="x",
+            yref="y",
+            text=(
+                f'<span style="font-size:11px;color:#dce8f1">{cell["position"]}</span>'
+                f'<br><b style="font-size:19px;color:#ffffff">{cell["material"]}</b>'
+            ),
+            showarrow=False,
+            align="center",
+            xanchor="center",
+            yanchor="middle",
+            font={"family": "Inter, IBM Plex Sans, sans-serif", "color": "#ffffff", "size": 16},
+        )
+    fig.update_layout(
+        height=height,
+        paper_bgcolor=BG,
+        plot_bgcolor=PANEL,
+        font={"family": "Inter, IBM Plex Sans, ui-sans-serif, sans-serif", "color": TEXT, "size": 11},
+        margin={"l": 62, "r": 25, "t": 48, "b": 55},
+        xaxis={
+            "side": "top",
+            "tickmode": "array",
+            "tickvals": [0, 1],
+            "ticktext": ["Column 0", "Column 1"],
+            "fixedrange": True,
+            "showgrid": False,
+            "zeroline": False,
+            "ticks": "",
+            "constrain": "domain",
+        },
+        yaxis={
+            "autorange": "reversed",
+            "tickmode": "array",
+            "tickvals": [0, 1],
+            "ticktext": ["Row 0", "Row 1"],
+            "fixedrange": True,
+            "showgrid": False,
+            "zeroline": False,
+            "ticks": "",
+            "scaleanchor": "x",
+            "scaleratio": 1,
+        },
+        annotations=list(fig.layout.annotations) + [
+            {
+                "xref": "paper", "yref": "paper", "x": 0.5, "y": -0.18,
+                "text": "SCHEMATIC ONLY · NOT TO SCALE · UO₂ / MOX ASSIGNMENT",
+                "showarrow": False, "font": {"size": 9, "color": MUTED},
+                "xanchor": "center",
+            }
+        ],
+    )
+    return fig
 
 def candidate_label(row) -> str:
     return str(row["candidate_id"]).replace("c5g7-2x2-", "")
