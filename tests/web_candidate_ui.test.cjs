@@ -134,8 +134,8 @@ test("all six candidate selections update placement, detail, comparison highligh
 
     const proxy = proxyRows.find(item => item.candidate_id === row.candidate_id && item.layout_signature === row.layout_signature);
     assert.equal(JSON.stringify(charts.get("assemblyMap").traces[0].z), JSON.stringify([
-      [proxy.p00_fission_rate, proxy.p01_fission_rate],
-      [proxy.p10_fission_rate, proxy.p11_fission_rate]
+      [Number(proxy.p00_fission_rate), Number(proxy.p01_fission_rate)],
+      [Number(proxy.p10_fission_rate), Number(proxy.p11_fission_rate)]
     ]));
     assert.equal($("selectedRecordTag").textContent, String(row.canonical_reference).toLowerCase() === "true" ? "CANONICAL LAYOUT REFERENCE" : "LAYOUT VARIANT");
   }
