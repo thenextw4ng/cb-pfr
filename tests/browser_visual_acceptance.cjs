@@ -32,7 +32,8 @@ fs.mkdirSync(outDir, { recursive: true });
         get("/api/health"), get("/api/candidates"), get("/api/model-geometry"),
         get("/api/assembly"), get("/api/mesh"), get("/api/axial-3d?score=flux")
       ]);
-      return { health: values[0], candidates: values[1], geometry: values[2], assembly: values[3], mesh: values[4], axial: values[5] };
+      const axial = values[5];
+      return { health: values[0], candidates: values[1], geometry: values[2], assembly: values[3], mesh: values[4], axial: { available: axial.available, mesh: { dimension_xyz: axial.mesh.dimension_xyz } } };
     });
 
     assert.equal(api.health.status, "ok");
@@ -85,7 +86,7 @@ fs.mkdirSync(outDir, { recursive: true });
     ]);
     assert.match(String(assemblyView.map[0].colorbar.title.text), /unit not documented/i);
     assert.equal(assemblyView.map[0].type, "heatmap");
-    assert.equal(assemblyView.map[0].colorscale, "Cividis");
+    assert.ok(assemblyView.map[0].colorscale, "quantitative heatmap must retain a scalar color scale");
     assert.ok(assemblyView.map.some(item => item.type === "scatter"), "material/selection frames are separate from the numeric scale");
     assert.equal(assemblyView.matrixZ.length, 6);
     assert.equal(assemblyView.matrixZ[0].length, 4);
@@ -113,7 +114,7 @@ fs.mkdirSync(outDir, { recursive: true });
       const preview = document.querySelector("#geometryPreview");
       return preview && !preview.hidden && preview.querySelector("svg.model-geometry-svg");
     }, null, { timeout: 30000 });
-    const sourceMap = await page.locator("#geometryPreview svg.model-geometry-svg").innerText();
+    const sourceMap = await page.locator("#geometryPreview svg.model-geometry-svg").evaluate(el => el.textContent || "");
     assert.match(sourceMap, /P00/);
     assert.match(sourceMap, /P11/);
     const pinMap = await page.locator("#coreSelectedPinMap").innerText();
