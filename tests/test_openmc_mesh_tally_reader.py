@@ -81,6 +81,18 @@ class OpenMCMeshTallyReaderTests(unittest.TestCase):
                 tally = payload["mesh_tallies"][0]
                 self.assertEqual(tally["dimensions"], [51, 51, 1])
                 self.assertEqual(tally["mesh_id"], 1)
+                geometry = tally["spatial_geometry"]
+                self.assertTrue(geometry["coordinates_available"])
+                self.assertEqual(geometry["coordinate_units"], "cm")
+                self.assertEqual(geometry["mesh_type"], "regular")
+                self.assertEqual(len(geometry["lower_left_cm"]), 2)
+                self.assertEqual(len(geometry["upper_right_cm"]), 2)
+                self.assertEqual(len(geometry["cell_width_cm"]), 2)
+                self.assertTrue(all(
+                    geometry["upper_right_cm"][axis] > geometry["lower_left_cm"][axis]
+                    and geometry["cell_width_cm"][axis] > 0
+                    for axis in range(2)
+                ))
                 self.assertEqual(tally["n_realizations"], 4500)
                 self.assertEqual(set(tally["scores"]), EXPECTED_SCORES)
 
