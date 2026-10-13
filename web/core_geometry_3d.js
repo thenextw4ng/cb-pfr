@@ -72,7 +72,7 @@ export function createCoreViewer(container, onAssemblySelect) {
   scene.fog = new THREE.Fog("#07131e", 100, 190);
 
   const camera = new THREE.PerspectiveCamera(37, 1, 0.1, 500);
-  camera.position.set(72, 65, 88);
+  camera.position.set(72, 66.63, 88);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -111,7 +111,7 @@ export function createCoreViewer(container, onAssemblySelect) {
   controls.maxDistance = 150;
   controls.minPolarAngle = 0.2;
   controls.maxPolarAngle = 1.49;
-  controls.target.set(0, 0, 0);
+  controls.target.set(0, 1.63, 0);
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
@@ -437,8 +437,8 @@ export function createCoreViewer(container, onAssemblySelect) {
     update,
     reset() {
       controls.reset();
-      controls.target.set(0, 0, 0);
-      camera.position.set(72, 65, 88);
+      controls.target.set(0, 1.63, 0);
+      camera.position.set(72, 66.63, 88);
       controls.update();
     },
     highlight(row, col) {
