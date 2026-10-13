@@ -5,8 +5,28 @@ let metadata = {};
 let meshData = null;
 let assemblyRecords = [];
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
-const has = (row,key) => row[key] !== null && row[key] !== undefined && row[key] !== "" && Number.isFinite(Number(row[key]));
+const has = (row,key) => {
+ if(!row || typeof row!=="object")return false;
+ const value=row[key];
+ return value!==null && value!==undefined && !(typeof value==="string" && value.trim()==="") && Number.isFinite(Number(value));
+};
 function label(row){return String(row.candidate_id ?? "Candidate") + " · " + String(row.layout_signature ?? "layout");}
+function validateCandidateRecords(rows){
+ if(!Array.isArray(rows)||!rows.length)throw new Error("The API returned no candidate records.");
+ const seen=new Set();
+ rows.forEach((row,index)=>{
+  if(!row||typeof row!=="object"||Array.isArray(row))throw new Error("Candidate record "+(index+1)+" is not an object.");
+  const id=String(row.candidate_id??"").trim();
+  if(!id)throw new Error("Candidate record "+(index+1)+" has no candidate_id.");
+  if(seen.has(id))throw new Error("Duplicate candidate_id in source data: "+id+". Selection would be ambiguous.");
+  seen.add(id);
+ });
+ return rows;
+}
+function candidateOption(row){
+ const id=String(row.candidate_id??"");
+ return '<option value="'+escapeHtml(id)+'">'+escapeHtml(label(row))+'</option>';
+}
 function layoutCells(signature){
   const raw=String(signature??"").trim().toUpperCase();
   if(!/^[UM]{4}$/.test(raw)){
@@ -49,19 +69,21 @@ let geometryArtifactActive=false;
 function drawSelectedCandidate(row){
  const signature=String(row.layout_signature??"").trim().toUpperCase();
  const tag=$("selectedRecordTag");
+ const canonical=row.canonical_reference===true||String(row.canonical_reference).toLowerCase()==="true";
  if(tag){
-  const canonical=String(row.canonical_reference).toLowerCase()==="true";
   tag.textContent=canonical?"CANONICAL LAYOUT REFERENCE":"LAYOUT VARIANT";
   tag.classList.toggle("warning",!canonical);
  }
+ const selectedIndex=records.findIndex(item=>String(item.candidate_id)===String(row.candidate_id));
+ const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
  $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
- $("selectedCandidateMetaLine").textContent="Layout "+(signature||"not recorded")+" · "+(has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded");
+ $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
  $("selectedCandidateSignature").innerHTML=/^[UM]{4}$/.test(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
  const metrics=[
   ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff"],
   ["Reported SD",has(row,"keff_std_dev")?number(row.keff_std_dev,6):"Not recorded","sd"],
   ["Relative SD",has(row,"keff_relative_sd_percent")?number(row.keff_relative_sd_percent,4)+"%":"Not recorded","uncertainty"],
-  ["Aggregate fission score",has(row,"aggregate_fission_score")?number(row.aggregate_fission_score,5):"Not recorded","proxy"]
+  ["Aggregate fission score · not power",has(row,"aggregate_fission_score")?number(row.aggregate_fission_score,5):"Not recorded","proxy"]
  ];
  $("selectedCandidateMetrics").innerHTML=metrics.map(([name,value,type])=>'<div class="candidate-stat candidate-stat-'+type+'"><span>'+name+'</span><strong>'+value+'</strong></div>').join("");
  const runInfo=[
@@ -72,8 +94,26 @@ function drawSelectedCandidate(row){
  ];
  $("selectedCandidateRunInfo").innerHTML=runInfo.map(([name,value])=>'<div class="run-meta"><span>'+name+'</span><b>'+escapeHtml(value)+'</b></div>').join("");
  const unchanged=has(row,"mutated_preexisting_file_count")&&Number(row.mutated_preexisting_file_count)===0;
- const mgxsStable=row.mgxs_sha256_before_transport&&row.mgxs_sha256_before_transport===row.mgxs_sha256_after_transport;
+ const mgxsStable=Boolean(row.mgxs_sha256_before_transport&&row.mgxs_sha256_before_transport===row.mgxs_sha256_after_transport);
  $("selectedCandidateChecks").innerHTML='<span class="micro-check '+(unchanged?"ok":"")+'"><i></i>'+(unchanged?"No pre-existing file mutation recorded":"Mutation check unavailable")+'</span><span class="micro-check '+(mgxsStable?"ok":"")+'"><i></i>'+(mgxsStable?"MGXS hash unchanged across recorded run":"MGXS hash comparison unavailable")+'</span>';
+}
+function clearCandidateSelection(message="No candidate selected."){
+ $("layoutView").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>'+escapeHtml(message)+'</p></div>';
+ $("layoutCaption").textContent=message;
+ $("selectedRecordTag").textContent="NO SELECTION";
+ $("selectedRecordTag").classList.add("warning");
+ $("selectedCandidateId").textContent="No candidate selected";
+ $("selectedCandidateMetaLine").textContent="Select a recorded candidate to inspect its configuration.";
+ $("selectedCandidateSignature").textContent="—";
+ $("selectedCandidateMetrics").innerHTML='<div class="empty-state"><b>Metrics unavailable</b><p>No candidate is selected.</p></div>';
+ $("selectedCandidateRunInfo").innerHTML="";
+ $("selectedCandidateChecks").innerHTML="";
+ geometryArtifactActive=false;
+ if($("geometryPreview"))$("geometryPreview").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to show its linked model view.</p></div>';
+ if($("geometryCaption"))$("geometryCaption").textContent="No candidate selected.";
+ if(records.length)drawCandidateChart();
+ if(assemblyRecords.length)drawAssemblyField();
+ else if($("assemblyMap"))$("assemblyMap").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>Select a candidate to inspect recorded assembly evidence.</p></div>';
 }
 function materialCellSvg(code,x,y,pitch){
  const material=pinMaterials[code];
@@ -163,7 +203,11 @@ function chart(id,traces,layout={}){
  }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';}
 }
 function showCandidate(){
- const id=$("candidateSelect").value,row=records.find(r=>String(r.candidate_id)===id);if(!row)return;
+ const selector=$("candidateSelect");
+ const id=String(selector?.value??"");
+ const row=records.find(r=>String(r.candidate_id)===id);
+ if(!row){clearCandidateSelection(id?"The selected identifier does not match a recorded candidate.":"Choose a candidate from the selector.");return;}
+ $("selectedRecordTag").classList.remove("warning");
  $("layoutView").innerHTML=layoutCells(row.layout_signature);
  $("layoutCaption").textContent=label(row)+" · seed "+(row.seed??"not recorded")+" · signature "+(row.layout_signature??"not recorded");
  drawSelectedCandidate(row);
@@ -198,15 +242,14 @@ async function init(){
  try{
   const response=await fetch("/api/candidates",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("API returned HTTP "+response.status);
-  const payload=await response.json();records=payload.records||[];metadata=payload.metadata||{};
-  if(!records.length)throw new Error("The API returned no candidate records.");
+  const payload=await response.json();records=validateCandidateRecords(payload.records);metadata=payload.metadata||{};
   $("sourcePath").textContent=metadata.source||"Source path not provided by API";
   const layouts=new Set(records.map(r=>r.layout_signature).filter(Boolean));
   const seeds=new Set(records.map(r=>String(r.seed)).filter(s=>s!=="undefined"&&s!=="null"));
   const ks=records.filter(r=>has(r,"keff_mean")).map(r=>Number(r.keff_mean));
   const metrics=[["Candidate records",records.length.toLocaleString(),"Rows in current candidate summary"],["Unique layouts",layouts.size.toLocaleString(),"Distinct recorded signatures"],["k-effective span",ks.length?number(Math.min(...ks),5)+" – "+number(Math.max(...ks),5):"—","Reported mean values"],["Recorded seeds",seeds.size.toLocaleString(),"Distinct seed values"]];
   $("metrics").innerHTML=metrics.map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
-  $("candidateSelect").innerHTML=records.map(r=>'<option value="'+String(r.candidate_id).replaceAll('"',"&quot;")+'">'+label(r)+'</option>').join("");
+  $("candidateSelect").innerHTML=records.map(candidateOption).join("");
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
   showCandidate();drawOtherCharts();
   await initAssembly();
@@ -214,7 +257,7 @@ async function init(){
   await initMesh();
  }catch(error){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
-  $("layoutView").innerHTML='<div class="loading">Evidence unavailable — no scientific values are fabricated.</div>';
+  clearCandidateSelection("Candidate evidence unavailable: "+error.message);
   $("sourcePath").textContent="API unavailable";
   await initGeometry();
   await initMesh();
