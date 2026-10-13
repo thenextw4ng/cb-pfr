@@ -47,6 +47,66 @@ def audit_inputs(candidate_root: Path) -> dict:
     if pitch != [21.42, 21.42, 21.42]:
         raise ValueError(f"Unexpected core-lattice pitch: {pitch}")
 
+    # The model's current source convention maps U to unrodded universe 9,
+    # M to universe 11, and water/reflector to universe 13. Verify the archived
+    # candidate identifier against the actual generated XML, not just its size.
+    signature = candidate_root.name.removeprefix("c5g7-2x2-")
+    if len(signature) != 4 or set(signature) - {"U", "M"} or signature.count("U") != 2 or signature.count("M") != 2:
+        raise ValueError(f"Unexpected or infeasible four-position candidate signature: {signature}")
+    u_ids = [9 if letter == "U" else 11 for letter in signature]
+    expected_active_layer = [u_ids[0], u_ids[1], 13, u_ids[2], u_ids[3], 13, 13, 13, 13]
+    recorded_universes = _numbers(lattice, "universes", int)
+    if len(recorded_universes) != 90:
+        raise ValueError(f"3-D core lattice must contain 90 universe entries; found {len(recorded_universes)}")
+    active_layers = [
+        recorded_universes[index * 9:(index + 1) * 9]
+        for index in range(9)
+    ]
+    if any(layer != expected_active_layer for layer in active_layers):
+        raise ValueError(
+            f"Axial active-layer universes do not match candidate {signature}: "
+            f"expected {expected_active_layer}, got {active_layers[:1]}"
+        )
+    top_layer = recorded_universes[81:90]
+    if top_layer != [13] * 9:
+        raise ValueError(f"Expected all-reflector top layer in source geometry; got {top_layer}")
+
+    materials = ET.parse(model3d / "materials.xml").getroot()
+    material_names = {
+        int(node.attrib["id"]): node.attrib.get("name", "")
+        for node in materials.findall("material")
+        if "id" in node.attrib
+    }
+    expected_materials = {
+        1: "UO2",
+        2: "MOX 4.3%",
+        3: "MOX 7.0%",
+        4: "MOX 8.7%",
+        5: "Fission Chamber",
+        6: "Guide Tube",
+        7: "Water",
+        8: "Control Rod",
+    }
+    if any(material_names.get(key) != value for key, value in expected_materials.items()):
+        raise ValueError(f"Material ID/name map differs from the archived C5G7 source: {material_names}")
+
+    assembly_specs = {
+        "101": ([17, 17], [1.26, 1.26]),
+        "103": ([17, 17], [1.26, 1.26]),
+        "105": ([1, 1], [21.42, 21.42]),
+    }
+    for lattice_id, (expected_dims, expected_pitch) in assembly_specs.items():
+        candidates = [
+            node for node in geometry.findall(".//lattice")
+            if node.attrib.get("id") == lattice_id
+        ]
+        if len(candidates) != 1:
+            raise ValueError(f"Expected one assembly lattice {lattice_id}; found {len(candidates)}")
+        if _numbers(candidates[0], "dimension", int) != expected_dims:
+            raise ValueError(f"Assembly lattice {lattice_id} dimensions mismatch")
+        if _numbers(candidates[0], "pitch") != expected_pitch:
+            raise ValueError(f"Assembly lattice {lattice_id} pitch mismatch")
+
     z_surfaces = {}
     for surface in geometry.findall(".//surface"):
         name = surface.attrib.get("name", "")
