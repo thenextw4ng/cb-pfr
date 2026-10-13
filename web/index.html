@@ -168,7 +168,7 @@
             <div><h3>Physical axial 3D tally volume</h3><p>Actual multi-layer OpenMC mesh statepoint · volumetric view and selected Z-plane</p></div>
             <div class="section-actions"><span id="axial3dStatus" class="tag">CHECKING 3D DATA</span><button id="reloadAxial3d" class="action-button" type="button">↻ Reload 3D tally</button></div>
           </div>
-          <div class="notice mesh-notice"><b>VOLUME DATA PROVENANCE</b><span id="axial3dProvenance">Checking for an archived 3D OpenMC mesh export. The 2D terrain above is not used as a substitute.</span></div>
+          <div class="notice mesh-notice"><b>VOLUME DATA PROVENANCE</b><span id="axial3dProvenance">Checking for the hash-verified high-budget OpenMC 3D export. If it is absent locally, the server will try to retrieve the successful UMMU production artifact from GitHub Actions. The 2D terrain is never used as a substitute.</span></div>
           <div class="field-controls axial3d-controls">
             <div class="control"><label for="axial3dScore">TALLY SCORE</label><select id="axial3dScore"><option value="flux">Flux</option><option value="fission">Fission</option><option value="nu-fission">Nu-fission</option></select></div>
             <div class="control"><label for="axial3dView">VOLUME COLOUR</label><select id="axial3dView"><option value="mean">Recorded mean · log₁₀ display</option><option value="relative_error">Relative MC standard error (%)</option></select></div>
@@ -178,7 +178,7 @@
           </div>
           <div class="field-kpis axial3d-kpis" id="axial3dKpis"><article class="metric"><label>Mesh dimensions</label><strong>—</strong><small>Awaiting 3D statepoint</small></article><article class="metric"><label>Axial span</label><strong>—</strong><small>Physical Z extent</small></article><article class="metric"><label>Axial bins</label><strong>—</strong><small>Independent recorded tally layers</small></article><article class="metric"><label>Active realisations</label><strong>—</strong><small>Statepoint metadata</small></article></div>
           <div id="axial3dPlot" class="field-chart surface-chart js-spatial-plot" aria-label="True volumetric 3D OpenMC tally with a selected physical axial slice"></div>
-          <div id="axial3dSummary" class="mesh-summary-note">A true 3D volume is shown only when an audited multi-layer statepoint export is installed. This plot will never reuse or extrude the 2D terrain above.</div>
+          <div id="axial3dSummary" class="mesh-summary-note">A true 3D volume is shown only from a hash-verified, multi-layer OpenMC statepoint export. The server attempts one lazy install from GitHub Actions if the local copy is absent; use Reload 3D tally to retry after a network failure. This plot never reuses or extrudes the 2D terrain above.</div>
           <div class="panel-footnote">The voxel coordinates come from the 3D statepoint mesh. The transparent volume encodes the selected recorded tally or uncertainty; the coloured horizontal sheet is the selected physical Z-bin. Hover values retain the tally mean and Monte Carlo uncertainty. These tallies are source-normalised and not absolute power.</div>
         </article>
         <div class="note-row"><span class="note-icon">i</span><p><b>Physics interpretation.</b> Relative Monte Carlo standard error is calculated as 100 × standard error / mean for positive mean bins. Log scale is applied only to positive mean values. Spatial bins are not assigned to fuel, reflector, or assembly coordinates in this view, so no physical core orientation is inferred.</p></div>
