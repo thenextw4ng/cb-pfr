@@ -141,8 +141,8 @@ test("all six candidate selections update placement, detail, comparison highligh
     const comparison = charts.get("candidateChart").traces[0];
     const selectedTraceIndex = comparison.customdata.findIndex(item => item[0] === row.candidate_id);
     assert.notEqual(selectedTraceIndex, -1);
-    assert.equal(comparison.marker.color[selectedTraceIndex], "#55d4df", "selected candidate should be highlighted");
-    assert.equal(comparison.marker.color.filter(color => color === "#55d4df").length, 1, "only selected candidate should be highlighted");
+    assert.equal(comparison.marker.color[selectedTraceIndex], "#ffffff", "selected candidate should be highlighted with a neutral outline colour");
+    assert.equal(comparison.marker.color.filter(color => color === "#ffffff").length, 1, "only selected candidate should be highlighted");
 
     const proxy = proxyRows.find(item => item.candidate_id === row.candidate_id && item.layout_signature === row.layout_signature);
     assert.equal(JSON.stringify(charts.get("assemblyMap").traces[0].z), JSON.stringify([
