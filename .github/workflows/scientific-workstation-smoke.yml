@@ -37,6 +37,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Install headless Chromium for browser visual QA
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
       - name: Install spatial evidence reader dependencies
         run: python -m pip install h5py numpy
       - name: Static syntax checks
@@ -44,6 +48,7 @@ jobs:
           python -m py_compile web_server.py tools/export_openmc_geometry.py
           node --check web/app.js
           node --check tests/web_candidate_ui.test.cjs
+          node --check tests/browser_visual_smoke.cjs
       - name: Verify candidate inspector synchronization
         run: node --test tests/web_candidate_ui.test.cjs
       - name: Verify OpenMC geometry manifest against original XML bytes
@@ -185,3 +190,12 @@ jobs:
               print("Mesh archive unavailable in this CI checkout; UI must show an explicit unavailable state. " + str(error.get("error", "")))
           print("Health, HTML, CSS, JS, all six candidate inspector tests, source manifest tests, model geometry API, candidate API, assembly API, and geometry inventory passed.")
           PY
+          node tests/browser_visual_smoke.cjs
+      - name: Upload browser visual QA screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cb-pfr-browser-visual-qa
+          path: artifacts/visual-qa/
+          if-no-files-found: warn
+          retention-days: 14
