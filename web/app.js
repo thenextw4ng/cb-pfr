@@ -368,14 +368,14 @@ function clearCandidateSelection(message="No candidate selected."){
 const baseLayout={paper_bgcolor:"rgba(0,0,0,0)",plot_bgcolor:"rgba(0,0,0,0)",font:{family:"Manrope, sans-serif",color:palette.muted,size:10},margin:{l:55,r:18,t:15,b:65},xaxis:{gridcolor:"#1e3545",linecolor:palette.line,tickangle:-28},yaxis:{gridcolor:"#1e3545",linecolor:palette.line,zerolinecolor:palette.line},hoverlabel:{bgcolor:"#102536",bordercolor:palette.line,font:{color:palette.text}}};
 const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d","select2d"]};
 function chart(id,traces,layout={}){
- const el=$(id);if(!el)return;
- if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return;}
+ const el=$(id);if(!el)return Promise.resolve();
+ if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
  try{
-  Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
-   const msg=String(error?.message||error).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  return Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
+   const msg=String(error?.message||error).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
    el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+msg+'</p></div>';
   });
- }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';}
+ }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';return Promise.resolve();}
 }
 function showCandidate(){
  const selector=$("candidateSelect");
