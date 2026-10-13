@@ -10,7 +10,16 @@ const has = (row,key) => {
  const value=row[key];
  return value!==null && value!==undefined && !(typeof value==="string" && value.trim()==="") && Number.isFinite(Number(value));
 };
-function label(row){return String(row.candidate_id ?? "Candidate") + " · " + String(row.layout_signature ?? "layout");}
+function displayValue(value,fallback="Not recorded"){
+ if(value===null||value===undefined||(typeof value==="string"&&value.trim()===""))return fallback;
+ return String(value);
+}
+function normalizeLayoutSignature(signature){return String(signature??"").trim().toUpperCase();}
+function isValidLayoutSignature(signature){
+ const raw=normalizeLayoutSignature(signature);
+ return /^[UM]{4}$/.test(raw)&&raw.split("M").length-1===2&&raw.split("U").length-1===2;
+}
+function label(row){return displayValue(row.candidate_id,"Candidate") + " · " + displayValue(row.layout_signature,"layout");}
 function validateCandidateRecords(rows){
  if(!Array.isArray(rows)||!rows.length)throw new Error("The API returned no candidate records.");
  const seen=new Set();
@@ -28,8 +37,8 @@ function candidateOption(row){
  return '<option value="'+escapeHtml(id)+'">'+escapeHtml(label(row))+'</option>';
 }
 function layoutCells(signature){
-  const raw=String(signature??"").trim().toUpperCase();
-  if(!/^[UM]{4}$/.test(raw)){
+  const raw=normalizeLayoutSignature(signature);
+  if(!isValidLayoutSignature(raw)){
     return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate does not contain a validated four-position U/M signature. No default arrangement is substituted.</p></div>';
   }
   const cells=raw.split("");
@@ -67,18 +76,19 @@ const pinMaterials={
 };
 let geometryArtifactActive=false;
 function drawSelectedCandidate(row){
- const signature=String(row.layout_signature??"").trim().toUpperCase();
+ const signature=normalizeLayoutSignature(row.layout_signature);
  const tag=$("selectedRecordTag");
- const canonical=row.canonical_reference===true||String(row.canonical_reference).toLowerCase()==="true";
+ const layoutValid=isValidLayoutSignature(signature);
+ const canonical=(row.canonical_reference===true||String(row.canonical_reference).toLowerCase()==="true")&&layoutValid;
  if(tag){
-  tag.textContent=canonical?"CANONICAL LAYOUT REFERENCE":"LAYOUT VARIANT";
-  tag.classList.toggle("warning",!canonical);
+  tag.textContent=!layoutValid?"INVALID LAYOUT":canonical?"CANONICAL LAYOUT REFERENCE":"LAYOUT VARIANT";
+  tag.classList.toggle("warning",!layoutValid||!canonical);
  }
  const selectedIndex=records.findIndex(item=>String(item.candidate_id)===String(row.candidate_id));
  const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
  $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
  $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
- $("selectedCandidateSignature").innerHTML=/^[UM]{4}$/.test(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
+ $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
  const metrics=[
   ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff"],
   ["Reported SD",has(row,"keff_std_dev")?number(row.keff_std_dev,6):"Not recorded","sd"],
@@ -87,10 +97,10 @@ function drawSelectedCandidate(row){
  ];
  $("selectedCandidateMetrics").innerHTML=metrics.map(([name,value,type])=>'<div class="candidate-stat candidate-stat-'+type+'"><span>'+name+'</span><strong>'+value+'</strong></div>').join("");
  const runInfo=[
-  ["SEED",row.seed??"Not recorded"],
-  ["BATCHES",row.batches??"Not recorded"],
-  ["INACTIVE",row.inactive??"Not recorded"],
-  ["PARTICLES / BATCH",row.particles_per_batch??"Not recorded"]
+  ["SEED",displayValue(row.seed)],
+  ["BATCHES",displayValue(row.batches)],
+  ["INACTIVE",displayValue(row.inactive)],
+  ["PARTICLES / BATCH",displayValue(row.particles_per_batch)]
  ];
  $("selectedCandidateRunInfo").innerHTML=runInfo.map(([name,value])=>'<div class="run-meta"><span>'+name+'</span><b>'+escapeHtml(value)+'</b></div>').join("");
  const unchanged=has(row,"mutated_preexisting_file_count")&&Number(row.mutated_preexisting_file_count)===0;
@@ -209,7 +219,7 @@ function showCandidate(){
  if(!row){clearCandidateSelection(id?"The selected identifier does not match a recorded candidate.":"Choose a candidate from the selector.");return;}
  $("selectedRecordTag").classList.remove("warning");
  $("layoutView").innerHTML=layoutCells(row.layout_signature);
- $("layoutCaption").textContent=label(row)+" · seed "+(row.seed??"not recorded")+" · signature "+(row.layout_signature??"not recorded");
+ $("layoutCaption").textContent=label(row)+" · seed "+displayValue(row.seed,"not recorded")+" · signature "+displayValue(row.layout_signature,"not recorded");
  drawSelectedCandidate(row);
  geometryArtifactActive=false;
  drawModelGeometry(row);
