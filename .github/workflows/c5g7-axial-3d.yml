@@ -240,22 +240,34 @@ jobs:
           Mesh: 51 × 51 × 30 bins. Coordinate and source-normalisation limits are recorded in the JSON sidecars.
           EOF
 
-          # Use a separate worktree so PR merge-checkout files remain untouched.
-          # Publish only back to the source branch (never to refs/pull/<n>/merge).
-          git fetch origin "refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
-          publish_repo="$RUNNER_TEMP/cbpfr-publish-repo"
-          git worktree add --detach "$publish_repo" "origin/$TARGET_BRANCH"
-          mkdir -p "$publish_repo/evidence/cbpfr_axial_3d"
-          cp "$publish_dir/"* "$publish_repo/evidence/cbpfr_axial_3d/"
-          git -C "$publish_repo" add evidence/cbpfr_axial_3d/
-          if git -C "$publish_repo" diff --cached --quiet; then
-            echo "The published axial tally is unchanged; no evidence commit is needed."
-            exit 0
-          fi
-          git -C "$publish_repo" config user.name "github-actions[bot]"
-          git -C "$publish_repo" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$publish_repo" commit -m "data: publish recorded axial 3D tally for workstation"
-          git -C "$publish_repo" push origin "HEAD:$TARGET_BRANCH"
+          # Use a fresh worktree on each attempt so PR merge-checkout files stay untouched.
+          # Retry if another run advances the target branch between fetch and push.
+          for attempt in 1 2 3; do
+            git fetch origin "refs/heads/$TARGET_BRANCH:refs/remotes/origin/$TARGET_BRANCH"
+            publish_repo="$RUNNER_TEMP/cbpfr-publish-repo-$attempt"
+            git worktree add --detach "$publish_repo" "origin/$TARGET_BRANCH"
+            mkdir -p "$publish_repo/evidence/cbpfr_axial_3d"
+            cp "$publish_dir/"* "$publish_repo/evidence/cbpfr_axial_3d/"
+            git -C "$publish_repo" add evidence/cbpfr_axial_3d/
+            if git -C "$publish_repo" diff --cached --quiet; then
+              echo "The published axial tally is unchanged; no evidence commit is needed."
+              git worktree remove --force "$publish_repo"
+              exit 0
+            fi
+            git -C "$publish_repo" config user.name "github-actions[bot]"
+            git -C "$publish_repo" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$publish_repo" commit -m "data: publish recorded axial 3D tally for workstation"
+            if git -C "$publish_repo" push origin "HEAD:$TARGET_BRANCH"; then
+              echo "Published recorded 3-D tally and provenance to $TARGET_BRANCH."
+              git worktree remove --force "$publish_repo"
+              exit 0
+            fi
+            echo "Target branch advanced during publish attempt $attempt; retrying against its latest head."
+            git worktree remove --force "$publish_repo"
+            sleep 2
+          done
+          echo "Could not publish the generated axial tally after 3 attempts." >&2
+          exit 1
 
       - name: Browser-test the actual 3D tally volume and axial slice
         if: github.event_name == 'pull_request'
