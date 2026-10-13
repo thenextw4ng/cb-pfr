@@ -9,6 +9,7 @@ from cbpfr.sciviz import (
     field_figure,
     profile_figure,
     uncertainty_figure,
+    vtk_plane_html,
 )
 
 
@@ -64,6 +65,18 @@ class ScientificVisualizationTests(unittest.TestCase):
         np.testing.assert_allclose(fig.data[0].y, mean)
         np.testing.assert_allclose(fig.data[0].error_y.array, sd)
         self.assertIn("row 4", fig.layout.title.text.lower())
+
+    def test_vtk_trame_export_returns_embeddable_html_scene(self):
+        values = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=float)
+        html = vtk_plane_html(
+            values,
+            x_bounds=(0.0, 2.0),
+            y_bounds=(0.0, 2.0),
+            score_name="flux",
+        )
+        self.assertIn("<html", html.lower())
+        self.assertIn("flux", html.lower())
+        self.assertIn("</html>", html.lower())
 
     def test_uncertainty_and_distribution_figures_accept_spatial_arrays(self):
         x = np.array([0.0, 1.0])
