@@ -91,6 +91,10 @@ def read_model_geometry():
             char in "0123456789abcdef" for char in value.lower()
         )
 
+    source = payload.get("source", {})
+    if not valid_sha256(source.get("archive_sha256", "")):
+        raise ValueError("Geometry manifest source archive SHA-256 is missing or malformed.")
+
     core = payload.get("core_lattice", {})
     if core.get("id") != 201 or core.get("dimensions") != [3, 3]:
         raise ValueError("Geometry manifest core lattice must be the archived 3 x 3 lattice 201.")
@@ -172,6 +176,8 @@ def read_model_geometry():
             raise ValueError(f"Candidate {candidate_id} does not contain two UO2, two MOX, and five reflector sites.")
         if not valid_sha256(candidate.get("geometry_xml_sha256", "")):
             raise ValueError(f"Candidate {candidate_id} has a malformed geometry XML SHA-256.")
+        if not valid_sha256(candidate.get("materials_xml_sha256", "")):
+            raise ValueError(f"Candidate {candidate_id} has a malformed materials XML SHA-256.")
     if {candidate.get("layout_signature") for candidate in candidates} != expected_layouts:
         raise ValueError("Geometry manifest does not contain all six expected layouts.")
     return payload
