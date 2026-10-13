@@ -165,7 +165,7 @@ def profile_figure(
     )
     base_layout(fig, height=360)
     fig.update_layout(
-        title={"text": f"Central-row profile · row {row_index}", "x": 0.02},
+        title={"text": f"Selected-row profile · row {row_index}", "x": 0.02},
         xaxis_title=x_label,
         yaxis_title=f"{score_name} mean (score units as stored)",
         margin={"l": 65, "r": 25, "t": 55, "b": 55},
@@ -263,8 +263,9 @@ def vtk_plane_html(
         raise ValueError(
             f"VTK plane cell count {grid.n_cells} does not match tally bins {values.size}."
         )
-    safe_values = np.where(np.isfinite(values), values, 0.0)
-    grid.cell_data[score_name] = safe_values.ravel(order="C")
+    if not np.isfinite(values).all():
+        raise ValueError("The mesh contains non-finite values; missing bins are not silently replaced with zero.")
+    grid.cell_data[score_name] = values.ravel(order="C")
 
     plotter = pv.Plotter(off_screen=True, window_size=(1050, 620))
     try:
