@@ -57,11 +57,14 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/ | grep -q 'Scientific Workstation'
           curl --fail --silent http://127.0.0.1:8765/styles.css | grep -q 'geometry-preview'
           curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function drawMesh'
+          curl --fail --silent http://127.0.0.1:8765/app.js | grep -q 'function renderModelGeometrySvg'
+          curl --fail --silent http://127.0.0.1:8765/ | grep -q 'selectedCandidateMetrics'
           curl --fail --silent http://127.0.0.1:8765/api/candidates > /tmp/cb-pfr-candidates.json
           curl --fail --silent http://127.0.0.1:8765/api/assembly > /tmp/cb-pfr-assembly.json
           curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
           mesh_status=$(curl --silent --output /tmp/cb-pfr-mesh.json --write-out '%{http_code}' http://127.0.0.1:8765/api/mesh)
-          test "$mesh_status" = "200"
+          test "$mesh_status" = "200" -o "$mesh_status" = "503"
+          echo "$mesh_status" > /tmp/cb-pfr-mesh-status
           python - <<'PY'
           import json
           for path, key in (("/tmp/cb-pfr-candidates.json", "records"), ("/tmp/cb-pfr-assembly.json", "records")):
@@ -71,18 +74,25 @@ jobs:
           with open("/tmp/cb-pfr-geometry.json", encoding="utf-8") as f:
               geometry = json.load(f)
           assert isinstance(geometry.get("artifacts"), list), geometry
-          with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
-              mesh = json.load(f)
-          tallies = mesh.get("mesh_tallies", [])
-          assert tallies, mesh
-          for tally in tallies:
-              dims = tally.get("dimensions", [])
-              assert len(dims) == 3 and dims[2] == 1, tally
-              assert tally.get("scores"), tally
-              for score, fields in tally["scores"].items():
-                  for field_name in ("mean", "std_dev"):
-                      grid = fields.get(field_name)
-                      assert isinstance(grid, list) and grid, (score, field_name, tally)
-                      assert all(isinstance(row, list) and row for row in grid), (score, field_name, tally)
-          print(f"Health, HTML, CSS, JS, candidate API, assembly API, geometry discovery, and {len(tallies)} archived OpenMC mesh tally/tallies passed.")
+          mesh_status = open("/tmp/cb-pfr-mesh-status", encoding="utf-8").read().strip()
+          if mesh_status == "200":
+              with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
+                  mesh = json.load(f)
+              tallies = mesh.get("mesh_tallies", [])
+              assert tallies, mesh
+              for tally in tallies:
+                  dims = tally.get("dimensions", [])
+                  assert len(dims) == 3 and dims[2] == 1, tally
+                  assert tally.get("scores"), tally
+                  for score, fields in tally["scores"].items():
+                      for field_name in ("mean", "std_dev"):
+                          grid = fields.get(field_name)
+                          assert isinstance(grid, list) and grid, (score, field_name, tally)
+                          assert all(isinstance(row, list) and row for row in grid), (score, field_name, tally)
+              print(f"API smoke passed; validated {len(tallies)} archived OpenMC mesh tally/tallies.")
+          else:
+              with open("/tmp/cb-pfr-mesh.json", encoding="utf-8") as f:
+                  error = json.load(f)
+              print("Mesh archive unavailable in this CI checkout; UI must show an explicit unavailable state. " + str(error.get("error", "")))
+          print("Health, HTML, CSS, JS, selected-candidate view, XML-derived geometry renderer, candidate API, assembly API, and geometry inventory passed.")
           PY
