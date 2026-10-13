@@ -4,6 +4,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
+import zipfile
 import unittest
 from pathlib import Path
 
@@ -142,6 +144,51 @@ class ScientificVisualAcceptance(unittest.TestCase):
         self.assertIn("This plot never reuses or extrudes the 2D terrain above.", self.html)
         nonclaims = " ".join(audit.get("nonclaims", [])) + " " + " ".join(str(v) for v in manifest.get("inherited_axial_assumptions", {}).values())
         self.assertTrue("boundary" in nonclaims.lower() or "benchmark" in nonclaims.lower())
+
+    def test_archived_xml_hashes_match_source_manifest_when_archive_supplied(self):
+        archive_value = os.environ.get("CBPFR_TEST_ARCHIVE")
+        if not archive_value:
+            self.skipTest("CBPFR_TEST_ARCHIVE not set; raw XML provenance cross-check requires the archived study ZIP.")
+        archive_path = Path(archive_value)
+        self.assertTrue(archive_path.is_file(), f"Study archive not found: {archive_path}")
+        archive_bytes = archive_path.read_bytes()
+        self.assertEqual(
+            hashlib.sha256(archive_bytes).hexdigest(),
+            self.geometry["source"]["archive_sha256"],
+            "Study archive SHA-256 must match the geometry manifest source.",
+        )
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+            self.assertEqual(len(self.geometry["candidates"]), 6)
+            checked = set()
+            for candidate in self.geometry["candidates"]:
+                signature = candidate["layout_signature"]
+                self.assertIn(signature, LAYOUTS)
+                geometry_member = candidate["source_member"]
+                materials_member = geometry_member.rsplit("/", 1)[0] + "/materials.xml"
+                self.assertIn(geometry_member, names, f"Missing source geometry XML for {signature}")
+                self.assertIn(materials_member, names, f"Missing source materials XML for {signature}")
+                geometry_bytes = archive.read(geometry_member)
+                materials_bytes = archive.read(materials_member)
+                self.assertEqual(
+                    hashlib.sha256(geometry_bytes).hexdigest(),
+                    candidate["geometry_xml_sha256"],
+                    f"Geometry XML SHA-256 mismatch for {signature}",
+                )
+                self.assertEqual(
+                    hashlib.sha256(materials_bytes).hexdigest(),
+                    candidate["materials_xml_sha256"],
+                    f"Materials XML SHA-256 mismatch for {signature}",
+                )
+                self.assertIn(b"<geometry", geometry_bytes.lower())
+                self.assertIn(b"<materials", materials_bytes.lower())
+                checked.add(signature)
+            self.assertEqual(checked, LAYOUTS)
+
+    def test_missing_candidate_uncertainty_is_not_encoded_as_zero(self):
+        # A missing SD must not look like a perfectly precise measurement in Plotly error bars.
+        self.assertIn('array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null)', self.js)
+        self.assertIn('array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null)', self.js)
 
     def test_responsive_and_provenance_contracts_exist(self):
         for breakpoint in ("680px", "1000px", "1100px", "1120px"):
