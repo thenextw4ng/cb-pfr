@@ -236,7 +236,7 @@ function drawCandidateChart(){
  }
  chart("candidateChart",[trace],{
   autosize:true,margin:{l:90,r:30,t:16,b:58},showlegend:false,hovermode:"closest",
-  xaxis:{...baseLayout.xaxis,title:isKeff?"Reported k-effective mean (± SD)":"Recorded repository score (units not specified)",automargin:true,gridcolor:palette.line,zeroline:false},
+  xaxis:{...baseLayout.xaxis,title:isKeff?"Reported k-effective mean (± SD)":"Recorded repository score (units not specified)",automargin:true,gridcolor:palette.line,zeroline:false,tickangle:0,tickformat:isKeff?".3f":".4g"},
   yaxis:{...baseLayout.yaxis,title:"Layout signature",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.55)"},
   annotations:[]
  });
