@@ -30,10 +30,10 @@ async function main() {
     await page.waitForSelector("#candidateChart svg", { timeout: 30000 });
     // A green browser smoke run requires the actual four spatial Plotly canvases, not just empty panels.
     for (const selector of [
-      "#meshHeatmap .js-plotly-plot",
-      "#meshContour .js-plotly-plot",
-      "#meshProfile .js-plotly-plot",
-      "#meshSurface .js-plotly-plot"
+      "#meshHeatmap.js-plotly-plot",
+      "#meshContour.js-plotly-plot",
+      "#meshProfile.js-plotly-plot",
+      "#meshSurface.js-plotly-plot"
     ]) {
       await page.waitForSelector(selector, { timeout: 30000 });
     }
@@ -138,7 +138,7 @@ async function main() {
       candidateCount: candidateOptions.length,
       candidateIds: candidateOptions.map(option => option.value),
       sourceGeometryPinCellCount: 4 * 17 * 17,
-      spatialPlotCount: await page.locator("#meshHeatmap .js-plotly-plot, #meshContour .js-plotly-plot, #meshProfile .js-plotly-plot, #meshSurface .js-plotly-plot").count(),
+      spatialPlotCount: await page.locator("#meshHeatmap.js-plotly-plot, #meshContour.js-plotly-plot, #meshProfile.js-plotly-plot, #meshSurface.js-plotly-plot").count(),
       spatialDataStatus: await page.locator("#meshStatus").innerText(),
       desktopViewport: { width: 1440, height: 1000, ...desktopOverflow },
       mobileViewport: { width: 390, height: 844, ...mobileOverflow },
