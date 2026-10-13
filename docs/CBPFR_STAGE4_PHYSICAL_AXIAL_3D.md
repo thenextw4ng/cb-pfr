@@ -18,11 +18,13 @@ The prepared model therefore reuses the archived geometry/material/lattice sourc
 - scripts/audit_c5g7_axial_3d.py checks generated XML inputs and exports a compressed [z, y, x, score] volume plus an audit summary from the actual statepoint. Uncertainty is derived from OpenMC's stored tally sum/sum-of-squares and realization count.
 - A GitHub Actions workflow performs the structural audit and a small transport smoke run on the canonical UMMU candidate. A smoke run checks the 3-D pipeline works; it does not establish convergence or benchmark acceptance.
 
-## Important inherited geometry assumption
+## Axial geometry cross-check against the published benchmark
 
-The archived builder repeats its 3 x 3 cross-sectional arrangement for nine axial lattice layers and puts an all-reflector arrangement in the tenth/top layer. The bottom Z boundary is reflective and the top Z boundary is vacuum. Stage 4 preserves this source definition instead of silently inventing a symmetric reflector stack or new pin-height constants.
+The official OECD/NEA C5G7 MOX benchmark specification describes each fuel assembly as 21.42 cm × 21.42 cm × 192.78 cm, with an additional 21.42 cm water reflector above the fuel assemblies; the overall 3-D quarter-core domain is 64.26 cm × 64.26 cm × 214.20 cm, with a reflected lower-Z boundary and vacuum upper-Z boundary. See [OECD/NEA, NEA/NSC/DOC(2003)16, Chapter 2](https://www.oecd-nea.org/upload/docs/application/pdf/2019-12/nsc-doc2003-16.pdf), pp. 13–14.
 
-This source pattern must be reviewed against the intended OECD/NEA C5G7 benchmark variant before stronger physical-validity claims are made. The geometry source is evidence of what the model encodes, not independent proof that the source model's axial interpretation is correct.
+The archived builder's 10-layer stack maps to those dimensions: nine 21.42 cm layers contain the repeated fuel-bearing 3 × 3 cross section (192.78 cm total), and its tenth/top layer is the 21.42 cm all-water reflector. The source also uses a 17 × 17 pin lattice with 1.26 cm pitch and 0.54 cm pin/guide-tube radius, consistent with the same specification. The generated XML audit now checks the actual candidate-specific universe map, all nine repeated layers, the all-reflector top layer, material IDs/names, pin/assembly pitches, and axial boundary locations/conditions.
+
+This is a source-geometry consistency result—not proof that computed values match benchmark references. Numerical validation still requires a statistically credible 3-D transport result and comparison of eigenvalue and normalized pin/assembly fission-power estimates against the published reference; this workflow's 3-D mesh fission tally is source-normalized rather than absolute power.
 
 ## Workstation integration
 
