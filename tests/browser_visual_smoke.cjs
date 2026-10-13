@@ -377,9 +377,11 @@ async function main() {
 
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-full.png"), fullPage: true, animations: "disabled" });
-    await page.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-spatial-field-lab.png"), animations: "disabled" });
-    await page.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-core-geometry-3d.png"), animations: "disabled" });
-    await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
+    // The full-page capture above includes the map, candidate detail, and Three.js
+    // canvas. Avoid per-locator screenshots of live Plotly/WebGL regions: those
+    // canvases keep repainting, so Playwright's pixel-stability wait can time out
+    // even though the visual smoke assertions have passed. The full-page artifact
+    // provides one faithful capture without falsely failing on live canvas motion.
     await page.click("#coreView2d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled" });
