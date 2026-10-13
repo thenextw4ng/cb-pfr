@@ -29,6 +29,9 @@ jobs:
         run: |
           python -m py_compile web_server.py tools/export_openmc_geometry.py
           node --check web/app.js
+          node --check tests/web_candidate_ui.test.cjs
+      - name: Verify candidate inspector synchronization
+        run: node --test tests/web_candidate_ui.test.cjs
       - name: Start workstation and smoke-test API/assets
         shell: bash
         run: |
