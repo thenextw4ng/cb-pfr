@@ -98,6 +98,7 @@ fs.mkdirSync(outDir, { recursive: true });
         annotation: (plot.layout.annotations || []).map(item => item.text).join(" "),
         matrixZ: matrix.data[0].z,
         matrixShowscale: matrix.data[0].showscale,
+        pickerValues: [...document.querySelectorAll("#assemblyPositionPicker strong")].map(el => el.textContent.trim()),
         mapNote: document.querySelector(".assembly-map-note").innerText
       };
     });
@@ -115,6 +116,8 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.equal(assemblyView.matrixZ.length, 6);
     assert.equal(assemblyView.matrixZ[0].length, 4);
     assert.equal(assemblyView.matrixShowscale, false);
+    assert.equal(assemblyView.pickerValues.length, 4);
+    assert.ok(assemblyView.pickerValues.every(value => value.length <= 7), "position picker values must remain on one readable line");
     assert.match(assemblyView.mapNote, /not absolute power/i);
     assert.match(JSON.stringify(assemblyView.map[0].text), /P00.*P01.*P10.*P11/);
     assert.ok(!assemblyView.annotation.includes("ROW 0 (TOP)"), "dense geometry annotation should stay out of the plot canvas");
