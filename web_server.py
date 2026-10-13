@@ -509,6 +509,20 @@ def read_axial_3d_evidence(score="flux"):
         input_audit = json.loads(audit_path.read_text(encoding="utf-8"))
     if manifest_path.is_file():
         input_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    # Bind the binary data currently served to the metadata recorded alongside it.
+    # Sidecar metadata may be absent in older diagnostic fixtures; when present, its
+    # byte count and SHA-256 must match exactly before any values are returned.
+    npz_bytes = AXIAL_TALLY_NPZ.read_bytes()
+    npz_sha256 = hashlib.sha256(npz_bytes).hexdigest()
+    npz_meta = summary.get("npz", {})
+    expected_sha256 = npz_meta.get("sha256")
+    expected_bytes = npz_meta.get("bytes")
+    if expected_sha256 and expected_sha256 != npz_sha256:
+        raise ValueError("Axial NPZ SHA-256 does not match AXIAL_3D_STATEPOINT_SUMMARY.json.")
+    if expected_bytes is not None and int(expected_bytes) != len(npz_bytes):
+        raise ValueError("Axial NPZ byte count does not match AXIAL_3D_STATEPOINT_SUMMARY.json.")
+
     with np.load(AXIAL_TALLY_NPZ, allow_pickle=False) as payload:
         required = {
             "mean", "standard_error", "relative_error_percent",
@@ -559,7 +573,7 @@ def read_axial_3d_evidence(score="flux"):
         "available": True,
         "provenance": {
             "source": str(AXIAL_TALLY_NPZ),
-            "sha256": hashlib.sha256(AXIAL_TALLY_NPZ.read_bytes()).hexdigest(),
+            "sha256": npz_sha256,
             "summary_path": str(summary_path) if summary_path.is_file() else None,
             "statepoint": summary.get("statepoint", {}),
             "status": summary.get("status", "NPZ found; sidecar statepoint summary missing"),
