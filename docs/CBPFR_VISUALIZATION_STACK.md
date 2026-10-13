@@ -13,6 +13,14 @@
 
 No new npm package or Python runtime dependency is added by this stage.
 
+## Installed recorded axial evidence
+
+The workstation branch includes the audited production UMMU field files at `evidence/cbpfr_axial_3d/`. The primary payload is `axial_tally_3d.npz`, sourced from [successful OpenMC production run 38393987067](https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067), accompanied by its statepoint summary, input audit, input manifest, and provenance record.
+
+The current recorded run uses 7,000 batches (500 inactive), 10,000 particles per batch, and 6,500 active realizations. It exports 51 × 51 × 30 = 78,030 bins for flux, fission, and nu-fission. NPZ byte count and SHA-256 are recorded in both source summary and provenance, checked before publication, and rechecked by the local API before values are served. A focused workstation-smoke test checks this metadata and the returned array dimensions.
+
+This evidence makes the viewer available in this branch without requiring a local download from Actions. The lazy, hash-verified artifact installer remains a recovery path if the files are absent in a local checkout; it accepts only a successful high-budget UMMU production artifact, not the small smoke-profile result.
+
 ## Loading and fallback behavior
 
 - Plotly is version-pinned at the HTML entry point and has a second CDN source. If both fail, the workstation records the load failure and each chart shows a bounded, readable engine-unavailable message.
