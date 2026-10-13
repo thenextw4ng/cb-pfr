@@ -690,7 +690,8 @@ function drawMesh(){
   connectgaps:false,hoverongaps:false,showscale:true,
   lighting:{ambient:0.42,diffuse:0.92,specular:0.26,roughness:0.46,fresnel:0.12},
   lightposition:{x:1200,y:1000,z:1800},opacity:1
- }],{
+ }];
+ const surfaceLayout={
   autosize:true,margin:{l:8,r:8,t:8,b:8},
   scene:{
    uirevision:"cbpfr-neutron-field-camera-v1",
@@ -699,7 +700,7 @@ function drawMesh(){
    zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line},
    bgcolor:"rgba(0,0,0,0)",aspectmode:"manual",aspectratio:{x:aspectX,y:aspectY,z:Math.min(0.95,0.30*exaggeration)},camera:JSON.parse(JSON.stringify(meshDefaultCamera))
   }
- }];
+ };
  if(contourLines.segments>0){
   surfaceTraces.push({
    type:"scatter3d",mode:"lines",name:"Surface isolines",x:contourLines.surface.x,y:contourLines.surface.y,z:contourLines.surface.z,
@@ -710,16 +711,7 @@ function drawMesh(){
    line:{color:"rgba(85,212,223,0.56)",width:2},hoverinfo:"skip",showlegend:false,connectgaps:false
   });
  }
- chart("meshSurface",surfaceTraces,{
-  autosize:true,margin:{l:8,r:8,t:8,b:8},
-  scene:{
-   uirevision:"cbpfr-neutron-field-camera-v1",
-   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.xRange:undefined},
-   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.yRange:undefined},
-   zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line},
-   bgcolor:"rgba(0,0,0,0)",aspectmode:"manual",aspectratio:{x:aspectX,y:aspectY,z:Math.min(0.95,0.30*exaggeration)},camera:JSON.parse(JSON.stringify(meshDefaultCamera))
-  }
- });
+ chart("meshSurface",surfaceTraces,surfaceLayout);
  const centerY=Math.floor((ny-1)/2);
  const meanRow=f.mean[centerY]||[], seRow=f.standardError[centerY]||[], relativeRow=f.relative[centerY]||[];
  const profileY=f.view==="relative_sd"?relativeRow:meanRow;
