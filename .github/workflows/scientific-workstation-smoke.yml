@@ -10,6 +10,7 @@ on:
     branches:
       - feat/cern-workstation-integration
       - fix/**
+      - refine/**
   workflow_dispatch:
 
 permissions:
