@@ -24,6 +24,14 @@ The archived builder repeats its 3 x 3 cross-sectional arrangement for nine axia
 
 This source pattern must be reviewed against the intended OECD/NEA C5G7 benchmark variant before stronger physical-validity claims are made. The geometry source is evidence of what the model encodes, not independent proof that the source model's axial interpretation is correct.
 
+## Workstation integration
+
+The HTML workstation now includes a separate **Physical axial 3D tally volume** panel. It reads `/api/axial-3d`, which serves only the NPZ exported from a real multi-layer OpenMC statepoint. The existing Stage 3 surface remains labelled as a surface representation of a 2-D tally and is not used as fallback data.
+
+For local use, place both `axial_tally_3d.npz` and `AXIAL_3D_STATEPOINT_SUMMARY.json` in `evidence/cbpfr_axial_3d/` under the repository root, or set `CBPFR_AXIAL_TALLY_NPZ` to the NPZ file path before starting `web_server.py`. The browser UI provides a 3-D volumetric trace plus a selectable physical Z slice, tally-score selector, mean/relative-error colouring, opacity, and palette controls. The volume uses log10(mean) for visual contrast by default while hover readouts retain the recorded untransformed mean and uncertainties.
+
+The panel deliberately shows an unavailable state when no 3-D NPZ is installed; it does not inflate or recycle the 2-D tally. The artifact's `AXIAL_3D_STATEPOINT_SUMMARY.json` records the originating statepoint SHA-256 and the NPZ summary has its own SHA-256, allowing source/output matching during installation.
+
 ## Outputs and evidence
 
 A successful workflow uploads the prepared XML files, input manifest, actual statepoint and summary, plus:
