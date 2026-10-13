@@ -153,3 +153,28 @@
 
 #spatial .field-grid>.panel:nth-child(3){grid-column:1/-1}
 @media(max-width:680px){#spatial .field-grid>.panel:nth-child(3){grid-column:auto}}
+
+
+/* Scientific presentation refinements: metric definitions, candidate interval chart, and labeled contours. */
+.candidate-stat small{display:block;color:var(--muted);font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.candidate-stat-flux strong{color:#9bc7e4}
+.candidate-stat.reference{border-color:#2e8390;color:var(--cyan)}
+.candidate-chart-panel #candidateChart{height:390px;min-height:360px;width:100%;min-width:0}
+.candidate-chart-panel .panel-head p{max-width:680px}
+#selectedCandidateMetaLine{line-height:1.5;overflow-wrap:anywhere}
+#spatial .field-panel:nth-child(2) .panel-footnote,
+#spatial .field-panel:nth-child(3) .panel-footnote{min-height:54px}
+#meshContour.js-plotly-plot .main-svg text{paint-order:stroke;stroke:#07111b;stroke-width:1.8px;stroke-linejoin:round}
+@media(max-width:1100px){
+ .candidate-chart-panel #candidateChart{height:370px}
+}
+@media(max-width:680px){
+ .selected-candidate-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .candidate-stat{padding:10px}
+ .candidate-stat span{font-size:9px}
+ .candidate-stat strong{font-size:13px;line-height:1.4}
+ .candidate-stat small{font-size:9px}
+ .candidate-chart-panel #candidateChart{height:390px;min-height:350px}
+ #spatial .field-panel:nth-child(2) .panel-footnote,
+ #spatial .field-panel:nth-child(3) .panel-footnote{min-height:0}
+}
