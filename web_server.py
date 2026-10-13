@@ -465,16 +465,32 @@ def read_mesh_evidence():
     }
 
 
+_AXIAL_AUTO_INSTALL_ATTEMPTED = False
+
+
 def read_axial_3d_evidence(score="flux"):
-    """Read one selected score from an actual OpenMC 3-D statepoint export."""
+    """Read a selected score from a recorded OpenMC 3-D tally, installing evidence once if absent."""
+    global _AXIAL_AUTO_INSTALL_ATTEMPTED
+    if not AXIAL_TALLY_NPZ.is_file() and not _AXIAL_AUTO_INSTALL_ATTEMPTED:
+        _AXIAL_AUTO_INSTALL_ATTEMPTED = True
+        try:
+            # Optional, lazy network operation: only try when the user opens the 3-D evidence panel
+            # and the recorded tally is not already installed. The installer accepts only a
+            # successful high-budget UMMU artifact with a verified NPZ hash and 51 x 51 x 30 mesh.
+            from tools.install_axial_3d_artifact import install_latest_production_axial_tally
+            install_latest_production_axial_tally(AXIAL_TALLY_NPZ)
+        except Exception as install_error:
+            raise FileNotFoundError(
+                "Recorded axial 3-D tally is not installed, and automatic retrieval from GitHub "
+                "Actions did not complete: " + str(install_error) + ". "
+                "Retry by restarting the server after network access returns, or run "
+                "python tools/install_axial_3d_artifact.py --target "
+                + str(AXIAL_TALLY_NPZ) + "."
+            ) from install_error
     if not AXIAL_TALLY_NPZ.is_file():
         raise FileNotFoundError(
-            "3-D axial tally export is not installed in this checkout. The Stage 4 workflow "
-            "publishes evidence/cbpfr_axial_3d/ after a successful OpenMC transport/export run. "
-            "Sync the latest feat/stage4-physical-axial-tallies branch and restart the server. "
-            "For older runs without the publisher step, download axial_tally_3d.npz and the "
-            "AXIAL_3D_STATEPOINT_SUMMARY.json sidecar from the GitHub Actions artifact, then copy "
-            "them beside the expected path: " + str(AXIAL_TALLY_NPZ) + "."
+            "Recorded axial 3-D tally is still unavailable at " + str(AXIAL_TALLY_NPZ)
+            + ". No 2-D fallback is used."
         )
     try:
         import numpy as np
