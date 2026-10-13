@@ -3,6 +3,7 @@ const palette = {text:"#e8f1f7",muted:"#91a8b9",line:"#263f52",cyan:"#55d4df",bl
 let records = [];
 let metadata = {};
 let meshData = null;
+let meshDrawRevision = 0;
 let assemblyRecords = [];
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => {
@@ -603,8 +604,9 @@ function buildSurfaceContourLines(z,xs,ys,levels,baseZ){
  return {surface,base,segments:surface.z.filter(value=>value!==null).length/2};
 }
 const meshDefaultCamera={eye:{x:1.55,y:1.55,z:1.1},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
-function drawMesh(){
+async function drawMesh(){
  if(!meshData)return;
+ const drawRevision=++meshDrawRevision;
  const f=currentField();
  if(!f){
   $("meshStatus").textContent="SCORE UNAVAILABLE";
@@ -659,12 +661,13 @@ function drawMesh(){
  let contourEnd=Math.ceil(zMax/contourStep)*contourStep;
  if(contourEnd<=contourStart)contourEnd=contourStart+contourStep;
  const colorbar={title:{text:plotTitle,font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}};
- chart("meshHeatmap",[{
+ await chart("meshHeatmap",[{
   type:"heatmap",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
- }],heatLayout);
- chart("meshContour",[{
+}],heatLayout);
+ if(drawRevision!==meshDrawRevision)return;
+ await chart("meshContour",[{
   type:"contour",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
   autocontour:false,
   contours:{
@@ -676,8 +679,35 @@ function drawMesh(){
   line:{width:1,color:"rgba(7,17,27,0.72)"},
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false
- }],heatLayout);
- const surfaceContourCount=Math.min(6,Math.max(0,Math.floor(zSpan/Math.max(contourStep,1e-12))));
+}],heatLayout);
+ if(drawRevision!==meshDrawRevision)return;
+ const centerY=Math.floor((ny-1)/2);
+ const meanRow=f.mean[centerY]||[], seRow=f.standardError[centerY]||[], relativeRow=f.relative[centerY]||[];
+ const profileY=f.view==="relative_sd"?relativeRow:meanRow;
+ const profileCustom=xs.map((x,i)=>[meanRow[i],seRow[i],relativeRow[i]]);
+ const profileHover=f.view==="relative_sd"
+  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<br>Recorded tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>"
+  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%<extra></extra>";
+ const profileError=f.view==="mean"?{
+  type:"data",symmetric:false,
+  array:seRow.map((se,i)=>Number.isFinite(se)&&se>=0?se:0),
+  arrayminus:seRow.map((se,i)=>Number.isFinite(se)&&se>=0&&Number.isFinite(meanRow[i])?Math.min(se,Math.max(0,meanRow[i]*0.999999)):0),
+  visible:true,color:palette.muted,thickness:1,width:3
+ }:{visible:false};
+ await chart("meshProfile",[{
+  type:"scatter",mode:"lines+markers",name:f.view==="relative_sd"?"Relative MC standard error":"Recorded "+scoreLabel+" mean",
+  x:xs,y:profileY,customdata:profileCustom,
+  line:{color:palette.cyan,width:2.5,shape:"linear"},
+  marker:{size:5,color:palette.orange,line:{color:palette.text,width:0.6}},
+  error_y:profileError,connectgaps:false,hovertemplate:profileHover
+ }],{
+  autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
+  xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
+  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean"+(f.scale==="log"?" (logarithmic axis)":""),standoff:8},exponentformat:"power"},
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:coordinates.physical?"Central cut: Y = "+coordinates.y[centerY].toFixed(3)+" cm · row "+centerY:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
+ });
+ if(drawRevision!==meshDrawRevision)return;
+  const surfaceContourCount=Math.min(6,Math.max(0,Math.floor(zSpan/Math.max(contourStep,1e-12))));
  const contourLevels=zSpan>0
   ?Array.from({length:surfaceContourCount},(_,index)=>zMin+(index+1)*zSpan/(surfaceContourCount+1))
   :finiteZ.length?[zMin]:[];
@@ -711,32 +741,9 @@ function drawMesh(){
    line:{color:"rgba(85,212,223,0.56)",width:2},hoverinfo:"skip",showlegend:false,connectgaps:false
   });
  }
- chart("meshSurface",surfaceTraces,surfaceLayout);
- const centerY=Math.floor((ny-1)/2);
- const meanRow=f.mean[centerY]||[], seRow=f.standardError[centerY]||[], relativeRow=f.relative[centerY]||[];
- const profileY=f.view==="relative_sd"?relativeRow:meanRow;
- const profileCustom=xs.map((x,i)=>[meanRow[i],seRow[i],relativeRow[i]]);
- const profileHover=f.view==="relative_sd"
-  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<br>Recorded tally mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>"
-  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative Monte Carlo standard error %{customdata[2]:.4g}%<extra></extra>";
- const profileError=f.view==="mean"?{
-  type:"data",symmetric:false,
-  array:seRow.map((se,i)=>Number.isFinite(se)&&se>=0?se:0),
-  arrayminus:seRow.map((se,i)=>Number.isFinite(se)&&se>=0&&Number.isFinite(meanRow[i])?Math.min(se,Math.max(0,meanRow[i]*0.999999)):0),
-  visible:true,color:palette.muted,thickness:1,width:3
- }:{visible:false};
- chart("meshProfile",[{
-  type:"scatter",mode:"lines+markers",name:f.view==="relative_sd"?"Relative MC standard error":"Recorded "+scoreLabel+" mean",
-  x:xs,y:profileY,customdata:profileCustom,
-  line:{color:palette.cyan,width:2.5,shape:"linear"},
-  marker:{size:5,color:palette.orange,line:{color:palette.text,width:0.6}},
-  error_y:profileError,connectgaps:false,hovertemplate:profileHover
- }],{
-  autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
-  xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
-  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean"+(f.scale==="log"?" (logarithmic axis)":""),standoff:8},exponentformat:"power"},
-  annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:coordinates.physical?"Central cut: Y = "+coordinates.y[centerY].toFixed(3)+" cm · row "+centerY:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
- });
+ await chart("meshSurface",surfaceTraces,surfaceLayout);
+
+ if(drawRevision!==meshDrawRevision)return;
  if($("meshContourSubtitle"))$("meshContourSubtitle").textContent=f.view==="relative_sd"
   ?"Labelled iso-contours of relative Monte Carlo standard error (%)"
   :f.scale==="log"?"Labelled iso-contours; colour levels use log₁₀(mean), hover reports the recorded mean":"Labelled iso-contours of recorded tally mean";
