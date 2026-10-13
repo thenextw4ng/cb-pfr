@@ -49,7 +49,7 @@ fs.mkdirSync(outputDir, { recursive: true });
     await page.waitForFunction(() => {
       const el = document.getElementById("axial3dPlot");
       return el && el.data && el.data.some(trace => trace.type === "volume");
-    }, { timeout: 120000 });
+    }, null, { timeout: 120000 });
 
     const initial = await page.evaluate(() => {
       const plot = document.getElementById("axial3dPlot");
@@ -85,13 +85,13 @@ fs.mkdirSync(outputDir, { recursive: true });
       const plot = document.getElementById("axial3dPlot");
       return label.includes("Z bin 20") &&
         plot.data.some(trace => String(trace.name || "").startsWith("Selected axial slice · Z="));
-    }, { timeout: 30000 });
+    }, null, { timeout: 30000 });
 
     await page.locator("#axial3dScore").selectOption("fission");
     await page.waitForFunction(() => {
       const plot = document.getElementById("axial3dPlot");
       return plot && plot.data && plot.data.some(trace => trace.type === "volume");
-    }, { timeout: 30000 });
+    }, null, { timeout: 30000 });
 
     await page.locator("#axial3dPlot").screenshot({
       path: path.join(outputDir, "physical-axial-3d-volume.png"),

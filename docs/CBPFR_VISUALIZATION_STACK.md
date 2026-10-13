@@ -2,6 +2,8 @@
 
 **Scope:** HTML scientific workstation, including web/index.html, web/app.js, web/styles.css, and OpenMC-derived geometry/field evidence.
 
+Official documentation: [Plotly.js](https://plotly.com/javascript/) · [VTK.js](https://kitware.github.io/vtk-js/).
+
 ## Chosen stack
 
 | Visual task | Renderer | Why this is the current choice |
