@@ -28,6 +28,7 @@ def locate_statepoint_archive():
     )
 STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
+MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
 
 GEOMETRY_SEARCH_ROOTS = tuple(ROOT / name for name in ("plots", "plot", "geometry", "model", "c5g7-run", "evidence", "results", "artifacts"))
 GEOMETRY_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".vti", ".vtk", ".vtp", ".vtu", ".vtm", ".xdmf"}
@@ -74,6 +75,23 @@ def read_geometry_artifact(relative_path):
         except (ValueError, OSError):
             pass
     raise PermissionError("Artifact path is outside approved geometry-output directories.")
+
+
+def read_model_geometry():
+    """Return model geometry normalized from archived OpenMC geometry.xml inputs."""
+    if not MODEL_GEOMETRY_MANIFEST.is_file():
+        raise FileNotFoundError(f"OpenMC-derived geometry manifest not found: {MODEL_GEOMETRY_MANIFEST}")
+    with MODEL_GEOMETRY_MANIFEST.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if payload.get("schema_version") != 1:
+        raise ValueError("Unsupported OpenMC geometry manifest schema version.")
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list) or len(candidates) != 6:
+        raise ValueError("Geometry manifest must contain the six recorded C5G7 layout variants.")
+    ids = [str(item.get("candidate_id", "")) for item in candidates]
+    if not all(ids) or len(set(ids)) != len(ids):
+        raise ValueError("Geometry manifest contains empty or duplicate candidate IDs.")
+    return payload
 
 
 def read_candidates():
@@ -305,6 +323,11 @@ class Handler(BaseHTTPRequestHandler):
                 payload = {"metadata": {"source": str(CANDIDATE_CSV.relative_to(ROOT)), "mode": "recorded repository evidence; no OpenMC execution"}, "records": read_candidates()}
                 return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, csv.Error) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
+        if path == "/api/model-geometry":
+            try:
+                return self._send(200, json.dumps(read_model_geometry(), allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifacts":
             try:
