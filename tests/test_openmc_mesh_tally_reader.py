@@ -84,8 +84,10 @@ class OpenMCMeshTallyReaderTests(unittest.TestCase):
                 self.assertEqual(set(tally["scores"]), EXPECTED_SCORES)
 
                 for score in EXPECTED_SCORES:
+                    self.assertEqual(tally.get("uncertainty_statistic"), "standard_error")
                     field = tally["scores"][score]
-                    for key in ("mean", "std_dev"):
+                    self.assertEqual(field["standard_error"], field["std_dev"])
+                    for key in ("mean", "standard_error", "std_dev"):
                         grid = field[key]
                         self.assertEqual(len(grid), 51, (score, key))
                         self.assertTrue(all(len(row) == 51 for row in grid), (score, key))
