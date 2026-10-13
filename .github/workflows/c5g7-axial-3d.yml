@@ -31,7 +31,7 @@ on:
           - production
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -205,6 +205,44 @@ jobs:
             printf 'No OECD/NEA scalar reference comparison was generated for layout %s. The published scalar reference check is restricted to the canonical UMMU layout; retain this candidate output for candidate-to-candidate analysis only.\\n' "$layout" \
               > "$CANDIDATE_ROOT/model/3d/axial-benchmark-check.log"
           fi
+
+      - name: Publish recorded 3-D tally for the local HTML workstation
+        if: github.event_name == 'push' && steps.prepare.outputs.candidate_root != ''
+        shell: bash -l {0}
+        env:
+          CANDIDATE_ROOT: ${{ steps.prepare.outputs.candidate_root }}
+        run: |
+          set -euo pipefail
+          export_dir="$CANDIDATE_ROOT/model/3d/axial-3d-export"
+          test -s "$export_dir/axial_tally_3d.npz"
+          test -s "$export_dir/AXIAL_3D_STATEPOINT_SUMMARY.json"
+          test -s "$CANDIDATE_ROOT/AXIAL_3D_INPUT_AUDIT.json"
+          test -s "$CANDIDATE_ROOT/AXIAL_3D_INPUT_MANIFEST.json"
+
+          mkdir -p evidence/cbpfr_axial_3d
+          cp "$export_dir/axial_tally_3d.npz" evidence/cbpfr_axial_3d/
+          cp "$export_dir/AXIAL_3D_STATEPOINT_SUMMARY.json" evidence/cbpfr_axial_3d/
+          cp "$CANDIDATE_ROOT/AXIAL_3D_INPUT_AUDIT.json" evidence/cbpfr_axial_3d/
+          cp "$CANDIDATE_ROOT/AXIAL_3D_INPUT_MANIFEST.json" evidence/cbpfr_axial_3d/
+          cat > evidence/cbpfr_axial_3d/README.md <<'EOF'
+          # Recorded axial 3-D OpenMC tally
+
+          These files are automatically published by the c5g7-axial-3d workflow and read by the local HTML workstation.
+
+          **Evidence class:** a real exported multi-layer OpenMC statepoint tally, not a synthetic visualization. Check AXIAL_3D_STATEPOINT_SUMMARY.json for particle/batch budget and per-bin relative error before interpretation. Smoke-profile results are pipeline diagnostics only and are not evidence of convergence, benchmark agreement, or physical validation.
+
+          Mesh: 51 × 51 × 30 bins. Coordinate and source-normalisation limits are recorded in the JSON sidecars.
+          EOF
+
+          git add evidence/cbpfr_axial_3d/
+          if git diff --cached --quiet; then
+            echo "The published axial tally is unchanged; no evidence commit is needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "data: publish recorded axial 3D tally for workstation"
+          git push origin "HEAD:$GITHUB_REF_NAME"
 
       - name: Browser-test the actual 3D tally volume and axial slice
         if: github.event_name == 'pull_request'
