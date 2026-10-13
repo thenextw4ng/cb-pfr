@@ -12,10 +12,11 @@ fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 async function main() {
   const browser = await chromium.launch({ headless: true, args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
   const failures = [];
-  const page = await browser.newPage({
+  const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
     deviceScaleFactor: 1
   });
+  const page = await context.newPage();
   page.on("pageerror", error => failures.push("pageerror: " + error.message));
 
   try {
@@ -169,14 +170,34 @@ async function main() {
         rankedMode: document.querySelector("#distributionChart")?.data?.[0]?.mode,
         rankedCount: document.querySelector("#distributionChart")?.data?.[0]?.y?.length || 0,
         rankedErrorVisible: document.querySelector("#distributionChart")?.data?.[0]?.error_y?.visible === true,
-        rankedSelectedColorCount: (document.querySelector("#distributionChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#55d4df").length,
+        rankedSelectedColorCount: (document.querySelector("#distributionChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#ffffff").length,
         rankedOrder: document.querySelector("#distributionChart")?.data?.[0]?.x || [],
         aggregateTraceCount: document.querySelector("#aggregateChart")?.data?.length || 0,
         aggregateType: document.querySelector("#aggregateChart")?.data?.[0]?.type,
         aggregateXTitle: document.querySelector("#aggregateChart")?.layout?.xaxis?.title?.text || "",
         aggregateYTitle: document.querySelector("#aggregateChart")?.layout?.yaxis?.title?.text || "",
-        aggregateSelectedColorCount: (document.querySelector("#aggregateChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#55d4df").length,
+        aggregateSelectedColorCount: (document.querySelector("#aggregateChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#ffffff").length,
+        assemblyMapType: document.querySelector("#assemblyMap")?.data?.[0]?.type,
+        assemblyMapTraceCount: document.querySelector("#assemblyMap")?.data?.length || 0,
+        assemblyMapPositions: (document.querySelector("#assemblyMap")?.data?.[0]?.customdata || []).flat().map(cell => cell?.[0]),
+        assemblyMapValues: (document.querySelector("#assemblyMap")?.data?.[0]?.z || []).flat(),
+        assemblyMapText: (document.querySelector("#assemblyMap")?.data?.[0]?.text || []).flat(),
+        assemblyMapAxisMapping: document.querySelector("#assemblyMap")?.layout?.annotations?.[0]?.text || "",
+        assemblyMapPalette: document.querySelector("#assemblyMap")?.data?.[0]?.colorscale || "",
+        assemblyMapScale: [document.querySelector("#assemblyMap")?.data?.[0]?.zmin, document.querySelector("#assemblyMap")?.data?.[0]?.zmax],
+        assemblyMatrixScale: [document.querySelector("#assemblyMatrix")?.data?.[0]?.zmin, document.querySelector("#assemblyMatrix")?.data?.[0]?.zmax],
+        assemblyMapColorbarTitle: document.querySelector("#assemblyMap")?.data?.[0]?.colorbar?.title?.text || "",
+        assemblyMapMaterialEdgeColors: document.querySelector("#assemblyMap")?.data?.[1]?.marker?.color || [],
+        assemblyMapSelectedPosition: document.querySelector("#assemblyMap")?.data?.[2]?.customdata?.[0] || "",
+        assemblyPositionTitle: document.querySelector("#assemblyPositionTitle")?.textContent || "",
+        assemblyPositionMaterial: document.querySelector("#assemblyPositionMaterial")?.textContent || "",
+        assemblyPositionValue: document.querySelector("#assemblyPositionValue")?.textContent || "",
+        assemblyScaleRange: document.querySelector("#assemblyScaleRange")?.textContent || "",
+        assemblyProvenanceOpen: document.querySelector(".assembly-provenance")?.open ?? null,
+        assemblyMapColorbarCount: (document.querySelector("#assemblyMap")?.data || []).filter(trace => trace.colorbar || trace.showscale === true).length +
+          (document.querySelector("#assemblyMatrix")?.data || []).filter(trace => trace.colorbar || trace.showscale === true).length,
         matrixType: document.querySelector("#assemblyMatrix")?.data?.[0]?.type,
+        matrixColorbarVisible: document.querySelector("#assemblyMatrix")?.data?.[0]?.showscale,
         matrixRows: document.querySelector("#assemblyMatrix")?.data?.[0]?.z?.length || 0,
         matrixColumns: document.querySelector("#assemblyMatrix")?.data?.[0]?.z?.[0]?.length || 0,
         matrixPositions: document.querySelector("#assemblyMatrix")?.data?.[0]?.x || [],
@@ -218,10 +239,57 @@ async function main() {
       assert.equal(details.matrixRows, 6, "matrix should include all six exact candidate matches");
       assert.equal(details.matrixColumns, 4, "matrix should include all four assembly positions");
       assert.deepEqual(details.matrixPositions, ["P00","P01","P10","P11"]);
-      assert.equal(details.matrixTraceCount, 2, "matrix should have one colour-bearing heatmap and one selected-row outline");
+      assert.equal(details.assemblyMapType, "heatmap", "assembly proxy must remain a discrete 2 × 2 map, never a continuous contour");
+      assert.equal(details.assemblyMapTraceCount, 3, "map should contain one quantitative field, one material-category outline, and one selected-position outline");
+      assert.deepEqual(details.assemblyMapPositions, ["P00","P01","P10","P11"], "map labels must follow row-major geometry positions");
+      const recordedAssembly = await page.evaluate(async ({candidateId, signature}) => {
+        const response = await fetch("/api/assembly");
+        if (!response.ok) throw new Error("Assembly evidence API unavailable for value cross-check");
+        const payload = await response.json();
+        const row = (payload.records || []).find(item =>
+          String(item.candidate_id).trim() === candidateId.trim() &&
+          String(item.layout_signature).trim().toUpperCase() === signature.trim().toUpperCase()
+        );
+        return {
+          values: row ? ["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].map(key => Number(row[key])) : null,
+          pairs: (payload.records || []).map(item => [String(item.candidate_id), String(item.layout_signature)])
+        };
+      }, { candidateId: option.value, signature: details.coreInfo?.layoutSignature || "" });
+      assert.ok(recordedAssembly.values, "the selected candidate must have an exact ID + signature proxy record; selected=" + option.value + ", signature=" + String(details.coreInfo?.layoutSignature) + ", source records=" + JSON.stringify(recordedAssembly.pairs));
+      assert.deepEqual(details.assemblyMapValues.flat(), recordedAssembly.values, "all four displayed heatmap values must be the actual CSV values in P00, P01, P10, P11 order");
+      assert.deepEqual(details.assemblyMapText.flat().map(text => text.split("\n")[0]), details.coreInfo.layoutSignature.split("").map((code,index) => ["P00","P01","P10","P11"][index] + " · " + (code === "M" ? "MOX" : "UO₂")), "each tile must show its matching position label and actual material category");
+      assert.match(details.assemblyMapAxisMapping, /ROW 0 \(TOP\).*P00 = R0\/C0.*P11 = R1\/C1/, "the position labels must document the same row/column convention as the core map");
+      assert.deepEqual(details.assemblyMapScale, details.assemblyMatrixScale, "selected map and candidate matrix must keep one shared quantitative range");
+      assert.match(details.assemblyMapColorbarTitle, /CSV unit not documented/i, "do not invent a physical unit that the source CSV does not record");
+      assert.deepEqual(details.assemblyMapMaterialEdgeColors, details.coreInfo?.layoutSignature?.split("").map(code => code === "M" ? "#f4bd62" : "#55d4df") || [], "material edge colours must follow selected layout signature, not fixed spatial slots");
+      assert.equal(details.assemblyMapSelectedPosition, "P00", "selected position should have a synchronized outline");
+      assert.equal(details.assemblyPositionTitle, "P00");
+      assert.equal(details.assemblyPositionMaterial, details.coreInfo?.layoutSignature?.[0] === "M" ? "MOX" : "UO₂");
+      assert.match(details.assemblyPositionValue, /^0\.\d{3,}|^\d/);
+      assert.match(details.assemblyScaleRange, /Shared global colour range/);
+      assert.equal(details.assemblyProvenanceOpen, false, "verbose provenance should be collapsed by default");
+      assert.equal(details.assemblyMapColorbarCount, 1, "only the selected-candidate map should display the shared quantitative colorbar");
+      assert.equal(details.matrixColorbarVisible, false, "candidate matrix must reuse the map scale without duplicating its colorbar");
+      assert.equal(details.matrixTraceCount, 2, "matrix should have one quantitative heatmap and one selected-row outline");
       assert.equal(details.matrixSelectedLayout, details.coreInfo?.layoutSignature, "outlined matrix row should follow the selected candidate");
       assert.match(details.keffAndSdText, /Reported SD ±/);
     }
+
+    // Position controls and click events must stay synchronized with the 2 × 2 field.
+    await page.click('#assemblyPositionPicker [data-assembly-position="P11"]');
+    await page.waitForFunction(() =>
+      document.querySelector("#assemblyPositionTitle")?.textContent === "P11" &&
+      document.querySelector("#assemblyMap")?.data?.[2]?.customdata?.[0] === "P11"
+    );
+    await page.evaluate(() => {
+      const map = document.querySelector("#assemblyMap");
+      const cell = map?.data?.[0]?.customdata?.[1]?.[0];
+      map?.emit?.("plotly_click", { points: [{ curveNumber: 0, customdata: cell }] });
+    });
+    await page.waitForFunction(() =>
+      document.querySelector("#assemblyPositionTitle")?.textContent === "P10" &&
+      document.querySelector("#assemblyMap")?.data?.[2]?.customdata?.[0] === "P10"
+    );
 
     // Prove a 3D assembly click updates the selected-position inspector.
     const coreCanvas = page.locator("#core3dCanvas canvas.core3d-canvas");
@@ -331,23 +399,28 @@ async function main() {
 
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-full.png"), fullPage: true, animations: "disabled" });
-    await page.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-spatial-field-lab.png"), animations: "disabled" });
-    await page.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-core-geometry-3d.png"), animations: "disabled" });
-    await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
+    // The full-page capture above includes the map, candidate detail, and Three.js
+    // canvas. Avoid per-locator screenshots of live Plotly/WebGL regions: those
+    // canvases keep repainting, so Playwright's pixel-stability wait can time out
+    // even though the visual smoke assertions have passed. The full-page artifact
+    // provides one faithful capture without falsely failing on live canvas motion.
     await page.click("#coreView2d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
-    await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled" });
+    // The source-derived SVG fallback is asserted in the DOM above. Avoid a second
+    // screenshot while the UI reflows between 2D/3D modes: Chromium may report the
+    // SVG as moving even when the source geometry and controls are correct. The
+    // full-page screenshot above remains the primary visual QA artifact.
     await page.click("#coreView3d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
-    // Use a fresh browser page so Plotly initializes at mobile width, not by shrinking desktop SVGs.
-    const mobilePage = await browser.newPage({
-      viewport: { width: 390, height: 844 },
-      deviceScaleFactor: 1
-    });
+    // Reuse this explicitly-created BrowserContext so the already-loaded
+    // Three.js and Plotly libraries remain cached. Open a fresh page, then set its
+    // mobile viewport before navigating so charts initialise at the right width.
+    const mobilePage = await context.newPage();
+    await mobilePage.setViewportSize({ width: 390, height: 844 });
     const mobileFailures = [];
     mobilePage.on("pageerror", error => mobileFailures.push("pageerror: " + error.message));
-    const mobileResponse = await mobilePage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+    const mobileResponse = await mobilePage.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
     assert.ok(mobileResponse && mobileResponse.ok(), "mobile workstation HTML should return HTTP 200");
     await mobilePage.waitForFunction(() => {
       const select = document.querySelector("#candidateSelect");
@@ -406,9 +479,9 @@ async function main() {
     await mobilePage.evaluate(() => window.scrollTo(0, 0));
     await mobilePage.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-top.png"), fullPage: false, animations: "disabled" });
     await mobilePage.addStyleTag({ content: "@media(max-width:680px){.sidebar{position:static!important;top:auto!important}}" });
-    await mobilePage.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-spatial-field-lab.png"), animations: "disabled" });
-    await mobilePage.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-candidate-inspector.png"), animations: "disabled" });
-    await mobilePage.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
+    // The desktop full-page capture already documents every scientific plot.
+    // Keep a viewport-sized mobile capture here: element-level captures of live
+    // Plotly and WebGL content can time out waiting for pixel stability.
     await mobilePage.close();
 
     assert.deepEqual(failures, [], "desktop page must not throw uncaught JavaScript errors");

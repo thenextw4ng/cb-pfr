@@ -1,0 +1,138 @@
+{
+  "status": "generated_3d_inputs_passed_structural_audit",
+  "candidate_id": "c5g7-2x2-UMMU",
+  "model_files": {
+    "geometry.xml": {
+      "bytes": 4242,
+      "sha256": "a8fdfa18bff995a21abecb70562f15b6a93fff03a39a0c62816f081b5969685d"
+    },
+    "materials.xml": {
+      "bytes": 1173,
+      "sha256": "a91d12cc1e17faca58bbd946c090e00022693cf2df9cf2874f4d761cc7f81003"
+    },
+    "settings.xml": {
+      "bytes": 502,
+      "sha256": "a5f5f21530ee6d6a6c652b3a18c4568469222f290b2063332fc1b03cdbcad399"
+    },
+    "tallies.xml": {
+      "bytes": 497,
+      "sha256": "a5b27244a8fd50a0a9265aea860ae50aa934c090598280b7fb174a243361973e"
+    },
+    "mgxs.h5": {
+      "bytes": 61256,
+      "sha256": "a4328a7b012321fbe8f661745aa135f0a2eecd34cf475429e160865204acb129"
+    }
+  },
+  "candidate_layout": {
+    "layout_signature": "UMMU",
+    "universe_id_by_fuel_type": {
+      "U": 9,
+      "M": 11,
+      "reflector_or_water": 13
+    },
+    "expected_active_layer_universes": [
+      9,
+      11,
+      13,
+      11,
+      9,
+      13,
+      13,
+      13,
+      13
+    ],
+    "recorded_active_layers_match_candidate": true,
+    "recorded_top_layer_universes": [
+      13,
+      13,
+      13,
+      13,
+      13,
+      13,
+      13,
+      13,
+      13
+    ],
+    "recorded_top_layer_is_all_reflector": true
+  },
+  "materials_by_id": {
+    "1": "UO2",
+    "2": "MOX 4.3%",
+    "3": "MOX 7.0%",
+    "4": "MOX 8.7%",
+    "5": "Fission Chamber",
+    "6": "Guide Tube",
+    "7": "Water",
+    "8": "Control Rod"
+  },
+  "core_lattice": {
+    "dimension_xyz": [
+      3,
+      3,
+      10
+    ],
+    "lower_left_cm_xyz": [
+      -32.13,
+      -32.13,
+      -107.1
+    ],
+    "pitch_cm_xyz": [
+      21.42,
+      21.42,
+      21.42
+    ],
+    "axial_layers": 10,
+    "source_axial_definition": "9 repeated cross-sectional layers + 1 all-reflector top layer"
+  },
+  "axial_boundaries": {
+    "Big Core z-min": {
+      "z_cm": -107.1,
+      "boundary": "reflective"
+    },
+    "Big Core z-max": {
+      "z_cm": 107.1,
+      "boundary": "vacuum"
+    }
+  },
+  "mesh_tally": {
+    "dimension_xyz": [
+      51,
+      51,
+      30
+    ],
+    "lower_left_cm_xyz": [
+      -32.13,
+      -32.13,
+      -107.1
+    ],
+    "upper_right_cm_xyz": [
+      32.13,
+      32.13,
+      107.1
+    ],
+    "bin_width_cm_xyz": [
+      1.26,
+      1.26,
+      7.14
+    ],
+    "scores": [
+      "flux",
+      "fission",
+      "nu-fission"
+    ],
+    "bin_count": 78030
+  },
+  "settings": {
+    "batches": 30,
+    "inactive": 5,
+    "active_batches": 25,
+    "particles_per_batch": 500,
+    "seed": 640000,
+    "energy_mode": "multi-group"
+  },
+  "nonclaims": [
+    "Structural XML checks are not a transport calculation or benchmark acceptance.",
+    "The upstream axial layer pattern and one-sided axial boundary conditions remain assumptions requiring independent review.",
+    "Tally values are not absolute-power normalized."
+  ]
+}

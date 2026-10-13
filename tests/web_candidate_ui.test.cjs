@@ -124,7 +124,7 @@ test("all six candidate selections update placement, detail, comparison highligh
 
     const placement = $("layoutView").innerHTML;
     assert.match(placement, /fuel-signature-summary/, row.candidate_id + " should show the compact source-recorded fuel signature");
-    assert.match(placement, /p00 → p01 → p10 → p11/, "signature ordering must be explicit");
+    assert.match(placement, /P00 → P01 → P10 → P11/, "signature ordering must be explicit and consistent with the geometry map");
     assert.doesNotMatch(placement, /assembly-grid|class="assembly /, "duplicate four-tile assembly cards should be removed");
     const placementLetters = [...placement.matchAll(/class="fuel-signature-letter fuel-signature-letter-(mox|uo2)">([UM])<\/span>/g)];
     assert.deepEqual(placementLetters.map(m => m[2]), row.layout_signature.split(""), row.candidate_id + " compact signature should follow row-major source order");
@@ -141,8 +141,8 @@ test("all six candidate selections update placement, detail, comparison highligh
     const comparison = charts.get("candidateChart").traces[0];
     const selectedTraceIndex = comparison.customdata.findIndex(item => item[0] === row.candidate_id);
     assert.notEqual(selectedTraceIndex, -1);
-    assert.equal(comparison.marker.color[selectedTraceIndex], "#55d4df", "selected candidate should be highlighted");
-    assert.equal(comparison.marker.color.filter(color => color === "#55d4df").length, 1, "only selected candidate should be highlighted");
+    assert.equal(comparison.marker.color[selectedTraceIndex], "#ffffff", "selected candidate should be highlighted with a neutral outline colour");
+    assert.equal(comparison.marker.color.filter(color => color === "#ffffff").length, 1, "only selected candidate should be highlighted");
 
     const proxy = proxyRows.find(item => item.candidate_id === row.candidate_id && item.layout_signature === row.layout_signature);
     assert.equal(JSON.stringify(charts.get("assemblyMap").traces[0].z), JSON.stringify([
@@ -154,7 +154,7 @@ test("all six candidate selections update placement, detail, comparison highligh
     assert.equal(matrix.traces[0].z.length, 6, "matrix should include all six exact candidate-proxy matches");
     assert.equal(matrix.traces[0].z[0].length, 4, "matrix should include P00, P01, P10, and P11");
     assert.equal(matrix.traces.length, 2, "one heatmap plus one selection outline; only the heatmap carries a color scale");
-    assert.equal(matrix.traces[0].showscale, true);
+    assert.equal(matrix.traces[0].showscale, false, "matrix reuses the selected-map colour scale without duplicating its colorbar");
     assert.deepEqual(JSON.parse(JSON.stringify(matrix.traces[0].x)), ["P00","P01","P10","P11"]);
     const rankOrder = layouts.slice().sort((a,b)=>Number(a.keff_mean)-Number(b.keff_mean)).map(item=>item.layout_signature);
     assert.deepEqual(JSON.parse(JSON.stringify(matrix.traces[0].y)), rankOrder, "matrix row order should follow recorded candidate k-effective order");
@@ -168,13 +168,13 @@ test("all six candidate selections update placement, detail, comparison highligh
     const ranked = charts.get("distributionChart").traces[0];
     assert.equal(ranked.type, "scatter", "six observations should use a ranked dot plot, not a histogram");
     assert.equal(ranked.error_y.visible, true, "ranked k-effective plot must show reported SD");
-    assert.equal(ranked.marker.color.filter(color=>color==="#55d4df").length,1, "selected candidate highlight must sync to the ranked plot");
+    assert.equal(ranked.marker.color.filter(color=>color==="#ffffff").length,1, "selected candidate highlight must sync in neutral white, separate from the material palette");
     const aggregate = charts.get("aggregateChart");
     assert.equal(aggregate.traces.length, 1, "aggregate indicators must not be combined on one shared scale");
     assert.equal(aggregate.traces[0].type, "scatter", "aggregate relationship should be shown as a two-metric scatter");
     assert.match(aggregate.layout.xaxis.title, /aggregate flux score/i);
     assert.match(aggregate.layout.yaxis.title, /aggregate fission score/i);
-    assert.equal(aggregate.traces[0].marker.color.filter(color=>color==="#55d4df").length,1, "selected candidate highlight must sync to the aggregate relationship");
+    assert.equal(aggregate.traces[0].marker.color.filter(color=>color==="#ffffff").length,1, "selected candidate highlight must sync in neutral white, separate from the material palette");
     assert.equal($("selectedRecordTag").textContent, String(row.canonical_reference).toLowerCase() === "true" ? "CANONICAL LAYOUT REFERENCE" : "LAYOUT VARIANT");
   }
 });

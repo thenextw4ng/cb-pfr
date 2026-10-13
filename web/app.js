@@ -4,7 +4,19 @@ let records = [];
 let metadata = {};
 let meshData = null;
 let meshDrawRevision = 0;
+let axial3dData = null;
+let axial3dDrawRevision = 0;
 let assemblyRecords = [];
+let selectedAssemblyPosition = "P00";
+const candidateMarkColors = { selected: "#ffffff", default: "#788d9b" };
+const assemblyPositionDefs = [
+ {key:"p00_fission_rate",label:"P00",row:0,col:0,index:0},
+ {key:"p01_fission_rate",label:"P01",row:0,col:1,index:1},
+ {key:"p10_fission_rate",label:"P10",row:1,col:0,index:2},
+ {key:"p11_fission_rate",label:"P11",row:1,col:1,index:3}
+];
+const materialEdgeColor = {M:"#f4bd62",U:"#55d4df"};
+const formatSourceProxy = (value, precision=8) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value).toPrecision(precision) : "—";
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => {
  if(!row || typeof row!=="object")return false;
@@ -48,11 +60,11 @@ function layoutCells(signature){
  }
  const mox=raw.split("").filter(code=>code==="M").length;
  const uo2=raw.split("").filter(code=>code==="U").length;
- return '<div class="fuel-signature-summary" role="img" aria-label="Fuel loading signature '+escapeHtml(raw)+' in p00, p01, p10, p11 order">'+
+ return '<div class="fuel-signature-summary" role="img" aria-label="Fuel loading signature '+escapeHtml(raw)+' in P00, P01, P10, P11 order">'+
   '<div class="fuel-signature-kicker">LAYOUT SIGNATURE</div>'+
   '<div class="fuel-signature-code">'+signatureLettersHtml(raw)+'</div>'+
   '<div class="fuel-signature-counts"><span><b>'+mox+'</b> MOX positions</span><i></i><span><b>'+uo2+'</b> UO₂ positions</span></div>'+
-  '<div class="fuel-signature-order">p00 → p01 → p10 → p11 · row-major order</div>'+
+  '<div class="fuel-signature-order">P00 → P01 → P10 → P11 · row-major order</div>'+
   '</div>';
 }
 // Pin-universe maps extracted from the archived candidate geometry.xml files (17 × 17 lattices).
@@ -108,7 +120,7 @@ function renderModelGeometrySvg(row){
  const extent=core.lower_left_cm&&core.pitch_cm?core.lower_left_cm.map((v,i)=>Number(v)+Number(core.pitch_cm[i])*Number(dims[i])):null;
  const xwidth=extent?extent[0]-Number(core.lower_left_cm[0]):NaN,yheight=extent?extent[1]-Number(core.lower_left_cm[1]):NaN;
  let svg='<svg class="model-geometry-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="OpenMC C5G7 material map for layout '+escapeHtml(signature)+' candidate '+escapeHtml(candidateId)+'">';
- svg+='<defs><linearGradient id="reflectorFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#13394b"/><stop offset="100%" stop-color="#0b2637"/></linearGradient><pattern id="waterPattern" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 6 Q4 2 9 6 T18 6" fill="none" stroke="#2a637a" stroke-width="1" opacity=".5"/></pattern></defs>';
+ svg+='<defs><linearGradient id="reflectorFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4b535d"/><stop offset="100%" stop-color="#303841"/></linearGradient><pattern id="waterPattern" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 6 Q4 2 9 6 T18 6" fill="none" stroke="#8c969f" stroke-width="1" opacity=".38"/></pattern></defs>';
  svg+='<text x="'+x0+'" y="28" class="svg-kicker">ARCHIVED OPENMC GEOMETRY.XML · SOURCE-EXTRACTED</text><text x="'+x0+'" y="52" class="svg-title">C5G7 · '+cols+' × '+rows+' core lattice</text>';
  svg+='<text x="'+x0+'" y="72" class="svg-subtitle">'+escapeHtml(candidateId)+' · '+signature+' · '+(Number.isFinite(xwidth)?xwidth.toFixed(2):"—")+' × '+(Number.isFinite(yheight)?yheight.toFixed(2):"—")+' cm · assembly pitch '+Number(core.pitch_cm?.[0]).toFixed(2)+' cm</text>';
  svg+='<text x="'+(x0+cw/2)+'" y="'+(y0-11)+'" class="boundary-label boundary-reflective" text-anchor="middle">'+escapeHtml(modelBoundaryLabel("y","max"))+'</text>';
@@ -118,12 +130,12 @@ function renderModelGeometrySvg(row){
  grid.forEach((line,r)=>line.forEach((code,c)=>{
   const x=x0+c*(size+gap),y=y0+r*(size+gap);
   if(code==="R"){
-   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#reflectorFill)" stroke="#3b7184"/><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#waterPattern)"/><text x="'+(x+size/2)+'" y="'+(y+size/2-5)+'" class="reflector-title" text-anchor="middle">WATER</text><text x="'+(x+size/2)+'" y="'+(y+size/2+14)+'" class="reflector-title" text-anchor="middle">REFLECTOR</text><text x="'+(x+size/2)+'" y="'+(y+size/2+34)+'" class="reflector-sub" text-anchor="middle">'+Number(core.pitch_cm[0]).toFixed(2)+' cm pitch</text></g>';
+   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#reflectorFill)" stroke="#858e98"/><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="url(#waterPattern)"/><text x="'+(x+size/2)+'" y="'+(y+size/2-5)+'" class="reflector-title" text-anchor="middle">WATER</text><text x="'+(x+size/2)+'" y="'+(y+size/2+14)+'" class="reflector-title" text-anchor="middle">REFLECTOR</text><text x="'+(x+size/2)+'" y="'+(y+size/2+34)+'" class="reflector-sub" text-anchor="middle">'+Number(core.pitch_cm[0]).toFixed(2)+' cm pitch</text></g>';
   }else{
    const cell=assemblyMap[String(sourceGrid[r][c])],pins=modelGeometryData.pin_lattices[String(cell.lattice_id)]?.universe_grid;
    if(!Array.isArray(pins)||pins.length!==pinDims[1]||pins.some(pr=>!Array.isArray(pr)||pr.length!==pinDims[0]))throw new Error("Archived pin lattice "+cell.lattice_id+" does not match declared dimensions.");
    const color=code==="M"?"#f4bd62":"#51d2df",pp=Math.min(size-18,size-34)/pinDims[0],area=pp*pinDims[0],ix=x+(size-area)/2,iy=y+28;
-   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="#0a1a27" stroke="'+color+'" stroke-opacity=".72"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="'+(size-2)+'" height="24" rx="5" fill="'+color+'" fill-opacity=".12"/><text x="'+(x+8)+'" y="'+(y+16)+'" class="assembly-label" fill="'+color+'">p'+r+c+' · '+(code==="M"?"MOX":"UO₂")+'</text><text x="'+(x+size-8)+'" y="'+(y+16)+'" class="assembly-size" text-anchor="end">'+pinDims[0]+' × '+pinDims[1]+'</text>';
+   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="#0a1a27" stroke="'+color+'" stroke-opacity=".72"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="'+(size-2)+'" height="24" rx="5" fill="'+color+'" fill-opacity=".12"/><text x="'+(x+8)+'" y="'+(y+16)+'" class="assembly-label" fill="'+color+'">P'+r+c+' · '+(code==="M"?"MOX":"UO₂")+'</text><text x="'+(x+size-8)+'" y="'+(y+16)+'" class="assembly-size" text-anchor="end">'+pinDims[0]+' × '+pinDims[1]+'</text>';
    pins.forEach((pr,pi)=>pr.forEach((uid,pj)=>{svg+=modelMaterialCell(uid,ix+pj*pp,iy+pi*pp,pp);}));
    svg+='<rect x="'+(ix-.6)+'" y="'+(iy-.6)+'" width="'+(area+1.2)+'" height="'+(area+1.2)+'" fill="none" stroke="#64899a" stroke-width=".7"/></g>';
   }
@@ -181,7 +193,7 @@ function updateCoreInspector(row,gridRow=selectedCorePosition.row,gridCol=select
  const uid=String(source.core_universe_grid?.[r]?.[c]??"");
  const code=String(source.assembly_grid?.[r]?.[c]||modelGeometryData.assemblies?.[uid]?.code||"");
  const assembly=modelGeometryData.assemblies?.[uid]||{};
- const position="p"+r+c, fuel=code==="M"||code==="U";
+ const position="P"+r+c, fuel=code==="M"||code==="U";
  const signature=normalizeLayoutSignature(row.layout_signature);
  const positionCode=(r<2&&c<2)?signature[r*2+c]:code;
  const material=code==="M"?"MOX fuel":code==="U"?"UO₂ fuel":"Water reflector";
@@ -209,7 +221,7 @@ function updateCoreInspector(row,gridRow=selectedCorePosition.row,gridCol=select
   pinSub.textContent="The geometry manifest has no pin-resolved reflector universe grid";
   pinMap.innerHTML='<div class="core-reflector-detail"><span class="core-reflector-icon">R</span><div><b>Water / reflector universe '+escapeHtml(uid)+'</b><p>The archived manifest identifies this core position as reflector but does not provide a pin-resolved 17 × 17 grid for it. No internal material cells are invented.</p></div></div>';
   $("corePinMapBadge").textContent="SOURCE-LIMITED";
-  $("corePinLegend").innerHTML='<span class="core-pin-legend-item"><i style="background:#17495d"></i><b>Water reflector</b><small>Assembly universe</small></span>';
+  $("corePinLegend").innerHTML='<span class="core-pin-legend-item"><i style="background:#929aa5"></i><b>Water reflector</b><small>Assembly universe</small></span>';
  }
 }
 function setCoreGeometryMode(mode){
@@ -400,7 +412,7 @@ function drawCandidateChart(){
  if(!valid.length){$("candidateChart").innerHTML='<div class="empty-state"><b>Metric unavailable</b><p>No finite recorded values are available for the selected metric.</p></div>';return;}
  const isKeff=key==="keff_mean";
  const metricName=isKeff?"Reported k-effective mean":key==="aggregate_flux_score"?"Aggregate flux score":"Aggregate fission score";
- const colors=valid.map(r=>String(r.candidate_id)===selected?palette.cyan:"#47758f");
+ const colors=valid.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
  const trace={
   type:"scatter",mode:"markers",name:metricName,
   x:valid.map(r=>Number(r[key])),y:valid.map(r=>String(r.layout_signature||label(r))),
@@ -415,8 +427,8 @@ function drawCandidateChart(){
   trace.error_x={type:"data",array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.4,width:5};
   // Keep the k_eff=1 reference visible, but explicitly label it as interpretive rather than a safety limit.
   min=Math.min(1,min-pad); max+=pad;
-  shapes.push({type:"line",xref:"x",yref:"paper",x0:1,x1:1,y0:0,y1:1,line:{color:palette.orange,width:1,dash:"dash"}});
-  annotations.push({xref:"x",yref:"paper",x:1,y:1.02,text:"k_eff = 1 · reference only",showarrow:false,xanchor:"left",yanchor:"bottom",font:{size:9,color:palette.orange},bgcolor:"rgba(7,17,27,0.82)",borderpad:2});
+  shapes.push({type:"line",xref:"x",yref:"paper",x0:1,x1:1,y0:0,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}});
+  annotations.push({xref:"x",yref:"paper",x:1,y:1.02,text:"k_eff = 1 · reference only",showarrow:false,xanchor:"left",yanchor:"bottom",font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2});
  } else { min-=pad; max+=pad; }
  chart("candidateChart",[trace],{
   autosize:true,margin:{l:70,r:25,t:isKeff?34:16,b:54},showlegend:false,hovermode:"closest",shapes,annotations,
@@ -430,11 +442,11 @@ function drawOtherCharts(){
  if(!vals.length){
   $("distributionChart").innerHTML='<div class="empty-state"><b>k-effective data unavailable</b><p>No finite recorded means are available.</p></div>';
  } else {
-  const keffColors=vals.map(r=>String(r.candidate_id)===selected?palette.cyan:"#47758f");
+  const keffColors=vals.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
   const spread=Math.max(...vals.map(r=>Number(r.keff_mean)))-Math.min(...vals.map(r=>Number(r.keff_mean)));
   const pad=spread>0?spread*0.12:0.002;
   const trace={type:"scatter",mode:"markers",name:"Ranked candidate k-effective",x:vals.map(r=>String(r.layout_signature||label(r))),y:vals.map(r=>Number(r.keff_mean)),customdata:vals.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),marker:{color:keffColors,size:vals.map(r=>String(r.candidate_id)===selected?12:9),symbol:vals.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:vals.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.1}},error_y:{type:"data",array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.2,width:4},hovertemplate:"Ranked layout %{x}<br>Candidate %{customdata[0]}<br>Seed %{customdata[2]}<br>k-effective mean %{y:.7f}<br>Reported SD ±%{customdata[3]:.4g}<extra></extra>"};
-  chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by recorded k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Reported k-effective mean (± SD)",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:palette.orange,width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1 · reference only",showarrow:false,font:{size:9,color:palette.orange},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
+  chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by recorded k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Reported k-effective mean (± SD)",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1 · reference only",showarrow:false,font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
  }
  const pairs=records.filter(r=>has(r,"aggregate_flux_score")&&has(r,"aggregate_fission_score"));
  if(!pairs.length){
@@ -442,7 +454,7 @@ function drawOtherCharts(){
   return;
  }
  const isSelected=r=>String(r.candidate_id)===selected;
- const aggTrace={type:"scatter",mode:"markers+text",name:"Candidate score pair",x:pairs.map(r=>Number(r.aggregate_flux_score)),y:pairs.map(r=>Number(r.aggregate_fission_score)),text:pairs.map(r=>String(r.layout_signature||"")),textposition:"top center",textfont:{size:9,color:palette.muted},customdata:pairs.map(r=>[r.candidate_id,r.layout_signature,r.seed]),marker:{color:pairs.map(r=>isSelected(r)?palette.cyan:"#e0ad58"),size:pairs.map(r=>isSelected(r)?13:10),symbol:pairs.map(r=>isSelected(r)?"diamond":"circle"),line:{color:pairs.map(r=>isSelected(r)?palette.text:"#102536"),width:1.2}},hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Aggregate flux score %{x:.7g}<br>Aggregate fission score %{y:.7g}<extra></extra>"};
+ const aggTrace={type:"scatter",mode:"markers+text",name:"Candidate score pair",x:pairs.map(r=>Number(r.aggregate_flux_score)),y:pairs.map(r=>Number(r.aggregate_fission_score)),text:pairs.map(r=>String(r.layout_signature||"")),textposition:"top center",textfont:{size:9,color:palette.muted},customdata:pairs.map(r=>[r.candidate_id,r.layout_signature,r.seed]),marker:{color:pairs.map(r=>isSelected(r)?candidateMarkColors.selected:candidateMarkColors.default),size:pairs.map(r=>isSelected(r)?13:10),symbol:pairs.map(r=>isSelected(r)?"diamond":"circle"),line:{color:pairs.map(r=>isSelected(r)?palette.text:"#102536"),width:1.2}},hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Aggregate flux score %{x:.7g}<br>Aggregate fission score %{y:.7g}<extra></extra>"};
  const xValues=pairs.map(r=>Number(r.aggregate_flux_score)),yValues=pairs.map(r=>Number(r.aggregate_fission_score));
  const xSpan=Math.max(...xValues)-Math.min(...xValues),ySpan=Math.max(...yValues)-Math.min(...yValues);
  const xPad=xSpan>0?xSpan*0.12:Math.max(Math.abs(xValues[0])*0.02,0.001),yPad=ySpan>0?ySpan*0.14:Math.max(Math.abs(yValues[0])*0.02,0.001);
@@ -452,7 +464,7 @@ function showError(message){const el=$("apiError");el.hidden=false;el.textConten
 async function init(){
  setupNavigation();
  const reloadButton=$("reloadEvidence");
- if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
+ if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();await initAxial3D();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
  try{
   const response=await fetch("/api/candidates",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("API returned HTTP "+response.status);
@@ -464,18 +476,24 @@ async function init(){
   const metrics=[["Candidate records",records.length.toLocaleString(),"Rows in current candidate summary"],["Unique layouts",layouts.size.toLocaleString(),"Distinct recorded signatures"],["k-effective span",ks.length?number(Math.min(...ks),5)+" – "+number(Math.max(...ks),5):"—","Reported mean values"],["Recorded seeds",seeds.size.toLocaleString(),"Distinct seed values"]];
   $("metrics").innerHTML=metrics.map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
   $("candidateSelect").innerHTML=records.map(candidateOption).join("");
-  await initModelGeometry();
   $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
+  // Render the recorded candidate's scalar details immediately. Geometry manifest
+  // parsing/network access is slower and should not block the core evidence card.
+  showCandidate();drawOtherCharts();
+  await initModelGeometry();
+  // Re-bind the detailed model view now that XML-derived geometry is available.
   showCandidate();drawOtherCharts();
   await initAssembly();
   await initGeometry();
   await initMesh();
+  await initAxial3D();
  }catch(error){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
   clearCandidateSelection("Candidate evidence unavailable: "+error.message);
   $("sourcePath").textContent="API unavailable";
   await initGeometry();
   await initMesh();
+  await initAxial3D();
  }
 }
 document.addEventListener("DOMContentLoaded",init);
@@ -672,6 +690,12 @@ async function drawMesh(){
  const finiteZ=z.flat().filter(v=>typeof v==="number"&&Number.isFinite(v));
  const zMin=finiteZ.length?Math.min(...finiteZ):0, zMax=finiteZ.length?Math.max(...finiteZ):1;
  const zSpan=zMax-zMin;
+ // Pin the 2-D heatmap and contour to an identical numeric range. For a
+ // flat/constant field, open a tiny symmetric range so Plotly still has a
+ // valid scale without changing any tally value.
+ const flatPadding=Math.max(Math.abs(zMin)*0.01,1e-9);
+ const sharedColorMin=zSpan>0?zMin:zMin-flatPadding;
+ const sharedColorMax=zSpan>0?zMax:zMax+flatPadding;
  const rawStep=zSpan>0?zSpan/8:Math.max(Math.abs(zMin)*0.05,0.1);
  const power=Math.pow(10,Math.floor(Math.log10(rawStep)));
  const scaled=rawStep/power;
@@ -683,12 +707,14 @@ async function drawMesh(){
  const colorbar={title:{text:plotTitle,font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}};
  await chart("meshHeatmap",[{
   type:"heatmap",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
+  zmin:sharedColorMin,zmax:sharedColorMax,zauto:false,showscale:true,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
 }],heatLayout);
  if(drawRevision!==meshDrawRevision)return;
  await chart("meshContour",[{
   type:"contour",x:xs,y:ys,z:z,customdata:sourceCustomData,colorscale,
+  zmin:sharedColorMin,zmax:sharedColorMax,zauto:false,showscale:false,
   autocontour:false,
   contours:{
    coloring:"heatmap",showlines:true,showlabels:true,
@@ -697,7 +723,6 @@ async function drawMesh(){
    labelformat:f.view==="relative_sd"?".1f":".2f"
   },
   line:{width:1,color:"rgba(7,17,27,0.72)"},
-  colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false
 }],heatLayout);
  if(drawRevision!==meshDrawRevision)return;
@@ -717,8 +742,8 @@ async function drawMesh(){
  await chart("meshProfile",[{
   type:"scatter",mode:"lines+markers",name:f.view==="relative_sd"?"Relative MC standard error":"Recorded "+scoreLabel+" mean",
   x:xs,y:profileY,customdata:profileCustom,
-  line:{color:palette.cyan,width:2.5,shape:"linear"},
-  marker:{size:5,color:palette.orange,line:{color:palette.text,width:0.6}},
+  line:{color:"#c7d4dd",width:2.5,shape:"linear"},
+  marker:{size:5,color:"#8ca0ae",line:{color:palette.text,width:0.6}},
   error_y:profileError,connectgaps:false,hovertemplate:profileHover
  }],{
   autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
@@ -852,6 +877,188 @@ async function initMesh(){
  }
 }
 
+
+/* Stage 4: render only a recorded multi-layer OpenMC statepoint mesh. */
+async function initAxial3D(){
+ const panel=$("axial3dPanel");
+ if(!panel)return;
+ const updateButton=$("reloadAxial3d");
+ if(updateButton&&!updateButton.dataset.bound){
+  updateButton.dataset.bound="true";
+  updateButton.addEventListener("click",async()=>{
+   updateButton.disabled=true;updateButton.textContent="↻ Loading…";
+   await loadAxial3D();
+   updateButton.disabled=false;updateButton.textContent="↻ Reload 3D tally";
+  });
+ }
+ const score=$("axial3dScore"),view=$("axial3dView"),slice=$("axial3dSlice"),opacity=$("axial3dOpacity"),paletteSelect=$("axial3dPalette");
+ if(score&&!score.dataset.bound){score.dataset.bound="true";score.addEventListener("change",loadAxial3D);}
+ [view,slice,opacity,paletteSelect].forEach(control=>{
+  if(control&&!control.dataset.bound){
+   control.dataset.bound="true";
+   control.addEventListener("input",drawAxial3D);
+   control.addEventListener("change",drawAxial3D);
+  }
+ });
+ await loadAxial3D();
+}
+async function loadAxial3D(){
+ try{
+  const score=$("axial3dScore")?.value||"flux";
+  const response=await fetch("/api/axial-3d?score="+encodeURIComponent(score),{headers:{Accept:"application/json"}});
+  let payload;
+  try{payload=await response.json();}catch(_){payload={error:"API returned a non-JSON response"};}
+  if(!response.ok)throw new Error(payload.error||("HTTP "+response.status));
+  const dims=payload.mesh?.dimension_xyz||[];
+  if(!payload.available||dims.length!==3||dims[2]<=1||!Array.isArray(payload.mean)||!Array.isArray(payload.standard_error)||!Array.isArray(payload.relative_error_percent)){
+   throw new Error("The source does not contain a verified multi-layer 3D tally.");
+  }
+  if(payload.mean.length!==dims[2]||payload.mean.some(layer=>layer.length!==dims[1]||layer.some(row=>row.length!==dims[0]))){
+   throw new Error("3D tally arrays do not match the declared mesh dimensions.");
+  }
+  axial3dData=payload;
+  const scoreQuality=payload.provenance?.score_summary||{};
+  const medianRse=Number(scoreQuality.relative_error_percent_median_positive_bins);
+  const p95Rse=Number(scoreQuality.relative_error_percent_p95_positive_bins);
+  const state=payload.provenance?.statepoint||{};
+  const hasHighLocalRse=Number.isFinite(medianRse)&&medianRse>25;
+  const smokeBudget=Number(state.n_batches||0)<=30&&Number(state.n_particles||0)<=500;
+  const runEvidenceLabel=smokeBudget?"SMOKE DIAGNOSTIC ONLY":"3D STATEPOINT LOADED";
+  $("axial3dStatus").textContent=runEvidenceLabel+(hasHighLocalRse?" · HIGH BINWISE RSE":"");
+  $("axial3dStatus").classList.toggle("warning",smokeBudget||hasHighLocalRse);
+  const sha=payload.provenance?.sha256||"not recorded";
+  const inputAudit=payload.provenance?.input_audit||{};
+  const inputManifest=payload.provenance?.input_manifest||{};
+  const sourceCandidate=inputManifest.candidate_id||inputAudit.candidate_id||"candidate not recorded";
+  const layoutSignature=inputManifest.layout_signature||"layout not recorded";
+  const auditText=inputAudit.status||"input XML audit sidecar not installed";
+  $("axial3dProvenance").textContent=payload.provenance?.source+" · candidate "+sourceCandidate+" · layout "+layoutSignature+" · run class "+(smokeBudget?"SMOKE DIAGNOSTIC ONLY":"recorded transport run")+" · batches "+(state.n_batches??"not recorded")+" · inactive "+(state.n_inactive??"not recorded")+" · particles/batch "+(state.n_particles??"not recorded")+" · active realizations "+(state.n_realizations??"not recorded")+" · input audit: "+auditText+" · mesh "+dims.join(" × ")+" · statepoint SHA-256 "+(state.sha256||"not recorded")+" · NPZ SHA-256 "+sha+". The plotted field comes from recorded 3D tally bins, not the 2D surface.";
+  const zs=payload.mesh.z_centers_cm||[];
+  const slider=$("axial3dSlice");
+  slider.max=String(zs.length-1);
+  slider.value=String(Math.min(Number(slider.value)||0,zs.length-1));
+  const lower=payload.mesh.lower_left_cm_xyz,upper=payload.mesh.upper_right_cm_xyz;
+  const zCell=zs.length>1?Math.abs(zs[1]-zs[0]):0;
+  const zSpan=Array.isArray(lower)&&Array.isArray(upper)&&Number.isFinite(Number(lower[2]))&&Number.isFinite(Number(upper[2]))
+   ?Math.abs(Number(upper[2])-Number(lower[2]))
+   :(zs.length?Math.abs(zs[zs.length-1]-zs[0])+zCell:0);
+  const meanActive=state.n_realizations??"not recorded";
+  $("axial3dKpis").innerHTML=[
+   ["Mesh dimensions",dims.join(" × "),"51 × 51 × "+dims[2]+" source tally bins"],
+   ["Axial span",zSpan.toFixed(2)+" cm","From recorded Z cell centres"],
+   ["Axial bins",String(dims[2]),"Recorded independent mesh layers"],
+   ["Active realisations",String(meanActive),"OpenMC statepoint metadata"]
+  ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
+  const rseNote=Number.isFinite(medianRse)
+   ?" Positive-mean voxel relative MC standard error: median "+medianRse.toFixed(1)+"%"+(Number.isFinite(p95Rse)?", 95th percentile "+p95Rse.toFixed(1)+"%":"")+". These are descriptive spatial uncertainty statistics, not a formal acceptance threshold."
+   :" Spatial relative-error summary is not present in the sidecar.";
+  const smokeNote=smokeBudget?" This is a smoke-profile diagnostic ("+(state.n_batches??"—")+" total batches, "+(state.n_inactive??"—")+" inactive, "+(state.n_particles??"—")+" particles/batch). Do not interpret its spatial values as converged or physically validated. ":"";
+  $("axial3dSummary").textContent="Selected score: "+score+". Axial layers: "+dims[2]+". The volume is an OpenMC mesh-tally estimate; each voxel retains Monte Carlo uncertainty. Relative standard errors in zero-mean bins are undefined and shown as missing."+smokeNote+rseNote+" Input/model hashes and the full statepoint summary are retained in the artifact.";
+  drawAxial3D();
+ }catch(error){
+  axial3dData=null;
+  $("axial3dStatus").textContent="3D DATA UNAVAILABLE";
+  $("axial3dStatus").classList.add("warning");
+  const axialError=error.message||String(error);
+  $("axial3dProvenance").textContent=axialError.includes("not installed")||axialError.includes("not found")||axialError.includes("No such file")
+   ?axialError+" The GitHub Actions workflow publishes a real OpenMC 51 × 51 × 30 export to evidence/cbpfr_axial_3d/ after a successful run. After that commit appears, update this checkout with `git pull` and click Reload 3D tally."
+   :axialError;
+  $("axial3dKpis").innerHTML=[
+   ["Mesh dimensions","—","Awaiting 3D statepoint"],
+   ["Axial span","—","No verified physical Z data"],
+   ["Axial bins","—","No multi-layer tally installed"],
+   ["Active realisations","—","Statepoint unavailable"]
+  ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
+  $("axial3dSummary").textContent="No volumetric values are fabricated. The Stage 4 workflow now publishes a true multi-layer statepoint export to evidence/cbpfr_axial_3d/ after successful transport/export. Sync the latest feature branch and restart the server if this checkout predates that evidence commit.";
+  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Axial 3D evidence awaiting branch sync</b><p>This checkout does not yet contain the exported 51 × 51 × 30 OpenMC tally. After the axial workflow completes its transport and export steps, sync the latest Stage 4 branch and restart the local server. The 2D terrain above is intentionally not used as a fallback.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a></p></div>';
+ }
+}
+function drawAxial3D(){
+ if(!axial3dData||!window.Plotly)return;
+ const revision=++axial3dDrawRevision;
+ const payload=axial3dData,mean=payload.mean,se=payload.standard_error,rel=payload.relative_error_percent;
+ const xs=payload.mesh.x_centers_cm,ys=payload.mesh.y_centers_cm,zs=payload.mesh.z_centers_cm;
+ const nz=zs.length,ny=ys.length,nx=xs.length;
+ const zIndex=Math.min(nz-1,Math.max(0,Number($("axial3dSlice")?.value||0)));
+ const view=$("axial3dView")?.value||"mean";
+ const score=payload.score;
+ const colorscale=$("axial3dPalette")?.value||"Viridis";
+ const opacity=Math.max(0.04,Math.min(0.4,Number($("axial3dOpacity")?.value||0.14)));
+ const flatDisplay=[],flatMean=[],flatSE=[],flatRelative=[],flatX=[],flatY=[],flatZ=[],positiveDisplay=[];
+ const rawDisplay=(m,r)=>{
+  if(view==="relative_error")return m>0&&Number.isFinite(r)?r:null;
+  return m>0&&Number.isFinite(m)?Math.log10(m):null;
+ };
+ for(let k=0;k<nz;k++)for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+  const m=mean[k][j][i],s=se[k][j][i],r=rel[k][j][i],v=rawDisplay(m,r);
+  flatX.push(xs[i]);flatY.push(ys[j]);flatZ.push(zs[k]);
+  flatMean.push(m);flatSE.push(s);flatRelative.push(r);
+  flatDisplay.push(v);
+  if(v!==null&&Number.isFinite(v))positiveDisplay.push(v);
+ }
+ if(!positiveDisplay.length){
+  $("axial3dPlot").innerHTML='<div class="empty-state"><b>No finite voxels for this view</b><p>The selected tally score has no positive means or finite relative errors.</p></div>';
+  return;
+ }
+ const sorted=positiveDisplay.slice().sort((a,b)=>a-b);
+ const quantile=q=>sorted[Math.min(sorted.length-1,Math.max(0,Math.floor((sorted.length-1)*q)))];
+ let isomin=quantile(0.12),isomax=quantile(0.92);
+ if(!(isomax>isomin))isomax=isomin+Math.max(Math.abs(isomin)*0.02,1e-6);
+ const floor=isomin-Math.max(1,Math.abs(isomin)*0.05);
+ const values=flatDisplay.map(v=>v===null||!Number.isFinite(v)?floor:v);
+ const volumeTrace={
+  type:"volume",name:"Recorded 3D tally volume",
+  x:flatX,y:flatY,z:flatZ,value:values,
+  isomin,isomax,surface_count:10,opacity,
+  colorscale,showscale:true,
+  colorbar:{title:{text:view==="relative_error"?"Relative MC SE (%)":"log₁₀ tally mean",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},
+  caps:{x:{show:false},y:{show:false},z:{show:false}},
+  customdata:flatMean.map((m,i)=>[m,flatSE[i],flatRelative[i]]),
+  hovertemplate:"X %{x:.2f} cm<br>Y %{y:.2f} cm<br>Z %{z:.2f} cm<br>Recorded "+escapeHtml(score)+" mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative MC SE %{customdata[2]:.4g}%<extra>3D tally voxel</extra>"
+ };
+ const sliceMean=mean[zIndex],sliceSE=se[zIndex],sliceRel=rel[zIndex];
+ const sliceDisplay=sliceMean.map((row,j)=>row.map((m,i)=>{
+  const v=rawDisplay(m,sliceRel[j][i]);
+  return v===null||!Number.isFinite(v)?null:v;
+ }));
+ const sliceCustom=sliceMean.map((row,j)=>row.map((m,i)=>[m,sliceSE[j][i],sliceRel[j][i]]));
+ const planeZ=zs[zIndex];
+ const sliceTrace={
+  type:"surface",name:"Selected axial slice · Z="+planeZ.toFixed(2)+" cm",
+  x:xs,y:ys,z:Array.from({length:ny},()=>Array(nx).fill(planeZ)),
+  surfacecolor:sliceDisplay,colorscale,cmin:isomin,cmax:isomax,
+  showscale:false,opacity:0.94,connectgaps:false,
+  customdata:sliceCustom,
+  hovertemplate:"X %{x:.2f} cm<br>Y %{y:.2f} cm<br>Z "+planeZ.toFixed(2)+" cm<br>Recorded "+escapeHtml(score)+" mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative MC SE %{customdata[2]:.4g}%<extra>Selected Z bin</extra>"
+ };
+ const traceLayout={
+  autosize:true,margin:{l:0,r:8,t:8,b:8},showlegend:false,
+  scene:{
+   xaxis:{title:{text:"X position (cm)"},color:palette.muted,gridcolor:palette.line,backgroundcolor:"#091724",showbackground:true,range:[xs[0]-(xs[1]-xs[0])/2,xs[nx-1]+(xs[1]-xs[0])/2]},
+   yaxis:{title:{text:"Y position (cm)"},color:palette.muted,gridcolor:palette.line,backgroundcolor:"#091724",showbackground:true,range:[ys[0]-(ys[1]-ys[0])/2,ys[ny-1]+(ys[1]-ys[0])/2]},
+   zaxis:{title:{text:"Physical Z (cm)"},color:palette.muted,gridcolor:palette.line,backgroundcolor:"#091724",showbackground:true,range:[zs[0]-(zs[1]-zs[0])/2,zs[nz-1]+(zs[1]-zs[0])/2]},
+   aspectmode:"manual",aspectratio:{x:1,y:1,z:Math.max(0.5,(zs[nz-1]-zs[0])/(xs[nx-1]-xs[0]))},
+   camera:{eye:{x:1.6,y:1.7,z:1.45},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}}
+  },
+  uirevision:"cbpfr-physical-axial-volume-v1"
+ };
+ if(revision!==axial3dDrawRevision)return;
+ chart("axial3dPlot",[volumeTrace,sliceTrace],traceLayout);
+ $("axial3dSliceLabel").textContent="Z bin "+zIndex+" · "+planeZ.toFixed(2)+" cm";
+ const quality=payload.provenance?.score_summary||{};
+ const runState=payload.provenance?.statepoint||{};
+ const medianRse=Number(quality.relative_error_percent_median_positive_bins);
+ const p95Rse=Number(quality.relative_error_percent_p95_positive_bins);
+ const smokeBudget=Number(runState.n_batches||0)<=30&&Number(runState.n_particles||0)<=500;
+ const smokeNote=smokeBudget
+  ?" SMOKE-PROFILE DIAGNOSTIC ONLY ("+(runState.n_batches??"—")+" total batches, "+(runState.n_inactive??"—")+" inactive, "+(runState.n_particles??"—")+" particles/batch). Do not interpret this low-budget tally as converged or physically validated."
+  :"";
+ const uncertaintyText=Number.isFinite(medianRse)
+  ?" Positive-mean voxel relative MC standard error: median "+medianRse.toFixed(1)+"%"+(Number.isFinite(p95Rse)?", 95th percentile "+p95Rse.toFixed(1)+"%":"")+". These statistics describe sampling uncertainty spatially; they are not a formal acceptance threshold."
+  :" Spatial relative-error summary is not present in the sidecar.";
+ $("axial3dSummary").textContent="Score: "+score+" · view: "+(view==="relative_error"?"relative Monte Carlo standard error (%)":"log₁₀ of recorded mean for volume colour")+" · selected plane Z = "+planeZ.toFixed(2)+" cm · volume iso-range "+isomin.toPrecision(4)+" to "+isomax.toPrecision(4)+" · opacity "+opacity.toFixed(2)+". Voxel means and errors remain the recorded values; only the displayed colour variable is transformed."+smokeNote+uncertaintyText;
+}
+
 /* Displays existing external geometry artifacts only; never synthesizes a reactor layout. */
 async function initGeometry(){
  const refresh=$("reloadGeometry");
@@ -917,8 +1124,8 @@ async function initAssembly(){
   const response=await fetch("/api/assembly",{headers:{Accept:"application/json"}});
   if(!response.ok){let detail="HTTP "+response.status;try{detail=(await response.json()).error||detail}catch(_){}throw new Error(detail)}
   const payload=await response.json();
-  assemblyRecords=(payload.records||[]).filter(r=>["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].every(k=>Number.isFinite(Number(r[k]))));
-  if(!assemblyRecords.length)throw new Error("No complete 2×2 assembly proxy records.");
+  assemblyRecords=(payload.records||[]).filter(r=>assemblyPositionDefs.some(position=>has(r,position.key)));
+  if(!assemblyRecords.length)throw new Error("No finite assembly-integrated proxy values are available.");
   $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
   $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of the candidate-summary seeds; do not compare as paired runs.";
   drawAssemblyField();
@@ -931,43 +1138,179 @@ async function initAssembly(){
 }
 function drawAssemblyField(){
  if(!assemblyRecords.length||!$("assemblyMap")||!$("assemblyMatrix"))return;
- const selectedId=$("candidateSelect")?.value;
- const selected=records.find(r=>String(r.candidate_id)===String(selectedId));
- const row=selected?assemblyRecords.find(r=>String(r.candidate_id)===String(selected.candidate_id)&&String(r.layout_signature).toUpperCase()===String(selected.layout_signature).toUpperCase()):null;
- if(!row){
-  $("assemblyMap").innerHTML='<div class="empty-state"><b>No matching assembly evidence</b><p>The selected candidate has no matching 2 × 2 proxy record. Values are not borrowed from another candidate.</p></div>';
- } else {
- const positions=[["p00_fission_rate","p01_fission_rate"],["p10_fission_rate","p11_fission_rate"]];
- const z=positions.map(line=>line.map(key=>Number(row[key])));
- chart("assemblyMap",[{type:"heatmap",x:["Column 0","Column 1"],y:["Row 0","Row 1"],z,text:z.map(line=>line.map(value=>value.toFixed(3))),texttemplate:"%{text}",textfont:{size:11,color:"#e8f1f7"},customdata:[["P00","P01"],["P10","P11"]],colorscale:"Cividis",colorbar:{title:{text:"Fission-rate<br>proxy",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},hovertemplate:"Position %{customdata}<br>Recorded fission-rate proxy %{z:.8g}<extra></extra>"}],{margin:{l:62,r:26,t:12,b:48},xaxis:{...baseLayout.xaxis,title:"Assembly column",tickangle:0},yaxis:{...baseLayout.yaxis,title:"Assembly row",autorange:"reversed"},showlegend:false});
- }
- const matrixPositions=[["p00_fission_rate","P00"],["p01_fission_rate","P01"],["p10_fission_rate","P10"],["p11_fission_rate","P11"]];
- // Assemble the matrix in the same candidate order as the candidate selector, using only exact ID + signature matches.
+ const selectedId=String($("candidateSelect")?.value||"");
+ const selected=records.find(r=>String(r.candidate_id)===selectedId);
+ const row=selected?assemblyRecords.find(item=>
+  String(item.candidate_id)===String(selected.candidate_id)&&
+  String(item.layout_signature).toUpperCase()===String(selected.layout_signature).toUpperCase()
+ ):null;
  const matrixRows=records.slice().sort((a,b)=>{
   const av=has(a,"keff_mean")?Number(a.keff_mean):Number.POSITIVE_INFINITY;
   const bv=has(b,"keff_mean")?Number(b.keff_mean):Number.POSITIVE_INFINITY;
   return av-bv;
  }).map(candidate=>{
-  const proxy=assemblyRecords.find(item=>String(item.candidate_id)===String(candidate.candidate_id)&&String(item.layout_signature).toUpperCase()===String(candidate.layout_signature).toUpperCase());
-  if(!proxy||!matrixPositions.every(([key])=>has(proxy,key)))return null;
-  return {candidate,proxy,values:matrixPositions.map(([key])=>Number(proxy[key]))};
+  const proxy=assemblyRecords.find(item=>
+   String(item.candidate_id)===String(candidate.candidate_id)&&
+   String(item.layout_signature).toUpperCase()===String(candidate.layout_signature).toUpperCase()
+  );
+  if(!proxy||!assemblyPositionDefs.some(position=>has(proxy,position.key)))return null;
+  return {candidate,proxy,values:assemblyPositionDefs.map(position=>has(proxy,position.key)?Number(proxy[position.key]):null)};
  }).filter(Boolean);
- if(!matrixRows.length){
-  $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Position matrix unavailable</b><p>No complete proxy records match the candidate IDs and layout signatures.</p></div>';
+
+ // A common min/max is used by both views. Changing candidates must not rescale
+ // the colour field and visually exaggerate otherwise comparable proxy values.
+ const globalValues=matrixRows.flatMap(item=>item.values).filter(Number.isFinite);
+ if(!globalValues.length){
+  $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Quantitative scale unavailable</b><p>No finite, exact ID-and-layout-matched proxy values are available.</p></div>';
+  $("assemblyMap").innerHTML='<div class="empty-state"><b>Assembly data unavailable</b><p>No numerical field is drawn without recorded values.</p></div>';
   return;
  }
- const finite=matrixRows.flatMap(row=>row.values).filter(Number.isFinite);
- const observedMin=Math.min(...finite),observedMax=Math.max(...finite),zmin=observedMin,zmax=observedMax>observedMin?observedMax:observedMin+Math.max(Math.abs(observedMin)*0.01,1e-9),selectedRow=matrixRows.find(row=>String(row.candidate.candidate_id)===String(selectedId));
+ const observedMin=Math.min(...globalValues),observedMax=Math.max(...globalValues);
+ const scaleMin=observedMin,scaleMax=observedMax>observedMin?observedMax:observedMin+Math.max(Math.abs(observedMin)*0.01,1e-9);
+ const mid=(scaleMin+scaleMax)/2;
+ const colorbar={
+  title:{text:"Fission-rate proxy<br>(CSV unit not documented)",font:{size:10,color:palette.text}},
+  thickness:13,outlinewidth:0,tickfont:{size:9,color:palette.muted},
+  tickmode:"array",tickvals:[scaleMin,mid,scaleMax],
+  ticktext:[formatSourceProxy(scaleMin,4),formatSourceProxy(mid,4),formatSourceProxy(scaleMax,4)],
+  ticks:"outside",len:0.78
+ };
+
+ if(!row){
+  $("assemblyMap").innerHTML='<div class="empty-state"><b>No exact candidate proxy record</b><p>The selected candidate ID and layout signature have no matching assembly run. Values are not borrowed from another layout.</p></div>';
+  $("assemblyPositionTitle").textContent=selectedAssemblyPosition;
+  $("assemblyPositionMaterial").textContent="NO MATCH";
+  $("assemblyPositionValue").textContent="—";
+  $("assemblyPositionPicker").innerHTML="";
+ }else{
+  if(!assemblyPositionDefs.some(position=>position.label===selectedAssemblyPosition))selectedAssemblyPosition="P00";
+  const signature=normalizeLayoutSignature(row.layout_signature);
+  const positionFor=(position)=>({
+   ...position,
+   value:has(row,position.key)?Number(row[position.key]):null,
+   material:signature[position.index]==="M"?"MOX":"UO₂",
+   materialCode:signature[position.index]
+  });
+  const cells=assemblyPositionDefs.map(positionFor);
+  const selectedPosition=cells.find(position=>position.label===selectedAssemblyPosition)||cells[0];
+  $("assemblyPositionTitle").textContent=selectedPosition.label;
+  $("assemblyPositionMaterial").textContent=selectedPosition.material;
+  $("assemblyPositionMaterial").className="material-chip "+(selectedPosition.materialCode==="M"?"material-chip-mox":"material-chip-uo2");
+  $("assemblyPositionValue").textContent=formatSourceProxy(selectedPosition.value);
+  $("assemblyPositionPicker").innerHTML=cells.map(position=>
+   '<button type="button" class="assembly-position-option '+(position.materialCode==="M"?"material-mox":"material-uo2")+' '+(position.label===selectedAssemblyPosition?"selected":"")+'" data-assembly-position="'+position.label+'" aria-pressed="'+String(position.label===selectedAssemblyPosition)+'">'+
+    '<span>'+position.label+'</span><b>'+position.material+'</b><strong>'+formatSourceProxy(position.value)+'</strong>'+
+   '</button>'
+  ).join("");
+  const scaleRange=$("assemblyScaleRange");
+  if(scaleRange)scaleRange.textContent="Shared global colour range: "+formatSourceProxy(scaleMin,4)+" to "+formatSourceProxy(scaleMax,4)+" · CSV unit not documented · not absolute power.";
+  const positionPicker=$("assemblyPositionPicker");
+  if(positionPicker&&typeof positionPicker.querySelectorAll==="function")positionPicker.querySelectorAll("[data-assembly-position]").forEach(button=>button.addEventListener("click",()=>{
+   selectedAssemblyPosition=button.dataset.assemblyPosition;
+   drawAssemblyField();
+  }));
+
+  const z=[
+   [cells[0].value,cells[1].value],
+   [cells[2].value,cells[3].value]
+  ];
+  const customdata=[
+   [cells[0],cells[1]],
+   [cells[2],cells[3]]
+  ].map(line=>line.map(position=>[
+   position.label,position.material,row.candidate_id,signature,row.seed,row.status,position.row,position.col
+  ]));
+  const textValues=cells.map(position=>position.label+" · "+position.material+"\n"+formatSourceProxy(position.value));
+  const heatmap={
+   type:"heatmap",name:"Assembly-integrated fission-rate proxy",
+   x:["Column 0","Column 1"],y:["Row 0","Row 1"],
+   z,text:[[textValues[0],textValues[1]],[textValues[2],textValues[3]]],
+   texttemplate:"%{text}",textfont:{size:11,color:"#f0f3f5"},
+   customdata,colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,
+   colorbar,
+   xgap:4,ygap:4,hoverongaps:false,connectgaps:false,
+   hovertemplate:"Position %{customdata[0]} · %{customdata[1]}<br>Geometry index: row %{customdata[6]}, column %{customdata[7]}<br>Candidate %{customdata[2]}<br>Layout %{customdata[3]}<br>Recorded fission-rate proxy %{z:.8g}<br>CSV unit not documented · not absolute power<br>Proxy-run seed %{customdata[4]}<extra></extra>"
+  };
+  const mapEl=$("assemblyMap");
+  // Marker sizes scale with the chart's real cell footprint: category outlines
+  // follow each tile, while the selected-position frame remains clearly larger.
+  const mapWidth=mapEl?.clientWidth||560,mapHeight=mapEl?.clientHeight||410;
+  const tileFootprint=Math.min(Math.max(140,mapWidth-170)/2,Math.max(160,mapHeight-66)/2);
+  const materialOutlineSize=Math.max(32,Math.min(144,Math.floor(tileFootprint*0.72)));
+  const selectedOutlineSize=Math.max(40,Math.min(156,Math.floor(tileFootprint*0.86)));
+  const materialOutline={
+   type:"scatter",mode:"markers",name:"Material category outline",
+   x:cells.map(position=>position.col===0?"Column 0":"Column 1"),
+   y:cells.map(position=>position.row===0?"Row 0":"Row 1"),
+   customdata:cells.map(position=>position.label),
+   marker:{
+    symbol:"square-open",size:materialOutlineSize,
+    color:cells.map(position=>materialEdgeColor[position.materialCode]),
+    line:{width:2.6,color:cells.map(position=>materialEdgeColor[position.materialCode])}
+   },
+   hoverinfo:"skip",showlegend:false
+  };
+  const highlighted=cells.find(position=>position.label===selectedAssemblyPosition)||cells[0];
+  const selectionOutline={
+   type:"scatter",mode:"markers",name:"Selected spatial position",
+   x:[highlighted.col===0?"Column 0":"Column 1"],
+   y:[highlighted.row===0?"Row 0":"Row 1"],
+   customdata:[highlighted.label],
+   marker:{symbol:"square-open",size:selectedOutlineSize,color:"#ffffff",line:{width:3.2,color:"#ffffff"}},
+   hoverinfo:"skip",showlegend:false
+  };
+  chart("assemblyMap",[heatmap,materialOutline,selectionOutline],{
+   autosize:true,margin:{l:58,r:112,t:14,b:52},
+   showlegend:false,hovermode:"closest",
+   xaxis:{...baseLayout.xaxis,title:{text:"Core-map column",standoff:9},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   yaxis:{...baseLayout.yaxis,title:{text:"Core-map row · row 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"ROW 0 (TOP): P00 = R0/C0 · P01 = R0/C1    |    ROW 1: P10 = R1/C0 · P11 = R1/C1",font:{size:9,color:palette.muted}}]
+  }).then(()=>{
+   if(!mapEl||typeof mapEl.on!=="function"||mapEl.dataset.positionClickBound)return;
+   mapEl.on("plotly_click",event=>{
+    const point=(event?.points||[]).find(item=>item?.curveNumber===0)|| (event?.points||[])[0];
+    const raw=point?.customdata;
+    const position=Array.isArray(raw)?raw[0]:raw;
+    if(assemblyPositionDefs.some(item=>item.label===position)&&position!==selectedAssemblyPosition){
+     selectedAssemblyPosition=position;
+     drawAssemblyField();
+    }
+   });
+   mapEl.dataset.positionClickBound="true";
+  });
+ }
+ if(!matrixRows.length){
+  $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Position matrix unavailable</b><p>No complete exact candidate-ID and layout-signature matches exist in the proxy file.</p></div>';
+  return;
+ }
  const matrixTrace={
   type:"heatmap",name:"Recorded assembly fission-rate proxy",
-  x:matrixPositions.map(([,position])=>position),y:matrixRows.map(row=>String(row.candidate.layout_signature||label(row.candidate))),
-  z:matrixRows.map(row=>row.values),text:matrixRows.map(row=>row.values.map(value=>value.toFixed(3))),texttemplate:"%{text}",
-  textfont:{size:10,color:"#e8f1f7"},colorscale:"Cividis",zmin,zmax,showscale:true,
-  colorbar:{title:{text:"Fission-rate<br>proxy (source scale)",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},
-  customdata:matrixRows.map(row=>row.values.map((value,index)=>[row.candidate.candidate_id,row.candidate.layout_signature,matrixPositions[index][1],row.proxy.seed,row.proxy.status])),
-  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>Proxy seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
+  x:assemblyPositionDefs.map(position=>position.label),
+  y:matrixRows.map(item=>String(item.candidate.layout_signature||label(item.candidate))),
+  z:matrixRows.map(item=>item.values),
+  text:matrixRows.map(item=>item.values.map(value=>formatSourceProxy(value))),
+  texttemplate:"%{text}",textfont:{size:10,color:"#f0f3f5"},
+  colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,showscale:false,
+  xgap:3,ygap:2,
+  customdata:matrixRows.map(item=>item.values.map((value,index)=>[
+   item.candidate.candidate_id,item.candidate.layout_signature,
+   assemblyPositionDefs[index].label,item.proxy.seed,item.proxy.status
+  ])),
+  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>CSV unit not documented · not absolute power<br>Proxy-run seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
  };
+ const selectedRow=matrixRows.find(item=>String(item.candidate.candidate_id)===selectedId&&String(item.candidate.layout_signature).toUpperCase()===String(selected?.layout_signature||"").toUpperCase());
  const traces=[matrixTrace];
- if(selectedRow)traces.push({type:"scatter",mode:"markers",name:"Selected candidate",x:matrixPositions.map(([,position])=>position),y:matrixPositions.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),marker:{symbol:"square-open",size:37,color:"#e8f1f7",line:{width:1.5,color:"#e8f1f7"}},hoverinfo:"skip",showlegend:false});
- chart("assemblyMatrix",traces,{autosize:true,margin:{l:64,r:34,t:18,b:48},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Fuel position",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},yaxis:{...baseLayout.yaxis,title:"Candidate layout · rows sorted by recorded k-effective",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},annotations:[{xref:"paper",yref:"paper",x:1,y:1.02,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]});
+ if(selectedRow)traces.push({
+  type:"scatter",mode:"markers",name:"Selected candidate",
+  x:assemblyPositionDefs.map(position=>position.label),
+  y:assemblyPositionDefs.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),
+  marker:{symbol:"square-open",size:34,color:"#ffffff",line:{width:1.8,color:"#ffffff"}},
+  hoverinfo:"skip",showlegend:false
+ });
+ chart("assemblyMatrix",traces,{
+  autosize:true,margin:{l:62,r:20,t:16,b:50},showlegend:false,hovermode:"closest",
+  xaxis:{...baseLayout.xaxis,title:{text:"Fuel position · row-major",standoff:10},type:"category",categoryorder:"array",categoryarray:["P00","P01","P10","P11"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},
+  yaxis:{...baseLayout.yaxis,title:{text:"Candidate layout · descriptive k-effective order",standoff:8},type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.07,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]
+ });
 }

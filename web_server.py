@@ -9,7 +9,7 @@ import os
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
@@ -41,6 +41,10 @@ STATEPOINT_BASELINE = Path(os.environ.get(
 )).expanduser()
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
 MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
+AXIAL_TALLY_NPZ = Path(os.environ.get(
+    "CBPFR_AXIAL_TALLY_NPZ",
+    str(ROOT / "evidence" / "cbpfr_axial_3d" / "axial_tally_3d.npz")
+)).expanduser()
 
 GEOMETRY_SEARCH_ROOTS = tuple(ROOT / name for name in ("plots", "plot", "geometry", "model", "c5g7-run", "evidence", "results", "artifacts"))
 GEOMETRY_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".vti", ".vtk", ".vtp", ".vtu", ".vtm", ".xdmf"}
@@ -460,6 +464,116 @@ def read_mesh_evidence():
         },
     }
 
+
+def read_axial_3d_evidence(score="flux"):
+    """Read one selected score from an actual OpenMC 3-D statepoint export."""
+    if not AXIAL_TALLY_NPZ.is_file():
+        raise FileNotFoundError(
+            "3-D axial tally export is not installed in this checkout. The Stage 4 workflow "
+            "publishes evidence/cbpfr_axial_3d/ after a successful OpenMC transport/export run. "
+            "Sync the latest feat/stage4-physical-axial-tallies branch and restart the server. "
+            "For older runs without the publisher step, download axial_tally_3d.npz and the "
+            "AXIAL_3D_STATEPOINT_SUMMARY.json sidecar from the GitHub Actions artifact, then copy "
+            "them beside the expected path: " + str(AXIAL_TALLY_NPZ) + "."
+        )
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise RuntimeError("3-D axial volume needs numpy; install project requirements.") from exc
+
+    summary_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_STATEPOINT_SUMMARY.json")
+    audit_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_INPUT_AUDIT.json")
+    manifest_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_INPUT_MANIFEST.json")
+    summary = {}
+    input_audit = {}
+    input_manifest = {}
+    if summary_path.is_file():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if audit_path.is_file():
+        input_audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    if manifest_path.is_file():
+        input_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    with np.load(AXIAL_TALLY_NPZ, allow_pickle=False) as payload:
+        required = {
+            "mean", "standard_error", "relative_error_percent",
+            "score_names", "x_centers_cm", "y_centers_cm", "z_centers_cm"
+        }
+        missing = sorted(required.difference(payload.files))
+        if missing:
+            raise ValueError("3-D NPZ is missing required arrays: " + ", ".join(missing))
+        means = np.asarray(payload["mean"], dtype=float)
+        standard_errors = np.asarray(payload["standard_error"], dtype=float)
+        relative_errors = np.asarray(payload["relative_error_percent"], dtype=float)
+        scores = [
+            item.decode("utf-8") if isinstance(item, bytes) else str(item)
+            for item in payload["score_names"].tolist()
+        ]
+        xs = np.asarray(payload["x_centers_cm"], dtype=float)
+        ys = np.asarray(payload["y_centers_cm"], dtype=float)
+        zs = np.asarray(payload["z_centers_cm"], dtype=float)
+
+    if means.ndim != 4 or means.shape != standard_errors.shape or means.shape != relative_errors.shape:
+        raise ValueError("3-D arrays must share [z, y, x, score] dimensions.")
+    if means.shape[3] != len(scores) or means.shape[0] != len(zs) or means.shape[1] != len(ys) or means.shape[2] != len(xs):
+        raise ValueError("3-D data dimensions disagree with their score names or coordinate vectors.")
+    if means.shape[0] <= 1 or len(xs) <= 0 or len(ys) <= 0:
+        raise ValueError("A true multi-layer 3-D tally is required.")
+    if score not in scores:
+        raise ValueError("Requested score not present. Available: " + ", ".join(scores))
+    index = scores.index(score)
+
+    def finite_json(array):
+        arr = np.asarray(array, dtype=float)
+        if arr.ndim != 3:
+            raise ValueError("Expected [z, y, x] selected-score array.")
+        return [
+            [
+                [float(v) if np.isfinite(v) else None for v in row]
+                for row in layer
+            ]
+            for layer in arr
+        ]
+
+    mesh_meta = summary.get("mesh", {})
+    if mesh_meta.get("dimension_xyz") != [len(xs), len(ys), len(zs)]:
+        # The NPZ dimensions remain primary; summary metadata is not allowed to
+        # override or fabricate coordinate mapping.
+        mesh_meta = {}
+    return {
+        "available": True,
+        "provenance": {
+            "source": str(AXIAL_TALLY_NPZ),
+            "sha256": hashlib.sha256(AXIAL_TALLY_NPZ.read_bytes()).hexdigest(),
+            "summary_path": str(summary_path) if summary_path.is_file() else None,
+            "statepoint": summary.get("statepoint", {}),
+            "status": summary.get("status", "NPZ found; sidecar statepoint summary missing"),
+            "uncertainty_method": summary.get("uncertainty_method"),
+            "score_summary": summary.get("score_summary", {}).get(score, {}),
+            "input_audit": input_audit,
+            "input_manifest": input_manifest,
+            "input_audit_path": str(audit_path) if audit_path.is_file() else None,
+            "input_manifest_path": str(manifest_path) if manifest_path.is_file() else None,
+            "nonclaims": summary.get("nonclaims", [
+                "Tally values are not absolute-power normalized.",
+                "Presence of a statepoint is not benchmark acceptance or convergence."
+            ]),
+        },
+        "mesh": {
+            "dimension_xyz": [int(len(xs)), int(len(ys)), int(len(zs))],
+            "array_layout": "[z, y, x]",
+            "lower_left_cm_xyz": mesh_meta.get("lower_left_cm_xyz"),
+            "upper_right_cm_xyz": mesh_meta.get("upper_right_cm_xyz"),
+            "x_centers_cm": [float(v) for v in xs],
+            "y_centers_cm": [float(v) for v in ys],
+            "z_centers_cm": [float(v) for v in zs],
+        },
+        "score": score,
+        "scores_available": scores,
+        "mean": finite_json(means[:, :, :, index]),
+        "standard_error": finite_json(standard_errors[:, :, :, index]),
+        "relative_error_percent": finite_json(relative_errors[:, :, :, index]),
+    }
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "CBPFRLocal/0.2"
 
@@ -495,7 +609,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifact":
             try:
-                from urllib.parse import parse_qs
                 relative_path = parse_qs(urlparse(self.path).query).get("path", [""])[0]
                 artifact = read_geometry_artifact(relative_path)
                 return self._send(200, artifact.read_bytes(), mimetypes.guess_type(artifact.name)[0] or "application/octet-stream")
@@ -505,6 +618,13 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 return self._send(200, json.dumps(read_assembly_evidence(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, csv.Error) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
+        if path == "/api/axial-3d":
+            try:
+                score = parse_qs(urlparse(self.path).query).get("score", ["flux"])[0]
+                payload = read_axial_3d_evidence(score)
+                return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, RuntimeError, KeyError, json.JSONDecodeError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/mesh":
             try:
