@@ -454,7 +454,7 @@ function showError(message){const el=$("apiError");el.hidden=false;el.textConten
 async function init(){
  setupNavigation();
  const reloadButton=$("reloadEvidence");
- if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
+ if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();await initAxial3D();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
  try{
   const response=await fetch("/api/candidates",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("API returned HTTP "+response.status);
