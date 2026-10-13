@@ -83,18 +83,37 @@ async function main() {
     // Repeat viewport and rendering checks at a common narrow-phone width.
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(300);
-    const mobileOverflow = await page.evaluate(() => ({
-      viewport: window.innerWidth,
-      document: document.documentElement.scrollWidth,
-      body: document.body.scrollWidth
-    }));
+    const mobileOverflow = await page.evaluate(() => {
+      const overflowing = [...document.querySelectorAll("body *")].map(el => {
+        const rect = el.getBoundingClientRect();
+        return {
+          tag: el.tagName.toLowerCase(),
+          id: el.id || "",
+          className: typeof el.className === "string" ? el.className.slice(0, 100) : "",
+          right: Math.round(rect.right * 100) / 100,
+          width: Math.round(rect.width * 100) / 100
+        };
+      }).filter(el => el.right > window.innerWidth + 0.1).sort((a, b) => b.right - a.right).slice(0, 12);
+      return {
+        viewport: window.innerWidth,
+        document: document.documentElement.scrollWidth,
+        body: document.body.scrollWidth,
+        overflowingElements: overflowing
+      };
+    });
     assert.ok(mobileOverflow.document <= mobileOverflow.viewport + 1,
-      "mobile page must not create horizontal overflow: " + JSON.stringify(mobileOverflow));
+      "mobile page must not create more than 1px horizontal overflow: " + JSON.stringify(mobileOverflow));
     assert.ok(await page.locator("#candidateSelect").isVisible(), "candidate selector must remain visible on mobile");
     assert.ok(await page.locator("#selectedCandidateMetrics").isVisible(), "selected candidate metrics must remain visible on mobile");
     assert.ok(await page.locator("#geometryPreview svg.model-geometry-svg").isVisible(), "source geometry must remain visible on mobile");
 
+    // Take the top viewport at scroll origin. The mobile navigation is sticky during normal use.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-top.png"), fullPage: false, animations: "disabled" });
+
+    // Sticky navigation can be painted over tall element screenshots by Chromium. Disable only
+    // its sticky positioning for content cut-outs; the real mobile viewport screenshot above keeps it.
+    await page.addStyleTag({ content: "@media(max-width:680px){.sidebar{position:static!important;top:auto!important}}" });
     await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-candidate-inspector.png"), animations: "disabled" });
     await geometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
 
