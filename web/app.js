@@ -56,16 +56,18 @@ let coreGeometryMode="3d";
 let core3dLoadFailed=false;
 let currentGeometryRow=null;
 let selectedCorePosition={row:0,col:0};
-window.addEventListener("cbpfr-core3d-ready",()=>{
- core3dLoadFailed=false;
- if(currentGeometryRow&&!geometryArtifactActive)drawModelGeometry(currentGeometryRow);
-});
-window.addEventListener("cbpfr-core3d-failed",()=>{
- core3dLoadFailed=true;
- const status=$("core3dStatus");
- if(status)status.textContent="THREE.JS CDN UNAVAILABLE · 2D FALLBACK";
- if(currentGeometryRow&&!geometryArtifactActive)selectCoreView("2d");
-});
+if(typeof window.addEventListener==="function"){
+ window.addEventListener("cbpfr-core3d-ready",()=>{
+  core3dLoadFailed=false;
+  if(currentGeometryRow&&!geometryArtifactActive)drawModelGeometry(currentGeometryRow);
+ });
+ window.addEventListener("cbpfr-core3d-failed",()=>{
+  core3dLoadFailed=true;
+  const status=$("core3dStatus");
+  if(status)status.textContent="THREE.JS CDN UNAVAILABLE · 2D FALLBACK";
+  if(currentGeometryRow&&!geometryArtifactActive)selectCoreView("2d");
+ });
+}
 
 function modelMaterialCell(universeId,x,y,pitch){
  const key=String(universeId),source=modelGeometryData?.materials?.pin_universes?.[key];
