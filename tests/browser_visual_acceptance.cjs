@@ -123,6 +123,10 @@ fs.mkdirSync(outDir, { recursive: true });
     await page.locator("#candidateSelect").selectOption("c5g7-2x2-UMMU");
     await page.waitForFunction(() => document.querySelector("#selectedCandidateId").textContent === "c5g7-2x2-UMMU");
     const ummuMap = await page.locator("#assemblyMap").evaluate(el => ({ z: el.data[0].z, selectedOutline: el.data[2].marker.line.color }));
+    const matrixSelection = await page.locator("#assemblyMatrix").evaluate(el => ({ types: el.data.map(trace => trace.type), labels: el.data[0].y, values: el.data[0].z, annotation: (el.layout.annotations || []).map(item => item.text).join(" ") }));
+    assert.deepEqual(matrixSelection.types, ["heatmap"], "selected candidate highlight must not cover numerical matrix cells");
+    assert.ok(matrixSelection.labels.some(label => /UMMU\\s+◂/.test(label)), "selected candidate should be identified at its row label");
+    assert.match(matrixSelection.annotation, /Selected layout: UMMU/);
     const ummuProxy = api.assembly.records.find(row => row.candidate_id === "c5g7-2x2-UMMU" && row.layout_signature === "UMMU");
     assert.deepEqual(ummuMap.z, [
       [Number(ummuProxy.p00_fission_rate), Number(ummuProxy.p01_fission_rate)],
