@@ -73,7 +73,7 @@ jobs:
         shell: bash -l {0}
         run: |
           set -euo pipefail
-          python -m py_compile web_server.py scripts/prepare_c5g7_axial_3d.py scripts/audit_c5g7_axial_3d.py tests/test_c5g7_axial_3d.py
+          python -m py_compile web_server.py scripts/prepare_c5g7_axial_3d.py scripts/audit_c5g7_axial_3d.py scripts/analyze_c5g7_axial_3d.py tests/test_c5g7_axial_3d.py
           node --check web/app.js
           python - <<'PY'
           from pathlib import Path
@@ -194,6 +194,11 @@ jobs:
           PY
           cp "$CANDIDATE_ROOT/AXIAL_3D_INPUT_MANIFEST.json" "$CANDIDATE_ROOT/model/3d/axial-3d-export/AXIAL_3D_INPUT_MANIFEST.json"
           cp "$CANDIDATE_ROOT/AXIAL_3D_INPUT_AUDIT.json" "$CANDIDATE_ROOT/model/3d/axial-3d-export/AXIAL_3D_INPUT_AUDIT.json"
+          python scripts/analyze_c5g7_axial_3d.py \
+            --candidate-root "$CANDIDATE_ROOT" \
+            --openmc-log "$CANDIDATE_ROOT/model/3d/openmc.log" \
+            --output-dir "$CANDIDATE_ROOT/model/3d/axial-3d-export" \
+            > "$CANDIDATE_ROOT/model/3d/axial-benchmark-check.log"
 
       - name: Browser-test the actual 3D tally volume and axial slice
         if: github.event_name == 'pull_request'
