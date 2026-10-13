@@ -64,7 +64,7 @@ function layoutCells(signature){
   '<div class="fuel-signature-kicker">LAYOUT SIGNATURE</div>'+
   '<div class="fuel-signature-code">'+signatureLettersHtml(raw)+'</div>'+
   '<div class="fuel-signature-counts"><span><b>'+mox+'</b> MOX positions</span><i></i><span><b>'+uo2+'</b> UO₂ positions</span></div>'+
-  '<div class="fuel-signature-order">p00 → p01 → p10 → p11 · row-major order</div>'+
+  '<div class="fuel-signature-order">P00 → P01 → P10 → P11 · row-major order</div>'+
   '</div>';
 }
 // Pin-universe maps extracted from the archived candidate geometry.xml files (17 × 17 lattices).
@@ -135,7 +135,7 @@ function renderModelGeometrySvg(row){
    const cell=assemblyMap[String(sourceGrid[r][c])],pins=modelGeometryData.pin_lattices[String(cell.lattice_id)]?.universe_grid;
    if(!Array.isArray(pins)||pins.length!==pinDims[1]||pins.some(pr=>!Array.isArray(pr)||pr.length!==pinDims[0]))throw new Error("Archived pin lattice "+cell.lattice_id+" does not match declared dimensions.");
    const color=code==="M"?"#f4bd62":"#51d2df",pp=Math.min(size-18,size-34)/pinDims[0],area=pp*pinDims[0],ix=x+(size-area)/2,iy=y+28;
-   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="#0a1a27" stroke="'+color+'" stroke-opacity=".72"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="'+(size-2)+'" height="24" rx="5" fill="'+color+'" fill-opacity=".12"/><text x="'+(x+8)+'" y="'+(y+16)+'" class="assembly-label" fill="'+color+'">p'+r+c+' · '+(code==="M"?"MOX":"UO₂")+'</text><text x="'+(x+size-8)+'" y="'+(y+16)+'" class="assembly-size" text-anchor="end">'+pinDims[0]+' × '+pinDims[1]+'</text>';
+   svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="#0a1a27" stroke="'+color+'" stroke-opacity=".72"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="'+(size-2)+'" height="24" rx="5" fill="'+color+'" fill-opacity=".12"/><text x="'+(x+8)+'" y="'+(y+16)+'" class="assembly-label" fill="'+color+'">P'+r+c+' · '+(code==="M"?"MOX":"UO₂")+'</text><text x="'+(x+size-8)+'" y="'+(y+16)+'" class="assembly-size" text-anchor="end">'+pinDims[0]+' × '+pinDims[1]+'</text>';
    pins.forEach((pr,pi)=>pr.forEach((uid,pj)=>{svg+=modelMaterialCell(uid,ix+pj*pp,iy+pi*pp,pp);}));
    svg+='<rect x="'+(ix-.6)+'" y="'+(iy-.6)+'" width="'+(area+1.2)+'" height="'+(area+1.2)+'" fill="none" stroke="#64899a" stroke-width=".7"/></g>';
   }
@@ -193,7 +193,7 @@ function updateCoreInspector(row,gridRow=selectedCorePosition.row,gridCol=select
  const uid=String(source.core_universe_grid?.[r]?.[c]??"");
  const code=String(source.assembly_grid?.[r]?.[c]||modelGeometryData.assemblies?.[uid]?.code||"");
  const assembly=modelGeometryData.assemblies?.[uid]||{};
- const position="p"+r+c, fuel=code==="M"||code==="U";
+ const position="P"+r+c, fuel=code==="M"||code==="U";
  const signature=normalizeLayoutSignature(row.layout_signature);
  const positionCode=(r<2&&c<2)?signature[r*2+c]:code;
  const material=code==="M"?"MOX fuel":code==="U"?"UO₂ fuel":"Water reflector";
@@ -221,7 +221,7 @@ function updateCoreInspector(row,gridRow=selectedCorePosition.row,gridCol=select
   pinSub.textContent="The geometry manifest has no pin-resolved reflector universe grid";
   pinMap.innerHTML='<div class="core-reflector-detail"><span class="core-reflector-icon">R</span><div><b>Water / reflector universe '+escapeHtml(uid)+'</b><p>The archived manifest identifies this core position as reflector but does not provide a pin-resolved 17 × 17 grid for it. No internal material cells are invented.</p></div></div>';
   $("corePinMapBadge").textContent="SOURCE-LIMITED";
-  $("corePinLegend").innerHTML='<span class="core-pin-legend-item"><i style="background:#17495d"></i><b>Water reflector</b><small>Assembly universe</small></span>';
+  $("corePinLegend").innerHTML='<span class="core-pin-legend-item"><i style="background:#929aa5"></i><b>Water reflector</b><small>Assembly universe</small></span>';
  }
 }
 function setCoreGeometryMode(mode){
