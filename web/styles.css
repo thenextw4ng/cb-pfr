@@ -107,3 +107,46 @@
 
 /* Help text for the synchronized candidate selector */
 .control-hint{display:block;max-width:310px;margin-top:5px;color:var(--muted);font-size:10px;line-height:1.45;letter-spacing:0}
+
+
+/* Integrated spatial-field laboratory: prevent Plotly's intrinsic SVG width from widening the page. */
+.field-controls .control{min-width:0}
+.field-controls .control select{width:100%;max-width:100%}
+.field-grid{align-items:stretch;grid-template-columns:repeat(2,minmax(0,1fr));min-width:0}
+.field-grid>.panel{min-width:0;max-width:100%}
+.field-panel{display:flex;flex-direction:column;min-width:0}
+.field-panel .panel-head{min-height:80px}
+.field-chart{position:relative;display:block;width:100%;max-width:100%;min-width:0;overflow:hidden;padding:0;height:390px}
+.field-chart.js-plotly-plot{overflow:hidden!important}
+.field-chart .plot-container,.field-chart .svg-container{max-width:100%!important}
+.field-chart .main-svg{max-width:100%}
+.field-chart .modebar{top:4px!important;right:5px!important}
+.field-panel .panel-footnote{margin-top:auto;padding:10px 15px 13px;border-top:1px solid rgba(38,63,82,.62);font-size:10px;line-height:1.5;color:var(--muted);min-height:42px}
+.surface-panel{grid-column:1/-1;min-width:0}
+.surface-chart{height:500px}
+.mesh-summary-note{margin:-2px 0 14px;padding:11px 14px;border:1px solid var(--line);border-radius:7px;background:#091925;color:var(--muted);font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.mesh-notice{overflow-wrap:anywhere}
+.mesh-notice span{min-width:0;overflow-wrap:anywhere}
+#spatial .panel-head h3{font-size:14px;line-height:1.35}
+#spatial .panel-head p{font-size:11px;line-height:1.55}
+#spatial .grid,#spatial .panel,#spatial .panel-head{min-width:0}
+#spatial .js-spatial-plot{touch-action:pan-y}
+@media(max-width:1000px){
+ .field-grid{grid-template-columns:minmax(0,1fr)}
+ .surface-panel{grid-column:auto}
+ .field-chart{height:350px}
+ .surface-chart{height:420px}
+}
+@media(max-width:680px){
+ .field-controls{grid-template-columns:minmax(0,1fr)}
+ .field-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .field-grid{grid-template-columns:minmax(0,1fr)}
+ .field-panel .panel-head{min-height:0}
+ .field-chart{height:320px;padding:0}
+ .surface-chart{height:360px}
+ .field-panel .panel-footnote{min-height:0}
+ .mesh-summary-note{font-size:10px;padding:10px 11px}
+ #spatial .section-head{min-width:0}
+ #spatial .section-actions{display:flex;flex-wrap:wrap;min-width:0}
+ #spatial .notice{min-width:0;max-width:100%}
+}
