@@ -239,10 +239,10 @@ async function main() {
       assert.deepEqual(details.assemblyMapPositions, ["P00","P01","P10","P11"], "map labels must follow row-major geometry positions");
       assert.deepEqual(details.assemblyMapScale, details.assemblyMatrixScale, "selected map and candidate matrix must keep one shared quantitative range");
       assert.match(details.assemblyMapColorbarTitle, /source units not specified/i);
-      assert.deepEqual(details.assemblyMapMaterialEdgeColors, details.signature.trim().split("").map(code => code === "M" ? "#f4bd62" : "#55d4df"), "material edge colours must follow selected layout signature, not fixed spatial slots");
+      assert.deepEqual(details.assemblyMapMaterialEdgeColors, details.coreInfo?.layoutSignature?.split("").map(code => code === "M" ? "#f4bd62" : "#55d4df") || [], "material edge colours must follow selected layout signature, not fixed spatial slots");
       assert.equal(details.assemblyMapSelectedPosition, "P00", "selected position should have a synchronized outline");
       assert.equal(details.assemblyPositionTitle, "P00");
-      assert.equal(details.assemblyPositionMaterial, details.signature.trim()[0] === "M" ? "MOX" : "UO₂");
+      assert.equal(details.assemblyPositionMaterial, details.coreInfo?.layoutSignature?.[0] === "M" ? "MOX" : "UO₂");
       assert.match(details.assemblyPositionValue, /^0\.\d{3,}|^\d/);
       assert.match(details.assemblyScaleRange, /Shared global colour range/);
       assert.equal(details.assemblyProvenanceOpen, false, "verbose provenance should be collapsed by default");
