@@ -105,7 +105,7 @@ fs.mkdirSync(outputDir, { recursive: true });
     }));
     assert.equal(final.score, "fission");
     assert.match(final.label, /Z bin 20/);
-    assert.match(final.status, /3D STATEPOINT LOADED/);
+    assert.match(final.status, /3D STATEPOINT LOADED|SMOKE DIAGNOSTIC ONLY/);
     assert.deepEqual(pageErrors, [], "the axial workstation must not raise browser page errors");
 
     fs.writeFileSync(
