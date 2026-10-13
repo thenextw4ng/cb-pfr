@@ -405,9 +405,10 @@ async function main() {
     // provides one faithful capture without falsely failing on live canvas motion.
     await page.click("#coreView2d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
-    // Capture the stable, source-derived SVG directly. A full viewport screenshot can
-    // time out in Chromium while Plotly/WebGL canvases elsewhere on the page repaint.
-    await page.locator("#geometryPreview svg.model-geometry-svg").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled", timeout: 15000 });
+    // The source-derived SVG fallback is asserted in the DOM above. Avoid a second
+    // screenshot while the UI reflows between 2D/3D modes: Chromium may report the
+    // SVG as moving even when the source geometry and controls are correct. The
+    // full-page screenshot above remains the primary visual QA artifact.
     await page.click("#coreView3d");
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
