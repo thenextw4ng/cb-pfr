@@ -677,10 +677,10 @@ function drawMesh(){
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false
  }],heatLayout);
- const contourLevels=[];
- if(zSpan>0){
-  for(let level=contourStart;level<=contourEnd+contourStep*1e-8&&contourLevels.length<12;level+=contourStep)contourLevels.push(level);
- }else if(finiteZ.length)contourLevels.push(zMin);
+ const surfaceContourCount=Math.min(6,Math.max(0,Math.floor(zSpan/Math.max(contourStep,1e-12))));
+ const contourLevels=zSpan>0
+  ?Array.from({length:surfaceContourCount},(_,index)=>zMin+(index+1)*zSpan/(surfaceContourCount+1))
+  :finiteZ.length?[zMin]:[];
  const baseZ=zMin-Math.max(zSpan*0.08,Math.abs(zMin)*0.001,1e-6);
  const contourLines=buildSurfaceContourLines(z,xs,ys,contourLevels,baseZ);
  const surfaceTraces=[{
