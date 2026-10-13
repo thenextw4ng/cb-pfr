@@ -75,7 +75,7 @@ class ScientificVisualizationTests(unittest.TestCase):
             score_name="flux",
         )
         self.assertIn("<html", html.lower())
-        self.assertIn("flux", html.lower())
+        self.assertIn("offlinelocalview.load", html.lower())
         self.assertIn("</html>", html.lower())
 
     def test_uncertainty_and_distribution_figures_accept_spatial_arrays(self):
