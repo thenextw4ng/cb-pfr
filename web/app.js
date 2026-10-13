@@ -242,6 +242,7 @@ function drawCore3DForCandidate(row){
  try{
   if(!core3dViewer)core3dViewer=window.CBPFRCore3D.createCoreViewer(host,selectCoreAssembly);
   const info=core3dViewer.update(modelGeometryData,row,selectedCorePosition);
+  window.CBPFRCore3DInfo=info;
   const status=$("core3dStatus");
   if(status){status.classList.remove("warning");status.textContent="WEBGL READY · THREE.JS R"+info.libraryVersion+" · "+info.pinCount.toLocaleString()+" PIN INSTANCES";}
   const pitch=info.corePitchCm||[21.42,21.42],dims=info.coreDimensions||[3,3];
@@ -249,6 +250,7 @@ function drawCore3DForCandidate(row){
   if($("coreSourceBadge"))$("coreSourceBadge").textContent="XML SOURCE · IDENTITY MATCHED";
  }catch(error){
   core3dLoadFailed=true;
+  window.CBPFRCore3DInfo=null;
   const status=$("core3dStatus");
   if(status){status.classList.add("warning");status.textContent="WEBGL UNAVAILABLE · 2D SOURCE MAP";}
   if($("core3dCanvas"))$("core3dCanvas").innerHTML='<div class="core3d-loading"><b>3D renderer unavailable</b><small>'+escapeHtml(error.message||error)+'</small><small>The source-derived SVG map is available in 2D source map mode.</small></div>';
