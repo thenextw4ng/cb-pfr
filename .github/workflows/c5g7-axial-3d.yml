@@ -1,0 +1,197 @@
+name: CB-PFR physical axial 3-D transport
+
+on:
+  push:
+    branches:
+      - feat/stage4-physical-axial-tallies
+  pull_request:
+    branches:
+      - feat/**
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: C5G7 fuel-layout candidate to run
+        required: true
+        type: choice
+        default: c5g7-2x2-UMMU
+        options:
+          - c5g7-2x2-UMMU
+          - c5g7-2x2-MMUU
+          - c5g7-2x2-MUMU
+          - c5g7-2x2-MUUM
+          - c5g7-2x2-UMUM
+          - c5g7-2x2-UUMM
+      profile:
+        description: Smoke is a pipeline check; production uses the archived high-budget scale
+        required: true
+        type: choice
+        default: smoke
+        options:
+          - smoke
+          - production
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  axial-3d-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out CB-PFR
+        uses: actions/checkout@v4
+
+      - name: Set up OpenMC and Python dependencies
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-axial
+          create-args: >-
+            python=3.12
+            openmc=0.16
+            h5py
+            numpy
+
+      - name: Download and verify archived six-layout C5G7 input artifact
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/11719691969/zip" \
+            --output "$RUNNER_TEMP/c5g7-study-640000.zip"
+          echo "7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b  $RUNNER_TEMP/c5g7-study-640000.zip" | sha256sum --check
+
+      - name: Unit-test axial preparation and uncertainty export
+        shell: bash -l {0}
+        run: python tests/test_c5g7_axial_3d.py
+
+      - name: Select reproducible input and transport budget
+        id: profile
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            candidate="${{ inputs.candidate }}"
+            profile="${{ inputs.profile }}"
+          else
+            candidate="c5g7-2x2-UMMU"
+            profile="smoke"
+          fi
+          case "$profile" in
+            smoke)
+              batches=30
+              inactive=5
+              particles=500
+              ;;
+            production)
+              batches=7000
+              inactive=500
+              particles=10000
+              ;;
+            *)
+              echo "Unknown profile: $profile" >&2
+              exit 2
+              ;;
+          esac
+          case "$candidate" in
+            c5g7-2x2-UMMU) seed=640000 ;;
+            c5g7-2x2-MMUU) seed=640001 ;;
+            c5g7-2x2-MUMU) seed=640002 ;;
+            c5g7-2x2-MUUM) seed=640003 ;;
+            c5g7-2x2-UMUM) seed=640004 ;;
+            c5g7-2x2-UUMM) seed=640005 ;;
+            *) echo "Unknown candidate: $candidate" >&2; exit 2 ;;
+          esac
+          echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
+          echo "profile=$profile" >> "$GITHUB_OUTPUT"
+          echo "batches=$batches" >> "$GITHUB_OUTPUT"
+          echo "inactive=$inactive" >> "$GITHUB_OUTPUT"
+          echo "particles=$particles" >> "$GITHUB_OUTPUT"
+          echo "seed=$seed" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare the candidate's real 3-D geometry and 3-D mesh tally
+        id: prepare
+        shell: bash -l {0}
+        env:
+          CANDIDATE: ${{ steps.profile.outputs.candidate }}
+        run: |
+          set -euo pipefail
+          python scripts/prepare_c5g7_axial_3d.py \
+            --archive "$RUNNER_TEMP/c5g7-study-640000.zip" \
+            --output-dir "$RUNNER_TEMP/c5g7-axial-work" \
+            --candidate "$CANDIDATE"
+          builder="$(find "$RUNNER_TEMP/c5g7-axial-work" -path "*/$CANDIDATE/model/3d/build-xml-3d.py" -print -quit)"
+          test -n "$builder"
+          candidate_root="$(dirname "$(dirname "$(dirname "$builder")")")"
+          echo "candidate_root=$candidate_root" >> "$GITHUB_OUTPUT"
+
+      - name: Generate OpenMC XML and audit the actual geometry and tally inputs
+        shell: bash -l {0}
+        env:
+          CANDIDATE_ROOT: ${{ steps.prepare.outputs.candidate_root }}
+          CBPFR_3D_BATCHES: ${{ steps.profile.outputs.batches }}
+          CBPFR_3D_INACTIVE: ${{ steps.profile.outputs.inactive }}
+          CBPFR_3D_PARTICLES: ${{ steps.profile.outputs.particles }}
+          CBPFR_3D_SEED: ${{ steps.profile.outputs.seed }}
+        run: |
+          set -euo pipefail
+          cd "$CANDIDATE_ROOT/model/3d"
+          python build-xml-3d.py
+          cd "$GITHUB_WORKSPACE"
+          python scripts/audit_c5g7_axial_3d.py \
+            --candidate-root "$CANDIDATE_ROOT" \
+            --summary-out "$CANDIDATE_ROOT/AXIAL_3D_INPUT_AUDIT.json"
+
+      - name: Run the genuine 3-D OpenMC eigenvalue calculation
+        shell: bash -l {0}
+        env:
+          CANDIDATE_ROOT: ${{ steps.prepare.outputs.candidate_root }}
+        run: |
+          set -euo pipefail
+          cd "$CANDIDATE_ROOT/model/3d"
+          openmc -s 2 2>&1 | tee openmc.log
+          statepoint="statepoint.${{ steps.profile.outputs.batches }}.h5"
+          test -s "$statepoint"
+          python "$GITHUB_WORKSPACE/scripts/audit_c5g7_axial_3d.py" \
+            --statepoint "$PWD/$statepoint" \
+            --output-dir "$PWD/axial-3d-export" \
+            > axial-statepoint-export.log
+          cd "$GITHUB_WORKSPACE"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["CANDIDATE_ROOT"])
+          input_audit = json.loads((root / "AXIAL_3D_INPUT_AUDIT.json").read_text())
+          statepoint_summary = json.loads((root / "model/3d/axial-3d-export/AXIAL_3D_STATEPOINT_SUMMARY.json").read_text())
+          if input_audit["mesh_tally"]["dimension_xyz"] != [51, 51, 30]:
+              raise SystemExit("The audited XML is not 51 x 51 x 30.")
+          if statepoint_summary["mesh"]["dimension_xyz"] != [51, 51, 30]:
+              raise SystemExit("The statepoint does not contain the expected true 3-D mesh.")
+          print("3-D statepoint exported. This is a transport smoke/production run, not a convergence or benchmark acceptance statement.")
+          PY
+
+      - name: Upload reproducible axial input, statepoint, and volumetric tally
+        if: always() && steps.prepare.outputs.candidate_root != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-axial-3d-${{ steps.profile.outputs.candidate }}-${{ steps.profile.outputs.profile }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            ${{ steps.prepare.outputs.candidate_root }}/AXIAL_3D_INPUT_MANIFEST.json
+            ${{ steps.prepare.outputs.candidate_root }}/AXIAL_3D_INPUT_AUDIT.json
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/geometry.xml
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/materials.xml
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/settings.xml
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/tallies.xml
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/plots.xml
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/mgxs.h5
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/summary.h5
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/statepoint.*.h5
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/openmc.log
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/axial-3d-export/**
+            ${{ steps.prepare.outputs.candidate_root }}/model/3d/axial-statepoint-export.log
