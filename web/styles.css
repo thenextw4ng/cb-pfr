@@ -103,3 +103,7 @@
  .candidate-stat strong{font-size:14px}
  .model-geometry-grid .geometry-preview{min-height:340px}
 }
+
+
+/* Help text for the synchronized candidate selector */
+.control-hint{display:block;max-width:310px;margin-top:5px;color:var(--muted);font-size:10px;line-height:1.45;letter-spacing:0}
