@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - feat/scientific-visualization-reliability
+      - refine/**
+      - fix/**
   pull_request:
     branches:
       - feat/cern-workstation-integration
+      - fix/**
   workflow_dispatch:
 
 permissions:
@@ -192,6 +195,14 @@ jobs:
                   dims = tally.get("dimensions", [])
                   assert len(dims) == 3 and dims[2] == 1, tally
                   assert tally.get("scores"), tally
+                  spatial_geometry = tally.get("spatial_geometry", {})
+                  assert spatial_geometry.get("coordinates_available") is True, tally
+                  assert spatial_geometry.get("coordinate_units") == "cm", spatial_geometry
+                  lower = spatial_geometry.get("lower_left_cm", [])
+                  upper = spatial_geometry.get("upper_right_cm", [])
+                  width = spatial_geometry.get("cell_width_cm", [])
+                  assert len(lower) == len(upper) == len(width) == 2, spatial_geometry
+                  assert all(upper[axis] > lower[axis] and width[axis] > 0 for axis in range(2)), spatial_geometry
                   for score, fields in tally["scores"].items():
                       for field_name in ("mean", "std_dev"):
                           grid = fields.get(field_name)
