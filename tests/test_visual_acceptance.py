@@ -98,6 +98,8 @@ class ScientificVisualAcceptance(unittest.TestCase):
         self.assertIn('marker:{symbol:"square-open",size:selectedOutlineSize,color:"#ffffff"', self.js)
         self.assertIn('const materialEdgeColor = {M:"#f4bd62",U:"#55d4df"}', self.js)
         self.assertIn('collapsed by default', self.html)
+        self.assertIn('return signature+(isSelected?"  ◂":"");', self.js)
+        self.assertNotIn('name:"Selected candidate"', self.js)
         self.assertNotIn('type:"contour"', self.js[self.js.index("/* Assembly-integrated fission-rate proxy:"):])
 
     def test_spatial_plots_reference_one_recorded_mesh_field_and_coordinate_vectors(self):
