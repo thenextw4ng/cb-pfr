@@ -27,8 +27,9 @@ class OpenMCMeshTallyReaderTests(unittest.TestCase):
     def setUpClass(cls):
         archive_arg = os.environ.get("CBPFR_MESH_TALLY_TEST_ARCHIVE")
         if not archive_arg:
-            raise RuntimeError(
-                "Set CBPFR_MESH_TALLY_TEST_ARCHIVE to the audited c5g7-study-640000.zip artifact."
+            raise unittest.SkipTest(
+                "Set CBPFR_MESH_TALLY_TEST_ARCHIVE to the audited c5g7-study-640000.zip artifact "
+                "to run archive-backed mesh reader tests."
             )
         cls.archive_path = Path(archive_arg).expanduser().resolve()
         if not cls.archive_path.is_file():
