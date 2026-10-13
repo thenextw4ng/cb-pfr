@@ -185,7 +185,7 @@ async function main() {
       assert.equal(details.matrixColumns, 4, "matrix should include all four assembly positions");
       assert.deepEqual(details.matrixPositions, ["P00","P01","P10","P11"]);
       assert.equal(details.matrixTraceCount, 2, "matrix should have one colour-bearing heatmap and one selected-row outline");
-      assert.equal(details.matrixSelectedLayout, option.label.match(/[UM]{4}$/)?.[0] || details.matrixSelectedLayout, "outlined matrix row should follow the selected candidate");
+      assert.equal(details.matrixSelectedLayout, details.coreInfo?.layoutSignature, "outlined matrix row should follow the selected candidate");
       assert.match(details.keffAndSdText, /Reported SD ±/);
     }
 
