@@ -4,6 +4,8 @@ let records = [];
 let metadata = {};
 let meshData = null;
 let meshDrawRevision = 0;
+let axial3dData = null;
+let axial3dDrawRevision = 0;
 let assemblyRecords = [];
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => {
@@ -470,12 +472,14 @@ async function init(){
   await initAssembly();
   await initGeometry();
   await initMesh();
+  await initAxial3D();
  }catch(error){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
   clearCandidateSelection("Candidate evidence unavailable: "+error.message);
   $("sourcePath").textContent="API unavailable";
   await initGeometry();
   await initMesh();
+  await initAxial3D();
  }
 }
 document.addEventListener("DOMContentLoaded",init);
@@ -850,6 +854,155 @@ async function initMesh(){
   $("meshProvenance").textContent="The archived spatial tally could not be loaded: "+error.message;
   ["meshHeatmap","meshContour","meshProfile","meshSurface"].forEach(id=>$(id).innerHTML='<div class="empty-state"><b>Spatial data unavailable</b><p>'+escapeHtml(error.message||error)+'</p><p>No scientific values have been fabricated.</p></div>');
  }
+}
+
+
+/* Stage 4: render only a recorded multi-layer OpenMC statepoint mesh. */
+async function initAxial3D(){
+ const panel=$("axial3dPanel");
+ if(!panel)return;
+ const updateButton=$("reloadAxial3d");
+ if(updateButton&&!updateButton.dataset.bound){
+  updateButton.dataset.bound="true";
+  updateButton.addEventListener("click",async()=>{
+   updateButton.disabled=true;updateButton.textContent="↻ Loading…";
+   await loadAxial3D();
+   updateButton.disabled=false;updateButton.textContent="↻ Reload 3D tally";
+  });
+ }
+ const score=$("axial3dScore"),view=$("axial3dView"),slice=$("axial3dSlice"),opacity=$("axial3dOpacity"),paletteSelect=$("axial3dPalette");
+ if(score&&!score.dataset.bound){score.dataset.bound="true";score.addEventListener("change",loadAxial3D);}
+ [view,slice,opacity,paletteSelect].forEach(control=>{
+  if(control&&!control.dataset.bound){
+   control.dataset.bound="true";
+   control.addEventListener("input",drawAxial3D);
+   control.addEventListener("change",drawAxial3D);
+  }
+ });
+ await loadAxial3D();
+}
+async function loadAxial3D(){
+ try{
+  const score=$("axial3dScore")?.value||"flux";
+  const response=await fetch("/api/axial-3d?score="+encodeURIComponent(score),{headers:{Accept:"application/json"}});
+  let payload;
+  try{payload=await response.json();}catch(_){payload={error:"API returned a non-JSON response"};}
+  if(!response.ok)throw new Error(payload.error||("HTTP "+response.status));
+  const dims=payload.mesh?.dimension_xyz||[];
+  if(!payload.available||dims.length!==3||dims[2]<=1||!Array.isArray(payload.mean)||!Array.isArray(payload.standard_error)||!Array.isArray(payload.relative_error_percent)){
+   throw new Error("The source does not contain a verified multi-layer 3D tally.");
+  }
+  if(payload.mean.length!==dims[2]||payload.mean.some(layer=>layer.length!==dims[1]||layer.some(row=>row.length!==dims[0]))){
+   throw new Error("3D tally arrays do not match the declared mesh dimensions.");
+  }
+  axial3dData=payload;
+  $("axial3dStatus").textContent="3D STATEPOINT LOADED";
+  $("axial3dStatus").classList.remove("warning");
+  const state=payload.provenance?.statepoint||{};
+  const sha=payload.provenance?.sha256||"not recorded";
+  $("axial3dProvenance").textContent=payload.provenance?.source+" · mesh "+dims.join(" × ")+" · statepoint SHA-256 "+(state.sha256||"not recorded")+" · NPZ SHA-256 "+sha+". The plotted field comes from recorded 3D tally bins, not the 2D surface.";
+  const zs=payload.mesh.z_centers_cm||[];
+  const slider=$("axial3dSlice");
+  slider.max=String(zs.length-1);
+  slider.value=String(Math.min(Number(slider.value)||0,zs.length-1));
+  const zSpan=zs.length?Math.abs(zs[zs.length-1]-zs[0]):0;
+  const meanActive=state.n_realizations??"not recorded";
+  $("axial3dKpis").innerHTML=[
+   ["Mesh dimensions",dims.join(" × "),"51 × 51 × "+dims[2]+" source tally bins"],
+   ["Axial span",zSpan.toFixed(2)+" cm","From recorded Z cell centres"],
+   ["Axial bins",String(dims[2]),"Recorded independent mesh layers"],
+   ["Active realisations",String(meanActive),"OpenMC statepoint metadata"]
+  ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
+  $("axial3dSummary").textContent="Selected score: "+score+". Axial layers: "+dims[2]+". The volume is an OpenMC mesh-tally estimate; each voxel retains Monte Carlo uncertainty. Relative standard errors in zero-mean bins are undefined and shown as missing. Input/model hashes and the full statepoint summary are retained in the artifact.";
+  drawAxial3D();
+ }catch(error){
+  axial3dData=null;
+  $("axial3dStatus").textContent="3D DATA UNAVAILABLE";
+  $("axial3dStatus").classList.add("warning");
+  $("axial3dProvenance").textContent=error.message||String(error);
+  $("axial3dKpis").innerHTML=[
+   ["Mesh dimensions","—","Awaiting 3D statepoint"],
+   ["Axial span","—","No verified physical Z data"],
+   ["Axial bins","—","No multi-layer tally installed"],
+   ["Active realisations","—","Statepoint unavailable"]
+  ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
+  $("axial3dSummary").textContent="No volumetric data are fabricated. Install axial_tally_3d.npz and its AXIAL_3D_STATEPOINT_SUMMARY.json sidecar from the CB-PFR axial-3D Actions artifact under evidence/cbpfr_axial_3d/, or set CBPFR_AXIAL_TALLY_NPZ to the NPZ path and restart the local server.";
+  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Recorded 3D tally not installed</b><p>The physical axial volume will appear here when a true multi-layer OpenMC statepoint export is available. The 2D terrain above is intentionally not used as a fallback.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a></p></div>';
+ }
+}
+function drawAxial3D(){
+ if(!axial3dData||!window.Plotly)return;
+ const revision=++axial3dDrawRevision;
+ const payload=axial3dData,mean=payload.mean,se=payload.standard_error,rel=payload.relative_error_percent;
+ const xs=payload.mesh.x_centers_cm,ys=payload.mesh.y_centers_cm,zs=payload.mesh.z_centers_cm;
+ const nz=zs.length,ny=ys.length,nx=xs.length;
+ const zIndex=Math.min(nz-1,Math.max(0,Number($("axial3dSlice")?.value||0)));
+ const view=$("axial3dView")?.value||"mean";
+ const score=payload.score;
+ const colorscale=$("axial3dPalette")?.value||"Viridis";
+ const opacity=Math.max(0.04,Math.min(0.4,Number($("axial3dOpacity")?.value||0.14)));
+ const flatDisplay=[],flatMean=[],flatSE=[],flatRelative=[],flatX=[],flatY=[],flatZ=[],positiveDisplay=[];
+ const rawDisplay=(m,r)=>{
+  if(view==="relative_error")return m>0&&Number.isFinite(r)?r:null;
+  return m>0&&Number.isFinite(m)?Math.log10(m):null;
+ };
+ for(let k=0;k<nz;k++)for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+  const m=mean[k][j][i],s=se[k][j][i],r=rel[k][j][i],v=rawDisplay(m,r);
+  flatX.push(xs[i]);flatY.push(ys[j]);flatZ.push(zs[k]);
+  flatMean.push(m);flatSE.push(s);flatRelative.push(r);
+  flatDisplay.push(v);
+  if(v!==null&&Number.isFinite(v))positiveDisplay.push(v);
+ }
+ if(!positiveDisplay.length){
+  $("axial3dPlot").innerHTML='<div class="empty-state"><b>No finite voxels for this view</b><p>The selected tally score has no positive means or finite relative errors.</p></div>';
+  return;
+ }
+ const sorted=positiveDisplay.slice().sort((a,b)=>a-b);
+ const quantile=q=>sorted[Math.min(sorted.length-1,Math.max(0,Math.floor((sorted.length-1)*q)))];
+ let isomin=quantile(0.12),isomax=quantile(0.92);
+ if(!(isomax>isomin))isomax=isomin+Math.max(Math.abs(isomin)*0.02,1e-6);
+ const floor=isomin-Math.max(1,Math.abs(isomin)*0.05);
+ const values=flatDisplay.map(v=>v===null||!Number.isFinite(v)?floor:v);
+ const volumeTrace={
+  type:"volume",name:"Recorded 3D tally volume",
+  x:flatX,y:flatY,z:flatZ,value:values,
+  isomin,isomax,surface_count:10,opacity,
+  colorscale,showscale:true,
+  colorbar:{title:{text:view==="relative_error"?"Relative MC SE (%)":"log₁₀ tally mean",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},
+  caps:{x:{show:false},y:{show:false},z:{show:false}},
+  customdata:flatMean.map((m,i)=>[m,flatSE[i],flatRelative[i]]),
+  hovertemplate:"X %{x:.2f} cm<br>Y %{y:.2f} cm<br>Z %{z:.2f} cm<br>Recorded "+escapeHtml(score)+" mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative MC SE %{customdata[2]:.4g}%<extra>3D tally voxel</extra>"
+ };
+ const sliceMean=mean[zIndex],sliceSE=se[zIndex],sliceRel=rel[zIndex];
+ const sliceDisplay=sliceMean.map((row,j)=>row.map((m,i)=>{
+  const v=rawDisplay(m,sliceRel[j][i]);
+  return v===null||!Number.isFinite(v)?null:v;
+ }));
+ const sliceCustom=sliceMean.map((row,j)=>row.map((m,i)=>[m,sliceSE[j][i],sliceRel[j][i]]));
+ const planeZ=zs[zIndex];
+ const sliceTrace={
+  type:"surface",name:"Selected axial slice · Z="+planeZ.toFixed(2)+" cm",
+  x:xs,y:ys,z:Array.from({length:ny},()=>Array(nx).fill(planeZ)),
+  surfacecolor:sliceDisplay,colorscale,cmin:isomin,cmax:isomax,
+  showscale:false,opacity:0.94,connectgaps:false,
+  customdata:sliceCustom,
+  hovertemplate:"X %{x:.2f} cm<br>Y %{y:.2f} cm<br>Z "+planeZ.toFixed(2)+" cm<br>Recorded "+escapeHtml(score)+" mean %{customdata[0]:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<br>Relative MC SE %{customdata[2]:.4g}%<extra>Selected Z bin</extra>"
+ };
+ const traceLayout={
+  autosize:true,margin:{l:0,r:8,t:8,b:8},showlegend:false,
+  scene:{
+   xaxis:{title:{text:"X position (cm)"},color:palette.muted,gridcolor:palette.line,backgroundcolor:"#091724",showbackground:true,range:[xs[0]-(xs[1]-xs[0])/2,xs[nx-1]+(xs[1]-xs[0])/2]},
+   yaxis:{title:{text:"Y position (cm)"},color:palette.muted,gridcolor:palette.line,backgroundcolor:"#091724",showbackground:true,range:[ys[0]-(ys[1]-ys[0])/2,ys[ny-1]+(ys[1]-ys[0])/2]},
+   zaxis:{title:{text:"Physical Z (cm)"},color:palette.muted,gridcolor:palette.line,backgroundcolor:"#091724",showbackground:true,range:[zs[0]-(zs[1]-zs[0])/2,zs[nz-1]+(zs[1]-zs[0])/2]},
+   aspectmode:"manual",aspectratio:{x:1,y:1,z:Math.max(0.5,(zs[nz-1]-zs[0])/(xs[nx-1]-xs[0]))},
+   camera:{eye:{x:1.6,y:1.7,z:1.45},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}}
+  },
+  uirevision:"cbpfr-physical-axial-volume-v1"
+ };
+ if(revision!==axial3dDrawRevision)return;
+ chart("axial3dPlot",[volumeTrace,sliceTrace],traceLayout);
+ $("axial3dSliceLabel").textContent="Z bin "+zIndex+" · "+planeZ.toFixed(2)+" cm";
+ $("axial3dSummary").textContent="Score: "+score+" · view: "+(view==="relative_error"?"relative Monte Carlo standard error (%)":"log₁₀ of recorded mean for volume colour")+" · selected plane Z = "+planeZ.toFixed(2)+" cm · volume iso-range "+isomin.toPrecision(4)+" to "+isomax.toPrecision(4)+" · opacity "+opacity.toFixed(2)+". Voxel means and errors remain the recorded values; only the displayed colour variable is transformed.";
 }
 
 /* Displays existing external geometry artifacts only; never synthesizes a reactor layout. */
