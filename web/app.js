@@ -16,7 +16,7 @@ const assemblyPositionDefs = [
  {key:"p11_fission_rate",label:"P11",row:1,col:1,index:3}
 ];
 const materialEdgeColor = {M:"#f4bd62",U:"#55d4df"};
-const formatSourceProxy = (value, precision=8) => Number.isFinite(Number(value)) ? Number(value).toPrecision(precision) : "—";
+const formatSourceProxy = (value, precision=8) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value).toPrecision(precision) : "—";
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => {
  if(!row || typeof row!=="object")return false;
@@ -1102,7 +1102,7 @@ async function initAssembly(){
   const response=await fetch("/api/assembly",{headers:{Accept:"application/json"}});
   if(!response.ok){let detail="HTTP "+response.status;try{detail=(await response.json()).error||detail}catch(_){}throw new Error(detail)}
   const payload=await response.json();
-  assemblyRecords=(payload.records||[]).filter(r=>assemblyPositionDefs.every(position=>has(r,position.key)));
+  assemblyRecords=(payload.records||[]).filter(r=>assemblyPositionDefs.some(position=>has(r,position.key)));
   if(!assemblyRecords.length)throw new Error("No complete 2×2 assembly proxy records.");
   $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
   $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of the candidate-summary seeds; do not compare as paired runs.";
@@ -1131,8 +1131,8 @@ function drawAssemblyField(){
    String(item.candidate_id)===String(candidate.candidate_id)&&
    String(item.layout_signature).toUpperCase()===String(candidate.layout_signature).toUpperCase()
   );
-  if(!proxy||!assemblyPositionDefs.every(position=>has(proxy,position.key)))return null;
-  return {candidate,proxy,values:assemblyPositionDefs.map(position=>Number(proxy[position.key]))};
+  if(!proxy||!assemblyPositionDefs.some(position=>has(proxy,position.key)))return null;
+  return {candidate,proxy,values:assemblyPositionDefs.map(position=>has(proxy,position.key)?Number(proxy[position.key]):null)};
  }).filter(Boolean);
 
  // A common min/max is used by both views. Changing candidates must not rescale
@@ -1147,7 +1147,7 @@ function drawAssemblyField(){
  const scaleMin=observedMin,scaleMax=observedMax>observedMin?observedMax:observedMin+Math.max(Math.abs(observedMin)*0.01,1e-9);
  const mid=(scaleMin+scaleMax)/2;
  const colorbar={
-  title:{text:"Fission-rate proxy<br>(source units not specified)",font:{size:10,color:palette.text}},
+  title:{text:"Fission-rate proxy<br>(CSV unit not documented)",font:{size:10,color:palette.text}},
   thickness:13,outlinewidth:0,tickfont:{size:9,color:palette.muted},
   tickmode:"array",tickvals:[scaleMin,mid,scaleMax],
   ticktext:[formatSourceProxy(scaleMin,4),formatSourceProxy(mid,4),formatSourceProxy(scaleMax,4)],
@@ -1165,7 +1165,7 @@ function drawAssemblyField(){
   const signature=normalizeLayoutSignature(row.layout_signature);
   const positionFor=(position)=>({
    ...position,
-   value:Number(row[position.key]),
+   value:has(row,position.key)?Number(row[position.key]):null,
    material:signature[position.index]==="M"?"MOX":"UO₂",
    materialCode:signature[position.index]
   });
@@ -1181,7 +1181,7 @@ function drawAssemblyField(){
    '</button>'
   ).join("");
   const scaleRange=$("assemblyScaleRange");
-  if(scaleRange)scaleRange.textContent="Shared global colour range: "+formatSourceProxy(scaleMin,4)+" to "+formatSourceProxy(observedMax,4)+" · source units not specified · not absolute power.";
+  if(scaleRange)scaleRange.textContent="Shared global colour range: "+formatSourceProxy(scaleMin,4)+" to "+formatSourceProxy(scaleMax,4)+" · CSV unit not documented · not absolute power.";
   const positionPicker=$("assemblyPositionPicker");
   if(positionPicker&&typeof positionPicker.querySelectorAll==="function")positionPicker.querySelectorAll("[data-assembly-position]").forEach(button=>button.addEventListener("click",()=>{
    selectedAssemblyPosition=button.dataset.assemblyPosition;
@@ -1196,9 +1196,9 @@ function drawAssemblyField(){
    [cells[0],cells[1]],
    [cells[2],cells[3]]
   ].map(line=>line.map(position=>[
-   position.label,position.material,row.candidate_id,signature,row.seed,row.status
+   position.label,position.material,row.candidate_id,signature,row.seed,row.status,position.row,position.col
   ]));
-  const textValues=cells.map(position=>position.label+" · "+(position.materialCode==="M"?"M":"U")+"\n"+formatSourceProxy(position.value));
+  const textValues=cells.map(position=>position.label+" · "+position.material+"\n"+formatSourceProxy(position.value));
   const heatmap={
    type:"heatmap",name:"Assembly-integrated fission-rate proxy",
    x:["Column 0","Column 1"],y:["Row 0","Row 1"],
@@ -1207,7 +1207,7 @@ function drawAssemblyField(){
    customdata,colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,
    colorbar,
    xgap:4,ygap:4,hoverongaps:false,connectgaps:false,
-   hovertemplate:"Position %{customdata[0]} · %{customdata[1]}<br>Candidate %{customdata[2]}<br>Layout %{customdata[3]}<br>Recorded fission-rate proxy %{z:.8g}<br>Source unit: not specified · not absolute power<br>Proxy-run seed %{customdata[4]}<extra></extra>"
+   hovertemplate:"Position %{customdata[0]} · %{customdata[1]}<br>Geometry index: row %{customdata[6]}, column %{customdata[7]}<br>Candidate %{customdata[2]}<br>Layout %{customdata[3]}<br>Recorded fission-rate proxy %{z:.8g}<br>CSV unit not documented · not absolute power<br>Proxy-run seed %{customdata[4]}<extra></extra>"
   };
   const materialOutline={
    type:"scatter",mode:"markers",name:"Material category outline",
@@ -1236,7 +1236,7 @@ function drawAssemblyField(){
    showlegend:false,hovermode:"closest",
    xaxis:{...baseLayout.xaxis,title:{text:"Core-map column",standoff:9},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
    yaxis:{...baseLayout.yaxis,title:{text:"Core-map row · row 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
-   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"Row 0: P00, P01 · Row 1: P10, P11",font:{size:9,color:palette.muted}}]
+   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"ROW 0 (TOP): P00 = R0/C0 · P01 = R0/C1    |    ROW 1: P10 = R1/C0 · P11 = R1/C1",font:{size:9,color:palette.muted}}]
   }).then(()=>{
    if(!mapEl||typeof mapEl.on!=="function"||mapEl.dataset.positionClickBound)return;
    mapEl.on("plotly_click",event=>{
@@ -1268,7 +1268,7 @@ function drawAssemblyField(){
    item.candidate.candidate_id,item.candidate.layout_signature,
    assemblyPositionDefs[index].label,item.proxy.seed,item.proxy.status
   ])),
-  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>Source unit: not specified · not absolute power<br>Proxy-run seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
+  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>CSV unit not documented · not absolute power<br>Proxy-run seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
  };
  const selectedRow=matrixRows.find(item=>String(item.candidate.candidate_id)===selectedId&&String(item.candidate.layout_signature).toUpperCase()===String(selected?.layout_signature||"").toUpperCase());
  const traces=[matrixTrace];
