@@ -560,6 +560,48 @@ function currentField(){
   stats:fieldStats(mean),displayStats:fieldStats(values)
  };
 }
+function buildSurfaceContourLines(z,xs,ys,levels,baseZ){
+ const surface={x:[],y:[],z:[]},base={x:[],y:[],z:[]};
+ const rows=z.length,cols=z[0]?.length||0;
+ const append=(a,b)=>{
+  surface.x.push(a.x,b.x,null);surface.y.push(a.y,b.y,null);surface.z.push(a.z,b.z,null);
+  base.x.push(a.x,b.x,null);base.y.push(a.y,b.y,null);base.z.push(baseZ,baseZ,null);
+ };
+ const interpolate=(a,b,level)=>{
+  const delta=b.v-a.v;
+  const t=delta===0?0.5:Math.max(0,Math.min(1,(level-a.v)/delta));
+  return {x:a.x+t*(b.x-a.x),y:a.y+t*(b.y-a.y),z:level};
+ };
+ for(const level of levels){
+  if(!Number.isFinite(level))continue;
+  for(let row=0;row<rows-1;row++){
+   for(let col=0;col<cols-1;col++){
+    const corners=[
+     {x:xs[col],y:ys[row],v:z[row][col]},
+     {x:xs[col+1],y:ys[row],v:z[row][col+1]},
+     {x:xs[col+1],y:ys[row+1],v:z[row+1][col+1]},
+     {x:xs[col],y:ys[row+1],v:z[row+1][col]}
+    ];
+    if(corners.some(p=>typeof p.v!=="number"||!Number.isFinite(p.v)))continue;
+    const edges=[[0,1],[1,2],[2,3],[3,0]],points=[];
+    for(const [ai,bi] of edges){
+     const a=corners[ai],b=corners[bi];
+     if((a.v<level&&b.v>=level)||(a.v>=level&&b.v<level)){
+      const point=interpolate(a,b,level);
+      if(!points.some(p=>Math.abs(p.x-point.x)<1e-10&&Math.abs(p.y-point.y)<1e-10))points.push(point);
+     }
+    }
+    if(points.length===2)append(points[0],points[1]);
+    else if(points.length===4){
+     const center=(corners[0].v+corners[1].v+corners[2].v+corners[3].v)/4;
+     if(center>=level){append(points[0],points[1]);append(points[2],points[3]);}
+     else {append(points[0],points[3]);append(points[1],points[2]);}
+    }
+   }
+  }
+ }
+ return {surface,base,segments:surface.z.filter(value=>value!==null).length/2};
+}
 const meshDefaultCamera={eye:{x:1.55,y:1.55,z:1.1},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
 function drawMesh(){
  if(!meshData)return;
@@ -635,18 +677,40 @@ function drawMesh(){
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
   hovertemplate:hover(""),connectgaps:false,hoverongaps:false
  }],heatLayout);
- chart("meshSurface",[{
+ const contourLevels=[];
+ if(zSpan>0){
+  for(let level=contourStart;level<=contourEnd+contourStep*1e-8&&contourLevels.length<12;level+=contourStep)contourLevels.push(level);
+ }else if(finiteZ.length)contourLevels.push(zMin);
+ const baseZ=zMin-Math.max(zSpan*0.08,Math.abs(zMin)*0.001,1e-6);
+ const contourLines=buildSurfaceContourLines(z,xs,ys,contourLevels,baseZ);
+ const surfaceTraces=[{
   type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:sourceCustomData,colorscale,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  contours:{
-   x:{show:false},y:{show:false},
-   z:{show:true,usecolormap:false,start:contourStart,end:contourEnd,size:contourStep,highlightcolor:"#e8f1f7",width:1.15,project:{z:true}}
-  },
   hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+sourceHover+displayHover+"<extra></extra>",
   connectgaps:false,hoverongaps:false,showscale:true,
   lighting:{ambient:0.42,diffuse:0.92,specular:0.26,roughness:0.46,fresnel:0.12},
   lightposition:{x:1200,y:1000,z:1800},opacity:1
  }],{
+  autosize:true,margin:{l:8,r:8,t:8,b:8},
+  scene:{
+   uirevision:"cbpfr-neutron-field-camera-v1",
+   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.xRange:undefined},
+   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index (0-based)",font:{size:11}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line,range:coordinates.physical?coordinates.yRange:undefined},
+   zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:"#365064",color:palette.muted,backgroundcolor:"#091724",showbackground:true,showspikes:false,zerolinecolor:palette.line},
+   bgcolor:"rgba(0,0,0,0)",aspectmode:"manual",aspectratio:{x:aspectX,y:aspectY,z:Math.min(0.95,0.30*exaggeration)},camera:JSON.parse(JSON.stringify(meshDefaultCamera))
+  }
+ }];
+ if(contourLines.segments>0){
+  surfaceTraces.push({
+   type:"scatter3d",mode:"lines",name:"Surface isolines",x:contourLines.surface.x,y:contourLines.surface.y,z:contourLines.surface.z,
+   line:{color:"rgba(232,241,247,0.88)",width:2},hoverinfo:"skip",showlegend:false,connectgaps:false
+  });
+  surfaceTraces.push({
+   type:"scatter3d",mode:"lines",name:"Projected base-plane isolines",x:contourLines.base.x,y:contourLines.base.y,z:contourLines.base.z,
+   line:{color:"rgba(85,212,223,0.56)",width:2},hoverinfo:"skip",showlegend:false,connectgaps:false
+  });
+ }
+ chart("meshSurface",surfaceTraces,{
   autosize:true,margin:{l:8,r:8,t:8,b:8},
   scene:{
    uirevision:"cbpfr-neutron-field-camera-v1",
