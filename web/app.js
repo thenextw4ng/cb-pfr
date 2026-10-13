@@ -280,60 +280,170 @@ function setupNavigation(){
 /* Spatial visualization is loaded from the archived OpenMC HDF5 statepoint via the local Python API. */
 const fieldPalette = {Viridis:"Viridis",Cividis:"Cividis",Plasma:"Plasma",Magma:"Magma",Turbo:"Turbo"};
 function fieldStats(values){
- const finite=values.flat().filter(v=>Number.isFinite(v));
+ const finite=values.flat().filter(v=>typeof v==="number"&&Number.isFinite(v));
  const positive=finite.filter(v=>v>0);
- return {finite:finite.length,positive:positive.length,min:finite.length?Math.min(...finite):null,max:finite.length?Math.max(...finite):null,mean:finite.length?finite.reduce((a,b)=>a+b,0)/finite.length:null};
+ return {
+  finite:finite.length,positive:positive.length,
+  min:finite.length?Math.min(...finite):null,
+  max:finite.length?Math.max(...finite):null,
+  mean:finite.length?finite.reduce((a,b)=>a+b,0)/finite.length:null
+ };
 }
 function currentField(){
- if(!meshData)return null;
+ if(!meshData||!Array.isArray(meshData.mesh_tallies)||!meshData.mesh_tallies.length)return null;
  const score=$("meshScore").value, view=$("meshView").value, scale=$("meshScale").value;
- const item=meshData.mesh_tallies[0], record=item.scores[score];
+ const item=meshData.mesh_tallies[0], record=item.scores?.[score];
  if(!record)return null;
- const mean=record.mean, sd=record.std_dev;
- const relative=mean.map((row,y)=>row.map((v,x)=>Number.isFinite(v)&&v>0&&Number.isFinite(sd[y][x])&&sd[y][x]>=0?100*sd[y][x]/v:null));
- let values=(view==="relative_sd"?relative:mean).map(row=>row.map(v=>v===null?null:Number(v)));
- let colorTitle=view==="relative_sd"?"Relative Monte Carlo SD (%)":"Tally mean";
- if(view==="mean"&&scale==="log"){
-  values=values.map(row=>row.map(v=>v!==null&&v>0?Math.log10(v):null));
-  colorTitle="log₁₀(tally mean)";
- } else if(view==="mean") colorTitle="Tally mean";
- return {item,score,view,mean,sd,relative,values,colorTitle,stats:fieldStats(mean)};
+ const mean=record.mean;
+ // "std_dev" remains as a backwards-compatible API field; in the audited reader,
+ // its stored values are the Monte Carlo standard error, not sample standard deviation.
+ const standardError=record.standard_error||record.std_dev;
+ if(!Array.isArray(mean)||!Array.isArray(standardError)||mean.length!==item.dimensions[1]||standardError.length!==mean.length)return null;
+ if(mean.some((row,i)=>!Array.isArray(row)||!Array.isArray(standardError[i])||row.length!==item.dimensions[0]||standardError[i].length!==row.length))return null;
+ const relative=mean.map((row,y)=>row.map((v,x)=>
+  Number.isFinite(v)&&v>0&&Number.isFinite(standardError[y][x])&&standardError[y][x]>=0
+   ?100*standardError[y][x]/v:null
+ ));
+ const values=(view==="relative_sd"?relative:mean).map(row=>row.map(v=>{
+  if(typeof v!=="number"||!Number.isFinite(v))return null;
+  if(view==="mean"&&scale==="log")return v>0?Math.log10(v):null;
+  return v;
+ }));
+ const colorTitle=view==="relative_sd"
+  ?"Relative Monte Carlo standard error (%)"
+  :(scale==="log"?"log₁₀(tally mean)":"Tally mean");
+ const rawValues=view==="relative_sd"?relative:mean;
+ return {
+  item,score,view,scale,mean,standardError,sd:standardError,relative,rawValues,values,colorTitle,
+  stats:fieldStats(mean),displayStats:fieldStats(values)
+ };
 }
 function drawMesh(){
  if(!meshData)return;
- const scale=$("meshScale").value;
  const f=currentField();
- if(!f){$("meshStatus").textContent="SCORE UNAVAILABLE";return;}
+ if(!f){
+  $("meshStatus").textContent="SCORE UNAVAILABLE";
+  ["meshHeatmap","meshContour","meshProfile","meshSurface"].forEach(id=>{
+   $(id).innerHTML='<div class="empty-state"><b>Selected field unavailable</b><p>The requested score is not present in the recorded mesh tally.</p></div>';
+  });
+  return;
+ }
  const paletteName=$("meshPalette").value;
- const z=f.values, raw=f.view==="relative_sd"?f.relative:f.mean;
- const xs=Array.from({length:f.item.dimensions[0]},(_,i)=>i),ys=Array.from({length:f.item.dimensions[1]},(_,i)=>i);
+ const z=f.values, raw=f.rawValues, scoreLabel=f.score;
+ const xs=Array.from({length:f.item.dimensions[0]},(_,i)=>i);
+ const ys=Array.from({length:f.item.dimensions[1]},(_,i)=>i);
+ const plotTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":(f.scale==="log"?"log₁₀("+scoreLabel+" tally mean)":"Recorded "+scoreLabel+" tally mean");
+ const rawTitle=f.view==="relative_sd"?"Relative standard error (%)":scoreLabel+" tally mean (source units)";
  const hover=(title)=>"x-bin %{x}<br>y-bin %{y}<br>"+title+" %{customdata:.6g}<extra></extra>";
- chart("meshHeatmap",[{type:"heatmap",x:xs,y:ys,z:z,customdata:raw,colorscale:f.view==="relative_sd"?"Magma":paletteName,colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:hover(f.colorTitle),connectgaps:false}],{margin:{l:50,r:25,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Mesh x-bin index"},yaxis:{...baseLayout.yaxis,title:"Mesh y-bin index",autorange:"reversed"},showlegend:false});
- chart("meshContour",[{type:"contour",x:xs,y:ys,z:z,customdata:raw,colorscale:f.view==="relative_sd"?"Magma":paletteName,contours:{coloring:"heatmap",showlines:true},colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:hover(f.colorTitle),connectgaps:false,ncontours:14}],{margin:{l:50,r:25,t:10,b:45},xaxis:{...baseLayout.xaxis,title:"Mesh x-bin index"},yaxis:{...baseLayout.yaxis,title:"Mesh y-bin index",autorange:"reversed"},showlegend:false});
- chart("meshSurface",[{type:"surface",x:xs,y:ys,z:z, surfacecolor:z,colorscale:f.view==="relative_sd"?"Magma":paletteName,colorbar:{title:{text:f.colorTitle,font:{size:10}}},hovertemplate:"x-bin %{x}<br>y-bin %{y}<br>Displayed value %{z:.6g}<extra></extra>",connectgaps:false,showscale:true}],{margin:{l:5,r:5,t:5,b:5},scene:{xaxis:{title:"X bin",gridcolor:palette.line,color:palette.muted},yaxis:{title:"Y bin",gridcolor:palette.line,color:palette.muted},zaxis:{title:f.colorTitle,gridcolor:palette.line,color:palette.muted},bgcolor:"rgba(0,0,0,0)",camera:{eye:{x:1.55,y:1.55,z:1.1}}}});
- const cy=Math.floor(f.mean.length/2), profileY=f.mean[cy]||[], profileSD=f.sd[cy]||[], profile=profileY.map((v,i)=>({x:i,y:f.view==="relative_sd"&&v>0?100*profileSD[i]/v:(f.view==="mean"&&scale==="log"&&v>0?Math.log10(v):v)}));
- chart("meshProfile",[{type:"scatter",mode:"lines+markers",name:f.colorTitle,x:profile.map(p=>p.x),y:profile.map(p=>p.y),line:{color:palette.cyan,width:2},marker:{size:4,color:palette.orange},connectgaps:false,hovertemplate:"x-bin %{x}<br>"+f.colorTitle+" %{y:.6g}<extra></extra>"}],{margin:{l:60,r:20,t:15,b:50},showlegend:false,xaxis:{...baseLayout.xaxis,title:"X mesh-bin index"},yaxis:{...baseLayout.yaxis,title:f.colorTitle}});
- const st=f.stats;
- $("fieldKpis").innerHTML=[["Mesh dimensions",f.item.dimensions[0]+" × "+f.item.dimensions[1],"Archived tally bins"],["Finite bins",st.finite.toLocaleString(),"Finite recorded means"],["Positive bins",st.positive.toLocaleString(),"Positive mean tally values"],["Max tally mean",st.max===null?"—":st.max.toExponential(4),"Recorded "+f.score+" mean"]].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
+ const axisStyle={...baseLayout.xaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
+ const yAxisStyle={...baseLayout.yaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
+ const sharedAxis={tickfont:{size:10,color:palette.muted},titlefont:{size:11,color:palette.muted}};
+ const colorscale=paletteName;
+ const heatLayout={
+  autosize:true,margin:{l:62,r:30,t:18,b:58},showlegend:false,
+  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index",standoff:8}},
+  yaxis:{...yAxisStyle,...sharedAxis,title:{text:"Y mesh-bin index",standoff:8},autorange:"reversed"}
+ };
+ const colorbar={title:{text:plotTitle,font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}};
+ chart("meshHeatmap",[{
+  type:"heatmap",x:xs,y:ys,z:z,customdata:raw,colorscale,
+  colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
+  hovertemplate:hover(rawTitle),connectgaps:false,hoverongaps:false,xgap:0,ygap:0
+ }],heatLayout);
+ chart("meshContour",[{
+  type:"contour",x:xs,y:ys,z:z,customdata:raw,colorscale,
+  contours:{coloring:"heatmap",showlines:true,showlabels:false},ncontours:12,
+  colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
+  hovertemplate:hover(rawTitle),connectgaps:false,hoverongaps:false
+ }],heatLayout);
+ chart("meshSurface",[{
+  type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:raw,colorscale,
+  colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
+  hovertemplate:"x-bin %{x}<br>y-bin %{y}<br>"+rawTitle+" %{customdata:.6g}<br>Displayed Z %{z:.6g}<extra></extra>",
+  connectgaps:false,hoverongaps:false,showscale:true,
+  lighting:{ambient:0.72,diffuse:0.78,specular:0.18,roughness:0.72,fresnel:0.08},opacity:0.98
+ }],{
+  autosize:true,margin:{l:8,r:8,t:8,b:8},
+  scene:{
+   xaxis:{title:{text:"X mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
+   yaxis:{title:{text:"Y mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
+   zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
+   bgcolor:"rgba(0,0,0,0)",aspectmode:"auto",camera:{eye:{x:1.55,y:1.55,z:1.1}}
+  }
+ });
+ const cy=Math.floor(z.length/2),profileY=z[cy]||[],profileRaw=raw[cy]||[];
+ chart("meshProfile",[{
+  type:"scatter",mode:"lines+markers",name:plotTitle,x:xs,y:profileY,customdata:profileRaw,
+  line:{color:palette.cyan,width:2.5,shape:"linear"},
+  marker:{size:4,color:palette.orange,line:{width:0}},
+  connectgaps:false,hovertemplate:"X bin %{x}<br>"+rawTitle+" %{customdata:.6g}<br>Displayed value %{y:.6g}<extra></extra>"
+ }],{
+  autosize:true,margin:{l:66,r:18,t:18,b:58},showlegend:false,
+  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (central row)",standoff:8}},
+  yaxis:{...yAxisStyle,...sharedAxis,title:{text:plotTitle,standoff:8}}
+ });
+ const st=f.stats,finiteDisplay=f.displayStats.finite,dimensionText=f.item.dimensions[0]+" × "+f.item.dimensions[1];
+ $("fieldKpis").innerHTML=[
+  ["Mesh dimensions",dimensionText,"Archived 2D mesh bins"],
+  ["Finite bins",finiteDisplay.toLocaleString(),"Valid bins in selected view"],
+  ["Positive mean bins",st.positive.toLocaleString(),"Positive recorded mean values"],
+  ["Maximum mean",st.max===null?"—":st.max.toExponential(4),"Recorded "+scoreLabel+" tally · source units"]
+ ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
+ const summary=[
+  "Score: "+scoreLabel,
+  "View: "+(f.view==="relative_sd"?"relative Monte Carlo standard error":"recorded tally mean"),
+  "Scale: "+(f.view==="relative_sd"?"ratio-derived percentage":f.scale),
+  "Mesh: "+dimensionText+" bins",
+  "Realizations: "+String(f.item.n_realizations??"not recorded")
+ ];
+ const note=$("meshSummaryNote");
+ if(note)note.textContent=summary.join(" · ")+". Bin indices are not physical assembly coordinates.";
+ $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"DATA LOADED · HASH NOT CHECKED";
+ $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
 }
 async function initMesh(){
  try{
   const response=await fetch("/api/mesh",{headers:{Accept:"application/json"}});
   if(!response.ok){let detail="HTTP "+response.status;try{detail=(await response.json()).error||detail}catch(_){}throw new Error(detail)}
-  meshData=await response.json();
-  if(!meshData.mesh_tallies||!meshData.mesh_tallies.length)throw new Error("No compatible 2D mesh tally in the archived statepoint.");
-  const item=meshData.mesh_tallies[0];
-  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"HASH NOT CHECKED";
-  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
-  $("meshProvenance").textContent=meshData.provenance.source+" · "+item.dimensions.join(" × ")+" bins · tally "+item.tally_name+" · SHA-256 "+meshData.provenance.sha256+". "+(meshData.provenance.hash_matches===true?"Archive member hash matches the committed baseline.":meshData.provenance.hash_matches===false?"WARNING: archive hash differs from the recorded baseline; verify provenance before scientific comparison.":"Baseline hash was unavailable; provenance has not been hash-verified.")+" Mesh indices are not mapped to physical assembly coordinates.";
-  const scoreSelect=$("meshScore");scoreSelect.innerHTML=Object.keys(item.scores).map(k=>'<option value="'+k+'">'+k+'</option>').join("");
-  ["meshScore","meshView","meshScale","meshPalette"].forEach(id=>$(id).addEventListener("change",drawMesh));
+  const payload=await response.json();
+  if(!payload.mesh_tallies||!payload.mesh_tallies.length)throw new Error("No compatible 2D mesh tally in the archived statepoint.");
+  const item=payload.mesh_tallies[0];
+  for(const score of Object.keys(item.scores||{})){
+   const record=item.scores[score];
+   if(!record.standard_error&&record.std_dev)record.standard_error=record.std_dev;
+  }
+  meshData=payload;
+  $("meshStatus").classList.remove("warning");
+  $("meshProvenance").textContent=meshData.provenance.source+" · "+item.dimensions.join(" × ")+" bins · tally "+item.tally_name+" · "+String(item.n_realizations??"unknown")+" realizations · SHA-256 "+meshData.provenance.sha256+". "+(meshData.provenance.hash_matches===true?"Statepoint member hash matches the recorded baseline.":meshData.provenance.hash_matches===false?"WARNING: statepoint hash differs from the recorded baseline; verify provenance before scientific comparison.":"Baseline hash was unavailable; provenance has not been hash-verified.")+" Mesh indices are not mapped to physical assembly coordinates; relative uncertainty shown below is standard error / mean.";
+  const scoreSelect=$("meshScore");
+  const availableScores=Object.keys(item.scores);
+  scoreSelect.innerHTML=availableScores.map(k=>'<option value="'+escapeHtml(k)+'">'+escapeHtml(k)+'</option>').join("");
+  if(!availableScores.includes(scoreSelect.value))scoreSelect.value=availableScores[0]||"";
+  ["meshScore","meshView","meshScale","meshPalette"].forEach(id=>{
+   const control=$(id);
+   if(control&&!control.dataset.meshListenerBound){
+    control.addEventListener("change",drawMesh);
+    control.dataset.meshListenerBound="true";
+   }
+  });
   drawMesh();
+  const resizePlots=()=>{
+   if(!window.Plotly||!window.Plotly.Plots)return;
+   ["meshHeatmap","meshContour","meshProfile","meshSurface"].forEach(id=>{
+    const el=$(id);
+    if(el&&el.classList.contains("js-plotly-plot"))try{window.Plotly.Plots.resize(el)}catch(_){}
+   });
+  };
+  if(!window.__cbpfrMeshResizeBound){
+   window.addEventListener("resize",()=>window.requestAnimationFrame(resizePlots),{passive:true});
+   window.__cbpfrMeshResizeBound=true;
+  }
  }catch(error){
+  meshData=null;
   $("meshStatus").textContent="SPATIAL DATA UNAVAILABLE";
   $("meshStatus").classList.add("warning");
   $("meshProvenance").textContent="The archived spatial tally could not be loaded: "+error.message;
-  ["meshHeatmap","meshContour","meshProfile","meshSurface"].forEach(id=>$(id).innerHTML='<div class="empty-state"><b>Spatial data unavailable</b><p>'+String(error.message||error)+'</p><p>No scientific values have been fabricated.</p></div>');
+  ["meshHeatmap","meshContour","meshProfile","meshSurface"].forEach(id=>$(id).innerHTML='<div class="empty-state"><b>Spatial data unavailable</b><p>'+escapeHtml(error.message||error)+'</p><p>No scientific values have been fabricated.</p></div>');
  }
 }
 
