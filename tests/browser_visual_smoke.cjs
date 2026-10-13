@@ -207,8 +207,11 @@ async function main() {
     await page.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-spatial-field-lab.png"), animations: "disabled" });
     await page.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-core-geometry-3d.png"), animations: "disabled" });
     await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
-    const geometrySection = page.locator("#geometryPreview").locator("xpath=ancestor::section[1]");
-    await geometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry.png"), animations: "disabled" });
+    await page.click("#coreView2d");
+    await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
+    await page.locator("#geometryPreview").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled" });
+    await page.click("#coreView3d");
+    await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
     // Use a fresh browser page so Plotly initializes at mobile width, not by shrinking desktop SVGs.
     const mobilePage = await browser.newPage({
@@ -265,8 +268,7 @@ async function main() {
     await mobilePage.addStyleTag({ content: "@media(max-width:680px){.sidebar{position:static!important;top:auto!important}}" });
     await mobilePage.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-spatial-field-lab.png"), animations: "disabled" });
     await mobilePage.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-candidate-inspector.png"), animations: "disabled" });
-    const mobileGeometrySection = mobilePage.locator("#core3dViewport").locator("xpath=ancestor::section[1]");
-    await mobileGeometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
+    await mobilePage.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
     await mobilePage.close();
 
     assert.deepEqual(failures, [], "desktop page must not throw uncaught JavaScript errors");
