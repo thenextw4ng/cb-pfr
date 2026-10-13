@@ -275,7 +275,7 @@ export function createCoreViewer(container, onAssemblySelect) {
         const yCoordinate = bottomY + (rows - r - 0.5) * pitchZ;
         const z = yCoordinate;
         const positionKey = r + "," + c;
-        const position = "p" + r + c;
+        const position = "P" + r + c;
         assemblyIndex[positionKey] = { x, z, code, universeId, position, latticeId: sourceAssembly.lattice_id };
         const base = new THREE.Mesh(baseGeometry, baseMaterials[code]);
         base.position.set(x, -0.13, z);
