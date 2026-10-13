@@ -84,7 +84,7 @@ function materialCellSvg(code,x,y,pitch){
 function renderModelGeometrySvg(signature){
  const sig=String(signature??"").trim().toUpperCase();
  if(!/^[UM]{4}$/.test(sig))return '<div class="empty-state"><b>Model geometry unavailable</b><p>The selected record does not contain a valid four-position U/M signature. No default configuration is substituted.</p></div>';
- const width=1020,height=670,x0=48,y0=92,size=170,gap=8,pinInsetX=9,pinInsetY=29,pinArea=152,pinPitch=pinArea/17,coreWidth=size*3+gap*2;
+ const width=1020,height=670,x0=48,y0=92,size=170,gap=1,pinInsetX=9,pinInsetY=29,pinArea=152,pinPitch=pinArea/17,coreWidth=size*3+gap*2;
  const cells=[sig[0],sig[1],"R",sig[2],sig[3],"R","R","R","R"];
  let svg='<svg class="model-geometry-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="C5G7 2D material-resolved 3 by 3 lattice for selected layout '+sig+'">';
  svg+='<defs><linearGradient id="reflectorFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#13394b"/><stop offset="100%" stop-color="#0b2637"/></linearGradient><pattern id="waterPattern" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 6 Q4 2 9 6 T18 6" fill="none" stroke="#2a637a" stroke-width="1" opacity=".5"/></pattern></defs>';
