@@ -113,8 +113,8 @@ async function main() {
     assert.equal(initialSpatialData.meshSurface.surfaceContours?.show, true, "3D terrain should show isolines on its surface");
     assert.equal(initialSpatialData.meshSurface.surfaceContours?.projectZ, true, "3D terrain isolines should also project to the lower reference plane");
     assert.ok(initialSpatialData.meshSurface.surfaceContours?.highlightColor, "projected isolines should remain visually legible");
-    assert.match(initialSpatialData.meshSurface.surfaceXAxisTitle, /X position \\(cm\\)/, "3D surface should use archived physical X coordinates");
-    assert.match(initialSpatialData.meshSurface.surfaceYAxisTitle, /Y position \\(cm\\)/, "3D surface should use archived physical Y coordinates");
+    assert.match(initialSpatialData.meshSurface.surfaceXAxisTitle, /X position \(cm\)/, "3D surface should use archived physical X coordinates");
+    assert.match(initialSpatialData.meshSurface.surfaceYAxisTitle, /Y position \(cm\)/, "3D surface should use archived physical Y coordinates");
     assert.ok(Array.isArray(initialSpatialData.meshSurface.surfaceCustomSample) && initialSpatialData.meshSurface.surfaceCustomSample.length === 3, "surface hover must carry mean, Monte Carlo standard error, and relative error from source data");
     assert.match(initialSpatialData.meshSurface.hovertemplate, /Monte Carlo standard error/);
     assert.match(initialSpatialData.meshSurface.hovertemplate, /Relative Monte Carlo standard error/);
