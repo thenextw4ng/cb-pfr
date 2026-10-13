@@ -413,13 +413,14 @@ async function main() {
     await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
     // Use a fresh browser page so Plotly initializes at mobile width, not by shrinking desktop SVGs.
-    const mobilePage = await browser.newPage({
-      viewport: { width: 390, height: 844 },
-      deviceScaleFactor: 1
-    });
+    // Reuse the desktop page's browser context so already-loaded scientific
+    // visualization libraries are cached; this keeps the mobile pass focused on
+    // responsive layout instead of making a second cold request to the Plotly CDN.
+    const mobilePage = await page.context().newPage();
+    await mobilePage.setViewportSize({ width: 390, height: 844 });
     const mobileFailures = [];
     mobilePage.on("pageerror", error => mobileFailures.push("pageerror: " + error.message));
-    const mobileResponse = await mobilePage.goto(BASE_URL, { waitUntil: "commit", timeout: 30000 });
+    const mobileResponse = await mobilePage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
     assert.ok(mobileResponse && mobileResponse.ok(), "mobile workstation HTML should return HTTP 200");
     await mobilePage.waitForFunction(() => {
       const select = document.querySelector("#candidateSelect");
