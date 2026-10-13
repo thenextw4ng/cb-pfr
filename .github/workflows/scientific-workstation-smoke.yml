@@ -5,6 +5,7 @@ on:
     branches:
       - feat/scientific-visualization-reliability
       - feat/stage4-physical-axial-tallies
+      - feat/stage5-targeted-visualization-stack
       - refine/**
       - fix/**
   pull_request:
