@@ -39,7 +39,7 @@ function candidateOption(row){
 function layoutCells(signature){
   const raw=normalizeLayoutSignature(signature);
   if(!isValidLayoutSignature(raw)){
-    return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate does not contain a validated four-position U/M signature. No default arrangement is substituted.</p></div>';
+    return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate must contain exactly two UO₂ and two MOX positions. No default arrangement is substituted.</p></div>';
   }
   const cells=raw.split("");
   const positions=["p00","p01","p10","p11"];
@@ -195,8 +195,12 @@ function drawModelGeometry(row){
  const preview=$("geometryPreview");
  if(!preview||!row)return;
  if(geometryArtifactActive)return;
- const signature=String(row.layout_signature??"").trim().toUpperCase();
+ const signature=normalizeLayoutSignature(row.layout_signature);
  preview.innerHTML=renderModelGeometrySvg(signature);
+ if(!isValidLayoutSignature(signature)){
+  $("geometryCaption").textContent="Model view unavailable · invalid fuel composition for "+displayValue(row.candidate_id,"selected candidate")+".";
+  return;
+ }
  $("geometryCaption").textContent="Archived Actions artifact c5g7-study-640000 · "+String(row.candidate_id??"candidate")+" · layout "+signature+" · lattice/material map reconstructed from geometry.xml definitions; not an OpenMC transport result.";
 }
 
