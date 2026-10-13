@@ -285,9 +285,9 @@ def vtk_plane_html(
         plotter.add_axes(line_width=2)
         plotter.show_grid(
             color="#8da4b7",
-            xlabel="x (cm)" if x_bounds else "x-bin",
-            ylabel="y (cm)" if y_bounds else "y-bin",
-            zlabel="mesh plane",
+            xtitle="x (cm)" if x_bounds else "x-bin",
+            ytitle="y (cm)" if y_bounds else "y-bin",
+            ztitle="mesh plane",
         )
         plotter.view_isometric()
         exported = plotter.trame.export_html(None)
