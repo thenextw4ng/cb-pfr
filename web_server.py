@@ -594,7 +594,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifact":
             try:
-                from urllib.parse import parse_qs
                 relative_path = parse_qs(urlparse(self.path).query).get("path", [""])[0]
                 artifact = read_geometry_artifact(relative_path)
                 return self._send(200, artifact.read_bytes(), mimetypes.guess_type(artifact.name)[0] or "application/octet-stream")
