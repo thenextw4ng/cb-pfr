@@ -236,6 +236,7 @@ function drawCore3DForCandidate(row){
  if(!window.CBPFRCore3D){
   const status=$("core3dStatus");
   if(status)status.textContent=window.CBPFRCore3DError?"THREE.JS CDN UNAVAILABLE":"CONNECTING THREE.JS CDN…";
+  if(!window.CBPFRCore3DError&&!host.children.length)host.innerHTML='<div class="core3d-loading"><span></span><b>Loading Three.js scientific renderer…</b><small>The source SVG map is available in 2D source map mode.</small></div>';
   return;
  }
  try{
@@ -719,7 +720,7 @@ async function loadGeometryArtifacts(){
   if(!items.length){
    $("geometryArtifactStatus").textContent="NO FILES FOUND";
    $("geometryArtifactStatus").classList.remove("warning");
-   $("geometryProvenance").textContent="The candidate-linked material map is reconstructed from archived OpenMC geometry.xml lattice/material definitions. No separate native PNG/VTK/VTI plot is checked into scanned output folders.";
+   $("geometryProvenance").textContent="Manifest schema v1 · "+(modelGeometryData?.candidates?.length||0)+" candidate geometry.xml records · "+(modelGeometryData?.core_lattice?.dimensions||[]).join(" × ")+" core lattice · pin-material universe maps and boundary conditions source-extracted from archived XML. No separate native PNG/VTK/VTI plot is checked into scanned output folders.";
    list.innerHTML='<div class="empty-state"><b>No separate OpenMC plot artifact found</b><p>The main panel still renders the archived model lattice and pin-material regions for the selected candidate.</p><p>Native PNG/VTK/VTI artifacts can be inspected here when present.</p></div>';
    geometryArtifactActive=false;
    const selected=records.find(r=>String(r.candidate_id)===$("candidateSelect")?.value);
@@ -728,15 +729,15 @@ async function loadGeometryArtifacts(){
   }
   $("geometryArtifactStatus").textContent=items.length+" FILE(S) FOUND";
   $("geometryArtifactStatus").classList.remove("warning");
-  $("geometryProvenance").textContent="Found "+items.length+" existing geometry file(s). The candidate-linked XML material map remains primary; select an item below to inspect a separate native artifact.";
+  $("geometryProvenance").textContent="Manifest schema v1 · "+(modelGeometryData?.candidates?.length||0)+" candidate geometry.xml records · found "+items.length+" existing native geometry file(s). Select a file below to inspect that external artifact.";
   list.innerHTML=items.map((item,i)=>'<button class="artifact-item" type="button" data-artifact-index="'+i+'"><span class="artifact-icon">'+(item.kind==="image"?"IMG":"3D")+'</span><span class="artifact-meta"><b>'+escapeHtml(item.name)+'</b><small>'+escapeHtml(item.path)+' · '+item.format+' · '+formatBytes(item.size_bytes)+'</small></span><span class="tag">'+item.kind.toUpperCase()+'</span></button>').join("");
   list.querySelectorAll("[data-artifact-index]").forEach(button=>button.addEventListener("click",()=>showGeometryArtifact(items[Number(button.dataset.artifactIndex)])));
   geometryArtifactActive=false;
   const selected=records.find(r=>String(r.candidate_id)===$("candidateSelect")?.value);
   drawModelGeometry(selected);
  }catch(error){
-  $("geometryStatus").textContent="ARTIFACT SCAN FAILED";$("geometryStatus").classList.add("warning");
-  $("geometryProvenance").textContent="Could not inspect geometry outputs: "+error.message;
+  $("geometryArtifactStatus").textContent="SCAN FAILED";$("geometryArtifactStatus").classList.add("warning");
+  $("geometryProvenance").textContent="OpenMC geometry manifest was loaded separately. Could not inspect additional native artifacts: "+error.message;
   $("geometryArtifactList").innerHTML='<div class="loading">Artifact inventory unavailable.</div>';
  }
 }
