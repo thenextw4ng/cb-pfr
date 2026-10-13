@@ -105,23 +105,47 @@ def read_model_geometry_manifest():
         raise ValueError("Model geometry manifest has an unsupported schema.")
     provenance = payload.get("provenance", {})
     archive_sha = provenance.get("archive_sha256", "")
-    if len(archive_sha) != 64 or any(char not in "0123456789abcdef" for char in archive_sha.lower()):
+    is_sha256 = lambda value: isinstance(value, str) and len(value) == 64 and all(
+        char in "0123456789abcdef" for char in value.lower()
+    )
+    if not is_sha256(archive_sha):
         raise ValueError("Model geometry manifest archive SHA-256 is missing or malformed.")
-    model = payload.get("model")
-    if not isinstance(model, dict):
-        raise ValueError("Model geometry manifest has no model metadata.")
-    for key in ("U", "M"):
-        lattice = model.get("pin_lattices", {}).get(key, {})
-        rows = lattice.get("universe_rows", [])
-        if lattice.get("dimension") != [17, 17] or len(rows) != 17 or any(
-            not isinstance(row, str) or len(row) != 17 for row in rows
+    core = payload.get("core_lattice", {})
+    if core.get("id") != 201 or core.get("dimensions") != [3, 3]:
+        raise ValueError("Model geometry manifest has an invalid core lattice.")
+    if core.get("pitch_cm") != [21.42, 21.42] or core.get("lower_left_cm") != [-32.13, -32.13]:
+        raise ValueError("Core dimensions or placement differ from the archived C5G7 model.")
+    pin_geometry = payload.get("pin_geometry", {})
+    if pin_geometry.get("dimensions") != [17, 17] or pin_geometry.get("pin_radius_cm") != 0.54:
+        raise ValueError("Model geometry manifest has invalid pin dimensions.")
+    pin_lattices = payload.get("pin_lattices", {})
+    pin_universes = payload.get("materials", {}).get("pin_universes", {})
+    for lattice_id, expected_name in (("101", "UO2 Unrodded Assembly"), ("103", "MOX Unrodded Assembly")):
+        lattice = pin_lattices.get(lattice_id, {})
+        grid = lattice.get("universe_grid", [])
+        if lattice.get("name") != expected_name or lattice.get("dimensions") != [17, 17] or len(grid) != 17 or any(
+            not isinstance(row, list) or len(row) != 17 for row in grid
         ):
-            raise ValueError(f"Model geometry manifest has an invalid {key} 17 x 17 pin lattice.")
+            raise ValueError(f"Model geometry manifest has an invalid {expected_name} pin lattice.")
+        allowed = {"1", "5", "6"} if lattice_id == "101" else {"2", "3", "4", "5", "6"}
+        if any(str(value) not in allowed for row in grid for value in row):
+            raise ValueError(f"Pin lattice {lattice_id} contains an unknown material universe.")
+    if set(pin_universes) != {"1", "2", "3", "4", "5", "6"}:
+        raise ValueError("Model geometry manifest has an incomplete pin material map.")
+    for universe_id, cell in pin_universes.items():
+        material_id = str(cell.get("material_id", ""))
+        if material_id not in payload.get("materials", {}).get("by_id", {}):
+            raise ValueError(f"Pin universe {universe_id} references an unknown material.")
+        if cell.get("material_name") != payload["materials"]["by_id"][material_id]:
+            raise ValueError(f"Pin universe {universe_id} material label differs from materials.xml.")
     candidates = payload.get("candidates")
     expected = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
     if not isinstance(candidates, list) or len(candidates) != 6:
         raise ValueError("Model geometry manifest must contain exactly six candidates.")
     seen = set()
+    assembly_map = payload.get("assemblies", {})
+    if {str(k): v.get("code") for k, v in assembly_map.items()} != {"9": "U", "11": "M", "13": "R"}:
+        raise ValueError("Assembly universe mapping differs from the archived XML.")
     for candidate in candidates:
         if not isinstance(candidate, dict):
             raise ValueError("Model geometry candidate is not an object.")
@@ -130,20 +154,19 @@ def read_model_geometry_manifest():
         if not candidate_id or candidate_id in seen:
             raise ValueError("Model geometry candidate IDs are empty or duplicated.")
         seen.add(candidate_id)
-        core = candidate.get("core_lattice", {})
-        rows = core.get("layout_rows", [])
-        if core.get("dimension") != [3, 3] or len(rows) != 3 or any(
-            not isinstance(row, str) or len(row) != 3 for row in rows
-        ):
-            raise ValueError(f"Candidate {candidate_id} has an invalid 3 x 3 core lattice.")
-        actual = rows[0][0] + rows[0][1] + rows[1][0] + rows[1][1]
+        rows = candidate.get("core_universe_grid", [])
+        if len(rows) != 3 or any(not isinstance(row, list) or len(row) != 3 for row in rows):
+            raise ValueError(f"Candidate {candidate_id} has an invalid 3 x 3 core universe grid.")
+        mapped_rows = ["".join(assembly_map.get(str(value), {}).get("code", "?") for value in row) for row in rows]
+        actual = mapped_rows[0][0] + mapped_rows[0][1] + mapped_rows[1][0] + mapped_rows[1][1]
         if actual != signature or signature not in expected or candidate_id.endswith("-" + signature) is False:
             raise ValueError(f"Candidate {candidate_id} does not match its XML-derived layout signature.")
-        if rows[0][2] != "R" or rows[1][2] != "R" or rows[2] != "RRR":
+        if mapped_rows[0][2] != "R" or mapped_rows[1][2] != "R" or mapped_rows[2] != "RRR":
             raise ValueError(f"Candidate {candidate_id} does not have the expected reflector lattice.")
-        for source_key in ("geometry_sha256", "materials_sha256"):
-            digest = candidate.get("source", {}).get(source_key, "")
-            if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
+        if candidate.get("source_matches_candidate_signature") is not True or candidate.get("signature_derived_from_xml") != signature:
+            raise ValueError(f"Candidate {candidate_id} failed its XML-derived signature identity check.")
+        for source_key in ("geometry_xml_sha256", "materials_xml_sha256"):
+            if not is_sha256(candidate.get(source_key, "")):
                 raise ValueError(f"Candidate {candidate_id} has a malformed {source_key}.")
     if {str(candidate.get("layout_signature")) for candidate in candidates} != expected:
         raise ValueError("Model geometry manifest does not include all six expected layouts.")
