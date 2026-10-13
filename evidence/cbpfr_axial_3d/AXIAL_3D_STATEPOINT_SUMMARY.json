@@ -2,7 +2,7 @@
   "schema_version": 1,
   "status": "3d_openmc_statepoint_mesh_exported",
   "statepoint": {
-    "sha256": "587c1e5c57892735c2f88dbce03075b2556a8ebc3d298bc2b3f683493e9f3c7f",
+    "sha256": "6bd728915017f692e54ee943eeaf3abec19b6a43cf3fdc832cef2803e5b05b00",
     "path": "/home/runner/work/_temp/c5g7-axial-work/c5g7-2x2-UMMU/model/3d/statepoint.30.h5",
     "n_batches": 30,
     "n_inactive": 5,
