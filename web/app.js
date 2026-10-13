@@ -380,7 +380,7 @@ function drawMesh(){
  const xs=coordinates.x, ys=coordinates.y;
  const plotTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":(f.scale==="log"?"log₁₀("+scoreLabel+" tally mean)":"Recorded "+scoreLabel+" tally mean");
  const rawTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":scoreLabel+" tally mean (recorded scale)";
- const hover=(title)=>"x-bin %{x}<br>y-bin %{y}<br>"+title+" %{customdata:.6g}<extra></extra>";
+ const hover=(title)=>coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+title+" %{customdata:.6g}<extra></extra>";
  const axisStyle={...baseLayout.xaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const yAxisStyle={...baseLayout.yaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const sharedAxis={tickfont:{size:10,color:palette.muted},titlefont:{size:11,color:palette.muted}};
@@ -476,14 +476,14 @@ function drawMesh(){
   "View: "+(f.view==="relative_sd"?"relative Monte Carlo standard error":"recorded tally mean"),
   "Scale: "+(f.view==="relative_sd"?"ratio-derived percentage":f.scale),
   "Mesh: "+dimensionText+" bins",
-  "Central cut: Y-bin "+centerY,
+  "Central cut: "+(coordinates.physical?"Y = "+coordinates.y[centerY].toFixed(3)+" cm (row "+centerY+")":"Y-bin "+centerY),
   "Realizations: "+String(f.item.n_realizations??"not recorded")
  ];
  const note=$("meshSummaryNote");
  const coordinateNote=coordinates.physical
   ?"XY axes use archived regular-mesh bounds in cm; plotted coordinates are cell centres. No fuel/reflector/assembly labels are inferred."
   :"Physical XY bounds are unavailable; axes remain mesh-bin indices, not cm or assembly coordinates.";
- if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" Contours and the surface use the selected display scale; hover values preserve recorded tally means.";
+ if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" Heatmap, contours, profile, and surface reflect the selected display scale; hover values preserve recorded tally means.";
  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"DATA LOADED · HASH NOT CHECKED";
  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
 }
