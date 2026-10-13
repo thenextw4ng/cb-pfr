@@ -80,7 +80,7 @@ function renderModelGeometrySvg(row){
  const cw=cols*size+(cols-1)*gap,ch=rows*size+(rows-1)*gap,pinDims=modelGeometryData.pin_geometry?.dimensions||[];
  const extent=core.lower_left_cm&&core.pitch_cm?core.lower_left_cm.map((v,i)=>Number(v)+Number(core.pitch_cm[i])*Number(dims[i])):null;
  const xwidth=extent?extent[0]-Number(core.lower_left_cm[0]):NaN,yheight=extent?extent[1]-Number(core.lower_left_cm[1]):NaN;
- let svg='<svg class="model-geometry-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="OpenMC C5G7 material map '+escapeHtml(candidateId)+'">';
+ let svg='<svg class="model-geometry-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="OpenMC C5G7 material map for layout '+escapeHtml(signature)+' candidate '+escapeHtml(candidateId)+'">';
  svg+='<defs><linearGradient id="reflectorFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#13394b"/><stop offset="100%" stop-color="#0b2637"/></linearGradient><pattern id="waterPattern" width="18" height="12" patternUnits="userSpaceOnUse"><path d="M0 6 Q4 2 9 6 T18 6" fill="none" stroke="#2a637a" stroke-width="1" opacity=".5"/></pattern></defs>';
  svg+='<text x="'+x0+'" y="28" class="svg-kicker">ARCHIVED OPENMC GEOMETRY.XML · SOURCE-EXTRACTED</text><text x="'+x0+'" y="52" class="svg-title">C5G7 · '+cols+' × '+rows+' core lattice</text>';
  svg+='<text x="'+x0+'" y="72" class="svg-subtitle">'+escapeHtml(candidateId)+' · '+signature+' · '+(Number.isFinite(xwidth)?xwidth.toFixed(2):"—")+' × '+(Number.isFinite(yheight)?yheight.toFixed(2):"—")+' cm · assembly pitch '+Number(core.pitch_cm?.[0]).toFixed(2)+' cm</text>';
@@ -95,7 +95,7 @@ function renderModelGeometrySvg(row){
   }else{
    const cell=assemblyMap[String(sourceGrid[r][c])],pins=modelGeometryData.pin_lattices[String(cell.lattice_id)]?.universe_grid;
    if(!Array.isArray(pins)||pins.length!==pinDims[1]||pins.some(pr=>!Array.isArray(pr)||pr.length!==pinDims[0]))throw new Error("Archived pin lattice "+cell.lattice_id+" does not match declared dimensions.");
-   const color=code==="M"?"#f4bd62":"#51d2df",pp=(size-18)/pinDims[0],area=pp*pinDims[0],ix=x+9,iy=y+31;
+   const color=code==="M"?"#f4bd62":"#51d2df",pp=Math.min(size-18,size-34)/pinDims[0],area=pp*pinDims[0],ix=x+(size-area)/2,iy=y+28;
    svg+='<g><rect x="'+x+'" y="'+y+'" width="'+size+'" height="'+size+'" rx="7" fill="#0a1a27" stroke="'+color+'" stroke-opacity=".72"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="'+(size-2)+'" height="24" rx="5" fill="'+color+'" fill-opacity=".12"/><text x="'+(x+8)+'" y="'+(y+16)+'" class="assembly-label" fill="'+color+'">p'+r+c+' · '+(code==="M"?"MOX":"UO₂")+'</text><text x="'+(x+size-8)+'" y="'+(y+16)+'" class="assembly-size" text-anchor="end">'+pinDims[0]+' × '+pinDims[1]+'</text>';
    pins.forEach((pr,pi)=>pr.forEach((uid,pj)=>{svg+=modelMaterialCell(uid,ix+pj*pp,iy+pi*pp,pp);}));
    svg+='<rect x="'+(ix-.6)+'" y="'+(iy-.6)+'" width="'+(area+1.2)+'" height="'+(area+1.2)+'" fill="none" stroke="#64899a" stroke-width=".7"/></g>';
