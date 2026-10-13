@@ -154,7 +154,7 @@ function drawSelectedCandidate(row){
  $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
  $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
  $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
- const keffSd=has(row,"keff_std_dev")?"Reported SD ± "+number(row.keff_std_dev,6)+"; not a confidence interval":"Reported SD not recorded";
+ const keffSd=has(row,"keff_std_dev")?"Reported SD ± "+number(row.keff_std_dev,6)+"; not a confidence interval":"Reported SD unavailable";
  const metrics=[
   ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff",keffSd],
   ["Relative SD",has(row,"keff_relative_sd_percent")?number(row.keff_relative_sd_percent,4)+"%":"Not recorded","uncertainty","Relative spread recorded in candidate summary"],
@@ -238,7 +238,7 @@ function drawCandidateChart(){
   autosize:true,margin:{l:90,r:30,t:16,b:58},showlegend:false,hovermode:"closest",
   xaxis:{...baseLayout.xaxis,title:isKeff?"Reported k-effective mean (± SD)":"Recorded repository score (units not specified)",automargin:true,gridcolor:palette.line,zeroline:false},
   yaxis:{...baseLayout.yaxis,title:"Layout signature",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.55)"},
-  shapes:[{type:"line",xref:"paper",x0:0,x1:1,yref:"y",y0:""+valid.find(r=>String(r.candidate_id)===selected)?.layout_signature,y1:""+valid.find(r=>String(r.candidate_id)===selected)?.layout_signature,line:{color:"rgba(81,210,223,0.28)",width:1,dash:"dot"}}]
+  annotations:[]
  });
 }
 function drawOtherCharts(){
