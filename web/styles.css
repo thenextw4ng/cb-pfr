@@ -243,7 +243,7 @@
 }
 .core-material-legend>span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .core-legend-swatch{width:9px;height:9px;border-radius:2px;display:inline-block;box-shadow:0 0 0 1px rgba(255,255,255,.13)}
-.swatch-mox{background:#f4bd62}.swatch-uo2{background:#51d2df}.swatch-reflector{background:#347b91}.swatch-guide{background:#9cb6c8}.swatch-chamber{background:#c1b3ff}
+.swatch-mox{background:#f4bd62}.swatch-uo2{background:#51d2df}.swatch-reflector{background:#929aa5}.swatch-guide{background:#9cb6c8}.swatch-chamber{background:#c1b3ff}
 .core-geometry-layout #geometryPreview{
  width:100%;min-width:0;max-width:100%;min-height:430px;max-height:640px;overflow:auto;
  padding:8px;background:#07131e;border:1px solid #25475a;border-radius:9px;display:flex;align-items:flex-start;justify-content:flex-start;
@@ -270,7 +270,7 @@
 .core-pin-legend-item b{font-size:8px;color:#c8d9e2;font-weight:600}
 .core-pin-legend-item small{font:8px "DM Mono",monospace;color:var(--muted)}
 .core-reflector-detail{display:flex;align-items:flex-start;gap:10px;padding:12px 7px;min-height:120px}
-.core-reflector-icon{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid #347b91;border-radius:7px;background:#0f3141;color:#9bd8eb;font:700 15px "DM Mono",monospace}
+.core-reflector-icon{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1px solid #858e98;border-radius:7px;background:#252c33;color:#d0d5da;font:700 15px "DM Mono",monospace}
 .core-reflector-detail b{display:block;font-size:11px;color:var(--text);margin:1px 0 6px}
 .core-reflector-detail p{font-size:10px;color:var(--muted);line-height:1.6;margin:0}
 .core-artifact-details{padding:0;overflow:hidden}
