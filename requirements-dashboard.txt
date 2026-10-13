@@ -8,3 +8,4 @@ h5py>=3.10,<4
 # Scientific mesh visualization in the browser (VTK-backed)
 pyvista>=0.49,<0.50
 trame-pyvista>=0.1.7,<0.2
+nest-asyncio2>=1.7.3,<2
