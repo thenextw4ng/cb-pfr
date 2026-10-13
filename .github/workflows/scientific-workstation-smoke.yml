@@ -62,10 +62,17 @@ jobs:
             --archive /tmp/c5g7-study-640000.zip \
             --expected-sha256 7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b \
             --json-output /tmp/spatial-tally-source-audit.json
+      - name: Verify mesh tally reader against all six audited statepoints
+        env:
+          CBPFR_MESH_TALLY_TEST_ARCHIVE: /tmp/c5g7-study-640000.zip
+        run: python tests/test_openmc_mesh_tally_reader.py
       - name: Start workstation and smoke-test API/assets
         shell: bash
         run: |
           set -euo pipefail
+          CBPFR_STATEPOINT_ARCHIVE=/tmp/c5g7-study-640000.zip \
+          CBPFR_STATEPOINT_MEMBER=c5g7-2x2-MUMU/model/2d/statepoint.5000.h5 \
+          CBPFR_STATEPOINT_BASELINE=/tmp/cb-pfr-no-baseline-for-smoke.json \
           python -u web_server.py > /tmp/cb-pfr-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
@@ -97,7 +104,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:8765/api/geometry-artifacts > /tmp/cb-pfr-geometry.json
           curl --fail --silent http://127.0.0.1:8765/api/model-geometry > /tmp/cb-pfr-model-geometry.json
           mesh_status=$(curl --silent --output /tmp/cb-pfr-mesh.json --write-out '%{http_code}' http://127.0.0.1:8765/api/mesh)
-          test "$mesh_status" = "200" -o "$mesh_status" = "503"
+          test "$mesh_status" = "200"
           echo "$mesh_status" > /tmp/cb-pfr-mesh-status
           python - <<'PY'
           import json
