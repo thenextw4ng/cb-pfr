@@ -54,7 +54,19 @@ async function main() {
           xCount: Array.isArray(trace?.x) ? trace.x.length : 0,
           yCount: Array.isArray(trace?.y) ? trace.y.length : 0,
           colorscale: trace?.colorscale?.[0]?.[1] || null,
-          hovertemplate: trace?.hovertemplate || ""
+          hovertemplate: trace?.hovertemplate || "",
+          contours: trace?.contours ? {
+            showlabels: trace.contours.showlabels,
+            start: trace.contours.start,
+            end: trace.contours.end,
+            size: trace.contours.size,
+            labelformat: trace.contours.labelformat
+          } : null,
+          errorVisible: trace?.error_y?.visible === true,
+          errorCount: Array.isArray(trace?.error_y?.array) ? trace.error_y.array.length : 0,
+          yAxisType: el?.layout?.yaxis?.type || "linear",
+          xAxisTitle: el?.layout?.xaxis?.title?.text || "",
+          yAxisTitle: el?.layout?.yaxis?.title?.text || ""
         }];
       }));
     });
@@ -68,6 +80,14 @@ async function main() {
     }
     assert.equal(initialSpatialData.meshProfile.xCount, 51, "central profile should include all x bins");
     assert.equal(initialSpatialData.meshProfile.yCount, 51, "central profile should include all x-bin values");
+    assert.equal(initialSpatialData.meshContour.contours?.showlabels, true, "contour isolines should be numerically labeled");
+    assert.ok(initialSpatialData.meshContour.contours?.size > 0, "contour levels must have an explicit interval");
+    assert.ok(initialSpatialData.meshContour.contours?.end > initialSpatialData.meshContour.contours?.start, "contour interval must span the observed field");
+    assert.match(initialSpatialData.meshProfile.xAxisTitle, /X mesh-bin index/);
+    assert.match(initialSpatialData.meshProfile.yAxisTitle, /Recorded flux tally mean/);
+    assert.equal(initialSpatialData.meshProfile.yAxisType, "log", "mean profile should use a true log axis instead of plotting log-transformed values");
+    assert.equal(initialSpatialData.meshProfile.errorVisible, true, "central mean profile should show ±1 standard error");
+    assert.equal(initialSpatialData.meshProfile.errorCount, 51, "central profile error bars must cover all bins");
 
     const candidateOptions = await page.locator("#candidateSelect option").evaluateAll(options =>
       options.map(option => ({ value: option.value, label: option.textContent.trim() }))
@@ -90,7 +110,11 @@ async function main() {
         metricText: document.querySelector("#selectedCandidateMetrics")?.innerText || "",
         pinCellCount: document.querySelectorAll("#geometryPreview svg.model-geometry-svg title").length,
         svgCount: document.querySelectorAll("#geometryPreview svg.model-geometry-svg").length,
-        chartSvgCount: document.querySelectorAll("#candidateChart svg").length
+        chartSvgCount: document.querySelectorAll("#candidateChart svg").length,
+        comparisonType: document.querySelector("#candidateChart")?.data?.[0]?.type,
+        comparisonErrorVisible: document.querySelector("#candidateChart")?.data?.[0]?.error_x?.visible === true,
+        comparisonXTitle: document.querySelector("#candidateChart")?.layout?.xaxis?.title?.text || "",
+        keffAndSdText: document.querySelector("#selectedCandidateMetrics")?.innerText || ""
       }));
       assert.equal(details.selectedId, option.value, "selected candidate identity must update");
       assert.ok(details.signature.trim().length > 0, "candidate signature should be visible");
@@ -98,6 +122,10 @@ async function main() {
       assert.equal(details.svgCount, 1, "one candidate-linked source geometry SVG should render");
       assert.equal(details.pinCellCount, 4 * 17 * 17, "pin material maps must include all four 17x17 fuel-assembly lattices");
       assert.ok(details.chartSvgCount >= 1, "candidate comparison chart should render in the browser");
+      assert.equal(details.comparisonType, "scatter", "candidate comparison should use scientific point/interval marks, not baseline-zero bars");
+      assert.equal(details.comparisonErrorVisible, true, "k-effective comparison must display reported SD intervals");
+      assert.match(details.comparisonXTitle, /Reported k-effective mean/);
+      assert.match(details.keffAndSdText, /Reported SD ±/);
     }
 
     // Return to the first exact recorded candidate for consistent screenshots.
