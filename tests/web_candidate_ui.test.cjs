@@ -57,7 +57,7 @@ function makeHarness() {
     "setAssemblyRecords(rows) { assemblyRecords = rows; }," +
     "setModelGeometryData(data) { modelGeometryData = data; }," +
     "renderModelGeometrySvg," +
-    "showCandidate, drawSelectedCandidate, drawCandidateChart, layoutCells," +
+    "showCandidate, drawSelectedCandidate, drawCandidateChart, drawOtherCharts, drawAssemblyField, layoutCells," +
     "candidateOption, validateCandidateRecords, escapeHtml," +
     "getRecords() { return records; }" +
     "};";
@@ -149,8 +149,67 @@ test("all six candidate selections update placement, detail, comparison highligh
       [Number(proxy.p00_fission_rate), Number(proxy.p01_fission_rate)],
       [Number(proxy.p10_fission_rate), Number(proxy.p11_fission_rate)]
     ]));
+    const matrix = charts.get("assemblyMatrix");
+    assert.equal(matrix.traces[0].type, "heatmap", "all candidates and four positions should use a shared position matrix");
+    assert.equal(matrix.traces[0].z.length, 6, "matrix should include all six exact candidate-proxy matches");
+    assert.equal(matrix.traces[0].z[0].length, 4, "matrix should include P00, P01, P10, and P11");
+    assert.equal(matrix.traces.length, 2, "one heatmap plus one selection outline; only the heatmap carries a color scale");
+    assert.equal(matrix.traces[0].showscale, true);
+    assert.deepEqual(JSON.parse(JSON.stringify(matrix.traces[0].x)), ["P00","P01","P10","P11"]);
+    const rankOrder = layouts.slice().sort((a,b)=>Number(a.keff_mean)-Number(b.keff_mean)).map(item=>item.layout_signature);
+    assert.deepEqual(JSON.parse(JSON.stringify(matrix.traces[0].y)), rankOrder, "matrix row order should follow recorded candidate k-effective order");
+    const matrixRow = rankOrder.indexOf(row.layout_signature);
+    assert.deepEqual(JSON.parse(JSON.stringify(matrix.traces[0].z[matrixRow])), [
+      Number(proxy.p00_fission_rate), Number(proxy.p01_fission_rate),
+      Number(proxy.p10_fission_rate), Number(proxy.p11_fission_rate)
+    ], "matrix values must preserve the exact matching source proxy record");
+    assert.deepEqual(JSON.parse(JSON.stringify(matrix.traces[1].y)), [row.layout_signature,row.layout_signature,row.layout_signature,row.layout_signature], "selected candidate must be outlined across all four position cells");
+
+    const ranked = charts.get("distributionChart").traces[0];
+    assert.equal(ranked.type, "scatter", "six observations should use a ranked dot plot, not a histogram");
+    assert.equal(ranked.error_y.visible, true, "ranked k-effective plot must show reported SD");
+    assert.equal(ranked.marker.color.filter(color=>color==="#55d4df").length,1, "selected candidate highlight must sync to the ranked plot");
+    const aggregate = charts.get("aggregateChart");
+    assert.equal(aggregate.traces.length, 1, "aggregate indicators must not be combined on one shared scale");
+    assert.equal(aggregate.traces[0].type, "scatter", "aggregate relationship should be shown as a two-metric scatter");
+    assert.match(aggregate.layout.xaxis.title, /aggregate flux score/i);
+    assert.match(aggregate.layout.yaxis.title, /aggregate fission score/i);
+    assert.equal(aggregate.traces[0].marker.color.filter(color=>color==="#55d4df").length,1, "selected candidate highlight must sync to the aggregate relationship");
     assert.equal($("selectedRecordTag").textContent, String(row.canonical_reference).toLowerCase() === "true" ? "CANONICAL LAYOUT REFERENCE" : "LAYOUT VARIANT");
   }
+});
+
+
+test("Stage 2 scientific plots use ranking, uncertainty, separate score axes, and a candidate-position matrix", () => {
+  const { hooks, charts, $ } = makeHarness();
+  hooks.setRecords(layouts);
+  hooks.setAssemblyRecords(proxyRows);
+  $("candidateSelect").value = layouts[0].candidate_id;
+  $("metricSelect").value = "keff_mean";
+  hooks.showCandidate();
+  hooks.drawOtherCharts();
+
+  const comparison = charts.get("candidateChart");
+  assert.equal(comparison.traces[0].type, "scatter");
+  assert.equal(comparison.traces[0].error_x.visible, true);
+  assert.ok(comparison.layout.shapes.some(shape => shape.x0 === 1 && shape.x1 === 1), "candidate point-range plot should mark k_eff=1 as an interpretive reference");
+  assert.match(comparison.layout.annotations.map(a=>a.text).join(" "), /reference/i);
+
+  const ranked = charts.get("distributionChart");
+  assert.equal(ranked.traces[0].type, "scatter");
+  assert.deepEqual(JSON.parse(JSON.stringify(ranked.traces[0].x)), layouts.slice().sort((a,b)=>Number(a.keff_mean)-Number(b.keff_mean)).map(row=>row.layout_signature));
+  assert.equal(ranked.traces[0].y.length, 6);
+  assert.equal(ranked.traces[0].error_y.array.length, 6);
+  assert.ok(ranked.layout.shapes.some(shape => shape.y0 === 1 && shape.y1 === 1), "ranked plot should show the k_eff=1 reference");
+
+  const aggregate = charts.get("aggregateChart");
+  assert.equal(aggregate.traces.length, 1);
+  assert.equal(aggregate.traces[0].type, "scatter");
+  assert.equal(aggregate.traces[0].x.length, 6);
+  assert.equal(aggregate.traces[0].y.length, 6);
+  assert.match(aggregate.layout.xaxis.title, /flux score/i);
+  assert.match(aggregate.layout.yaxis.title, /fission score/i);
+  assert.doesNotMatch(aggregate.layout.xaxis.title, /absolute power/i);
 });
 
 test("missing numeric fields remain unavailable, not fabricated as zero", () => {

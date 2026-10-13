@@ -30,7 +30,16 @@ async function main() {
     await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
     await page.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
     await page.waitForSelector("#candidateChart svg", { timeout: 30000 });
-    // All four real Plotly graphs and their source mesh matrix must be present.
+    for (const selector of [
+      "#distributionChart.js-plotly-plot",
+      "#aggregateChart.js-plotly-plot",
+      "#assemblyMap.js-plotly-plot",
+      "#assemblyMatrix.js-plotly-plot"
+    ]) {
+      await page.waitForSelector(selector, { timeout: 30000 });
+      await page.waitForSelector(selector + " svg.main-svg", { timeout: 30000 });
+    }
+    // All four real OpenMC spatial plots plus the Stage 2 scientific candidate/proxy charts must render.
     for (const selector of [
       "#meshHeatmap.js-plotly-plot",
       "#meshContour.js-plotly-plot",
@@ -121,6 +130,24 @@ async function main() {
         comparisonType: document.querySelector("#candidateChart")?.data?.[0]?.type,
         comparisonErrorVisible: document.querySelector("#candidateChart")?.data?.[0]?.error_x?.visible === true,
         comparisonXTitle: document.querySelector("#candidateChart")?.layout?.xaxis?.title?.text || "",
+        comparisonHasReference: (document.querySelector("#candidateChart")?.layout?.shapes || []).some(shape => shape.x0 === 1 && shape.x1 === 1),
+        rankedType: document.querySelector("#distributionChart")?.data?.[0]?.type,
+        rankedMode: document.querySelector("#distributionChart")?.data?.[0]?.mode,
+        rankedCount: document.querySelector("#distributionChart")?.data?.[0]?.y?.length || 0,
+        rankedErrorVisible: document.querySelector("#distributionChart")?.data?.[0]?.error_y?.visible === true,
+        rankedSelectedColorCount: (document.querySelector("#distributionChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#55d4df").length,
+        rankedOrder: document.querySelector("#distributionChart")?.data?.[0]?.x || [],
+        aggregateTraceCount: document.querySelector("#aggregateChart")?.data?.length || 0,
+        aggregateType: document.querySelector("#aggregateChart")?.data?.[0]?.type,
+        aggregateXTitle: document.querySelector("#aggregateChart")?.layout?.xaxis?.title?.text || "",
+        aggregateYTitle: document.querySelector("#aggregateChart")?.layout?.yaxis?.title?.text || "",
+        aggregateSelectedColorCount: (document.querySelector("#aggregateChart")?.data?.[0]?.marker?.color || []).filter(color => color === "#55d4df").length,
+        matrixType: document.querySelector("#assemblyMatrix")?.data?.[0]?.type,
+        matrixRows: document.querySelector("#assemblyMatrix")?.data?.[0]?.z?.length || 0,
+        matrixColumns: document.querySelector("#assemblyMatrix")?.data?.[0]?.z?.[0]?.length || 0,
+        matrixPositions: document.querySelector("#assemblyMatrix")?.data?.[0]?.x || [],
+        matrixTraceCount: document.querySelector("#assemblyMatrix")?.data?.length || 0,
+        matrixSelectedLayout: document.querySelector("#assemblyMatrix")?.data?.[1]?.y?.[0] || "",
         keffAndSdText: document.querySelector("#selectedCandidateMetrics")?.innerText || ""
       }));
       assert.equal(details.selectedId, option.value, "selected candidate identity must update");
@@ -141,6 +168,24 @@ async function main() {
       assert.equal(details.comparisonType, "scatter", "candidate comparison should use scientific point/interval marks, not baseline-zero bars");
       assert.equal(details.comparisonErrorVisible, true, "k-effective comparison must display reported SD intervals");
       assert.match(details.comparisonXTitle, /Reported k-effective mean/);
+      assert.equal(details.comparisonHasReference, true, "point-range plot should make the k_eff=1 interpretation reference explicit");
+      assert.equal(details.rankedType, "scatter", "k-effective distribution should be a ranked dot plot, not a histogram");
+      assert.equal(details.rankedMode, "markers");
+      assert.equal(details.rankedCount, 6, "ranked dot plot should show six actual candidate observations");
+      assert.equal(details.rankedErrorVisible, true, "ranked plot should show the source-reported standard deviations");
+      assert.equal(details.rankedSelectedColorCount, 1, "selected-candidate highlight should synchronize to the ranked plot");
+      assert.deepEqual(details.rankedOrder, ["MUMU","MMUU","MUUM","UMMU","UUMM","UMUM"], "rank order should follow the six recorded k-effective means");
+      assert.equal(details.aggregateTraceCount, 1, "flux and fission scores should not share one common y scale");
+      assert.equal(details.aggregateType, "scatter", "aggregate indicators should be shown as an x-y relationship");
+      assert.match(details.aggregateXTitle, /aggregate flux score/i);
+      assert.match(details.aggregateYTitle, /aggregate fission score/i);
+      assert.equal(details.aggregateSelectedColorCount, 1, "selected-candidate highlight should synchronize to the score relationship");
+      assert.equal(details.matrixType, "heatmap", "position-wise comparison should be a heatmap matrix");
+      assert.equal(details.matrixRows, 6, "matrix should include all six exact candidate matches");
+      assert.equal(details.matrixColumns, 4, "matrix should include all four assembly positions");
+      assert.deepEqual(details.matrixPositions, ["P00","P01","P10","P11"]);
+      assert.equal(details.matrixTraceCount, 2, "matrix should have one colour-bearing heatmap and one selected-row outline");
+      assert.equal(details.matrixSelectedLayout, details.coreInfo?.layoutSignature, "outlined matrix row should follow the selected candidate");
       assert.match(details.keffAndSdText, /Reported SD ±/);
     }
 
