@@ -306,18 +306,25 @@ async function loadGeometryArtifacts(){
   const response=await fetch("/api/geometry-artifacts",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("HTTP "+response.status);
   const payload=await response.json(),items=payload.artifacts||[];
-  $("geometryStatus").textContent=items.length?items.length+" ARTIFACT(S) FOUND":"NO GEOMETRY ARTIFACTS";
-  $("geometryStatus").classList.toggle("warning",!items.length);
-  $("geometryProvenance").textContent=items.length?"Found "+items.length+" existing file(s) in repository output folders. Preview uses original files; no geometry is inferred.":"No supported geometry visualization files were found in approved output folders. Generate them from the actual OpenMC model inputs, then refresh.";
   const list=$("geometryArtifactList");
   if(!items.length){
-   list.innerHTML='<div class="empty-state"><b>No external geometry output found</b><p>Expected OpenMC-generated PNG slice/raytrace plots or VTK/VTI datasets in plots/, plot/, geometry/, model/, c5g7-run/, evidence/, results/, or artifacts/.</p><p>The dashboard deliberately does not replace missing files with a fabricated assembly diagram.</p></div>';
-   $("geometryPreview").innerHTML='<div class="empty-state"><b>Geometry preview unavailable</b><p>Generate a plot from the validated OpenMC model inputs and click Refresh artifacts.</p><p><a href="https://docs.openmc.org/en/latest/usersguide/plots.html" target="_blank" rel="noreferrer">OpenMC geometry plotting documentation ↗</a></p></div>';
-   $("geometryCaption").textContent="No external geometry artifact selected.";return;
+   $("geometryStatus").textContent="XML VIEW READY · NO PLOT FILE";
+   $("geometryStatus").classList.remove("warning");
+   $("geometryProvenance").textContent="The candidate-linked material map is reconstructed from archived OpenMC geometry.xml lattice/material definitions. No separate native PNG/VTK/VTI plot is checked into scanned output folders.";
+   list.innerHTML='<div class="empty-state"><b>No separate OpenMC plot artifact found</b><p>The main panel still renders the archived model lattice and pin-material regions for the selected candidate.</p><p>Native PNG/VTK/VTI artifacts can be inspected here when present.</p></div>';
+   geometryArtifactActive=false;
+   const selected=records.find(r=>String(r.candidate_id)===$("candidateSelect")?.value);
+   drawModelGeometry(selected);
+   return;
   }
+  $("geometryStatus").textContent=items.length+" EXTERNAL ARTIFACT(S) FOUND";
+  $("geometryStatus").classList.remove("warning");
+  $("geometryProvenance").textContent="Found "+items.length+" existing geometry file(s). The candidate-linked XML material map remains primary; select an item below to inspect a separate native artifact.";
   list.innerHTML=items.map((item,i)=>'<button class="artifact-item" type="button" data-artifact-index="'+i+'"><span class="artifact-icon">'+(item.kind==="image"?"IMG":"3D")+'</span><span class="artifact-meta"><b>'+escapeHtml(item.name)+'</b><small>'+escapeHtml(item.path)+' · '+item.format+' · '+formatBytes(item.size_bytes)+'</small></span><span class="tag">'+item.kind.toUpperCase()+'</span></button>').join("");
   list.querySelectorAll("[data-artifact-index]").forEach(button=>button.addEventListener("click",()=>showGeometryArtifact(items[Number(button.dataset.artifactIndex)])));
-  showGeometryArtifact(items.find(item=>item.kind==="image")||items[0]);
+  geometryArtifactActive=false;
+  const selected=records.find(r=>String(r.candidate_id)===$("candidateSelect")?.value);
+  drawModelGeometry(selected);
  }catch(error){
   $("geometryStatus").textContent="ARTIFACT SCAN FAILED";$("geometryStatus").classList.add("warning");
   $("geometryProvenance").textContent="Could not inspect geometry outputs: "+error.message;
@@ -326,6 +333,7 @@ async function loadGeometryArtifacts(){
 }
 function showGeometryArtifact(item){
  if(!item)return;
+ geometryArtifactActive=true;
  document.querySelectorAll(".artifact-item").forEach(el=>el.classList.remove("active"));
  // Mark the selected source by matching its path text, avoiding assumptions about array order after refresh.
  document.querySelectorAll(".artifact-item").forEach(el=>{if(el.textContent.includes(item.name))el.classList.add("active");});
