@@ -6,7 +6,7 @@ const PIN_COLORS = {
   "1": "#51d2df", "2": "#f4bd62", "3": "#f08f62",
   "4": "#dc6f91", "5": "#c1b3ff", "6": "#9cb6c8"
 };
-const CODE_COLORS = { U: "#51d2df", M: "#f4bd62", R: "#47768a" };
+const CODE_COLORS = { U: "#51d2df", M: "#f4bd62", R: "#929aa5" };
 
 function releaseObjectResources(root) {
   const geometries = new Set(), materials = new Set(), textures = new Set();
@@ -252,7 +252,7 @@ export function createCoreViewer(container, onAssemblySelect) {
     const baseMaterials = {
       M: new THREE.MeshStandardMaterial({ color: "#704d2d", metalness: 0.35, roughness: 0.45 }),
       U: new THREE.MeshStandardMaterial({ color: "#174657", metalness: 0.34, roughness: 0.42 }),
-      R: new THREE.MeshStandardMaterial({ color: "#0d2b3a", metalness: 0.5, roughness: 0.34 })
+      R: new THREE.MeshStandardMaterial({ color: "#414851", metalness: 0.16, roughness: 0.74 })
     };
     const baseGeometry = new THREE.BoxGeometry(pitchX * 0.985, 0.48, pitchZ * 0.985);
     const reflectorTopGeometry = new THREE.BoxGeometry(pitchX * 0.97, 0.16, pitchZ * 0.97);
@@ -287,7 +287,7 @@ export function createCoreViewer(container, onAssemblySelect) {
           reflectorCount++;
           const top = new THREE.Mesh(
             reflectorTopGeometry,
-            new THREE.MeshStandardMaterial({ color: "#17495d", metalness: 0.42, roughness: 0.38, emissive: "#0a2a38", emissiveIntensity: 0.5 })
+            new THREE.MeshStandardMaterial({ color: "#727b86", metalness: 0.14, roughness: 0.72, emissive: "#252b32", emissiveIntensity: 0.16 })
           );
           top.position.set(x, 0.19, z);
           top.castShadow = true;
@@ -299,8 +299,8 @@ export function createCoreViewer(container, onAssemblySelect) {
             wavePoints.push([x - pitchX * 0.34, 0.29, z + offset], [x + pitchX * 0.34, 0.29, z + offset]);
             wavePoints.push([x + offset, 0.29, z - pitchZ * 0.34], [x + offset, 0.29, z + pitchZ * 0.34]);
           }
-          for (let i = 0; i < wavePoints.length; i += 2) addLine([wavePoints[i], wavePoints[i + 1]], "#347b91", 0.58);
-          const label = makeLabel("REFLECTOR · " + position, "#9bd8eb");
+          for (let i = 0; i < wavePoints.length; i += 2) addLine([wavePoints[i], wavePoints[i + 1]], "#a1aab3", 0.42);
+          const label = makeLabel("REFLECTOR · " + position, "#d0d5da");
           label.position.set(x, 1.7, z);
           label.scale.set(9.6, 2.4, 1);
           model.add(label);
