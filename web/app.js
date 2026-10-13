@@ -7,6 +7,15 @@ let meshDrawRevision = 0;
 let axial3dData = null;
 let axial3dDrawRevision = 0;
 let assemblyRecords = [];
+let selectedAssemblyPosition = "P00";
+const assemblyPositionDefs = [
+ {key:"p00_fission_rate",label:"P00",row:0,col:0,index:0},
+ {key:"p01_fission_rate",label:"P01",row:0,col:1,index:1},
+ {key:"p10_fission_rate",label:"P10",row:1,col:0,index:2},
+ {key:"p11_fission_rate",label:"P11",row:1,col:1,index:3}
+];
+const materialEdgeColor = {M:"#f4bd62",U:"#55d4df"};
+const formatSourceProxy = value => Number.isFinite(Number(value)) ? Number(value).toPrecision(6) : "—";
 const number = (x, digits=5) => Number.isFinite(Number(x)) ? Number(x).toFixed(digits) : "—";
 const has = (row,key) => {
  if(!row || typeof row!=="object")return false;
@@ -1092,7 +1101,7 @@ async function initAssembly(){
   const response=await fetch("/api/assembly",{headers:{Accept:"application/json"}});
   if(!response.ok){let detail="HTTP "+response.status;try{detail=(await response.json()).error||detail}catch(_){}throw new Error(detail)}
   const payload=await response.json();
-  assemblyRecords=(payload.records||[]).filter(r=>["p00_fission_rate","p01_fission_rate","p10_fission_rate","p11_fission_rate"].every(k=>Number.isFinite(Number(r[k]))));
+  assemblyRecords=(payload.records||[]).filter(r=>assemblyPositionDefs.every(position=>has(r,position.key)));
   if(!assemblyRecords.length)throw new Error("No complete 2×2 assembly proxy records.");
   $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
   $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of the candidate-summary seeds; do not compare as paired runs.";
@@ -1106,43 +1115,170 @@ async function initAssembly(){
 }
 function drawAssemblyField(){
  if(!assemblyRecords.length||!$("assemblyMap")||!$("assemblyMatrix"))return;
- const selectedId=$("candidateSelect")?.value;
- const selected=records.find(r=>String(r.candidate_id)===String(selectedId));
- const row=selected?assemblyRecords.find(r=>String(r.candidate_id)===String(selected.candidate_id)&&String(r.layout_signature).toUpperCase()===String(selected.layout_signature).toUpperCase()):null;
- if(!row){
-  $("assemblyMap").innerHTML='<div class="empty-state"><b>No matching assembly evidence</b><p>The selected candidate has no matching 2 × 2 proxy record. Values are not borrowed from another candidate.</p></div>';
- } else {
- const positions=[["p00_fission_rate","p01_fission_rate"],["p10_fission_rate","p11_fission_rate"]];
- const z=positions.map(line=>line.map(key=>Number(row[key])));
- chart("assemblyMap",[{type:"heatmap",x:["Column 0","Column 1"],y:["Row 0","Row 1"],z,text:z.map(line=>line.map(value=>value.toFixed(3))),texttemplate:"%{text}",textfont:{size:11,color:"#e8f1f7"},customdata:[["P00","P01"],["P10","P11"]],colorscale:"Cividis",colorbar:{title:{text:"Fission-rate<br>proxy",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},hovertemplate:"Position %{customdata}<br>Recorded fission-rate proxy %{z:.8g}<extra></extra>"}],{margin:{l:62,r:26,t:12,b:48},xaxis:{...baseLayout.xaxis,title:"Assembly column",tickangle:0},yaxis:{...baseLayout.yaxis,title:"Assembly row",autorange:"reversed"},showlegend:false});
- }
- const matrixPositions=[["p00_fission_rate","P00"],["p01_fission_rate","P01"],["p10_fission_rate","P10"],["p11_fission_rate","P11"]];
- // Assemble the matrix in the same candidate order as the candidate selector, using only exact ID + signature matches.
+ const selectedId=String($("candidateSelect")?.value||"");
+ const selected=records.find(r=>String(r.candidate_id)===selectedId);
+ const row=selected?assemblyRecords.find(item=>
+  String(item.candidate_id)===String(selected.candidate_id)&&
+  String(item.layout_signature).toUpperCase()===String(selected.layout_signature).toUpperCase()
+ ):null;
  const matrixRows=records.slice().sort((a,b)=>{
   const av=has(a,"keff_mean")?Number(a.keff_mean):Number.POSITIVE_INFINITY;
   const bv=has(b,"keff_mean")?Number(b.keff_mean):Number.POSITIVE_INFINITY;
   return av-bv;
  }).map(candidate=>{
-  const proxy=assemblyRecords.find(item=>String(item.candidate_id)===String(candidate.candidate_id)&&String(item.layout_signature).toUpperCase()===String(candidate.layout_signature).toUpperCase());
-  if(!proxy||!matrixPositions.every(([key])=>has(proxy,key)))return null;
-  return {candidate,proxy,values:matrixPositions.map(([key])=>Number(proxy[key]))};
+  const proxy=assemblyRecords.find(item=>
+   String(item.candidate_id)===String(candidate.candidate_id)&&
+   String(item.layout_signature).toUpperCase()===String(candidate.layout_signature).toUpperCase()
+  );
+  if(!proxy||!assemblyPositionDefs.every(position=>has(proxy,position.key)))return null;
+  return {candidate,proxy,values:assemblyPositionDefs.map(position=>Number(proxy[position.key]))};
  }).filter(Boolean);
- if(!matrixRows.length){
-  $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Position matrix unavailable</b><p>No complete proxy records match the candidate IDs and layout signatures.</p></div>';
+
+ // A common min/max is used by both views. Changing candidates must not rescale
+ // the colour field and visually exaggerate otherwise comparable proxy values.
+ const globalValues=matrixRows.flatMap(item=>item.values).filter(Number.isFinite);
+ if(!globalValues.length){
+  $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Quantitative scale unavailable</b><p>No finite, exact ID-and-layout-matched proxy values are available.</p></div>';
+  $("assemblyMap").innerHTML='<div class="empty-state"><b>Assembly data unavailable</b><p>No numerical field is drawn without recorded values.</p></div>';
   return;
  }
- const finite=matrixRows.flatMap(row=>row.values).filter(Number.isFinite);
- const observedMin=Math.min(...finite),observedMax=Math.max(...finite),zmin=observedMin,zmax=observedMax>observedMin?observedMax:observedMin+Math.max(Math.abs(observedMin)*0.01,1e-9),selectedRow=matrixRows.find(row=>String(row.candidate.candidate_id)===String(selectedId));
+ const observedMin=Math.min(...globalValues),observedMax=Math.max(...globalValues);
+ const scaleMin=observedMin,scaleMax=observedMax>observedMin?observedMax:observedMin+Math.max(Math.abs(observedMin)*0.01,1e-9);
+ const mid=(scaleMin+scaleMax)/2;
+ const colorbar={
+  title:{text:"Fission-rate proxy<br>(source units not specified)",font:{size:10,color:palette.text}},
+  thickness:13,outlinewidth:0,tickfont:{size:9,color:palette.muted},
+  tickmode:"array",tickvals:[scaleMin,mid,scaleMax],
+  ticktext:[formatSourceProxy(scaleMin),formatSourceProxy(mid),formatSourceProxy(scaleMax)],
+  ticks:"outside",len:0.78
+ };
+
+ if(!row){
+  $("assemblyMap").innerHTML='<div class="empty-state"><b>No exact candidate proxy record</b><p>The selected candidate ID and layout signature have no matching assembly run. Values are not borrowed from another layout.</p></div>';
+  $("assemblyPositionTitle").textContent=selectedAssemblyPosition;
+  $("assemblyPositionMaterial").textContent="NO MATCH";
+  $("assemblyPositionValue").textContent="—";
+  $("assemblyPositionPicker").innerHTML="";
+ }else{
+  if(!assemblyPositionDefs.some(position=>position.label===selectedAssemblyPosition))selectedAssemblyPosition="P00";
+  const signature=normalizeLayoutSignature(row.layout_signature);
+  const positionFor=(position)=>({
+   ...position,
+   value:Number(row[position.key]),
+   material:signature[position.index]==="M"?"MOX":"UO₂",
+   materialCode:signature[position.index]
+  });
+  const cells=assemblyPositionDefs.map(positionFor);
+  const selectedPosition=cells.find(position=>position.label===selectedAssemblyPosition)||cells[0];
+  $("assemblyPositionTitle").textContent=selectedPosition.label;
+  $("assemblyPositionMaterial").textContent=selectedPosition.material;
+  $("assemblyPositionMaterial").className="material-chip "+(selectedPosition.materialCode==="M"?"material-chip-mox":"material-chip-uo2");
+  $("assemblyPositionValue").textContent=formatSourceProxy(selectedPosition.value);
+  $("assemblyPositionPicker").innerHTML=cells.map(position=>
+   '<button type="button" class="assembly-position-option '+(position.label===selectedAssemblyPosition?"selected":"")+'" data-assembly-position="'+position.label+'" aria-pressed="'+String(position.label===selectedAssemblyPosition)+'">'+
+    '<span>'+position.label+'</span><b>'+position.material+'</b><strong>'+formatSourceProxy(position.value)+'</strong>'+
+   '</button>'
+  ).join("");
+  $("assemblyPositionPicker").querySelectorAll("[data-assembly-position]").forEach(button=>button.addEventListener("click",()=>{
+   selectedAssemblyPosition=button.dataset.assemblyPosition;
+   drawAssemblyField();
+  }));
+
+  const z=[
+   [cells[0].value,cells[1].value],
+   [cells[2].value,cells[3].value]
+  ];
+  const customdata=[
+   [cells[0],cells[1]],
+   [cells[2],cells[3]]
+  ].map(line=>line.map(position=>[
+   position.label,position.material,row.candidate_id,signature,row.seed,row.status
+  ]));
+  const textValues=cells.map(position=>position.label+" · "+(position.materialCode==="M"?"M":"U")+"\n"+formatSourceProxy(position.value));
+  const heatmap={
+   type:"heatmap",name:"Assembly-integrated fission-rate proxy",
+   x:["Column 0","Column 1"],y:["Row 0","Row 1"],
+   z,text:[[textValues[0],textValues[1]],[textValues[2],textValues[3]]],
+   texttemplate:"%{text}",textfont:{size:11,color:"#f0f3f5"},
+   customdata,colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,
+   colorbar,
+   xgap:4,ygap:4,hoverongaps:false,connectgaps:false,
+   hovertemplate:"Position %{customdata[0]} · %{customdata[1]}<br>Candidate %{customdata[2]}<br>Layout %{customdata[3]}<br>Recorded fission-rate proxy %{z:.8g}<br>Source unit: not specified · not absolute power<br>Proxy-run seed %{customdata[4]}<extra></extra>"
+  };
+  const materialOutline={
+   type:"scatter",mode:"markers",name:"Material category outline",
+   x:cells.map(position=>position.col===0?"Column 0":"Column 1"),
+   y:cells.map(position=>position.row===0?"Row 0":"Row 1"),
+   customdata:cells.map(position=>position.label),
+   marker:{
+    symbol:"square-open",size:49,
+    color:cells.map(position=>materialEdgeColor[position.materialCode]),
+    line:{width:2.6,color:cells.map(position=>materialEdgeColor[position.materialCode])}
+   },
+   hoverinfo:"skip",showlegend:false
+  };
+  const highlighted=cells.find(position=>position.label===selectedAssemblyPosition)||cells[0];
+  const selectionOutline={
+   type:"scatter",mode:"markers",name:"Selected spatial position",
+   x:[highlighted.col===0?"Column 0":"Column 1"],
+   y:[highlighted.row===0?"Row 0":"Row 1"],
+   customdata:[highlighted.label],
+   marker:{symbol:"square-open",size:62,color:"#ffffff",line:{width:3.2,color:"#ffffff"}},
+   hoverinfo:"skip",showlegend:false
+  };
+  const mapEl=$("assemblyMap");
+  chart("assemblyMap",[heatmap,materialOutline,selectionOutline],{
+   autosize:true,margin:{l:58,r:112,t:14,b:52},
+   showlegend:false,hovermode:"closest",
+   xaxis:{...baseLayout.xaxis,title:{text:"Core-map column",standoff:9},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   yaxis:{...baseLayout.yaxis,title:{text:"Core-map row · row 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"P00 → P01 / P10 → P11 · row-major",font:{size:9,color:palette.muted}}]
+  }).then(()=>{
+   if(!mapEl||typeof mapEl.on!=="function"||mapEl.dataset.positionClickBound)return;
+   mapEl.on("plotly_click",event=>{
+    const point=(event?.points||[]).find(item=>item?.curveNumber===0)|| (event?.points||[])[0];
+    const raw=point?.customdata;
+    const position=Array.isArray(raw)?raw[0]:raw;
+    if(assemblyPositionDefs.some(item=>item.label===position)&&position!==selectedAssemblyPosition){
+     selectedAssemblyPosition=position;
+     drawAssemblyField();
+    }
+   });
+   mapEl.dataset.positionClickBound="true";
+  });
+ }
+ if(!matrixRows.length){
+  $("assemblyMatrix").innerHTML='<div class="empty-state"><b>Position matrix unavailable</b><p>No complete exact candidate-ID and layout-signature matches exist in the proxy file.</p></div>';
+  return;
+ }
  const matrixTrace={
   type:"heatmap",name:"Recorded assembly fission-rate proxy",
-  x:matrixPositions.map(([,position])=>position),y:matrixRows.map(row=>String(row.candidate.layout_signature||label(row.candidate))),
-  z:matrixRows.map(row=>row.values),text:matrixRows.map(row=>row.values.map(value=>value.toFixed(3))),texttemplate:"%{text}",
-  textfont:{size:10,color:"#e8f1f7"},colorscale:"Cividis",zmin,zmax,showscale:true,
-  colorbar:{title:{text:"Fission-rate<br>proxy (source scale)",font:{size:10,color:palette.text}},thickness:12,outlinewidth:0,tickfont:{size:9,color:palette.muted}},
-  customdata:matrixRows.map(row=>row.values.map((value,index)=>[row.candidate.candidate_id,row.candidate.layout_signature,matrixPositions[index][1],row.proxy.seed,row.proxy.status])),
-  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>Proxy seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
+  x:assemblyPositionDefs.map(position=>position.label),
+  y:matrixRows.map(item=>String(item.candidate.layout_signature||label(item.candidate))),
+  z:matrixRows.map(item=>item.values),
+  text:matrixRows.map(item=>item.values.map(formatSourceProxy)),
+  texttemplate:"%{text}",textfont:{size:10,color:"#f0f3f5"},
+  colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,showscale:false,
+  xgap:3,ygap:2,
+  customdata:matrixRows.map(item=>item.values.map((value,index)=>[
+   item.candidate.candidate_id,item.candidate.layout_signature,
+   assemblyPositionDefs[index].label,item.proxy.seed,item.proxy.status
+  ])),
+  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>Source unit: not specified · not absolute power<br>Proxy-run seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
  };
+ const selectedRow=matrixRows.find(item=>String(item.candidate.candidate_id)===selectedId&&String(item.candidate.layout_signature).toUpperCase()===String(selected?.layout_signature||"").toUpperCase());
  const traces=[matrixTrace];
- if(selectedRow)traces.push({type:"scatter",mode:"markers",name:"Selected candidate",x:matrixPositions.map(([,position])=>position),y:matrixPositions.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),marker:{symbol:"square-open",size:37,color:"#e8f1f7",line:{width:1.5,color:"#e8f1f7"}},hoverinfo:"skip",showlegend:false});
- chart("assemblyMatrix",traces,{autosize:true,margin:{l:64,r:34,t:18,b:48},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Fuel position",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},yaxis:{...baseLayout.yaxis,title:"Candidate layout · rows sorted by recorded k-effective",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},annotations:[{xref:"paper",yref:"paper",x:1,y:1.02,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]});
+ if(selectedRow)traces.push({
+  type:"scatter",mode:"markers",name:"Selected candidate",
+  x:assemblyPositionDefs.map(position=>position.label),
+  y:assemblyPositionDefs.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),
+  marker:{symbol:"square-open",size:34,color:"#ffffff",line:{width:1.8,color:"#ffffff"}},
+  hoverinfo:"skip",showlegend:false
+ });
+ chart("assemblyMatrix",traces,{
+  autosize:true,margin:{l:62,r:20,t:16,b:50},showlegend:false,hovermode:"closest",
+  xaxis:{...baseLayout.xaxis,title:{text:"Fuel position · row-major",standoff:10},type:"category",categoryorder:"array",categoryarray:["P00","P01","P10","P11"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},
+  yaxis:{...baseLayout.yaxis,title:{text:"Candidate layout · descriptive k-effective order",standoff:8},type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.07,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]
+ });
 }
