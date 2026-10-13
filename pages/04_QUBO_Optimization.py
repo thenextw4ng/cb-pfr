@@ -100,7 +100,7 @@ with left:
         textfont={"size": 12, "color": "#ffffff"},
         customdata=hover_grid,
         colorscale=[
-            [0.0, "#16394b"],
+            [0.0, "#55d4df"],
             [0.001, "#55d4df"],
             [0.0011, "#254158"],
             [0.55, "#49617a"],
