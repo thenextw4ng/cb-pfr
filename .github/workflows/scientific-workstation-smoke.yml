@@ -19,28 +19,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Download the archived OpenMC geometry source
-        uses: actions/download-artifact@v4
-        with:
-          repository: ${{ github.repository }}
-          run-id: 38182056526
-          name: c5g7-study-640000
-          path: /tmp/cbpfr-geometry-source
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Repackage source members for XML-level checks
+      - name: Download the exact archived OpenMC geometry source ZIP
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import zipfile
-          root = Path("/tmp/cbpfr-geometry-source")
-          archive = Path("/tmp/c5g7-study-640000-repacked.zip")
-          files = sorted(path for path in root.rglob("*") if path.is_file())
-          assert files, f"No files downloaded from the archived geometry artifact: {root}"
-          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
-              for path in files:
-                  output.write(path, path.relative_to(root).as_posix())
-          print(f"Repacked {len(files)} archived source members for XML fidelity checks.")
-          PY
+          curl --fail --location --retry 3 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/11719691969/zip" \
+            --output /tmp/c5g7-study-640000.zip
+          echo "7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b  /tmp/c5g7-study-640000.zip" | sha256sum --check
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -60,7 +48,7 @@ jobs:
         run: node --test tests/web_candidate_ui.test.cjs
       - name: Verify OpenMC geometry manifest against original XML bytes
         env:
-          CBPFR_OPENMC_GEOMETRY_ARCHIVE: /tmp/c5g7-study-640000-repacked.zip
+          CBPFR_OPENMC_GEOMETRY_ARCHIVE: /tmp/c5g7-study-640000.zip
         run: python tests/test_openmc_geometry_manifest.py
       - name: Start workstation and smoke-test API/assets
         shell: bash
