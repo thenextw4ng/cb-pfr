@@ -905,7 +905,7 @@ async function initAxial3D(){
   updateButton.dataset.bound="true";
   updateButton.addEventListener("click",async()=>{
    updateButton.disabled=true;updateButton.textContent="↻ Loading…";
-   await loadAxial3D();
+   await loadAxial3D(true);
    updateButton.disabled=false;updateButton.textContent="↻ Reload 3D tally";
   });
  }
@@ -920,10 +920,10 @@ async function initAxial3D(){
  });
  await loadAxial3D();
 }
-async function loadAxial3D(){
+async function loadAxial3D(forceRetry=false){
  try{
   const score=$("axial3dScore")?.value||"flux";
-  const response=await fetch("/api/axial-3d?score="+encodeURIComponent(score),{headers:{Accept:"application/json"}});
+  const response=await fetch("/api/axial-3d?score="+encodeURIComponent(score)+(forceRetry?"&retry=1":""),{headers:{Accept:"application/json"}});
   let payload;
   try{payload=await response.json();}catch(_){payload={error:"API returned a non-JSON response"};}
   if(!response.ok)throw new Error(payload.error||("HTTP "+response.status));
@@ -984,8 +984,8 @@ async function loadAxial3D(){
    ["Axial bins","—","No multi-layer tally installed"],
    ["Active realisations","—","Statepoint unavailable"]
   ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
-  $("axial3dSummary").textContent="No volumetric values are fabricated. The Stage 4 workflow now publishes a true multi-layer statepoint export to evidence/cbpfr_axial_3d/ after successful transport/export. Sync the latest feature branch and restart the server if this checkout predates that evidence commit.";
-  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Axial 3D evidence awaiting branch sync</b><p>This checkout does not yet contain the exported 51 × 51 × 30 OpenMC tally. After the axial workflow completes its transport and export steps, sync the latest Stage 4 branch and restart the local server. The 2D terrain above is intentionally not used as a fallback.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a></p></div>';
+  $("axial3dSummary").textContent="No volumetric values are fabricated. The workstation attempted to retrieve the latest hash-verified high-budget UMMU production artifact from GitHub Actions. If the request failed, check network access and use Reload 3D tally to retry. The 2D terrain is not used as a fallback.";
+  $("axial3dPlot").innerHTML='<div class="empty-state"><b>Recorded axial 3D tally unavailable</b><p>The server could not install the verified 51 × 51 × 30 production export. Check your network connection, then use Reload 3D tally to retry. No synthetic volume or 2D extrusion is generated.</p><p><a href="https://github.com/thenextw4ng/cb-pfr/actions/workflows/c5g7-axial-3d.yml" target="_blank" rel="noreferrer">Open the axial 3D transport workflow ↗</a> · <a href="https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067" target="_blank" rel="noreferrer">View successful UMMU production run ↗</a></p></div>';
  }
 }
 function drawAxial3D(){
