@@ -45,6 +45,8 @@ def field_figure(
     score_name: str,
     selected_row: int,
     log_color: bool = True,
+    x_label: str = "x-coordinate / bin",
+    y_label: str = "y-coordinate / bin",
 ) -> go.Figure:
     """Heatmap with contour lines and a row locator linked to the profile plot."""
     z = np.asarray(mean_grid, dtype=float)
@@ -117,8 +119,8 @@ def field_figure(
     base_layout(fig, height=600)
     fig.update_layout(
         title={"text": f"{score_name} · spatial field with contour overlay", "x": 0.02},
-        xaxis_title="x-coordinate / bin",
-        yaxis_title="y-coordinate / bin",
+        xaxis_title=x_label,
+        yaxis_title=y_label,
         margin={"l": 60, "r": 25, "t": 55, "b": 55},
         hovermode="closest",
         yaxis={"gridcolor": LINE, "linecolor": LINE, "scaleanchor": "x", "scaleratio": 1},
@@ -176,6 +178,8 @@ def uncertainty_figure(
     x: np.ndarray,
     y: np.ndarray,
     score_name: str,
+    x_label: str = "x-coordinate / bin",
+    y_label: str = "y-coordinate / bin",
 ) -> go.Figure:
     """Spatial map of relative tally SD for positive-mean bins."""
     values = np.asarray(relative_sd_grid, dtype=float)
@@ -202,8 +206,8 @@ def uncertainty_figure(
     base_layout(fig, height=500)
     fig.update_layout(
         title={"text": f"{score_name} · relative Monte Carlo uncertainty", "x": 0.02},
-        xaxis_title="x-coordinate / bin",
-        yaxis_title="y-coordinate / bin",
+        xaxis_title=x_label,
+        yaxis_title=y_label,
         margin={"l": 60, "r": 25, "t": 55, "b": 55},
         yaxis={"gridcolor": LINE, "linecolor": LINE, "scaleanchor": "x", "scaleratio": 1},
     )
