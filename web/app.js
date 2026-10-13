@@ -896,8 +896,12 @@ async function loadAxial3D(){
    throw new Error("3D tally arrays do not match the declared mesh dimensions.");
   }
   axial3dData=payload;
-  $("axial3dStatus").textContent="3D STATEPOINT LOADED";
-  $("axial3dStatus").classList.remove("warning");
+  const scoreQuality=payload.provenance?.score_summary||{};
+  const medianRse=Number(scoreQuality.relative_error_percent_median_positive_bins);
+  const p95Rse=Number(scoreQuality.relative_error_percent_p95_positive_bins);
+  const hasHighLocalRse=Number.isFinite(medianRse)&&medianRse>25;
+  $("axial3dStatus").textContent="3D STATEPOINT LOADED"+(hasHighLocalRse?" · HIGH BINWISE RSE":"");
+  $("axial3dStatus").classList.toggle("warning",hasHighLocalRse);
   const state=payload.provenance?.statepoint||{};
   const sha=payload.provenance?.sha256||"not recorded";
   $("axial3dProvenance").textContent=payload.provenance?.source+" · mesh "+dims.join(" × ")+" · statepoint SHA-256 "+(state.sha256||"not recorded")+" · NPZ SHA-256 "+sha+". The plotted field comes from recorded 3D tally bins, not the 2D surface.";
@@ -905,7 +909,11 @@ async function loadAxial3D(){
   const slider=$("axial3dSlice");
   slider.max=String(zs.length-1);
   slider.value=String(Math.min(Number(slider.value)||0,zs.length-1));
-  const zSpan=zs.length?Math.abs(zs[zs.length-1]-zs[0]):0;
+  const lower=payload.mesh.lower_left_cm_xyz,upper=payload.mesh.upper_right_cm_xyz;
+  const zCell=zs.length>1?Math.abs(zs[1]-zs[0]):0;
+  const zSpan=Array.isArray(lower)&&Array.isArray(upper)&&Number.isFinite(Number(lower[2]))&&Number.isFinite(Number(upper[2]))
+   ?Math.abs(Number(upper[2])-Number(lower[2]))
+   :(zs.length?Math.abs(zs[zs.length-1]-zs[0])+zCell:0);
   const meanActive=state.n_realizations??"not recorded";
   $("axial3dKpis").innerHTML=[
    ["Mesh dimensions",dims.join(" × "),"51 × 51 × "+dims[2]+" source tally bins"],
@@ -913,7 +921,10 @@ async function loadAxial3D(){
    ["Axial bins",String(dims[2]),"Recorded independent mesh layers"],
    ["Active realisations",String(meanActive),"OpenMC statepoint metadata"]
   ].map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
-  $("axial3dSummary").textContent="Selected score: "+score+". Axial layers: "+dims[2]+". The volume is an OpenMC mesh-tally estimate; each voxel retains Monte Carlo uncertainty. Relative standard errors in zero-mean bins are undefined and shown as missing. Input/model hashes and the full statepoint summary are retained in the artifact.";
+  const rseNote=Number.isFinite(medianRse)
+   ?" Positive-mean voxel relative MC standard error: median "+medianRse.toFixed(1)+"%"+(Number.isFinite(p95Rse)?", 95th percentile "+p95Rse.toFixed(1)+"%":"")+". These are descriptive spatial uncertainty statistics, not a formal acceptance threshold."
+   :" Spatial relative-error summary is not present in the sidecar.";
+  $("axial3dSummary").textContent="Selected score: "+score+". Axial layers: "+dims[2]+". The volume is an OpenMC mesh-tally estimate; each voxel retains Monte Carlo uncertainty. Relative standard errors in zero-mean bins are undefined and shown as missing."+rseNote+" Input/model hashes and the full statepoint summary are retained in the artifact.";
   drawAxial3D();
  }catch(error){
   axial3dData=null;
