@@ -115,12 +115,6 @@ async function main() {
     assert.ok(desktopOverflow.document <= desktopOverflow.viewport + 1,
       "desktop page must not create horizontal overflow: " + JSON.stringify(desktopOverflow));
 
-    await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-full.png"), fullPage: true, animations: "disabled" });
-    await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
-    await page.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-spatial-field-lab.png"), animations: "disabled" });
-    const geometrySection = page.locator("#geometryPreview").locator("xpath=ancestor::section[1]");
-    await geometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry.png"), animations: "disabled" });
-
     // Validate control synchronization on desktop without resizing initialized Plotly SVGs.
     for (const score of ["fission", "nu-fission", "flux"]) {
       await page.selectOption("#meshScore", score);
