@@ -10,7 +10,7 @@ const OUTPUT_DIR = path.join(process.cwd(), "artifacts", "visual-qa");
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
 async function main() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
   const failures = [];
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
@@ -26,7 +26,9 @@ async function main() {
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
     await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
-    await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
+    await page.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 30000 });
+    await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
+    await page.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
     await page.waitForSelector("#candidateChart svg", { timeout: 30000 });
     // All four real Plotly graphs and their source mesh matrix must be present.
     for (const selector of [
@@ -83,7 +85,7 @@ async function main() {
     assert.equal(initialSpatialData.meshContour.contours?.showlabels, true, "contour isolines should be numerically labeled");
     assert.ok(initialSpatialData.meshContour.contours?.size > 0, "contour levels must have an explicit interval");
     assert.ok(initialSpatialData.meshContour.contours?.end > initialSpatialData.meshContour.contours?.start, "contour interval must span the observed field");
-    assert.match(initialSpatialData.meshProfile.xAxisTitle, /X mesh-bin index/);
+    assert.match(initialSpatialData.meshProfile.xAxisTitle, /X position \(cm\)/, "verified regular-mesh bounds should put the profile on physical X coordinates");
     assert.match(initialSpatialData.meshProfile.yAxisTitle, /Recorded flux tally mean/);
     assert.equal(initialSpatialData.meshProfile.yAxisType, "log", "mean profile should use a true log axis instead of plotting log-transformed values");
     assert.equal(initialSpatialData.meshProfile.errorVisible, true, "central mean profile should show ±1 standard error");
@@ -110,6 +112,11 @@ async function main() {
         metricText: document.querySelector("#selectedCandidateMetrics")?.innerText || "",
         pinCellCount: document.querySelectorAll("#geometryPreview svg.model-geometry-svg title").length,
         svgCount: document.querySelectorAll("#geometryPreview svg.model-geometry-svg").length,
+        coreCanvasCount: document.querySelectorAll("#core3dCanvas canvas.core3d-canvas").length,
+        core3dStatus: document.querySelector("#core3dStatus")?.textContent || "",
+        coreInfo: window.CBPFRCore3DInfo || null,
+        coreViewMode: document.querySelector("#core3dViewport")?.hidden === false ? "3d" : "2d",
+        pinMapCellCount: document.querySelectorAll("#coreSelectedPinMap svg.core-pin-map-svg rect[fill]").length,
         chartSvgCount: document.querySelectorAll("#candidateChart svg").length,
         comparisonType: document.querySelector("#candidateChart")?.data?.[0]?.type,
         comparisonErrorVisible: document.querySelector("#candidateChart")?.data?.[0]?.error_x?.visible === true,
@@ -119,8 +126,17 @@ async function main() {
       assert.equal(details.selectedId, option.value, "selected candidate identity must update");
       assert.ok(details.signature.trim().length > 0, "candidate signature should be visible");
       assert.ok(!/Chart render failed|Candidate evidence unavailable/i.test(details.metricText), "candidate details should not show an error");
-      assert.equal(details.svgCount, 1, "one candidate-linked source geometry SVG should render");
-      assert.equal(details.pinCellCount, 4 * 17 * 17, "pin material maps must include all four 17x17 fuel-assembly lattices");
+      assert.equal(details.svgCount, 1, "one candidate-linked source geometry fallback SVG should remain available");
+      assert.equal(details.pinCellCount, 4 * 17 * 17, "source 2D map should preserve all four 17x17 fuel-assembly lattices");
+      assert.equal(details.coreCanvasCount, 1, "external Three.js WebGL canvas should be rendered");
+      assert.match(details.core3dStatus, /WEBGL READY.*THREE\.JS R0\.180\.0.*1,156 PIN INSTANCES/);
+      assert.equal(details.coreViewMode, "3d", "3D core should be the default view");
+      assert.equal(details.coreInfo?.candidateId, option.value, "3D core must update with the selected candidate");
+      assert.equal(details.coreInfo?.fuelAssemblyCount, 4, "3D core should show four source-derived fuel assemblies");
+      assert.equal(details.coreInfo?.reflectorCount, 5, "3D core should show five source-derived reflector positions");
+      assert.equal(details.coreInfo?.pinCount, 1156, "all 1156 source-defined fuel pin instances should be rendered");
+      assert.equal(details.coreInfo?.libraryVersion, "0.180.0", "Three.js version must be explicit in the QA evidence");
+      assert.equal(details.pinMapCellCount >= 17 * 17, true, "selected pin inspector should render the source 17x17 material map");
       assert.ok(details.chartSvgCount >= 1, "candidate comparison chart should render in the browser");
       assert.equal(details.comparisonType, "scatter", "candidate comparison should use scientific point/interval marks, not baseline-zero bars");
       assert.equal(details.comparisonErrorVisible, true, "k-effective comparison must display reported SD intervals");
@@ -128,6 +144,19 @@ async function main() {
       assert.match(details.keffAndSdText, /Reported SD ±/);
     }
 
+    // Prove a 3D assembly click updates the selected-position inspector.
+    const coreCanvas = page.locator("#core3dCanvas canvas.core3d-canvas");
+    const coreBox = await coreCanvas.boundingBox();
+    assert.ok(coreBox && coreBox.width > 300 && coreBox.height > 300, "3D canvas must occupy a meaningful viewport");
+    await coreCanvas.click({ position: { x: coreBox.width / 2, y: coreBox.height / 2 } });
+    await page.waitForFunction(() => document.querySelector("#coreAssemblyBadge")?.textContent.trim() === "P11", { timeout: 10000 });
+    assert.match(await page.locator("#coreSelectionTitle").innerText(), /p11/i, "clicking the centre lattice cell must update the inspector");
+    await page.click("#coreView2d");
+    await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
+    await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "visible", timeout: 10000 });
+    await page.click("#coreView3d");
+    await page.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 10000 });
+    await page.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""));
     // Return to the first exact recorded candidate for consistent screenshots.
     await page.selectOption("#candidateSelect", candidateOptions[0].value);
     await page.waitForFunction(expected =>
@@ -176,9 +205,13 @@ async function main() {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-full.png"), fullPage: true, animations: "disabled" });
     await page.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-spatial-field-lab.png"), animations: "disabled" });
+    await page.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-core-geometry-3d.png"), animations: "disabled" });
     await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
-    const geometrySection = page.locator("#geometryPreview").locator("xpath=ancestor::section[1]");
-    await geometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry.png"), animations: "disabled" });
+    await page.click("#coreView2d");
+    await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === false && document.querySelector("#core3dViewport")?.hidden === true);
+    await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry-2d-fallback.png"), animations: "disabled" });
+    await page.click("#coreView3d");
+    await page.waitForFunction(() => document.querySelector("#geometryPreview")?.hidden === true && document.querySelector("#core3dViewport")?.hidden === false);
 
     // Use a fresh browser page so Plotly initializes at mobile width, not by shrinking desktop SVGs.
     const mobilePage = await browser.newPage({
@@ -193,16 +226,31 @@ async function main() {
       const select = document.querySelector("#candidateSelect");
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
-    await mobilePage.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
-    await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
-    for (const selector of [
-      "#meshHeatmap.js-plotly-plot",
-      "#meshContour.js-plotly-plot",
-      "#meshProfile.js-plotly-plot",
-      "#meshSurface.js-plotly-plot"
-    ]) {
-      await mobilePage.waitForSelector(selector + " svg.main-svg", { timeout: 30000 });
-    }
+    await mobilePage.waitForFunction(() => document.querySelectorAll("#selectedCandidateMetrics .candidate-stat").length === 4, { timeout: 30000 });
+    await mobilePage.waitForSelector("#core3dCanvas canvas.core3d-canvas", { timeout: 30000 });
+    await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { state: "attached", timeout: 30000 });
+    await mobilePage.waitForFunction(() => /WEBGL READY/.test(document.querySelector("#core3dStatus")?.textContent || ""), { timeout: 30000 });
+    // Desktop QA above checks all four Plotly spatial views fully. On mobile,
+    // focus this pass on the Stage 1 core renderer, position inspector, and overflow;
+    // don't initialize/wait for a second full set of heavyweight Plotly SVGs.
+    // Wait until all chart/3D initialization has settled before forcing the mobile metric into view.
+    await mobilePage.evaluate(() => {
+      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      metric?.scrollIntoView({ block: "center", behavior: "instant" });
+    });
+    await mobilePage.waitForFunction(() => {
+      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      if (!metric) return false;
+      const rect = metric.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+    }, { timeout: 10000 });
+    const mobileMetricsVisible = await mobilePage.evaluate(() => {
+      const metric = document.querySelector("#selectedCandidateMetrics .candidate-stat");
+      if (!metric) return false;
+      const style = getComputedStyle(metric);
+      return style.visibility !== "hidden" && style.display !== "none" && metric.getBoundingClientRect().height > 0;
+    });
+    assert.equal(mobileMetricsVisible, true, "candidate metrics must remain visible after chart initialization on mobile");
     const mobileOverflow = await mobilePage.evaluate(() => {
       const geometry = document.querySelector("#geometryPreview");
       const overflowing = [...document.querySelectorAll("body *")].filter(el => {
@@ -227,18 +275,21 @@ async function main() {
       "mobile page must not create more than 1px horizontal overflow: " + JSON.stringify(mobileOverflow));
     assert.ok(await mobilePage.locator("#candidateSelect").isVisible(), "candidate selector must remain visible on mobile");
     assert.ok(await mobilePage.locator("#selectedCandidateMetrics").isVisible(), "selected candidate metrics must remain visible on mobile");
-    assert.ok(await mobilePage.locator("#geometryPreview svg.model-geometry-svg").isVisible(), "source geometry must remain visible on mobile");
+    assert.ok(await mobilePage.locator("#core3dCanvas canvas.core3d-canvas").isVisible(), "interactive Three.js core must remain visible on mobile");
     await mobilePage.evaluate(() => window.scrollTo(0, 0));
     await mobilePage.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-top.png"), fullPage: false, animations: "disabled" });
     await mobilePage.addStyleTag({ content: "@media(max-width:680px){.sidebar{position:static!important;top:auto!important}}" });
     await mobilePage.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-spatial-field-lab.png"), animations: "disabled" });
     await mobilePage.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-candidate-inspector.png"), animations: "disabled" });
-    const mobileGeometrySection = mobilePage.locator("#geometryPreview").locator("xpath=ancestor::section[1]");
-    await mobileGeometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
+    await mobilePage.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
     await mobilePage.close();
 
     assert.deepEqual(failures, [], "desktop page must not throw uncaught JavaScript errors");
     assert.deepEqual(mobileFailures, [], "mobile page must not throw uncaught JavaScript errors");
+    const coreGeometryReport = await page.evaluate(() => ({
+      renderer: document.querySelector("#core3dCanvas canvas.core3d-canvas") ? "Three.js WebGL" : "fallback",
+      evidence: window.CBPFRCore3DInfo || null
+    }));
     const report = {
       baseUrl: BASE_URL,
       result: "passed",
@@ -247,6 +298,9 @@ async function main() {
       sourceGeometryPinCellCount: 4 * 17 * 17,
       spatialPlotCount: await page.locator("#meshHeatmap.js-plotly-plot, #meshContour.js-plotly-plot, #meshProfile.js-plotly-plot, #meshSurface.js-plotly-plot").count(),
       spatialDataStatus: await page.locator("#meshStatus").innerText(),
+      coreGeometryRenderer: coreGeometryReport.renderer,
+      coreGeometryEvidence: coreGeometryReport.evidence,
+      coreGeometryStatus: await page.locator("#core3dStatus").innerText(),
       desktopViewport: { width: 1440, height: 1000, ...desktopOverflow },
       mobileViewport: { width: 390, height: 844, ...mobileOverflow },
       uncaughtJavaScriptErrors: failures,

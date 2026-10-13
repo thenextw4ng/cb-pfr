@@ -36,14 +36,23 @@ function candidateOption(row){
  const id=String(row.candidate_id??"");
  return '<option value="'+escapeHtml(id)+'">'+escapeHtml(label(row))+'</option>';
 }
+function signatureLettersHtml(signature){
+ const raw=normalizeLayoutSignature(signature);
+ return raw.split("").map(code=>'<span class="fuel-signature-letter '+(code==="M"?"fuel-signature-letter-mox":"fuel-signature-letter-uo2")+'">'+code+'</span>').join("");
+}
 function layoutCells(signature){
-  const raw=normalizeLayoutSignature(signature);
-  if(!isValidLayoutSignature(raw)){
-    return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate must contain exactly two UO₂ and two MOX positions. No default arrangement is substituted.</p></div>';
-  }
-  const cells=raw.split("");
-  const positions=["p00","p01","p10","p11"];
-  return '<div class="assembly-grid">'+cells.map((c,i)=>'<div class="assembly '+(c==="M"?"mox-cell":"")+'">'+(c==="M"?"MOX":"UO₂")+'<small>'+positions[i]+' · '+(i+1)+'</small></div>').join("")+'</div>';
+ const raw=normalizeLayoutSignature(signature);
+ if(!isValidLayoutSignature(raw)){
+  return '<div class="empty-state"><b>Placement unavailable</b><p>The selected candidate must contain exactly two UO₂ and two MOX positions. No default composition is substituted.</p></div>';
+ }
+ const mox=raw.split("").filter(code=>code==="M").length;
+ const uo2=raw.split("").filter(code=>code==="U").length;
+ return '<div class="fuel-signature-summary" role="img" aria-label="Fuel loading signature '+escapeHtml(raw)+' in p00, p01, p10, p11 order">'+
+  '<div class="fuel-signature-kicker">LAYOUT SIGNATURE</div>'+
+  '<div class="fuel-signature-code">'+signatureLettersHtml(raw)+'</div>'+
+  '<div class="fuel-signature-counts"><span><b>'+mox+'</b> MOX positions</span><i></i><span><b>'+uo2+'</b> UO₂ positions</span></div>'+
+  '<div class="fuel-signature-order">p00 → p01 → p10 → p11 · row-major order</div>'+
+  '</div>';
 }
 // Pin-universe maps extracted from the archived candidate geometry.xml files (17 × 17 lattices).
 // Universe IDs 1–6 map to UO2, three MOX enrichments, fission chamber, and guide tube;
@@ -51,6 +60,23 @@ function layoutCells(signature){
 const pinUniverseColors={"1":"#51d2df","2":"#f4bd62","3":"#f08f62","4":"#dc6f91","5":"#c1b3ff","6":"#9cb6c8"};
 let modelGeometryData=null;
 let geometryArtifactActive=false;
+let core3dViewer=null;
+let coreGeometryMode="3d";
+let core3dLoadFailed=false;
+let currentGeometryRow=null;
+let selectedCorePosition={row:0,col:0};
+if(typeof window.addEventListener==="function"){
+ window.addEventListener("cbpfr-core3d-ready",()=>{
+  core3dLoadFailed=false;
+  if(currentGeometryRow&&!geometryArtifactActive)drawModelGeometry(currentGeometryRow);
+ });
+ window.addEventListener("cbpfr-core3d-failed",()=>{
+  core3dLoadFailed=true;
+  const status=$("core3dStatus");
+  if(status)status.textContent="THREE.JS CDN UNAVAILABLE · 2D FALLBACK";
+  if(currentGeometryRow&&!geometryArtifactActive)selectCoreView("2d");
+ });
+}
 
 function modelMaterialCell(universeId,x,y,pitch){
  const key=String(universeId),source=modelGeometryData?.materials?.pin_universes?.[key];
@@ -113,29 +139,177 @@ function renderModelGeometrySvg(row){
  svg+='<rect x="'+lx+'" y="'+(my+195)+'" width="334" height="43" rx="7" fill="#102638" stroke="#2a4b5e"/><text x="'+(lx+12)+'" y="'+(my+212)+'" class="source-note">SOURCE SHA-256 · '+escapeHtml(hash.slice(0,16))+'…</text><text x="'+(lx+12)+'" y="'+(my+228)+'" class="source-note-secondary">XML-derived map · no transport run executed</text></svg>';
  return svg;
 }
+function sourceGeometryForCandidate(row){
+ const signature=normalizeLayoutSignature(row?.layout_signature);
+ return (modelGeometryData?.candidates||[]).find(item=>
+  String(item.candidate_id)===String(row?.candidate_id)&&normalizeLayoutSignature(item.layout_signature)===signature);
+}
+function materialNameForUniverse(universeId){
+ const material=modelGeometryData?.materials?.pin_universes?.[String(universeId)];
+ return material?.material_name||material?.name||("Universe "+universeId);
+}
+function renderSelectedPinMapSvg(pins){
+ const dims=modelGeometryData?.pin_geometry?.dimensions||[];
+ if(!Array.isArray(pins)||pins.length!==17||pins.some(line=>!Array.isArray(line)||line.length!==17)){
+  $("corePinLegend").innerHTML="";
+  $("corePinMapBadge").textContent="NOT IN SOURCE";
+  return '<div class="empty-state"><b>Pin-resolved map unavailable</b><p>The archived manifest does not provide a complete 17 × 17 pin-universe grid for this position. No pin pattern is fabricated.</p></div>';
+ }
+ const cell=14.2,x0=22,y0=20,size=cell*17,counts={};
+ let svg='<svg class="core-pin-map-svg" viewBox="0 0 292 292" role="img" aria-label="Source-derived 17 by 17 pin universe lattice"><rect x="0" y="0" width="292" height="292" rx="9" fill="#07131e"/>';
+ svg+='<text x="22" y="12" class="core-pin-map-axis">17 × 17 · SOURCE UNIVERSE GRID</text>';
+ pins.forEach((line,r)=>line.forEach((uid,c)=>{
+  const key=String(uid),color=pinUniverseColors[key]||"#8b9aa4";
+  counts[key]=(counts[key]||0)+1;
+  const x=x0+c*cell,y=y0+r*cell;
+  svg+='<g><title>Pin r'+r+' c'+c+' · Universe '+escapeHtml(key)+' · '+escapeHtml(materialNameForUniverse(key))+'</title><rect x="'+(x+.5).toFixed(2)+'" y="'+(y+.5).toFixed(2)+'" width="'+(cell-1).toFixed(2)+'" height="'+(cell-1).toFixed(2)+'" rx="1.6" fill="'+color+'" stroke="#0b1b28" stroke-width=".65"/></g>';
+ }));
+ svg+='<rect x="'+x0+'" y="'+y0+'" width="'+size+'" height="'+size+'" fill="none" stroke="#a9c1ce" stroke-opacity=".65" stroke-width="1.2"/>';
+ svg+='<text x="'+(x0+size/2)+'" y="276" text-anchor="middle" class="core-pin-map-axis">PITCH '+number(modelGeometryData.pin_geometry?.pitch_cm?.[0],2)+' cm · RADIUS '+number(modelGeometryData.pin_geometry?.pin_radius_cm,2)+' cm</text></svg>';
+ $("corePinLegend").innerHTML=Object.entries(counts).map(([uid,count])=>'<span class="core-pin-legend-item"><i style="background:'+pinUniverseColors[uid]+'"></i><b>'+escapeHtml(materialNameForUniverse(uid))+'</b><small>'+count+' pins</small></span>').join("");
+ $("corePinMapBadge").textContent=dims.join(" × ");
+ return svg;
+}
+function updateCoreInspector(row,gridRow=selectedCorePosition.row,gridCol=selectedCorePosition.col){
+ const title=$("coreSelectionTitle"),sub=$("coreSelectionSubtitle"),badge=$("coreAssemblyBadge"),facts=$("coreSelectedFacts"),pinMap=$("coreSelectedPinMap"),pinTitle=$("corePinMapTitle"),pinSub=$("corePinMapSubtitle");
+ if(!modelGeometryData||!row||!title||!facts||!pinMap)return;
+ const source=sourceGeometryForCandidate(row);
+ if(!source){title.textContent="No matching source geometry";sub.textContent="Candidate identity check failed";facts.innerHTML='<div class="empty-state"><b>Geometry not matched</b><p>No exact candidate/signature pair exists in the XML-derived manifest.</p></div>';pinMap.innerHTML="";return;}
+ const r=Math.max(0,Math.min(2,Number(gridRow)||0)),c=Math.max(0,Math.min(2,Number(gridCol)||0));
+ selectedCorePosition={row:r,col:c};
+ const uid=String(source.core_universe_grid?.[r]?.[c]??"");
+ const code=String(source.assembly_grid?.[r]?.[c]||modelGeometryData.assemblies?.[uid]?.code||"");
+ const assembly=modelGeometryData.assemblies?.[uid]||{};
+ const position="p"+r+c, fuel=code==="M"||code==="U";
+ const signature=normalizeLayoutSignature(row.layout_signature);
+ const positionCode=(r<2&&c<2)?signature[r*2+c]:code;
+ const material=code==="M"?"MOX fuel":code==="U"?"UO₂ fuel":"Water reflector";
+ title.textContent=material+" · "+position;
+ sub.textContent=String(row.candidate_id)+" · source universe "+uid;
+ badge.textContent=position.toUpperCase();
+ const core=modelGeometryData.core_lattice||{},pinsMeta=modelGeometryData.pin_geometry||{};
+ const factsRows=[
+  ["Core position",position+" · row "+r+" / col "+c],
+  ["Fuel assignment",fuel?(positionCode==="M"?"MOX":"UO₂")+" · candidate signature "+signature:"Invariant reflector"],
+  ["OpenMC universe",uid+" · "+displayValue(assembly.name,material)],
+  ["Lattice ID",fuel?String(assembly.lattice_id??"not recorded"):"Reflector universe; no pin grid supplied"],
+  ["Assembly pitch",number(core.pitch_cm?.[0],2)+" × "+number(core.pitch_cm?.[1],2)+" cm"],
+  ["Pin pitch / radius",fuel?number(pinsMeta.pitch_cm?.[0],2)+" / "+number(pinsMeta.pin_radius_cm,2)+" cm":"Not resolved for reflector"],
+  ["Source identity",String(source.geometry_xml_sha256||"unavailable").slice(0,18)+"…"]
+ ];
+ facts.innerHTML=factsRows.map(([labelText,value])=>'<div class="core-fact"><span>'+escapeHtml(labelText)+'</span><b>'+escapeHtml(value)+'</b></div>').join("");
+ if(fuel){
+  const lattice=modelGeometryData.pin_lattices?.[String(assembly.lattice_id)]?.universe_grid;
+  pinTitle.textContent="Fuel pin material map";
+  pinSub.textContent="Actual universe IDs from archived geometry.xml · categorical material map, not neutron flux";
+  pinMap.innerHTML=renderSelectedPinMapSvg(lattice);
+ }else{
+  pinTitle.textContent="Reflector source detail";
+  pinSub.textContent="The geometry manifest has no pin-resolved reflector universe grid";
+  pinMap.innerHTML='<div class="core-reflector-detail"><span class="core-reflector-icon">R</span><div><b>Water / reflector universe '+escapeHtml(uid)+'</b><p>The archived manifest identifies this core position as reflector but does not provide a pin-resolved 17 × 17 grid for it. No internal material cells are invented.</p></div></div>';
+  $("corePinMapBadge").textContent="SOURCE-LIMITED";
+  $("corePinLegend").innerHTML='<span class="core-pin-legend-item"><i style="background:#17495d"></i><b>Water reflector</b><small>Assembly universe</small></span>';
+ }
+}
+function setCoreGeometryMode(mode){
+ if(mode==="3d"&&core3dLoadFailed)mode="2d";
+ coreGeometryMode=mode==="2d"?"2d":"3d";
+ const view3d=$("core3dViewport"),map2d=$("geometryPreview");
+ if(view3d)view3d.hidden=coreGeometryMode!=="3d";
+ if(map2d)map2d.hidden=coreGeometryMode!=="2d";
+ const b3=$("coreView3d"),b2=$("coreView2d");
+ if(b3){b3.classList.toggle("active",coreGeometryMode==="3d");b3.setAttribute("aria-pressed",String(coreGeometryMode==="3d"));}
+ if(b2){b2.classList.toggle("active",coreGeometryMode==="2d");b2.setAttribute("aria-pressed",String(coreGeometryMode==="2d"));}
+ if(coreGeometryMode==="3d"){
+  if(!window.CBPFRCore3D){
+   const status=$("core3dStatus");
+   if(status)status.textContent=window.CBPFRCore3DError?"THREE.JS CDN UNAVAILABLE":"CONNECTING THREE.JS CDN…";
+   if(window.CBPFRCore3DError){core3dLoadFailed=true;setCoreGeometryMode("2d");}
+   else if($("core3dCanvas")&&!$("core3dCanvas").children.length)$("core3dCanvas").innerHTML='<div class="core3d-loading"><span></span><b>Loading Three.js scientific renderer…</b><small>The source SVG map remains available in 2D source map mode.</small></div>';
+  }else if(currentGeometryRow&&!geometryArtifactActive){
+   drawCore3DForCandidate(currentGeometryRow);
+  }
+ }else{
+  const status=$("core3dStatus");
+  if(status)status.textContent=core3dLoadFailed?"2D SOURCE FALLBACK":"2D XML MAP · SOURCE GEOMETRY";
+ }
+}
+function selectCoreAssembly(cell){
+ if(!cell||!Number.isFinite(Number(cell.row))||!Number.isFinite(Number(cell.col)))return;
+ selectedCorePosition={row:Number(cell.row),col:Number(cell.col)};
+ if(currentGeometryRow)updateCoreInspector(currentGeometryRow,selectedCorePosition.row,selectedCorePosition.col);
+ if(core3dViewer)core3dViewer.highlight(selectedCorePosition.row,selectedCorePosition.col);
+}
+function drawCore3DForCandidate(row){
+ if(!row||!modelGeometryData||coreGeometryMode!=="3d")return;
+ const host=$("core3dCanvas");
+ if(!host)return;
+ if(!window.CBPFRCore3D){
+  const status=$("core3dStatus");
+  if(status)status.textContent=window.CBPFRCore3DError?"THREE.JS CDN UNAVAILABLE":"CONNECTING THREE.JS CDN…";
+  if(!window.CBPFRCore3DError&&host.children&&!host.children.length&&"innerHTML" in host)host.innerHTML='<div class="core3d-loading"><span></span><b>Loading Three.js scientific renderer…</b><small>The source SVG map is available in 2D source map mode.</small></div>';
+  return;
+ }
+ try{
+  if(!core3dViewer)core3dViewer=window.CBPFRCore3D.createCoreViewer(host,selectCoreAssembly);
+  const info=core3dViewer.update(modelGeometryData,row,selectedCorePosition);
+  window.CBPFRCore3DInfo=info;
+  const status=$("core3dStatus");
+  if(status){status.classList.remove("warning");status.textContent="WEBGL READY · THREE.JS R"+info.libraryVersion+" · "+info.pinCount.toLocaleString()+" PIN INSTANCES";}
+  const pitch=info.corePitchCm||[21.42,21.42],dims=info.coreDimensions||[3,3];
+  if($("coreModelDimensions"))$("coreModelDimensions").textContent=dims.join(" × ")+" CORE · "+number(pitch[0]*dims[0],2)+" × "+number(pitch[1]*dims[1],2)+" cm · PITCH "+number(pitch[0],2)+" cm";
+  if($("coreSourceBadge"))$("coreSourceBadge").textContent="XML SOURCE · IDENTITY MATCHED";
+ }catch(error){
+  core3dLoadFailed=true;
+  window.CBPFRCore3DInfo=null;
+  const status=$("core3dStatus");
+  if(status){status.classList.add("warning");status.textContent="WEBGL UNAVAILABLE · 2D SOURCE MAP";}
+  if($("core3dCanvas"))$("core3dCanvas").innerHTML='<div class="core3d-loading"><b>3D renderer unavailable</b><small>'+escapeHtml(error.message||error)+'</small><small>The source-derived SVG map is available in 2D source map mode.</small></div>';
+  setCoreGeometryMode("2d");
+ }
+}
+function setupCoreGeometryControls(){
+ const b3=$("coreView3d"),b2=$("coreView2d"),reset=$("coreResetView");
+ if(b3&&!b3.dataset.bound){b3.dataset.bound="true";b3.addEventListener("click",()=>{geometryArtifactActive=false;const row=records.find(item=>String(item.candidate_id)===String($("candidateSelect")?.value));if(row){currentGeometryRow=row;const preview=$("geometryPreview");if(preview)preview.innerHTML=renderModelGeometrySvg(row);updateCoreInspector(row); }setCoreGeometryMode("3d");});}
+ if(b2&&!b2.dataset.bound){b2.dataset.bound="true";b2.addEventListener("click",()=>{if(currentGeometryRow&&!geometryArtifactActive){const preview=$("geometryPreview");if(preview)preview.innerHTML=renderModelGeometrySvg(currentGeometryRow);}setCoreGeometryMode("2d");});}
+ if(reset&&!reset.dataset.bound){reset.dataset.bound="true";reset.addEventListener("click",()=>{if(core3dViewer)core3dViewer.reset();});}
+}
 function drawModelGeometry(row){
  const preview=$("geometryPreview");if(!preview||!row||geometryArtifactActive)return;
+ currentGeometryRow=row;
  const sig=normalizeLayoutSignature(row.layout_signature);
  preview.innerHTML=renderModelGeometrySvg(row);
  if(!modelGeometryData){$("geometryCaption").textContent="OpenMC geometry manifest unavailable; model view not shown.";return;}
- const source=(modelGeometryData.candidates||[]).find(c=>String(c.candidate_id)===String(row.candidate_id)&&normalizeLayoutSignature(c.layout_signature)===sig);
- $("geometryCaption").textContent=source?"Source "+source.source_member+" · SHA-256 "+String(source.geometry_xml_sha256||"unavailable")+" · extracted from archived OpenMC geometry.xml; visualization only, not a transport result.":"No exact candidate ID and layout match exists in the source manifest.";
+ const source=sourceGeometryForCandidate(row);
+ if(!source){$("geometryCaption").textContent="No exact candidate ID and layout match exists in the source manifest.";return;}
+ $("geometryCaption").textContent="SOURCE "+source.source_member+" · GEOMETRY.XML SHA-256 "+String(source.geometry_xml_sha256||"unavailable")+" · exact candidate/signature match confirmed · visualization only, not a transport result.";
+ updateCoreInspector(row,selectedCorePosition.row,selectedCorePosition.col);
+ if(coreGeometryMode==="3d")drawCore3DForCandidate(row);
 }
+
 async function initModelGeometry(){
+ setupCoreGeometryControls();
  try{
   const response=await fetch("/api/model-geometry",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("HTTP "+response.status);
   const payload=await response.json();
   if(payload.schema_version!==1||!Array.isArray(payload.candidates)||payload.candidates.length!==6||!payload.core_lattice||!payload.pin_lattices)throw new Error("Incomplete or unsupported OpenMC geometry manifest.");
-  modelGeometryData=payload;return true;
+  modelGeometryData=payload;
+  $("geometryStatus").textContent="XML SOURCE MATCHED";
+  $("geometryStatus").classList.remove("warning");
+  $("geometryProvenance").textContent="Manifest schema v"+payload.schema_version+" · "+payload.candidates.length+" candidate geometry.xml records · "+payload.core_lattice.dimensions.join(" × ")+" core lattice · 17 × 17 fuel-pin grids · material universe map and boundary conditions from archived input XML. Three.js "+(window.CBPFRCore3D?"loaded":"loading")+" from jsDelivr; axial dimensions are not present in this 2D manifest.";
+  $("coreSourceBadge").textContent="XML-DERIVED";
+  if(window.CBPFRCore3DError){core3dLoadFailed=true;setCoreGeometryMode("2d");}
+  return true;
  }catch(error){
   modelGeometryData=null;
   if($("geometryStatus")){$("geometryStatus").textContent="MODEL MANIFEST UNAVAILABLE";$("geometryStatus").classList.add("warning");}
   if($("geometryProvenance"))$("geometryProvenance").textContent="Cannot load OpenMC geometry manifest: "+String(error.message||error);
   if($("geometryPreview"))$("geometryPreview").innerHTML='<div class="empty-state"><b>Model geometry unavailable</b><p>'+escapeHtml(error.message||error)+'</p><p>No substitute geometry is fabricated.</p></div>';
   if($("geometryCaption"))$("geometryCaption").textContent="Geometry not shown.";
+  if($("core3dCanvas"))$("core3dCanvas").innerHTML='<div class="empty-state"><b>No source geometry</b><p>Three-dimensional geometry is blocked until the archived manifest loads.</p></div>';
   return false;
-}
+ }
 }
 
 function drawSelectedCandidate(row){
@@ -153,7 +327,7 @@ function drawSelectedCandidate(row){
  const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
  $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
  $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
- $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?signature.split("").map((code,i)=>'<div class="signature-cell '+(code==="M"?"signature-mox":"signature-uo2")+'"><b>'+code+'</b><small>'+["p00","p01","p10","p11"][i]+'</small></div>').join(""):'<span class="muted">No validated layout signature</span>';
+ $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?'<span class="signature-summary-code">'+signatureLettersHtml(signature)+'</span><span class="signature-summary-caption">2 MOX · 2 UO₂</span>':'<span class="muted">No validated layout signature</span>';
  const keffSd=has(row,"keff_std_dev")?"Reported SD ± "+number(row.keff_std_dev,6)+"; not a confidence interval":"Reported SD unavailable";
  const metrics=[
   ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff",keffSd],
@@ -308,11 +482,38 @@ function fieldStats(values){
   mean:finite.length?finite.reduce((a,b)=>a+b,0)/finite.length:null
  };
 }
+function meshCoordinateInfo(item){
+ const dims=item?.dimensions||[],geometry=item?.spatial_geometry||{};
+ const lower=geometry.lower_left_cm,upper=geometry.upper_right_cm;
+ const nx=Number(dims[0]),ny=Number(dims[1]);
+ const physical=geometry.coordinates_available===true&&geometry.coordinate_units==="cm"&&
+  Array.isArray(lower)&&Array.isArray(upper)&&lower.length>=2&&upper.length>=2&&
+  Number.isFinite(Number(lower[0]))&&Number.isFinite(Number(lower[1]))&&
+  Number.isFinite(Number(upper[0]))&&Number.isFinite(Number(upper[1]))&&
+  Number(upper[0])>Number(lower[0])&&Number(upper[1])>Number(lower[1])&&nx>0&&ny>0;
+ if(physical){
+  const lx=Number(lower[0]),ly=Number(lower[1]),ux=Number(upper[0]),uy=Number(upper[1]);
+  return {physical:true,
+   x:Array.from({length:nx},(_,i)=>lx+(i+0.5)*(ux-lx)/nx),
+   y:Array.from({length:ny},(_,i)=>ly+(i+0.5)*(uy-ly)/ny),
+   xRange:[lx,ux],yRange:[ly,uy],xTitle:"X position (cm)",yTitle:"Y position (cm)",
+   xHoverLabel:"X position %{x:.4g} cm",yHoverLabel:"Y position %{y:.4g} cm"};
+ }
+ return {physical:false,x:Array.from({length:nx},(_,i)=>i),y:Array.from({length:ny},(_,i)=>i),
+  xRange:null,yRange:null,xTitle:"X mesh-bin index (0-based)",yTitle:"Y mesh-bin index (0-based)",
+  xHoverLabel:"X-bin %{x}",yHoverLabel:"Y-bin %{y}"};
+}
+function niceAxisStep(span,target=6){
+ if(!Number.isFinite(span)||span<=0)return undefined;
+ const raw=span/target,power=Math.pow(10,Math.floor(Math.log10(raw))),scaled=raw/power;
+ return (scaled<=1?1:scaled<=2?2:scaled<=2.5?2.5:scaled<=5?5:10)*power;
+}
 function currentField(){
  if(!meshData||!Array.isArray(meshData.mesh_tallies)||!meshData.mesh_tallies.length)return null;
  const score=$("meshScore").value, view=$("meshView").value, scale=$("meshScale").value;
  const item=meshData.mesh_tallies[0], record=item.scores?.[score];
  if(!record)return null;
+ const coordinates=meshCoordinateInfo(item);
  const mean=record.mean;
  // "std_dev" remains as a backwards-compatible API field; in the audited reader,
  // its stored values are the Monte Carlo standard error, not sample standard deviation.
@@ -333,7 +534,7 @@ function currentField(){
   :(scale==="log"?"log₁₀(tally mean)":"Tally mean");
  const rawValues=view==="relative_sd"?relative:mean;
  return {
-  item,score,view,scale,mean,standardError,sd:standardError,relative,rawValues,values,colorTitle,
+  item,score,view,scale,mean,standardError,sd:standardError,relative,rawValues,values,colorTitle,coordinates,
   stats:fieldStats(mean),displayStats:fieldStats(values)
  };
 }
@@ -349,19 +550,19 @@ function drawMesh(){
  }
  const paletteName=$("meshPalette").value;
  const z=f.values, raw=f.rawValues, scoreLabel=f.score;
- const nx=f.item.dimensions[0], ny=f.item.dimensions[1];
- const xs=Array.from({length:nx},(_,i)=>i), ys=Array.from({length:ny},(_,i)=>i);
+ const nx=f.item.dimensions[0], ny=f.item.dimensions[1], coordinates=f.coordinates;
+ const xs=coordinates.x, ys=coordinates.y;
  const plotTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":(f.scale==="log"?"log₁₀("+scoreLabel+" tally mean)":"Recorded "+scoreLabel+" tally mean");
  const rawTitle=f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":scoreLabel+" tally mean (recorded scale)";
- const hover=(title)=>"x-bin %{x}<br>y-bin %{y}<br>"+title+" %{customdata:.6g}<extra></extra>";
+ const hover=(title)=>coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+title+" %{customdata:.6g}<extra></extra>";
  const axisStyle={...baseLayout.xaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const yAxisStyle={...baseLayout.yaxis,gridcolor:palette.line,linecolor:palette.line,zerolinecolor:palette.line,automargin:true};
  const sharedAxis={tickfont:{size:10,color:palette.muted},titlefont:{size:11,color:palette.muted}};
  const colorscale=paletteName;
  const heatLayout={
   autosize:true,margin:{l:62,r:30,t:18,b:58},showlegend:false,
-  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (0-based)",standoff:8}},
-  yaxis:{...yAxisStyle,...sharedAxis,title:{text:"Y mesh-bin index (0-based)",standoff:8},autorange:"reversed"}
+  xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
+  yaxis:{...yAxisStyle,...sharedAxis,title:{text:coordinates.yTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.yRange[1]-coordinates.yRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.yRange:undefined,autorange:coordinates.physical?false:"reversed"}
  };
  const finiteZ=z.flat().filter(v=>typeof v==="number"&&Number.isFinite(v));
  const zMin=finiteZ.length?Math.min(...finiteZ):0, zMax=finiteZ.length?Math.max(...finiteZ):1;
@@ -396,14 +597,14 @@ function drawMesh(){
  chart("meshSurface",[{
   type:"surface",x:xs,y:ys,z:z,surfacecolor:z,customdata:raw,colorscale,
   colorbar:{...colorbar,title:{text:plotTitle,font:{size:10,color:palette.text}}},
-  hovertemplate:"x-bin %{x}<br>y-bin %{y}<br>"+rawTitle+" %{customdata:.6g}<br>Displayed Z %{z:.6g}<extra></extra>",
+  hovertemplate:coordinates.xHoverLabel+"<br>"+coordinates.yHoverLabel+"<br>"+rawTitle+" %{customdata:.6g}<br>Displayed Z %{z:.6g}<extra></extra>",
   connectgaps:false,hoverongaps:false,showscale:true,
   lighting:{ambient:0.72,diffuse:0.78,specular:0.18,roughness:0.72,fresnel:0.08},opacity:0.98
  }],{
   autosize:true,margin:{l:8,r:8,t:8,b:8},
   scene:{
-   xaxis:{title:{text:"X mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
-   yaxis:{title:{text:"Y mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
+   xaxis:{title:{text:coordinates.physical?"X position (cm)":"X mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.xRange:undefined},
+   yaxis:{title:{text:coordinates.physical?"Y position (cm)":"Y mesh-bin index",font:{size:11}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true,range:coordinates.physical?coordinates.yRange:undefined},
    zaxis:{title:{text:plotTitle,font:{size:10}},gridcolor:palette.line,color:palette.muted,backgroundcolor:"rgba(0,0,0,0)",showbackground:true},
    bgcolor:"rgba(0,0,0,0)",aspectmode:"auto",camera:{eye:{x:1.55,y:1.55,z:1.1}}
   }
@@ -411,10 +612,10 @@ function drawMesh(){
  const centerY=Math.floor((ny-1)/2);
  const meanRow=f.mean[centerY]||[], seRow=f.standardError[centerY]||[], relativeRow=f.relative[centerY]||[];
  const profileY=f.view==="relative_sd"?relativeRow:meanRow;
- const profileCustom=xs.map(i=>[meanRow[i],seRow[i],relativeRow[i]]);
+ const profileCustom=xs.map((x,i)=>[meanRow[i],seRow[i],relativeRow[i]]);
  const profileHover=f.view==="relative_sd"
-  ?"X-bin %{x}<br>Relative Monte Carlo standard error %{y:.4g}%<extra></extra>"
-  :"X-bin %{x}<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>";
+  ?coordinates.xHoverLabel+"<br>Relative Monte Carlo standard error %{y:.4g}%<extra></extra>"
+  :coordinates.xHoverLabel+"<br>Recorded "+scoreLabel+" tally mean %{y:.6g}<br>Monte Carlo standard error %{customdata[1]:.4g}<extra></extra>";
  const profileError=f.view==="mean"?{
   type:"data",symmetric:false,
   array:seRow.map((se,i)=>Number.isFinite(se)&&se>=0?se:0),
@@ -429,14 +630,14 @@ function drawMesh(){
   error_y:profileError,connectgaps:false,hovertemplate:profileHover
  }],{
   autosize:true,margin:{l:76,r:24,t:20,b:60},showlegend:false,
-  xaxis:{...axisStyle,...sharedAxis,title:{text:"X mesh-bin index (0-based)",standoff:8},dtick:5},
-  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean",standoff:8},exponentformat:"power"},
-  annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
+  xaxis:{...axisStyle,...sharedAxis,title:{text:coordinates.xTitle,standoff:8},dtick:coordinates.physical?niceAxisStep(coordinates.xRange[1]-coordinates.xRange[0]):5,tickformat:coordinates.physical?".1f":undefined,range:coordinates.physical?coordinates.xRange:undefined,autorange:coordinates.physical?false:undefined},
+  yaxis:{...yAxisStyle,...sharedAxis,type:f.view==="mean"&&f.scale==="log"?"log":"linear",dtick:f.view==="mean"&&f.scale==="log"?1:undefined,title:{text:f.view==="relative_sd"?"Relative Monte Carlo standard error (%)":"Recorded "+scoreLabel+" tally mean"+(f.scale==="log"?" (logarithmic axis)":""),standoff:8},exponentformat:"power"},
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.12,xanchor:"right",yanchor:"bottom",showarrow:false,text:coordinates.physical?"Central cut: Y = "+coordinates.y[centerY].toFixed(3)+" cm · row "+centerY:"Central cut: Y-bin "+centerY+" (0-based)",font:{size:10,color:palette.muted}}]
  });
  if($("meshContourSubtitle"))$("meshContourSubtitle").textContent=f.view==="relative_sd"
   ?"Labelled iso-contours of relative Monte Carlo standard error (%)"
   :f.scale==="log"?"Labelled iso-contours; colour levels use log₁₀(mean), hover reports the recorded mean":"Labelled iso-contours of recorded tally mean";
- if($("meshProfileSubtitle"))$("meshProfileSubtitle").textContent="Central cut at Y-bin "+centerY+" (0-based index)";
+ if($("meshProfileSubtitle"))$("meshProfileSubtitle").textContent=coordinates.physical?"Central cut at Y = "+coordinates.y[centerY].toFixed(3)+" cm (row "+centerY+")":"Central cut at Y-bin "+centerY+" (0-based index)";
  const st=f.stats,finiteDisplay=f.displayStats.finite,dimensionText=nx+" × "+ny;
  $("fieldKpis").innerHTML=[
   ["Mesh dimensions",dimensionText,"Archived 2D mesh bins"],
@@ -449,11 +650,14 @@ function drawMesh(){
   "View: "+(f.view==="relative_sd"?"relative Monte Carlo standard error":"recorded tally mean"),
   "Scale: "+(f.view==="relative_sd"?"ratio-derived percentage":f.scale),
   "Mesh: "+dimensionText+" bins",
-  "Central cut: Y-bin "+centerY,
+  "Central cut: "+(coordinates.physical?"Y = "+coordinates.y[centerY].toFixed(3)+" cm (row "+centerY+")":"Y-bin "+centerY),
   "Realizations: "+String(f.item.n_realizations??"not recorded")
  ];
  const note=$("meshSummaryNote");
- if(note)note.textContent=summary.join(" · ")+". Bin indices are not physical assembly coordinates; contour labels use the displayed scale, while hover values preserve recorded tallies.";
+ const coordinateNote=coordinates.physical
+  ?"XY axes use archived regular-mesh bounds in cm; plotted coordinates are cell centres. No fuel/reflector/assembly labels are inferred."
+  :"Physical XY bounds are unavailable; axes remain mesh-bin indices, not cm or assembly coordinates.";
+ if(note)note.textContent=summary.join(" · ")+". "+coordinateNote+" Heatmap, contours, profile, and surface reflect the selected display scale; hover values preserve recorded tally means.";
  $("meshStatus").textContent=meshData.provenance.hash_matches===true?"SHA-256 VERIFIED":meshData.provenance.hash_matches===false?"HASH MISMATCH":"DATA LOADED · HASH NOT CHECKED";
  $("meshStatus").classList.toggle("warning",meshData.provenance.hash_matches===false);
 }
@@ -470,7 +674,11 @@ async function initMesh(){
   }
   meshData=payload;
   $("meshStatus").classList.remove("warning");
-  $("meshProvenance").textContent=meshData.provenance.source+" · "+item.dimensions.join(" × ")+" bins · tally "+item.tally_name+" · "+String(item.n_realizations??"unknown")+" realizations · SHA-256 "+meshData.provenance.sha256+". "+(meshData.provenance.hash_matches===true?"Statepoint member hash matches the recorded baseline.":meshData.provenance.hash_matches===false?"WARNING: statepoint hash differs from the recorded baseline; verify provenance before scientific comparison.":"Baseline hash was unavailable; provenance has not been hash-verified.")+" Mesh indices are not mapped to physical assembly coordinates; relative uncertainty shown below is standard error / mean.";
+  const coordinates=meshCoordinateInfo(item);
+  const coordinateProvenance=coordinates.physical
+   ?"Recorded regular-mesh bounds: X "+coordinates.xRange[0].toFixed(3)+" to "+coordinates.xRange[1].toFixed(3)+" cm; Y "+coordinates.yRange[0].toFixed(3)+" to "+coordinates.yRange[1].toFixed(3)+" cm. Plots use cell-centre coordinates."
+   :"Physical mesh bounds unavailable; spatial plots use explicit mesh-bin indices rather than assumed centimetres.";
+  $("meshProvenance").textContent=meshData.provenance.source+" · "+item.dimensions.join(" × ")+" bins · tally "+item.tally_name+" · "+String(item.n_realizations??"unknown")+" realizations · SHA-256 "+meshData.provenance.sha256+". "+(meshData.provenance.hash_matches===true?"Statepoint member hash matches the recorded baseline.":meshData.provenance.hash_matches===false?"WARNING: statepoint hash differs from the recorded baseline; verify provenance before scientific comparison.":"Baseline hash was unavailable; provenance has not been hash-verified.")+" "+coordinateProvenance+" Relative uncertainty is calculated as standard error / mean for positive tally bins.";
   const scoreSelect=$("meshScore");
   const availableScores=Object.keys(item.scores);
   scoreSelect.innerHTML=availableScores.map(k=>'<option value="'+escapeHtml(k)+'">'+escapeHtml(k)+'</option>').join("");
@@ -506,7 +714,14 @@ async function initMesh(){
 /* Displays existing external geometry artifacts only; never synthesizes a reactor layout. */
 async function initGeometry(){
  const refresh=$("reloadGeometry");
- if(refresh)refresh.addEventListener("click",async()=>{refresh.disabled=true;refresh.textContent="↻ Scanning…";await loadGeometryArtifacts();refresh.disabled=false;refresh.textContent="↻ Refresh artifacts";});
+ if(refresh&&!refresh.dataset.bound){refresh.dataset.bound="true";refresh.addEventListener("click",async()=>{
+  refresh.disabled=true;refresh.textContent="↻ Refreshing…";
+  const ok=await initModelGeometry();
+  const selected=records.find(item=>String(item.candidate_id)===String($("candidateSelect")?.value));
+  if(ok&&selected){geometryArtifactActive=false;drawModelGeometry(selected);}
+  await loadGeometryArtifacts();
+  refresh.disabled=false;refresh.textContent="↻ Refresh source";
+ });}
  await loadGeometryArtifacts();
 }
 async function loadGeometryArtifacts(){
@@ -516,32 +731,33 @@ async function loadGeometryArtifacts(){
   const payload=await response.json(),items=payload.artifacts||[];
   const list=$("geometryArtifactList");
   if(!items.length){
-   $("geometryStatus").textContent="XML VIEW READY · NO PLOT FILE";
-   $("geometryStatus").classList.remove("warning");
-   $("geometryProvenance").textContent="The candidate-linked material map is reconstructed from archived OpenMC geometry.xml lattice/material definitions. No separate native PNG/VTK/VTI plot is checked into scanned output folders.";
+   $("geometryArtifactStatus").textContent="NO FILES FOUND";
+   $("geometryArtifactStatus").classList.remove("warning");
+   $("geometryProvenance").textContent="Manifest schema v1 · "+(modelGeometryData?.candidates?.length||0)+" candidate geometry.xml records · "+(modelGeometryData?.core_lattice?.dimensions||[]).join(" × ")+" core lattice · pin-material universe maps and boundary conditions source-extracted from archived XML. No separate native PNG/VTK/VTI plot is checked into scanned output folders.";
    list.innerHTML='<div class="empty-state"><b>No separate OpenMC plot artifact found</b><p>The main panel still renders the archived model lattice and pin-material regions for the selected candidate.</p><p>Native PNG/VTK/VTI artifacts can be inspected here when present.</p></div>';
    geometryArtifactActive=false;
    const selected=records.find(r=>String(r.candidate_id)===$("candidateSelect")?.value);
    drawModelGeometry(selected);
    return;
   }
-  $("geometryStatus").textContent=items.length+" EXTERNAL ARTIFACT(S) FOUND";
-  $("geometryStatus").classList.remove("warning");
-  $("geometryProvenance").textContent="Found "+items.length+" existing geometry file(s). The candidate-linked XML material map remains primary; select an item below to inspect a separate native artifact.";
+  $("geometryArtifactStatus").textContent=items.length+" FILE(S) FOUND";
+  $("geometryArtifactStatus").classList.remove("warning");
+  $("geometryProvenance").textContent="Manifest schema v1 · "+(modelGeometryData?.candidates?.length||0)+" candidate geometry.xml records · found "+items.length+" existing native geometry file(s). Select a file below to inspect that external artifact.";
   list.innerHTML=items.map((item,i)=>'<button class="artifact-item" type="button" data-artifact-index="'+i+'"><span class="artifact-icon">'+(item.kind==="image"?"IMG":"3D")+'</span><span class="artifact-meta"><b>'+escapeHtml(item.name)+'</b><small>'+escapeHtml(item.path)+' · '+item.format+' · '+formatBytes(item.size_bytes)+'</small></span><span class="tag">'+item.kind.toUpperCase()+'</span></button>').join("");
   list.querySelectorAll("[data-artifact-index]").forEach(button=>button.addEventListener("click",()=>showGeometryArtifact(items[Number(button.dataset.artifactIndex)])));
   geometryArtifactActive=false;
   const selected=records.find(r=>String(r.candidate_id)===$("candidateSelect")?.value);
   drawModelGeometry(selected);
  }catch(error){
-  $("geometryStatus").textContent="ARTIFACT SCAN FAILED";$("geometryStatus").classList.add("warning");
-  $("geometryProvenance").textContent="Could not inspect geometry outputs: "+error.message;
+  $("geometryArtifactStatus").textContent="SCAN FAILED";$("geometryArtifactStatus").classList.add("warning");
+  $("geometryProvenance").textContent="OpenMC geometry manifest was loaded separately. Could not inspect additional native artifacts: "+error.message;
   $("geometryArtifactList").innerHTML='<div class="loading">Artifact inventory unavailable.</div>';
  }
 }
 function showGeometryArtifact(item){
  if(!item)return;
  geometryArtifactActive=true;
+ setCoreGeometryMode("2d");
  document.querySelectorAll(".artifact-item").forEach(el=>el.classList.remove("active"));
  // Mark the selected source by matching its path text, avoiding assumptions about array order after refresh.
  document.querySelectorAll(".artifact-item").forEach(el=>{if(el.textContent.includes(item.name))el.classList.add("active");});
