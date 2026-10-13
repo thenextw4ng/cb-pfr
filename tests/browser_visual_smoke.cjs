@@ -176,15 +176,18 @@ async function main() {
       await mobilePage.waitForSelector(selector + " svg.main-svg", { timeout: 30000 });
     }
     const mobileOverflow = await mobilePage.evaluate(() => {
-      const overflowing = [...document.querySelectorAll("body *")].map(el => {
+      const geometry = document.querySelector("#geometryPreview");
+      const overflowing = [...document.querySelectorAll("body *")].filter(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.right > window.innerWidth + 0.5 && !(geometry && geometry.contains(el));
+      }).map(el => {
         const rect = el.getBoundingClientRect();
         return {
           tag: el.tagName.toLowerCase(), id: el.id || "",
           className: typeof el.className === "string" ? el.className.slice(0, 100) : "",
           right: Math.round(rect.right * 100) / 100, width: Math.round(rect.width * 100) / 100
         };
-      }).filter(el => el.right > window.innerWidth + 0.5 && !document.querySelector("#geometryPreview")?.contains(el))
-        .sort((a, b) => b.right - a.right).slice(0, 16);
+      }).sort((a, b) => b.right - a.right).slice(0, 16);
       return {
         viewport: window.innerWidth,
         document: document.documentElement.scrollWidth,
