@@ -233,8 +233,8 @@ def layout_figure(signature: str, height: int = 330) -> go.Figure:
         [0 if signature[2] == "U" else 1, 0 if signature[3] == "U" else 1],
     ]
     custom = [
-        [cells[0]["position"], cells[1]["position"]],
-        [cells[2]["position"], cells[3]["position"]],
+        [[cells[0]["position"], cells[0]["material"]], [cells[1]["position"], cells[1]["material"]]],
+        [[cells[2]["position"], cells[2]["material"]], [cells[3]["position"], cells[3]["material"]]],
     ]
     fig = go.Figure(go.Heatmap(
         z=z,
@@ -248,8 +248,8 @@ def layout_figure(signature: str, height: int = 330) -> go.Figure:
         xgap=5,
         ygap=5,
         hovertemplate=(
-            "Assembly position: %{customdata}<br>"
-            "Material: %{z}<extra></extra>"
+            "Assembly position: %{customdata[0]}<br>"
+            "Material: %{customdata[1]}<extra></extra>"
         ),
         hoverlabel={"namelength": 0},
     ))
