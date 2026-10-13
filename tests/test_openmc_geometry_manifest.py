@@ -25,11 +25,13 @@ class OpenMCGeometryManifestTests(unittest.TestCase):
     def test_manifest_has_all_six_unique_candidate_sources(self):
         self.assertEqual(self.manifest["schema_version"], 1)
         self.assertEqual([c["layout_signature"] for c in self.manifest["candidates"]], list(LAYOUTS))
+        self.assertRegex(self.manifest["source"].get("archive_sha256", ""), r"^[0-9a-f]{64}$")
         ids = [c["candidate_id"] for c in self.manifest["candidates"]]
         self.assertEqual(len(set(ids)), 6)
         for candidate in self.manifest["candidates"]:
             self.assertEqual(candidate["candidate_id"], "c5g7-2x2-" + candidate["layout_signature"])
             self.assertRegex(candidate["geometry_xml_sha256"], r"^[0-9a-f]{64}$")
+            self.assertRegex(candidate.get("materials_xml_sha256", ""), r"^[0-9a-f]{64}$")
             self.assertTrue(candidate["source_matches_candidate_signature"])
             self.assertEqual(candidate["signature_derived_from_xml"], candidate["layout_signature"])
 
@@ -82,6 +84,8 @@ class OpenMCGeometryManifestTests(unittest.TestCase):
         archive_path = os.environ.get("CBPFR_OPENMC_GEOMETRY_ARCHIVE")
         if not archive_path:
             self.skipTest("Set CBPFR_OPENMC_GEOMETRY_ARCHIVE to verify byte-for-byte source hashes and XML values.")
+        archive_bytes = Path(archive_path).read_bytes()
+        self.assertEqual(hashlib.sha256(archive_bytes).hexdigest(), self.manifest["source"]["archive_sha256"])
         with zipfile.ZipFile(archive_path) as archive:
             for candidate in self.manifest["candidates"]:
                 raw = archive.read(candidate["source_member"])
@@ -94,7 +98,9 @@ class OpenMCGeometryManifestTests(unittest.TestCase):
                     actual_pins = parse_universe_grid(lattices[lattice_id].findtext("universes", ""))
                     self.assertEqual(actual_pins, self.manifest["pin_lattices"][lattice_id]["universe_grid"])
                 material_member = candidate["source_member"].replace("geometry.xml", "materials.xml")
-                material_root = ET.fromstring(archive.read(material_member))
+                material_bytes = archive.read(material_member)
+                self.assertEqual(hashlib.sha256(material_bytes).hexdigest(), candidate["materials_xml_sha256"])
+                material_root = ET.fromstring(material_bytes)
                 names = {m.attrib["id"]: m.attrib.get("name") for m in material_root.findall("material")}
                 self.assertEqual(names, self.manifest["materials"]["by_id"])
 
