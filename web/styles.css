@@ -301,3 +301,39 @@
  .core-inspector-panel{padding:11px}
  .core-geometry-layout #geometryPreview{min-height:340px}
 }
+
+
+/* Candidate observatory: represent fuel composition as a signature, not duplicate assembly tiles. */
+.layout-panel .layout-view{
+ min-height:154px;display:block;padding:18px 18px 14px;background:radial-gradient(ellipse at 84% 15%,rgba(85,212,223,.07),transparent 52%);
+}
+.fuel-signature-summary{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-width:0}
+.fuel-signature-kicker{font:9px "DM Mono",monospace;letter-spacing:.14em;color:#87a7b8}
+.fuel-signature-code{display:flex;align-items:baseline;gap:12px;padding:2px 0 5px;line-height:1}
+.fuel-signature-letter{display:inline-block;font:600 clamp(32px,3vw,43px)/1 "DM Mono",monospace;letter-spacing:-.055em}
+.fuel-signature-letter-mox{color:#f4bd62;text-shadow:0 0 19px rgba(244,189,98,.12)}
+.fuel-signature-letter-uo2{color:#70e6f2;text-shadow:0 0 19px rgba(81,210,223,.12)}
+.fuel-signature-counts{display:flex;align-items:center;gap:10px;color:#d2e1e8;font-size:10px;line-height:1.4}
+.fuel-signature-counts b{font:600 11px "DM Mono",monospace;color:var(--text)}
+.fuel-signature-counts>i{width:1px;height:13px;background:#365263;display:block}
+.fuel-signature-order{color:var(--muted);font:9px "DM Mono",monospace;line-height:1.5;letter-spacing:.015em}
+.fuel-signature-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:0 18px 13px}
+.fuel-signature-legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;color:#b8cbd5;font-size:10px}
+.fuel-signature-legend span{display:inline-flex;align-items:center;gap:6px}
+.signature-mark{width:7px;height:7px;border-radius:50%;display:inline-block}
+.signature-mark-mox{background:#f4bd62}.signature-mark-uo2{background:#51d2df}
+.core-open-link{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap;font-size:9px}
+.candidate-signature{
+ display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;flex-shrink:0;
+ min-width:94px;padding:9px 11px;border:1px solid #29495a;border-radius:7px;background:linear-gradient(145deg,#102a3a,#0a1c29);
+}
+.signature-summary-code{display:flex;align-items:baseline;justify-content:flex-end;gap:3px;font:600 16px "DM Mono",monospace;letter-spacing:.015em}
+.signature-summary-caption{color:var(--muted);font:8px "DM Mono",monospace;white-space:nowrap}
+@media(max-width:680px){
+ .layout-panel .layout-view{min-height:132px;padding:15px}
+ .fuel-signature-footer{padding:0 15px 13px}
+ .fuel-signature-code{gap:9px}
+ .fuel-signature-letter{font-size:34px}
+ .candidate-signature{min-width:86px;padding:8px}
+ .signature-summary-code{font-size:14px}
+}
