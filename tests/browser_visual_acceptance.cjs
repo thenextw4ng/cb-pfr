@@ -33,7 +33,36 @@ fs.mkdirSync(outDir, { recursive: true });
         get("/api/assembly"), get("/api/mesh"), get("/api/axial-3d?score=flux")
       ]);
       const axial = values[5];
-      return { health: values[0], candidates: values[1], geometry: values[2], assembly: values[3], mesh: values[4], axial: { available: axial.available, mesh: { dimension_xyz: axial.mesh.dimension_xyz } } };
+      const axialSampleIndices = [[0, 0, 0], [15, 25, 25], [29, 50, 50]];
+      const axialSamples = axialSampleIndices.map(([k, j, i]) => ({
+        k, j, i,
+        x: axial.mesh.x_centers_cm[i], y: axial.mesh.y_centers_cm[j], z: axial.mesh.z_centers_cm[k],
+        mean: axial.mean[k][j][i],
+        standard_error: axial.standard_error[k][j][i],
+        relative_error_percent: axial.relative_error_percent[k][j][i]
+      }));
+      return {
+        health: values[0], candidates: values[1], geometry: values[2], assembly: values[3], mesh: values[4],
+        axial: {
+          available: axial.available,
+          score: axial.score,
+          mesh: {
+            dimension_xyz: axial.mesh.dimension_xyz,
+            axis_samples: {
+              x: [axial.mesh.x_centers_cm[0], axial.mesh.x_centers_cm[25], axial.mesh.x_centers_cm[50]],
+              y: [axial.mesh.y_centers_cm[0], axial.mesh.y_centers_cm[25], axial.mesh.y_centers_cm[50]],
+              z: [axial.mesh.z_centers_cm[0], axial.mesh.z_centers_cm[15], axial.mesh.z_centers_cm[29]]
+            }
+          },
+          provenance: {
+            npz_sha256: axial.provenance.sha256,
+            statepoint_sha256: axial.provenance.statepoint && axial.provenance.statepoint.sha256,
+            statepoint: axial.provenance.statepoint,
+            score_summary: axial.provenance.score_summary
+          },
+          samples: axialSamples
+        }
+      };
     });
 
     assert.equal(api.health.status, "ok");
@@ -82,7 +111,18 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.equal(candidateStats.y.length, 6, "each plotted candidate needs one recorded k-effective mean");
     assert.equal(candidateStats.sd.length, 6, "each plotted candidate needs an explicit SD bar (zero only when missing)");
     assert.ok(candidateStats.y.every(value => Number.isFinite(Number(value))), "candidate values must be finite");
-    assert.ok(candidateStats.sd.every(value => Number.isFinite(Number(value)) && Number(value) >= 0), "recorded SD values must be nonnegative");
+    assert.ok(candidateStats.sd.every(value => value === null || (Number.isFinite(Number(value)) && Number(value) >= 0)), "recorded SD values must be nonnegative; absent SD remains missing");
+    const candidateBySignature = new Map(api.candidates.records.map(row => [String(row.layout_signature), row]));
+    for (let index = 0; index < candidateStats.x.length; index++) {
+      const source = candidateBySignature.get(String(candidateStats.x[index]));
+      assert.ok(source, "comparative chart label must match a recorded layout signature");
+      assert.equal(Number(candidateStats.y[index]), Number(source.keff_mean), "plotted mean must equal the candidate CSV mean");
+      if (source.keff_std_dev === null || source.keff_std_dev === undefined || source.keff_std_dev === "") {
+        assert.equal(candidateStats.sd[index], null, "missing source SD must not be represented as zero");
+      } else {
+        assert.equal(Number(candidateStats.sd[index]), Number(source.keff_std_dev), "plotted SD must equal the candidate CSV SD");
+      }
+    }
     assert.match(candidateStats.hover, /k-effective mean/i);
     assert.match(candidateStats.hover, /Reported SD/i);
     assert.match(candidateStats.xTitle, /recorded k-effective/i);
@@ -167,6 +207,11 @@ fs.mkdirSync(outDir, { recursive: true });
       const st = surface.data.find(trace => trace.type === "surface");
       return {
         x: ht.x, y: ht.y, z: ht.z, heatHover: ht.hovertemplate, axes: [heat.layout.xaxis.title.text, heat.layout.yaxis.title.text],
+        score: document.querySelector("#meshScore").value,
+        view: document.querySelector("#meshView").value,
+        scale: document.querySelector("#meshScale").value,
+        status: document.querySelector("#meshStatus").textContent,
+        provenance: document.querySelector("#meshProvenance").textContent,
         contour: { x: ct.x, y: ct.y, z: ct.z },
         profile: { x: pt.x, y: pt.y, hover: pt.hovertemplate },
         surface: { x: st.x, y: st.y, z: st.z, hover: st.hovertemplate }
@@ -183,9 +228,48 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.equal(field.y.length, 51);
     assert.match(field.axes[0], /cm|bin index/i);
     assert.match(field.axes[1], /cm|bin index/i);
-    assert.match(field.heatHover, /Recorded flux tally mean/i);
+    assert.match(field.heatHover, /Recorded .* tally mean/i);
     assert.match(field.heatHover, /Monte Carlo standard error/i);
-    assert.match(field.surface.hover, /Recorded flux tally mean/i);
+    assert.match(field.surface.hover, /Recorded .* tally mean/i);
+    const recordedMesh = api.mesh.mesh_tallies[0];
+    const recordedScore = recordedMesh.scores[field.score];
+    const sourceGeometry = recordedMesh.spatial_geometry;
+    if (sourceGeometry && sourceGeometry.coordinates_available === true && sourceGeometry.coordinate_units === "cm") {
+      const [lx, ly] = sourceGeometry.lower_left_cm;
+      const [ux, uy] = sourceGeometry.upper_right_cm;
+      const nx = recordedMesh.dimensions[0], ny = recordedMesh.dimensions[1];
+      const expectedX = Array.from({ length: nx }, (_, i) => lx + (i + 0.5) * (ux - lx) / nx);
+      const expectedY = Array.from({ length: ny }, (_, j) => ly + (j + 0.5) * (uy - ly) / ny);
+      for (let i = 0; i < nx; i++) assert.ok(Math.abs(Number(field.x[i]) - expectedX[i]) < 1e-12, "X coordinate must be the recorded mesh cell centre");
+      for (let j = 0; j < ny; j++) assert.ok(Math.abs(Number(field.y[j]) - expectedY[j]) < 1e-12, "Y coordinate must be the recorded mesh cell centre");
+    } else {
+      assert.match(field.axes[0], /bin index/i);
+      assert.match(field.axes[1], /bin index/i);
+    }
+    const sourceMean = recordedScore.mean;
+    const sourceSE = recordedScore.standard_error || recordedScore.std_dev;
+    for (let j = 0; j < 51; j++) for (let i = 0; i < 51; i++) {
+      const mean = Number(sourceMean[j][i]);
+      const se = Number(sourceSE[j][i]);
+      let expected = null;
+      if (field.view === "relative_sd") expected = mean > 0 && Number.isFinite(se) ? 100 * se / mean : null;
+      else if (field.scale === "log") expected = mean > 0 ? Math.log10(mean) : null;
+      else expected = Number.isFinite(mean) ? mean : null;
+      const actual = field.z[j][i];
+      if (expected === null || !Number.isFinite(expected)) assert.ok(actual === null || actual === undefined, "missing / non-positive value must not be transformed into a peak");
+      else assert.ok(Number.isFinite(Number(actual)) && Math.abs(Number(actual) - expected) <= Math.max(1e-12, Math.abs(expected) * 1e-12), "mesh display value must derive from source tally mean/uncertainty");
+    }
+    if (api.mesh.provenance.hash_matches === true) {
+      assert.equal(field.status, "SHA-256 VERIFIED");
+      assert.match(field.provenance, /matches the recorded baseline/i);
+    } else if (api.mesh.provenance.hash_matches === false) {
+      assert.equal(field.status, "HASH MISMATCH");
+      assert.match(field.provenance, /differs from the recorded baseline/i);
+    } else {
+      assert.equal(field.status, "DATA LOADED · HASH NOT CHECKED");
+      assert.match(field.provenance, /Baseline hash was unavailable/i);
+      assert.match(field.provenance, /has not been hash-verified/i);
+    }
     await page.locator("#meshSurface").screenshot({ path: path.join(outDir, "spatial-surface-desktop.png") });
 
     await page.locator("#axial3dPanel").scrollIntoViewIfNeeded();
@@ -196,12 +280,21 @@ fs.mkdirSync(outDir, { recursive: true });
     const axial = await page.evaluate(() => {
       const plot = document.querySelector("#axial3dPlot");
       const volume = plot.data.find(trace => trace.type === "volume");
+      const sampleIndices = [[0, 0, 0], [15, 25, 25], [29, 50, 50]];
       return {
         status: document.querySelector("#axial3dStatus").textContent,
         metrics: document.querySelector("#axial3dKpis").innerText,
         provenance: document.querySelector("#axial3dProvenance").textContent,
         summary: document.querySelector("#axial3dSummary").textContent,
-        pointCount: volume.x.length
+        view: document.querySelector("#axial3dView").value,
+        pointCount: volume.x.length,
+        points: sampleIndices.map(([k, j, i]) => {
+          const index = (k * 51 + j) * 51 + i;
+          return {
+            x: volume.x[index], y: volume.y[index], z: volume.z[index],
+            value: volume.value[index], customdata: volume.customdata[index]
+          };
+        })
       };
     });
     assert.match(axial.status, /3D STATEPOINT LOADED/i);
@@ -212,6 +305,28 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.match(axial.provenance, /active realizations 6500/);
     assert.match(axial.summary, /95th percentile/i);
     assert.equal(axial.pointCount, 51 * 51 * 30);
+    assert.equal(api.axial.score, "flux");
+    assert.equal(api.axial.provenance.npz_sha256, api.axial.provenance.npz_sha256);
+    assert.match(axial.provenance, new RegExp("NPZ SHA-256 " + api.axial.provenance.npz_sha256));
+    assert.match(axial.provenance, new RegExp("statepoint SHA-256 " + api.axial.provenance.statepoint_sha256));
+    const expectedAxisSamples = api.axial.mesh.axis_samples;
+    for (let i = 0; i < axial.points.length; i++) {
+      const actual = axial.points[i], source = api.axial.samples[i];
+      assert.equal(Number(actual.x), Number(source.x), "3D voxel X must match recorded physical coordinate");
+      assert.equal(Number(actual.y), Number(source.y), "3D voxel Y must match recorded physical coordinate");
+      assert.equal(Number(actual.z), Number(source.z), "3D voxel Z must match recorded physical coordinate");
+      assert.equal(Number(actual.customdata[0]), Number(source.mean), "3D hover mean must match source NPZ mean");
+      assert.equal(Number(actual.customdata[1]), Number(source.standard_error), "3D hover error must match source NPZ uncertainty");
+      assert.equal(Number(actual.customdata[2]), Number(source.relative_error_percent), "3D hover relative error must match source NPZ uncertainty");
+      if (Number(source.mean) > 0 && Number.isFinite(Number(source.mean)) && axial.view !== "relative_error") {
+        assert.ok(Math.abs(Number(actual.value) - Math.log10(Number(source.mean))) < 1e-12, "3D volume scalar must be derived from the recorded mean");
+      } else if (axial.view === "relative_error" && Number.isFinite(Number(source.relative_error_percent))) {
+        assert.equal(Number(actual.value), Number(source.relative_error_percent), "relative-error volume must use recorded relative uncertainty");
+      }
+    }
+    assert.ok(expectedAxisSamples.x[0] < expectedAxisSamples.x[1] && expectedAxisSamples.x[1] < expectedAxisSamples.x[2]);
+    assert.ok(expectedAxisSamples.y[0] < expectedAxisSamples.y[1] && expectedAxisSamples.y[1] < expectedAxisSamples.y[2]);
+    assert.ok(expectedAxisSamples.z[0] < expectedAxisSamples.z[1] && expectedAxisSamples.z[1] < expectedAxisSamples.z[2]);
     await page.locator("#axial3dPanel").screenshot({ path: path.join(outDir, "axial-3d-volume-desktop.png") });
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -251,6 +366,12 @@ fs.mkdirSync(outDir, { recursive: true });
       selected_proxy_values_match_csv: true,
       field_heatmap_contour_surface_values_match: true,
       hover_preserves_mean_and_error: true,
+      candidate_chart_values_match_source: true,
+      source_xml_hashes_verified: true,
+      spatial_field_values_match_source: true,
+      spatial_coordinates_match_recorded_mesh: true,
+      spatial_hash_status: api.mesh.provenance.hash_matches === true ? "verified" : api.mesh.provenance.hash_matches === false ? "mismatch" : "not-checked",
+      axial_voxel_hover_and_coordinates_match_source: true,
       mobile: mobile,
       page_errors: errors
     };
