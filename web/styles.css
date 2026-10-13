@@ -388,3 +388,64 @@
  #spatial .axial3d-panel .section-actions{width:100%;justify-content:space-between}
  #axial3dPlot{height:420px}
 }
+
+
+/* Stage 4: separate material-category accents from quantitative tally colour. */
+.candidate-stat-keff strong,
+.candidate-stat-uncertainty strong,
+.candidate-stat-flux strong,
+.candidate-stat-proxy strong{color:var(--text)}
+.assembly-provenance{margin:2px 0 12px;border:1px solid #203848;border-radius:7px;background:#091824;overflow:hidden}
+.assembly-provenance summary{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;list-style:none;color:#9eb4c2;font:9px "DM Mono",monospace;letter-spacing:.55px}
+.assembly-provenance summary::-webkit-details-marker{display:none}
+.assembly-provenance summary:after{content:"+";margin-left:auto;color:var(--cyan);font:15px "DM Mono",monospace}
+.assembly-provenance[open] summary:after{content:"−"}
+.assembly-provenance summary span{font:10px Manrope,sans-serif;letter-spacing:0;color:#6f8797}
+.assembly-provenance p{margin:0;padding:0 12px 11px;color:#859cac;font-size:10px;line-height:1.65;overflow-wrap:anywhere}
+.assembly-material-key{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;margin:2px 0 13px;padding:8px 11px;border-bottom:1px solid #1b3342;color:#9eb3bf;font-size:10px}
+.assembly-material-key>span{display:inline-flex;align-items:center;gap:7px}
+.assembly-material-key i{width:9px;height:9px;display:inline-block;border-radius:2px}
+.assembly-material-key b{font:600 10px "DM Mono",monospace;color:var(--text)}
+.material-key-mox{background:#f4bd62}.material-key-uo2{background:#55d4df}
+.assembly-key-note{margin-left:auto;color:#6f899a;font-size:9px}
+.assembly-evidence-grid{align-items:stretch;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+.assembly-field-panel,.assembly-matrix-panel{min-width:0;display:flex;flex-direction:column}
+#assemblyMap,#assemblyMatrix{height:410px;min-height:320px}
+.assembly-position-detail{display:grid;grid-template-columns:minmax(100px,.65fr) minmax(150px,1fr);gap:12px;align-items:center;margin:0 15px 10px;padding:11px 12px;background:#091823;border:1px solid #233d4d;border-radius:7px}
+.assembly-position-detail>div:first-child{display:grid;grid-template-columns:auto auto;align-items:center;justify-content:start;gap:5px 8px}
+.assembly-position-detail .eyebrow{grid-column:1/-1;font-size:8px;color:#8ba2b2}
+.assembly-position-detail>div:first-child>strong{font:700 18px "DM Mono",monospace;letter-spacing:.3px}
+.material-chip{display:inline-flex;align-items:center;justify-content:center;border:1px solid #526574;border-radius:4px;padding:4px 6px;color:#d1dbe0;font:9px "DM Mono",monospace;white-space:nowrap}
+.material-chip-mox{border-color:#9a7746;color:#f4bd62;background:rgba(244,189,98,.07)}
+.material-chip-uo2{border-color:#367f8a;color:#70e6f2;background:rgba(85,212,223,.06)}
+.assembly-position-value{display:flex;flex-direction:column;gap:4px;min-width:0}
+.assembly-position-value strong{font:600 clamp(17px,1.5vw,22px) "DM Mono",monospace;color:var(--text);letter-spacing:-.35px;overflow-wrap:anywhere}
+.assembly-position-value small{font-size:9px;line-height:1.5;color:#7e95a5}
+.assembly-position-picker{display:grid;grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.assembly-position-option{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;min-width:0;padding:7px 8px;border:1px solid #2d4655;border-radius:5px;background:#0c1d2a;color:var(--muted);cursor:pointer}
+.assembly-position-option>span{font:600 10px "DM Mono",monospace;color:var(--text)}
+.assembly-position-option>b{font:9px "DM Mono",monospace;font-weight:500;color:#9bb0bd}
+.assembly-position-option>strong{font:10px "DM Mono",monospace;font-weight:500;color:#c8d5dc;overflow-wrap:anywhere}
+.assembly-position-option[data-assembly-position="P00"]{border-top:2px solid #f4bd62}
+.assembly-position-option[data-assembly-position="P01"]{border-top:2px solid #55d4df}
+.assembly-position-option[data-assembly-position="P10"]{border-top:2px solid #55d4df}
+.assembly-position-option[data-assembly-position="P11"]{border-top:2px solid #f4bd62}
+.assembly-position-option.selected{border-color:#fff;box-shadow:inset 0 0 0 1px #fff,0 0 0 1px rgba(255,255,255,.12);background:#142635}
+.assembly-position-option:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.assembly-map-note{margin:auto 0 0;padding:10px 15px 12px;border-top:1px solid #1b3342;color:#7e95a5;font-size:9px;line-height:1.6}
+#assemblyMatrix{margin-bottom:0}
+.model-geometry-svg .reflector-title{fill:#c3c9cf}
+.model-geometry-svg .reflector-sub{fill:#98a1aa}
+@media(max-width:1120px){
+ .assembly-evidence-grid{grid-template-columns:minmax(0,1fr)}
+ #assemblyMap,#assemblyMatrix{height:380px}
+}
+@media(max-width:680px){
+ .assembly-material-key{align-items:flex-start;flex-direction:column;gap:8px}
+ .assembly-key-note{margin-left:0}
+ .assembly-position-detail{grid-template-columns:minmax(0,1fr)}
+ .assembly-position-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #assemblyMap,#assemblyMatrix{height:340px}
+ .assembly-provenance summary{flex-wrap:wrap}
+ .assembly-provenance summary span{width:100%}
+}
