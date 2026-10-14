@@ -214,7 +214,7 @@ fs.mkdirSync(outDir, { recursive: true });
         provenance: document.querySelector("#meshProvenance").textContent,
         contour: { x: ct.x, y: ct.y, z: ct.z },
         profile: { x: pt.x, y: pt.y, hover: pt.hovertemplate },
-        surface: { x: st.x, y: st.y, z: st.z, hover: st.hovertemplate }
+        surface: { x: st.x, y: st.y, z: st.z, customdata: st.customdata, hover: st.hovertemplate, camera: surface.layout.scene.camera, aspectRatioZ: surface.layout.scene.aspectratio.z }
       };
     });
     assert.deepEqual(field.z, field.contour.z, "heatmap and contour must show the same field values");
@@ -258,7 +258,17 @@ fs.mkdirSync(outDir, { recursive: true });
       const actual = field.z[j][i];
       if (expected === null || !Number.isFinite(expected)) assert.ok(actual === null || actual === undefined, "missing / non-positive value must not be transformed into a peak");
       else assert.ok(Number.isFinite(Number(actual)) && Math.abs(Number(actual) - expected) <= Math.max(1e-12, Math.abs(expected) * 1e-12), "mesh display value must derive from source tally mean/uncertainty");
+      const surfaceCustom = field.surface.customdata[j][i];
+      assert.ok(Array.isArray(surfaceCustom) && surfaceCustom.length >= 3, "surface must retain source mean/SE/relative-SE for hover");
+      assert.equal(Number(surfaceCustom[0]), mean, "surface hover mean must match the source mesh");
+      assert.equal(Number(surfaceCustom[1]), se, "surface hover Monte Carlo SE must match the source mesh");
+      const expectedRelative = mean > 0 && Number.isFinite(se) && se >= 0 ? 100 * se / mean : null;
+      if (expectedRelative === null) assert.ok(surfaceCustom[2] === null || surfaceCustom[2] === undefined, "missing relative error must not be fabricated");
+      else assert.ok(Number.isFinite(Number(surfaceCustom[2])) && Math.abs(Number(surfaceCustom[2]) - expectedRelative) <= Math.max(1e-12, Math.abs(expectedRelative) * 1e-12), "surface hover relative error must match the source tally");
     }
+    assert.match(field.surface.hover, /customdata\\[0\\]/);
+    assert.match(field.surface.hover, /customdata\\[1\\]/);
+    assert.match(field.surface.hover, /customdata\\[2\\]/);
     if (api.mesh.provenance.hash_matches === true) {
       assert.equal(field.status, "SHA-256 VERIFIED");
       assert.match(field.provenance, /matches the recorded baseline/i);
@@ -271,6 +281,50 @@ fs.mkdirSync(outDir, { recursive: true });
       assert.match(field.provenance, /has not been hash-verified/i);
     }
     await page.locator("#meshSurface").screenshot({ path: path.join(outDir, "spatial-surface-desktop.png") });
+
+    // Exercise actual Plotly 3D interaction and confirm display controls never change source data.
+    const surfacePlot = page.locator("#meshSurface");
+    const surfaceBefore = await surfacePlot.evaluate(el => {
+      const trace = el.data.find(item => item.type === "surface");
+      return {
+        z: trace.z,
+        customdata: trace.customdata,
+        camera: el.layout.scene.camera,
+        aspectRatioZ: el.layout.scene.aspectratio.z
+      };
+    });
+    assert.ok(Math.abs(Number(surfaceBefore.aspectRatioZ) - 0.3) < 1e-8, "1× display exaggeration must start at its declared aspect ratio");
+    const surfaceCanvas = page.locator("#meshSurface canvas.gl-canvas").first();
+    await surfaceCanvas.waitFor({ state: "visible", timeout: 15000 });
+    const surfaceBounds = await surfaceCanvas.boundingBox();
+    assert.ok(surfaceBounds && surfaceBounds.width > 100 && surfaceBounds.height > 100, "interactive 3D surface canvas must have a usable hit area");
+    await page.mouse.move(surfaceBounds.x + surfaceBounds.width * 0.48, surfaceBounds.y + surfaceBounds.height * 0.52);
+    await page.mouse.down();
+    await page.mouse.move(surfaceBounds.x + surfaceBounds.width * 0.61, surfaceBounds.y + surfaceBounds.height * 0.43, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForFunction(original => {
+      const plot = document.querySelector("#meshSurface");
+      const camera = plot && plot.layout && plot.layout.scene && plot.layout.scene.camera;
+      return !!camera && ["x", "y", "z"].some(axis => Math.abs(Number(camera.eye[axis]) - Number(original.eye[axis])) > 1e-4);
+    }, surfaceBefore.camera, { timeout: 15000 });
+    const draggedCamera = await surfacePlot.evaluate(el => el.layout.scene.camera);
+    assert.notDeepEqual(draggedCamera, surfaceBefore.camera, "mouse drag must rotate the interactive surface camera");
+    await page.locator("#meshResetCamera").click();
+    await page.waitForFunction(original => {
+      const camera = document.querySelector("#meshSurface")?.layout?.scene?.camera;
+      return !!camera && ["x", "y", "z"].every(axis => Math.abs(Number(camera.eye[axis]) - Number(original.eye[axis])) < 1e-3);
+    }, surfaceBefore.camera, { timeout: 10000 });
+    await page.locator("#meshExaggeration").selectOption("3");
+    await page.waitForFunction(() => Math.abs(Number(document.querySelector("#meshSurface")?.layout?.scene?.aspectratio?.z) - 0.9) < 1e-6, null, { timeout: 15000 });
+    const exaggeratedSurface = await surfacePlot.evaluate(el => {
+      const trace = el.data.find(item => item.type === "surface");
+      return { z: trace.z, customdata: trace.customdata, aspectRatioZ: el.layout.scene.aspectratio.z };
+    });
+    assert.deepEqual(exaggeratedSurface.z, surfaceBefore.z, "vertical exaggeration must not change source-derived surface Z values");
+    assert.deepEqual(exaggeratedSurface.customdata, surfaceBefore.customdata, "vertical exaggeration must not change source mean/uncertainty hover data");
+    assert.ok(Math.abs(Number(exaggeratedSurface.aspectRatioZ) - 0.9) < 1e-6, "3× exaggeration may change scene aspect ratio only");
+    await page.locator("#meshExaggeration").selectOption("1");
+    await page.waitForFunction(() => Math.abs(Number(document.querySelector("#meshSurface")?.layout?.scene?.aspectratio?.z) - 0.3) < 1e-6, null, { timeout: 15000 });
 
     await page.locator("#axial3dPanel").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => {
@@ -328,6 +382,27 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.ok(expectedAxisSamples.z[0] < expectedAxisSamples.z[1] && expectedAxisSamples.z[1] < expectedAxisSamples.z[2]);
     await page.locator("#axial3dPanel").screenshot({ path: path.join(outDir, "axial-3d-volume-desktop.png") });
 
+    const desktop = await page.evaluate(() => ({
+      viewport: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+      charts: [...document.querySelectorAll(".js-spatial-plot, #candidateChart, #distributionChart, #assemblyMap, #assemblyMatrix")]
+        .filter(el => el.getClientRects().length)
+        .map(el => { const r = el.getBoundingClientRect(); return { id: el.id || el.className, right: r.right, width: r.width }; }),
+      layoutBlocks: [...document.querySelectorAll(".panel-head, .section-head, .field-controls, .topbar, .renderer-stack-strip")]
+        .filter(el => el.getClientRects().length)
+        .map(el => ({ className: el.className, clientWidth: el.clientWidth, scrollWidth: el.scrollWidth }))
+    }));
+    assert.ok(desktop.documentWidth <= desktop.viewport + 3, "desktop document overflows horizontally: " + JSON.stringify(desktop));
+    assert.ok(desktop.bodyWidth <= desktop.viewport + 3, "desktop body overflows horizontally");
+    for (const plot of desktop.charts) {
+      assert.ok(plot.width <= desktop.viewport + 3, "desktop " + plot.id + " is wider than viewport");
+      assert.ok(plot.right <= desktop.viewport + 5, "desktop " + plot.id + " extends beyond viewport edge");
+    }
+    for (const block of desktop.layoutBlocks) {
+      assert.ok(block.scrollWidth <= block.clientWidth + 4, "desktop labels/controls overflow their panel: " + JSON.stringify(block));
+    }
+
     await page.setViewportSize({ width: 390, height: 844 });
     if (page.evaluate) await page.evaluate(() => {
       if (window.Plotly) document.querySelectorAll(".js-spatial-plot, #candidateChart, #distributionChart, #assemblyMap, #assemblyMatrix").forEach(el => {
@@ -343,13 +418,19 @@ fs.mkdirSync(outDir, { recursive: true });
       charts: [...document.querySelectorAll(".js-spatial-plot, #candidateChart, #distributionChart, #assemblyMap, #assemblyMatrix")].map(el => {
         const r = el.getBoundingClientRect();
         return { id: el.id || el.className, right: r.right, width: r.width };
-      })
+      }),
+      layoutBlocks: [...document.querySelectorAll(".panel-head, .section-head, .field-controls, .topbar, .renderer-stack-strip")]
+        .filter(el => el.getClientRects().length)
+        .map(el => ({ className: el.className, clientWidth: el.clientWidth, scrollWidth: el.scrollWidth }))
     }));
     assert.ok(mobile.documentWidth <= mobile.viewport + 3, "document overflows horizontally on mobile: " + JSON.stringify(mobile));
     assert.ok(mobile.bodyWidth <= mobile.viewport + 3, "body overflows horizontally on mobile");
     for (const plot of mobile.charts) {
       assert.ok(plot.width <= mobile.viewport + 3, plot.id + " is wider than viewport");
       assert.ok(plot.right <= mobile.viewport + 5, plot.id + " extends beyond the right viewport edge");
+    }
+    for (const block of mobile.layoutBlocks) {
+      assert.ok(block.scrollWidth <= block.clientWidth + 4, "mobile labels/controls overflow their panel: " + JSON.stringify(block));
     }
     await page.screenshot({ path: path.join(outDir, "workstation-mobile.png"), fullPage: true });
     assert.deepEqual(errors, [], "uncaught browser errors must not be present");
@@ -369,6 +450,9 @@ fs.mkdirSync(outDir, { recursive: true });
       spatial_field_values_match_source: true,
       spatial_coordinates_match_recorded_mesh: true,
       spatial_hash_status: api.mesh.provenance.hash_matches === true ? "verified" : api.mesh.provenance.hash_matches === false ? "mismatch" : "not-checked",
+      surface_camera_drag_and_reset_passed: true,
+      exaggeration_preserves_source_surface_values: true,
+      desktop: desktop,
       axial_voxel_hover_and_coordinates_match_source: true,
       mobile: mobile,
       page_errors: errors
