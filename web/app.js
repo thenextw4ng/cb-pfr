@@ -486,7 +486,7 @@ async function exportPaperFigure(button){
   stage.style.cssText="position:fixed;left:-10000px;top:0;width:2200px;height:1400px;opacity:0.01;pointer-events:none;z-index:-1";
   document.body.appendChild(stage);
   await Plotly.newPlot(stage,data,paperLayout,{displayModeBar:false,displaylogo:false,responsive:false,staticPlot:true});
-  const imageData=await Plotly.toImage(stage,{format:"png",width:2200,height:1400,scale:2});
+  const imageData=await Plotly.toImage(stage,{format:"png",width:2200,height:1400,scale:1});
   const context={};
   if(targetId.startsWith("mesh")){
    context.score=$("meshScore")?.value||null;context.view=$("meshView")?.value||null;
@@ -507,7 +507,7 @@ async function exportPaperFigure(button){
   const sidecar={
    schema_version:"cbpfr-paper-figure-export-v1",
    figure:{target_id:targetId,title,subtitle,exported_at_utc:new Date().toISOString()},
-   image:{filename:imageFilename,format:"PNG",pixel_width:4400,pixel_height:2800,background:"white"},
+   image:{filename:imageFilename,format:"PNG",pixel_width:2200,pixel_height:1400,background:"white"},
    selected_view:context,
    provenance,
    interpretation_boundary:{
@@ -532,7 +532,7 @@ async function exportPaperFigure(button){
   if(status){
    status.replaceChildren();
    const message=document.createElement("span");
-   message.textContent="Rendered "+title+" as a high-resolution PNG (4400 × 2800 px). PNG and JSON provenance/interpretation sidecar are ready to download: ";
+   message.textContent="Rendered "+title+" as a high-resolution PNG (2200 × 1400 px). PNG and JSON provenance/interpretation sidecar are ready to download: ";
    status.appendChild(message);
    const pngLink=document.createElement("a");
    pngLink.className="action-button paper-export-download";pngLink.href=pngUrl;pngLink.download=imageFilename;
