@@ -266,9 +266,9 @@ fs.mkdirSync(outDir, { recursive: true });
       if (expectedRelative === null) assert.ok(surfaceCustom[2] === null || surfaceCustom[2] === undefined, "missing relative error must not be fabricated");
       else assert.ok(Number.isFinite(Number(surfaceCustom[2])) && Math.abs(Number(surfaceCustom[2]) - expectedRelative) <= Math.max(1e-12, Math.abs(expectedRelative) * 1e-12), "surface hover relative error must match the source tally");
     }
-    assert.match(field.surface.hover, /customdata\\[0\\]/);
-    assert.match(field.surface.hover, /customdata\\[1\\]/);
-    assert.match(field.surface.hover, /customdata\\[2\\]/);
+    assert.match(field.surface.hover, /customdata\[0\]/);
+    assert.match(field.surface.hover, /customdata\[1\]/);
+    assert.match(field.surface.hover, /customdata\[2\]/);
     if (api.mesh.provenance.hash_matches === true) {
       assert.equal(field.status, "SHA-256 VERIFIED");
       assert.match(field.provenance, /matches the recorded baseline/i);
