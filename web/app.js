@@ -425,7 +425,7 @@ function showCandidate(){
  if(!row){clearCandidateSelection(id?"The selected identifier does not match a recorded candidate.":"Choose a candidate from the selector.");return;}
  $("selectedRecordTag").classList.remove("warning");
  $("layoutView").innerHTML=layoutCells(row.layout_signature);
- $("layoutCaption").textContent=label(row)+" · 3 independent seeds "+displayValue(row.seed,"not recorded")+" · signature "+displayValue(row.layout_signature,"not recorded")+" · exploratory only, not a winner claim.";
+ $("layoutCaption").textContent=label(row)+" · 3 independent seeds "+displayValue(row.seed,"not recorded")+" · exploratory only, not a winner claim · signature "+displayValue(row.layout_signature,"not recorded");
  drawSelectedCandidate(row);
  geometryArtifactActive=false;
  drawModelGeometry(row);
