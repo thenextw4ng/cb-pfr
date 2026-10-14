@@ -30,11 +30,12 @@ The server uses Python's standard library for HTTP, plus the project's `h5py` an
 - `GET /api/candidates` — candidate records and source metadata
 - `GET /api/assembly` — four assembly-integrated fission-rate proxy values per recorded candidate
 - `GET /api/mesh` — archived 2D OpenMC mesh tallies and provenance metadata. The server checks the repository-root archive first, then `~/Desktop/OpenMC_HDF5_Evidence_2026-10-11.zip` so large evidence need not be committed to GitHub.
+- `GET /api/axial-3d?score=flux` — true archived 51 × 51 × 30 OpenMC volume, with input/statepoint/NPZ provenance and selected score. The available high-budget volume is from the separate UMMU run; it is not retargeted when the candidate selector changes and is not a substitute for six-layout validation.
 
 ## Scientific limits
 
 - The assembly diagram is a categorical 2×2 schematic from the recorded layout signature; it is not pin-cell geometry.
-- Mesh axes are bin indices only. No material identity, assembly coordinates, or physical orientation are inferred.
+- Mesh axes use stored physical mesh coordinates when archived bounds are available; otherwise they remain mesh-bin indices. No material identity, assembly placement, or physical core orientation is inferred from the tally alone.
 - The 2D planar mesh and true 51 × 51 × 30 axial volume are separate recorded tally sources and are not inferred from candidate-summary numbers or assembly-proxy bins.
 - Between-seed sample SD of the three-run derived scalar is descriptive variability, not a calibrated confidence interval or safety margin.
 - The fission objective is `max(assembly-integrated fission tally) / mean(assembly-integrated fission tally)`; it is dimensionless, not absolute thermal power, pinwise power, or a reactor-safety metric.
