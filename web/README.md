@@ -17,12 +17,12 @@ The server uses Python's standard library for HTTP, plus the project's `h5py` an
 
 ## Visualizations
 
-- Candidate comparison, recorded k-effective distribution, and aggregate flux/fission scores from `results/c5g7_layout_smoke_2026-10-10/candidate_summary.csv`.
+- Candidate comparison and k-effective distribution from the corrected-group 18-run campaign: `results/c5g7_corrected_group_repeatability_smoke_2026-10-11/fission_objective_repeatability_summary.csv`, validated against `run_level_fission_objective.csv` and `fission_objective_repeatability.json`. The API checks six layouts, three unique seeds/statepoints per layout, corrected MGXS identity, group-structure audit status, and recomputes reported between-seed means/SDs before serving the records. The plotted SD is descriptive across three runs, not a calibrated confidence interval.
 - OpenMC spatial tally: 2D heatmap, contour map, and interactive 3D surface from the exact archive member `c5g7-run/2d/statepoint.20000.h5` in `OpenMC_HDF5_Evidence_2026-10-11.zip`.
 - Select flux, fission, or nu-fission; choose mean tally or relative Monte Carlo standard deviation; switch between log and linear display for means; select a color scale.
 - The API reports SHA-256 and whether the archived statepoint matches `evidence/openmc_local_baseline_2026-10-11/statepoint_summary.json`.
 
-- Assembly-integrated fission-proxy visualizations: a selected-candidate 2 × 2 heatmap and a four-position grouped candidate comparison, both loaded from `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv`. The source is explicitly marked exploratory smoke evidence and is not absolute power. The current model is not a hexagonal core, so the UI does not fabricate a hex-lattice rendering.
+- Assembly-integrated fission-proxy visualizations remain loaded from the separate `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv` campaign. These are four discrete, unit-undocumented proxy values with independent seeds; they are not paired with the corrected-group candidate summaries, are not absolute power, and are not interpolated into a continuous field. The current model is not a hexagonal core, so the UI does not fabricate a hex-lattice rendering.
 
 ## API
 
@@ -35,11 +35,14 @@ The server uses Python's standard library for HTTP, plus the project's `h5py` an
 
 - The assembly diagram is a categorical 2×2 schematic from the recorded layout signature; it is not pin-cell geometry.
 - Mesh axes are bin indices only. No material identity, assembly coordinates, or physical orientation are inferred.
-- The 3D visualization is a surface representation of the recorded 2D field, not a true volumetric reactor mesh.
-- Relative SD is computed as 100 × standard deviation / mean for positive finite means only.
-- Flux, fission, and nu-fission scores are not automatically absolute thermal power in watts.
-- The UI does not launch OpenMC, prove physical feasibility, or certify a reactor design.
-- QUBO-to-C5G7 mapping and CB-PFR physical validation remain unresolved/not established in the repository evidence.
+- The 2D planar mesh and true 51 × 51 × 30 axial volume are separate recorded tally sources and are not inferred from candidate-summary numbers or assembly-proxy bins.
+- Between-seed sample SD of the three-run derived scalar is descriptive variability, not a calibrated confidence interval or safety margin.
+- The fission objective is `max(assembly-integrated fission tally) / mean(assembly-integrated fission tally)`; it is dimensionless, not absolute thermal power, pinwise power, or a reactor-safety metric.
+- The composition-only QUBO `E(y) = A(Σyᵢ − 2)²` enforces two MOX positions; all six feasible layouts tie at zero energy and QUBO alone does not select a physical winner. The legacy fresh/once-burned/twice-burned QUBO remains unmapped to this UO₂/MOX C5G7 model.
+- No design-specific acceptable k-effective band has been approved. The UI does not launch OpenMC, certify physical feasibility, claim full physical validation, establish confirmatory CB-PFR superiority on physical data, or claim quantum advantage.
+- Research dossier: https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/docs/CB-PFR_SIMULATOR_RESEARCH_DOSSIER.md
+- Evidence-bounded claims: https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_EVIDENCE_BOUNDED_SCIENTIFIC_CLAIMS_2026-10-12.md
+- A–G final closeout: https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_A-G_FINAL_EVIDENCE_CLOSEOUT_2026-10-12.md
 
 The existing Streamlit application remains intact as a fallback while this interface is tested.
 
