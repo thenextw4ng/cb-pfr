@@ -71,7 +71,7 @@ Official OpenMC geometry visualization guide: https://docs.openmc.org/en/latest/
 
 ## Paper figure exports
 
-The Evidence Integrity section includes a **Paper figure export** panel. It exports the current source-backed Plotly chart as a white-background 4400 × 2800 PNG and writes a same-stem JSON sidecar containing the figure identity, selected view settings, available source provenance, and interpretation boundaries.
+The Evidence Integrity section includes a **Paper figure export** panel. It exports the current source-backed Plotly chart as a white-background 2200 × 1400 PNG and writes a same-stem JSON sidecar containing the figure identity, selected view settings, available source provenance, and interpretation boundaries.
 
 Export only after selecting the intended metric/score and display mode. Keep the PNG and JSON together. Before publication, inspect the PNG at 100%, confirm labels and coordinate/unit basis, and cross-check the sidecar against raw campaign records. This feature does not improve convergence or turn a diagnostic tally into validation evidence.
 
