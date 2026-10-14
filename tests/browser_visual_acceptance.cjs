@@ -159,8 +159,8 @@ fs.mkdirSync(outDir, { recursive: true });
     const sidecar = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
     assert.equal(sidecar.schema_version, "cbpfr-paper-figure-export-v1");
     assert.equal(sidecar.figure.target_id, "distributionChart");
-    assert.equal(sidecar.image.pixel_width, 4400);
-    assert.equal(sidecar.image.pixel_height, 2800);
+    assert.equal(sidecar.image.pixel_width, 2200);
+    assert.equal(sidecar.image.pixel_height, 1400);
     assert.match(sidecar.interpretation_boundary, /smoke-budget|descriptive/i);
 
     const assemblyView = await page.evaluate(() => {
