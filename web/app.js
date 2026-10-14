@@ -9,6 +9,7 @@ let axial3dDrawRevision = 0;
 let axial3dLoadStarted = false;
 let axial3dObserver = null;
 let assemblyRecords = [];
+let paperFigureDownloadUrls = [];
 let selectedAssemblyPosition = "P00";
 const candidateMarkColors = { selected: "#ffffff", default: "#788d9b" };
 const assemblyPositionDefs = [
@@ -499,9 +500,6 @@ async function exportPaperFigure(button){
   const contextSlug=Object.values(context).filter(value=>value!==null&&value!=="").join("_");
   const slug=[targetId,contextSlug].filter(Boolean).join("_").toLowerCase().replace(/[^a-z0-9_-]+/g,"-");
   const imageFilename="cbpfr_"+slug+".png";
-  const imageLink=document.createElement("a");
-  imageLink.href=imageData;imageLink.download=imageFilename;
-  document.body.appendChild(imageLink);imageLink.click();imageLink.remove();
   const provenance=targetId.startsWith("mesh")?(meshData?.provenance||null):
    targetId==="axial3dPlot"?(axial3dData?.provenance||null):
    ["candidateChart","distributionChart","aggregateChart"].includes(targetId)?metadata:
@@ -520,13 +518,29 @@ async function exportPaperFigure(button){
    }[targetId.startsWith("mesh")?"planar_mesh":targetId==="axial3dPlot"?"axial_volume":["assemblyMap","assemblyMatrix"].includes(targetId)?"assembly_proxy":"candidate_campaign"],
    figure_caption_template:"State the source campaign, tally or metric, coordinate/units basis, reported uncertainty type, and all relevant diagnostic/validation limitations."
   };
+  const pngBlob=await fetch(imageData).then(response=>{
+   if(!response.ok)throw new Error("Could not materialise the rendered PNG.");
+   return response.blob();
+  });
   const sidecarBlob=new Blob([JSON.stringify(sidecar,null,2)+"\n"],{type:"application/json"});
-  const sidecarUrl=URL.createObjectURL(sidecarBlob);
-  const jsonLink=document.createElement("a");
-  jsonLink.href=sidecarUrl;jsonLink.download="cbpfr_"+slug+".json";
-  document.body.appendChild(jsonLink);jsonLink.click();jsonLink.remove();
-  setTimeout(()=>URL.revokeObjectURL(sidecarUrl),10000);
-  if(status)status.textContent="Exported "+title+" as a high-resolution PNG (4400 × 2800 px) plus a JSON provenance/interpretation sidecar.";
+  const pngUrl=URL.createObjectURL(pngBlob);
+  const jsonUrl=URL.createObjectURL(sidecarBlob);
+  paperFigureDownloadUrls.forEach(url=>URL.revokeObjectURL(url));
+  paperFigureDownloadUrls=[pngUrl,jsonUrl];
+  if(status){
+   status.replaceChildren();
+   const message=document.createElement("span");
+   message.textContent="Rendered "+title+" as a high-resolution PNG (4400 × 2800 px). PNG and JSON provenance/interpretation sidecar are ready to download: ";
+   status.appendChild(message);
+   const pngLink=document.createElement("a");
+   pngLink.className="action-button paper-export-download";pngLink.href=pngUrl;pngLink.download=imageFilename;
+   pngLink.dataset.exportKind="png";pngLink.textContent="Download PNG";
+   const jsonLink=document.createElement("a");
+   jsonLink.className="action-button paper-export-download";jsonLink.href=jsonUrl;
+   jsonLink.download=imageFilename.replace(/\.png$/i,".json");jsonLink.dataset.exportKind="json";jsonLink.textContent="Download JSON sidecar";
+   status.appendChild(pngLink);status.appendChild(document.createTextNode(" "));
+   status.appendChild(jsonLink);
+  }
  }catch(error){
   if(status)status.textContent="Figure export failed: "+String(error?.message||error).slice(0,180);
  }finally{
