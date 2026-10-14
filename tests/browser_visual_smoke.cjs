@@ -222,7 +222,7 @@ async function main() {
       assert.ok(details.chartSvgCount >= 1, "candidate comparison chart should render in the browser");
       assert.equal(details.comparisonType, "scatter", "candidate comparison should use scientific point/interval marks, not baseline-zero bars");
       assert.equal(details.comparisonErrorVisible, true, "k-effective comparison must display reported SD intervals");
-      assert.match(details.comparisonXTitle, /Reported k-effective mean/);
+      assert.match(details.comparisonXTitle, /mean k-effective/i);
       assert.equal(details.comparisonHasReference, true, "point-range plot should make the k_eff=1 interpretation reference explicit");
       assert.equal(details.rankedType, "scatter", "k-effective distribution should be a ranked dot plot, not a histogram");
       assert.equal(details.rankedMode, "markers");
@@ -232,8 +232,8 @@ async function main() {
       assert.deepEqual(details.rankedOrder, ["MUMU","MMUU","MUUM","UMMU","UUMM","UMUM"], "rank order should follow the six recorded k-effective means");
       assert.equal(details.aggregateTraceCount, 1, "flux and fission scores should not share one common y scale");
       assert.equal(details.aggregateType, "scatter", "aggregate indicators should be shown as an x-y relationship");
-      assert.match(details.aggregateXTitle, /aggregate flux score/i);
-      assert.match(details.aggregateYTitle, /aggregate fission score/i);
+      assert.match(details.aggregateXTitle, /mean k-effective/i);
+      assert.match(details.aggregateYTitle, /fission-rate peaking proxy/i);
       assert.equal(details.aggregateSelectedColorCount, 1, "selected-candidate highlight should synchronize to the score relationship");
       assert.equal(details.matrixType, "heatmap", "position-wise comparison should be a heatmap matrix");
       assert.equal(details.matrixRows, 6, "matrix should include all six exact candidate matches");
@@ -272,7 +272,7 @@ async function main() {
       assert.equal(details.matrixColorbarVisible, false, "candidate matrix must reuse the map scale without duplicating its colorbar");
       assert.equal(details.matrixTraceCount, 2, "matrix should have one quantitative heatmap and one selected-row outline");
       assert.equal(details.matrixSelectedLayout, details.coreInfo?.layoutSignature, "outlined matrix row should follow the selected candidate");
-      assert.match(details.keffAndSdText, /Reported SD ±/);
+      assert.match(details.keffAndSdText, /Between-seed sample SD ±/);
     }
 
     // Position controls and click events must stay synchronized with the 2 × 2 field.
