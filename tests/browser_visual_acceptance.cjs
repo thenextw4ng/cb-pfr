@@ -134,6 +134,33 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.match(candidateStats.xTitle, /k-effective/i);
     assert.match(candidateStats.yTitle, /between-seed sample SD/i);
 
+    // Verify the paper export really renders a publication-sized image and
+    // writes a JSON provenance sidecar from the current source-backed chart.
+    const paperDownloads = [];
+    page.on("download", download => paperDownloads.push(download));
+    const paperExportButton = page.locator('[data-figure-target="distributionChart"]');
+    assert.equal(await paperExportButton.count(), 1, "paper export control for corrected-group k-effective must exist");
+    await paperExportButton.click();
+    await page.waitForFunction(() => {
+      const status = document.querySelector("#paperExportStatus")?.textContent || "";
+      return status.includes("JSON provenance/interpretation sidecar");
+    }, null, { timeout: 60000 });
+    for (let attempt = 0; attempt < 30 && paperDownloads.length < 2; attempt++) await page.waitForTimeout(100);
+    const paperPng = paperDownloads.find(download => /\\.png$/i.test(download.suggestedFilename()));
+    const paperJson = paperDownloads.find(download => /\\.json$/i.test(download.suggestedFilename()));
+    assert.ok(paperPng, "paper export must download a high-resolution PNG");
+    assert.ok(paperJson, "paper export must download a companion JSON sidecar");
+    const pngPath = await paperPng.path();
+    const jsonPath = await paperJson.path();
+    assert.ok(fs.statSync(pngPath).size > 10000, "exported PNG must contain rendered figure data");
+    const sidecar = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+    assert.equal(sidecar.schema_version, "cbpfr-paper-figure-export-v1");
+    assert.equal(sidecar.figure.target_id, "distributionChart");
+    assert.equal(sidecar.image.pixel_width, 4400);
+    assert.equal(sidecar.image.pixel_height, 2800);
+    assert.match(sidecar.interpretation_boundary, /smoke-budget|descriptive/i);
+
+
     const assemblyView = await page.evaluate(() => {
       const select = document.querySelector("#candidateSelect");
       const plot = document.querySelector("#assemblyMap");
@@ -455,6 +482,7 @@ fs.mkdirSync(outDir, { recursive: true });
       field_heatmap_contour_surface_values_match: true,
       hover_preserves_mean_and_error: true,
       candidate_chart_values_match_source: true,
+      paper_png_and_json_sidecar_export_passed: true,
       spatial_field_values_match_source: true,
       spatial_coordinates_match_recorded_mesh: true,
       spatial_hash_status: api.mesh.provenance.hash_matches === true ? "verified" : api.mesh.provenance.hash_matches === false ? "mismatch" : "not-checked",
