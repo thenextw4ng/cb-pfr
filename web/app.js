@@ -518,7 +518,7 @@ async function exportPaperFigure(button){
    }[targetId.startsWith("mesh")?"planar_mesh":targetId==="axial3dPlot"?"axial_volume":["assemblyMap","assemblyMatrix"].includes(targetId)?"assembly_proxy":"candidate_campaign"],
    figure_caption_template:"State the source campaign, tally or metric, coordinate/units basis, reported uncertainty type, and all relevant diagnostic/validation limitations."
   };
-  const dataUrlMatch=imageData.match(/^data:([^;,]+);base64,([\\s\\S]+)$/);
+  const dataUrlMatch=imageData.match(/^data:([^;,]+);base64,([\s\S]+)$/);
   if(!dataUrlMatch)throw new Error("Plotly did not return a base64 PNG data URL.");
   const binary=atob(dataUrlMatch[2]);
   const bytes=new Uint8Array(binary.length);
