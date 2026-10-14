@@ -294,10 +294,12 @@ fs.mkdirSync(outDir, { recursive: true });
       };
     });
     assert.ok(Math.abs(Number(surfaceBefore.aspectRatioZ) - 0.3) < 1e-8, "1× display exaggeration must start at its declared aspect ratio");
-    const surfaceCanvas = page.locator("#meshSurface canvas.gl-canvas").first();
-    await surfaceCanvas.waitFor({ state: "visible", timeout: 15000 });
-    const surfaceBounds = await surfaceCanvas.boundingBox();
-    assert.ok(surfaceBounds && surfaceBounds.width > 100 && surfaceBounds.height > 100, "interactive 3D surface canvas must have a usable hit area");
+    // Plotly's WebGL layer may be nested in a canvas that is intentionally transparent
+    // or not exposed as a visible element by headless Chromium. Drag the plot's own hit area,
+    // which is the public interactive surface container, rather than depending on canvas CSS.
+    await surfacePlot.waitFor({ state: "visible", timeout: 15000 });
+    const surfaceBounds = await surfacePlot.boundingBox();
+    assert.ok(surfaceBounds && surfaceBounds.width > 100 && surfaceBounds.height > 100, "interactive 3D surface plot must have a usable hit area");
     await page.mouse.move(surfaceBounds.x + surfaceBounds.width * 0.48, surfaceBounds.y + surfaceBounds.height * 0.52);
     await page.mouse.down();
     await page.mouse.move(surfaceBounds.x + surfaceBounds.width * 0.61, surfaceBounds.y + surfaceBounds.height * 0.43, { steps: 8 });
