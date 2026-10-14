@@ -67,6 +67,12 @@ fs.mkdirSync(outDir, { recursive: true });
 
     assert.equal(api.health.status, "ok");
     assert.equal(api.candidates.records.length, 6);
+    assert.equal(api.candidates.metadata.campaign_status, "EXPLORATORY_DESCRIPTIVE_ONLY");
+    assert.equal(api.candidates.metadata.run_count, 18);
+    assert.equal(api.candidates.metadata.runs_per_layout, 3);
+    assert.equal(api.candidates.metadata.records_validated_against_run_level_data, true);
+    assert.match(api.candidates.metadata.source, /c5g7_corrected_group_repeatability_smoke_2026-10-11/);
+    assert.match(api.candidates.metadata.acceptance_status, /BLOCKED_NO_DESIGN_SPECIFIC_KEFF_BAND/);
     assert.equal(api.geometry.candidates.length, 6);
     assert.equal(api.assembly.records.length, 6);
     assert.deepEqual(api.mesh.mesh_tallies[0].dimensions, [51, 51, 1]);
