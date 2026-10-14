@@ -450,7 +450,7 @@ function drawCandidateChart(){
  let min= Math.min(...valid.map(r=>Number(r[key]))), max=Math.max(...valid.map(r=>Number(r[key])));
  const spread=max-min, pad=spread>0?spread*0.14:Math.max(Math.abs(max)*0.01,0.001);
  if(isKeff){
-  trace.error_x={type:"data",array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.4,width:5};
+  trace.error_x={type:"data",array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null),visible:true,color:palette.muted,thickness:1.4,width:5};
   // Keep the k_eff=1 reference visible, but explicitly label it as interpretive rather than a safety limit.
   min=Math.min(1,min-pad); max+=pad;
   shapes.push({type:"line",xref:"x",yref:"paper",x0:1,x1:1,y0:0,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}});
@@ -471,7 +471,7 @@ function drawOtherCharts(){
   const keffColors=vals.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
   const spread=Math.max(...vals.map(r=>Number(r.keff_mean)))-Math.min(...vals.map(r=>Number(r.keff_mean)));
   const pad=spread>0?spread*0.12:0.002;
-  const trace={type:"scatter",mode:"markers",name:"Ranked candidate k-effective",x:vals.map(r=>String(r.layout_signature||label(r))),y:vals.map(r=>Number(r.keff_mean)),customdata:vals.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),marker:{color:keffColors,size:vals.map(r=>String(r.candidate_id)===selected?12:9),symbol:vals.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:vals.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.1}},error_y:{type:"data",array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):0),visible:true,color:palette.muted,thickness:1.2,width:4},hovertemplate:"Ranked layout %{x}<br>Candidate %{customdata[0]}<br>Seed %{customdata[2]}<br>k-effective mean %{y:.7f}<br>Reported SD ±%{customdata[3]:.4g}<extra></extra>"};
+  const trace={type:"scatter",mode:"markers",name:"Ranked candidate k-effective",x:vals.map(r=>String(r.layout_signature||label(r))),y:vals.map(r=>Number(r.keff_mean)),customdata:vals.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),marker:{color:keffColors,size:vals.map(r=>String(r.candidate_id)===selected?12:9),symbol:vals.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:vals.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.1}},error_y:{type:"data",array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null),visible:true,color:palette.muted,thickness:1.2,width:4},hovertemplate:"Ranked layout %{x}<br>Candidate %{customdata[0]}<br>Seed %{customdata[2]}<br>k-effective mean %{y:.7f}<br>Reported SD ±%{customdata[3]:.4g}<extra></extra>"};
   chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by recorded k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Reported k-effective mean (± SD)",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1 · reference only",showarrow:false,font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
  }
  const pairs=records.filter(r=>has(r,"aggregate_flux_score")&&has(r,"aggregate_fission_score"));
@@ -668,7 +668,7 @@ function waitForCoreGeometryReady(timeoutMs=3000){
   timer=window.setTimeout(finish,timeoutMs);
  });
 }
-const meshDefaultCamera={eye:{x:1.55,y:1.55,z:1.1},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
+const meshDefaultCamera={eye:{x:1.25,y:1.25,z:0.9},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
 async function drawMesh(){
  if(!meshData)return;
  const drawRevision=++meshDrawRevision;
@@ -1214,10 +1214,10 @@ function drawAssemblyField(){
  const mid=(scaleMin+scaleMax)/2;
  const colorbar={
   title:{text:"Fission-rate proxy<br>(CSV unit not documented)",font:{size:10,color:palette.text}},
-  thickness:13,outlinewidth:0,tickfont:{size:9,color:palette.muted},
+  thickness:10,outlinewidth:0,tickfont:{size:8,color:palette.muted},
   tickmode:"array",tickvals:[scaleMin,mid,scaleMax],
   ticktext:[formatSourceProxy(scaleMin,4),formatSourceProxy(mid,4),formatSourceProxy(scaleMax,4)],
-  ticks:"outside",len:0.78
+  ticks:"outside",len:0.68
  };
 
  if(!row){
@@ -1243,7 +1243,7 @@ function drawAssemblyField(){
   $("assemblyPositionValue").textContent=formatSourceProxy(selectedPosition.value);
   $("assemblyPositionPicker").innerHTML=cells.map(position=>
    '<button type="button" class="assembly-position-option '+(position.materialCode==="M"?"material-mox":"material-uo2")+' '+(position.label===selectedAssemblyPosition?"selected":"")+'" data-assembly-position="'+position.label+'" aria-pressed="'+String(position.label===selectedAssemblyPosition)+'">'+
-    '<span>'+position.label+'</span><b>'+position.material+'</b><strong>'+formatSourceProxy(position.value)+'</strong>'+
+    '<span>'+position.label+'</span><b>'+position.material+'</b><strong>'+formatSourceProxy(position.value,4)+'</strong>'+
    '</button>'
   ).join("");
   const scaleRange=$("assemblyScaleRange");
@@ -1264,7 +1264,7 @@ function drawAssemblyField(){
   ].map(line=>line.map(position=>[
    position.label,position.material,row.candidate_id,signature,row.seed,row.status,position.row,position.col
   ]));
-  const textValues=cells.map(position=>position.label+" · "+position.material+"\n"+formatSourceProxy(position.value));
+  const textValues=cells.map(position=>position.label+" · "+position.material+"<br>"+formatSourceProxy(position.value,4));
   const heatmap={
    type:"heatmap",name:"Assembly-integrated fission-rate proxy",
    x:["Column 0","Column 1"],y:["Row 0","Row 1"],
@@ -1280,8 +1280,8 @@ function drawAssemblyField(){
   // follow each tile, while the selected-position frame remains clearly larger.
   const mapWidth=mapEl?.clientWidth||560,mapHeight=mapEl?.clientHeight||410;
   const tileFootprint=Math.min(Math.max(140,mapWidth-170)/2,Math.max(160,mapHeight-66)/2);
-  const materialOutlineSize=Math.max(32,Math.min(144,Math.floor(tileFootprint*0.72)));
-  const selectedOutlineSize=Math.max(40,Math.min(156,Math.floor(tileFootprint*0.86)));
+  const materialOutlineSize=Math.max(24,Math.min(112,Math.floor(tileFootprint*0.54)));
+  const selectedOutlineSize=Math.max(30,Math.min(124,Math.floor(tileFootprint*0.66)));
   const materialOutline={
    type:"scatter",mode:"markers",name:"Material category outline",
    x:cells.map(position=>position.col===0?"Column 0":"Column 1"),
@@ -1304,11 +1304,11 @@ function drawAssemblyField(){
    hoverinfo:"skip",showlegend:false
   };
   chart("assemblyMap",[heatmap,materialOutline,selectionOutline],{
-   autosize:true,margin:{l:58,r:112,t:14,b:52},
+   autosize:true,margin:{l:42,r:78,t:10,b:44},
    showlegend:false,hovermode:"closest",
-   xaxis:{...baseLayout.xaxis,title:{text:"Core-map column",standoff:9},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
-   yaxis:{...baseLayout.yaxis,title:{text:"Core-map row · row 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
-   annotations:[{xref:"paper",yref:"paper",x:0,y:1.08,xanchor:"left",yanchor:"bottom",showarrow:false,text:"ROW 0 (TOP): P00 = R0/C0 · P01 = R0/C1    |    ROW 1: P10 = R1/C0 · P11 = R1/C1",font:{size:9,color:palette.muted}}]
+   xaxis:{...baseLayout.xaxis,title:{text:"Column index",standoff:8},type:"category",categoryorder:"array",categoryarray:["Column 0","Column 1"],tickvals:["Column 0","Column 1"],ticktext:["0","1"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   yaxis:{...baseLayout.yaxis,title:{text:"Row index · 0 at top",standoff:8},type:"category",categoryorder:"array",categoryarray:["Row 0","Row 1"],tickvals:["Row 0","Row 1"],ticktext:["0","1"],autorange:"reversed",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.35)"},
+   annotations:[]
   }).then(()=>{
    if(!mapEl||typeof mapEl.on!=="function"||mapEl.dataset.positionClickBound)return;
    mapEl.on("plotly_click",event=>{
@@ -1330,9 +1330,9 @@ function drawAssemblyField(){
  const matrixTrace={
   type:"heatmap",name:"Recorded assembly fission-rate proxy",
   x:assemblyPositionDefs.map(position=>position.label),
-  y:matrixRows.map(item=>String(item.candidate.layout_signature||label(item.candidate))),
+  y:matrixRows.map(item=>{const signature=String(item.candidate.layout_signature||label(item.candidate));const isSelected=String(item.candidate.candidate_id)===selectedId&&signature.toUpperCase()===String(selected?.layout_signature||"").toUpperCase();return signature+(isSelected?"  ◂":"");}),
   z:matrixRows.map(item=>item.values),
-  text:matrixRows.map(item=>item.values.map(value=>formatSourceProxy(value))),
+  text:matrixRows.map(item=>item.values.map(value=>formatSourceProxy(value,6))),
   texttemplate:"%{text}",textfont:{size:10,color:"#f0f3f5"},
   colorscale:"Cividis",zmin:scaleMin,zmax:scaleMax,zauto:false,showscale:false,
   xgap:3,ygap:2,
@@ -1343,18 +1343,10 @@ function drawAssemblyField(){
   hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Position %{customdata[2]}<br>Recorded fission-rate proxy %{z:.8g}<br>CSV unit not documented · not absolute power<br>Proxy-run seed %{customdata[3]}<br>Status %{customdata[4]}<extra></extra>"
  };
  const selectedRow=matrixRows.find(item=>String(item.candidate.candidate_id)===selectedId&&String(item.candidate.layout_signature).toUpperCase()===String(selected?.layout_signature||"").toUpperCase());
- const traces=[matrixTrace];
- if(selectedRow)traces.push({
-  type:"scatter",mode:"markers",name:"Selected candidate",
-  x:assemblyPositionDefs.map(position=>position.label),
-  y:assemblyPositionDefs.map(()=>String(selectedRow.candidate.layout_signature||label(selectedRow.candidate))),
-  marker:{symbol:"square-open",size:34,color:"#ffffff",line:{width:1.8,color:"#ffffff"}},
-  hoverinfo:"skip",showlegend:false
- });
- chart("assemblyMatrix",traces,{
-  autosize:true,margin:{l:62,r:20,t:16,b:50},showlegend:false,hovermode:"closest",
+ chart("assemblyMatrix",[matrixTrace],{
+  autosize:true,margin:{l:62,r:20,t:24,b:50},showlegend:false,hovermode:"closest",
   xaxis:{...baseLayout.xaxis,title:{text:"Fuel position · row-major",standoff:10},type:"category",categoryorder:"array",categoryarray:["P00","P01","P10","P11"],tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.3)"},
-  yaxis:{...baseLayout.yaxis,title:{text:"Candidate layout · descriptive k-effective order",standoff:8},type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},
-  annotations:[{xref:"paper",yref:"paper",x:1,y:1.07,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Outlined row = selected candidate":"No matching candidate selected",font:{size:9,color:palette.muted}}]
+  yaxis:{...baseLayout.yaxis,title:{text:"Layout signature",standoff:8},type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.25)"},
+  annotations:[{xref:"paper",yref:"paper",x:1,y:1.07,xanchor:"right",yanchor:"bottom",showarrow:false,text:selectedRow?"Selected layout: "+selectedRow.candidate.layout_signature:"No matching candidate selected",font:{size:9,color:palette.muted}}]
  });
 }
