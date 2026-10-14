@@ -4,8 +4,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
 import mimetypes
 import os
+import statistics
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -13,7 +15,10 @@ from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
-CANDIDATE_CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
+CANDIDATE_DIR = ROOT / "results" / "c5g7_corrected_group_repeatability_smoke_2026-10-11"
+CANDIDATE_CSV = CANDIDATE_DIR / "fission_objective_repeatability_summary.csv"
+CANDIDATE_RUN_LEVEL_CSV = CANDIDATE_DIR / "run_level_fission_objective.csv"
+CANDIDATE_CAMPAIGN_JSON = CANDIDATE_DIR / "fission_objective_repeatability.json"
 # Explicit environment overrides let CI audit a known smoke artifact and let users point to
 # their production ZIP without renaming or copying it into the repository.
 STATEPOINT_ARCHIVE = Path(os.environ.get(
@@ -199,26 +204,196 @@ def read_model_geometry():
     return payload
 
 
-def read_candidates():
-    if not CANDIDATE_CSV.is_file():
-        raise FileNotFoundError(f"Candidate summary not found: {CANDIDATE_CSV.relative_to(ROOT)}")
-    with CANDIDATE_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+def _read_csv_rows(path: Path):
+    if not path.is_file():
+        raise FileNotFoundError(f"Required research data not found: {path.relative_to(ROOT)}")
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
-            raise ValueError("Candidate summary CSV has no header row.")
-        rows = []
-        for raw in reader:
-            row = {}
-            for key, value in raw.items():
-                if value is None or value.strip() == "":
-                    row[key] = None
-                    continue
-                try:
-                    row[key] = float(value) if any(ch in value.lower() for ch in (".", "e")) else int(value)
-                except (ValueError, AttributeError):
-                    row[key] = value
-            rows.append(row)
-    return rows
+            raise ValueError(f"CSV has no header row: {path.relative_to(ROOT)}")
+        return list(reader)
+
+
+def _require_close(actual, expected, label, *, rel_tol=1e-8, abs_tol=1e-10):
+    if not math.isfinite(float(actual)) or not math.isclose(
+        float(actual), float(expected), rel_tol=rel_tol, abs_tol=abs_tol
+    ):
+        raise ValueError(f"Research evidence consistency check failed for {label}: {actual} != {expected}.")
+
+
+def read_candidate_evidence():
+    """
+    Build dashboard candidates from the dossier's corrected-group 18-run campaign.
+
+    Fail closed if the run-level evidence, group audits, campaign metadata, or
+    derived means/standard deviations no longer agree with the checked-in summary.
+    The legacy one-run smoke CSV is deliberately not used for this dashboard.
+    """
+    try:
+        campaign = json.loads(CANDIDATE_CAMPAIGN_JSON.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise FileNotFoundError(
+            f"Research campaign metadata not found: {CANDIDATE_CAMPAIGN_JSON.relative_to(ROOT)}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError("Research campaign metadata is not valid JSON.") from exc
+
+    required_contract = {
+        "status": "EXPLORATORY_DESCRIPTIVE_ONLY",
+        "run_count": 18,
+        "round_count": 3,
+        "candidate_count": 6,
+        "all_group_structure_audits_passed": True,
+        "all_statepoint_hashes_unique": True,
+        "all_mgxs_hashes_identical": True,
+        "acceptance_status": "BLOCKED_NO_DESIGN_SPECIFIC_KEFF_BAND_OR_BENCHMARK_GRADE_CONVERGENCE",
+        "no_winner_claim": True,
+    }
+    for key, expected in required_contract.items():
+        if campaign.get(key) != expected:
+            raise ValueError(f"Research campaign contract mismatch for {key}: expected {expected!r}.")
+    settings = campaign.get("settings", {})
+    for key, expected in {"batches": 100, "inactive_batches": 10, "particles_per_batch": 1000}.items():
+        if settings.get(key) != expected:
+            raise ValueError(f"Corrected-group smoke settings mismatch for {key}: expected {expected}.")
+
+    summaries = _read_csv_rows(CANDIDATE_CSV)
+    runs = _read_csv_rows(CANDIDATE_RUN_LEVEL_CSV)
+    expected_layouts = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
+    if len(summaries) != 6 or len(runs) != 18:
+        raise ValueError(f"Expected six candidate summaries and 18 run-level records; got {len(summaries)} and {len(runs)}.")
+
+    def fnum(row, key, context):
+        try:
+            value = float(row[key])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"Missing/non-numeric {key} in {context}.") from exc
+        if not math.isfinite(value):
+            raise ValueError(f"Non-finite {key} in {context}.")
+        return value
+
+    def valid_sha(value):
+        value = str(value or "").lower()
+        return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
+
+    grouped = {layout: [] for layout in expected_layouts}
+    seen_seed, seen_statepoint = set(), set()
+    corrected_mgxs = campaign.get("corrected_mgxs_sha256")
+    if not valid_sha(corrected_mgxs):
+        raise ValueError("Corrected MGXS SHA-256 is missing or malformed.")
+    for index, run in enumerate(runs, start=1):
+        layout = str(run.get("layout_signature", "")).upper()
+        candidate_id = str(run.get("candidate_id", ""))
+        if layout not in expected_layouts or candidate_id != "c5g7-2x2-" + layout:
+            raise ValueError(f"Run-level candidate ID/layout mismatch on row {index}.")
+        if run.get("group_structure_audit") != "PASS":
+            raise ValueError(f"Corrected-group audit did not pass for run row {index}.")
+        seed = str(run.get("seed", "")).strip()
+        statepoint_sha = str(run.get("statepoint_sha256", "")).lower()
+        mgxs_sha = str(run.get("mgxs_sha256", "")).lower()
+        if not seed or seed in seen_seed:
+            raise ValueError(f"Run-level seed is empty or reused: {seed!r}.")
+        if not valid_sha(statepoint_sha) or statepoint_sha in seen_statepoint:
+            raise ValueError(f"Run-level statepoint SHA-256 is malformed or reused on row {index}.")
+        if mgxs_sha != corrected_mgxs:
+            raise ValueError(f"Run-level MGXS hash differs from the campaign's corrected MGXS on row {index}.")
+        seen_seed.add(seed)
+        seen_statepoint.add(statepoint_sha)
+        # Parse both recorded metrics now; invalid rows may never silently reach the UI.
+        fnum(run, "keff_mean", f"run row {index}")
+        fnum(run, "keff_std_dev", f"run row {index}")
+        fnum(run, "fission_rate_peaking_factor", f"run row {index}")
+        for field in ("R_p00", "R_p01", "R_p10", "R_p11"):
+            fnum(run, field, f"run row {index}")
+        grouped[layout].append(run)
+
+    if len(seen_seed) != 18 or len(seen_statepoint) != 18:
+        raise ValueError("Run-level evidence must contain 18 unique seeds and 18 unique statepoint hashes.")
+
+    normalized = []
+    seen_layouts = set()
+    for row in summaries:
+        layout = str(row.get("layout_signature", "")).upper()
+        candidate_id = str(row.get("candidate_id", ""))
+        if layout not in expected_layouts or candidate_id != "c5g7-2x2-" + layout or layout in seen_layouts:
+            raise ValueError(f"Candidate summary contains an invalid or duplicate layout: {candidate_id} / {layout}.")
+        seen_layouts.add(layout)
+        material_count = layout.count("M") == 2 and layout.count("U") == 2 and len(layout) == 4
+        if not material_count:
+            raise ValueError(f"Candidate {layout} violates the exact two-MOX/two-UO2 composition.")
+        case_runs = grouped[layout]
+        if len(case_runs) != 3:
+            raise ValueError(f"Expected three independently recorded runs for {layout}; found {len(case_runs)}.")
+        run_means = [fnum(item, "keff_mean", layout) for item in case_runs]
+        run_peaks = [fnum(item, "fission_rate_peaking_factor", layout) for item in case_runs]
+        if str(row.get("n_runs", "")) != "3":
+            raise ValueError(f"Summary record {layout} does not report exactly three runs.")
+        _require_close(fnum(row, "mean_keff", layout), statistics.fmean(run_means), layout + " mean k-effective")
+        _require_close(fnum(row, "between_seed_sd_keff", layout), statistics.stdev(run_means), layout + " between-seed k-effective SD")
+        _require_close(fnum(row, "mean_fission_rate_peaking_factor", layout), statistics.fmean(run_peaks), layout + " mean peaking proxy")
+        _require_close(fnum(row, "between_seed_sd_fission_peaking_factor", layout), statistics.stdev(run_peaks), layout + " between-seed peaking-proxy SD")
+        _require_close(fnum(row, "fission_peaking_cv_percent", layout), 100.0 * statistics.stdev(run_peaks) / statistics.fmean(run_peaks), layout + " peaking-proxy CV")
+        computed_rank = sorted(expected_layouts, key=lambda sig: statistics.fmean([fnum(item, "fission_rate_peaking_factor", sig) for item in grouped[sig]])).index(layout) + 1
+        if int(row.get("descriptive_rank_by_fission_peaking", "0")) != computed_rank:
+            raise ValueError(f"Descriptive peaking-proxy rank does not match run-level data for {layout}.")
+        normalized.append({
+            "candidate_id": candidate_id,
+            "layout_signature": layout,
+            "canonical_reference": False,
+            "keff_mean": fnum(row, "mean_keff", layout),
+            # This uncertainty column is explicitly a between-seed sample SD of
+            # the derived metric, not a single-run Monte Carlo standard error.
+            "keff_std_dev": fnum(row, "between_seed_sd_keff", layout),
+            "keff_relative_sd_percent": 100.0 * fnum(row, "between_seed_sd_keff", layout) / fnum(row, "mean_keff", layout),
+            "fission_peaking_mean": fnum(row, "mean_fission_rate_peaking_factor", layout),
+            "fission_peaking_sd": fnum(row, "between_seed_sd_fission_peaking_factor", layout),
+            "fission_peaking_cv_percent": fnum(row, "fission_peaking_cv_percent", layout),
+            "descriptive_fission_peaking_rank": computed_rank,
+            "n_runs": 3,
+            "seed": " / ".join(str(item["seed"]) for item in case_runs),
+            "batches": settings["batches"],
+            "inactive": settings["inactive_batches"],
+            "particles_per_batch": settings["particles_per_batch"],
+            "group_structure_audit_count": sum(item.get("group_structure_audit") == "PASS" for item in case_runs),
+            "statepoint_hash_count": len({str(item["statepoint_sha256"]) for item in case_runs}),
+            "mgxs_sha256": corrected_mgxs,
+            "status": campaign["status"],
+        })
+    if seen_layouts != expected_layouts:
+        raise ValueError("Corrected-group candidate summary does not contain all six expected layouts.")
+    normalized.sort(key=lambda item: item["descriptive_fission_peaking_rank"])
+
+    metadata = {
+        "source": str(CANDIDATE_CSV.relative_to(ROOT)),
+        "run_level_source": str(CANDIDATE_RUN_LEVEL_CSV.relative_to(ROOT)),
+        "campaign_metadata_source": str(CANDIDATE_CAMPAIGN_JSON.relative_to(ROOT)),
+        "mode": "recorded corrected-group OpenMC research evidence; no transport is launched by the dashboard",
+        "campaign_status": campaign["status"],
+        "source_run_id": campaign["source_run_id"],
+        "analysis_run_id": campaign["analysis_run_id"],
+        "upstream_source_commit": campaign["upstream_source_commit"],
+        "corrected_mgxs_sha256": corrected_mgxs,
+        "standard_c5g7_group_boundaries_eV": campaign["standard_c5g7_group_boundaries_eV"],
+        "settings": settings,
+        "objective": campaign["objective"],
+        "objective_interpretation": campaign["objective_interpretation"],
+        "uncertainty_method": campaign["uncertainty_method"],
+        "acceptance_status": campaign["acceptance_status"],
+        "no_winner_claim": campaign["no_winner_claim"],
+        "run_count": campaign["run_count"],
+        "layout_count": campaign["candidate_count"],
+        "runs_per_layout": 3,
+        "records_validated_against_run_level_data": True,
+        "research_dossier_url": "https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/docs/CB-PFR_SIMULATOR_RESEARCH_DOSSIER.md",
+        "claims_url": "https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_EVIDENCE_BOUNDED_SCIENTIFIC_CLAIMS_2026-10-12.md",
+        "closeout_url": "https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_A-G_FINAL_EVIDENCE_CLOSEOUT_2026-10-12.md",
+    }
+    return {"metadata": metadata, "records": normalized}
+
+
+def read_candidates():
+    """Compatibility wrapper for tests/consumers that need candidate rows only."""
+    return read_candidate_evidence()["records"]
 
 
 def read_assembly_evidence():
@@ -623,7 +798,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, json.dumps({"status": "ok", "mode": "recorded-evidence-only"}), "application/json; charset=utf-8")
         if path == "/api/candidates":
             try:
-                payload = {"metadata": {"source": str(CANDIDATE_CSV.relative_to(ROOT)), "mode": "recorded repository evidence; no OpenMC execution"}, "records": read_candidates()}
+                payload = read_candidate_evidence()
                 return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, csv.Error) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
