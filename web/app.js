@@ -486,11 +486,47 @@ async function exportPaperFigure(button){
   document.body.appendChild(stage);
   await Plotly.newPlot(stage,data,paperLayout,{displayModeBar:false,displaylogo:false,responsive:false,staticPlot:true});
   const imageData=await Plotly.toImage(stage,{format:"png",width:2200,height:1400,scale:2});
-  const slug=[targetId,$("meshScore")?.value,$("meshView")?.value,$("meshScale")?.value].filter(Boolean).join("_").toLowerCase().replace(/[^a-z0-9_-]+/g,"-");
-  const link=document.createElement("a");
-  link.href=imageData;link.download="cbpfr_"+slug+".png";
-  document.body.appendChild(link);link.click();link.remove();
-  if(status)status.textContent="Exported "+title+" as a high-resolution PNG (4400 × 2800 px). Check the browser downloads.";
+  const context={};
+  if(targetId.startsWith("mesh")){
+   context.score=$("meshScore")?.value||null;context.view=$("meshView")?.value||null;
+   context.display_scale=$("meshScale")?.value||null;context.palette=$("meshPalette")?.value||null;
+   context.vertical_exaggeration=$("meshExaggeration")?.value||null;
+  }else if(targetId==="axial3dPlot"){
+   context.score=$("axial3dScore")?.value||null;context.view=$("axial3dView")?.value||null;
+   context.z_bin=$("axial3dSlice")?.value||null;context.opacity=$("axial3dOpacity")?.value||null;
+   context.palette=$("axial3dPalette")?.value||null;
+  }else if(targetId==="candidateChart")context.metric=$("metricSelect")?.value||null;
+  const contextSlug=Object.values(context).filter(value=>value!==null&&value!=="").join("_");
+  const slug=[targetId,contextSlug].filter(Boolean).join("_").toLowerCase().replace(/[^a-z0-9_-]+/g,"-");
+  const imageFilename="cbpfr_"+slug+".png";
+  const imageLink=document.createElement("a");
+  imageLink.href=imageData;imageLink.download=imageFilename;
+  document.body.appendChild(imageLink);imageLink.click();imageLink.remove();
+  const provenance=targetId.startsWith("mesh")?(meshData?.provenance||null):
+   targetId==="axial3dPlot"?(axial3dData?.provenance||null):
+   ["candidateChart","distributionChart","aggregateChart"].includes(targetId)?metadata:
+   ["assemblyMap","assemblyMatrix"].includes(targetId)?{source:"results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv",records:assemblyRecords}:null;
+  const sidecar={
+   schema_version:"cbpfr-paper-figure-export-v1",
+   figure:{target_id:targetId,title,subtitle,exported_at_utc:new Date().toISOString()},
+   image:{filename:imageFilename,format:"PNG",pixel_width:4400,pixel_height:2800,background:"white"},
+   selected_view:context,
+   provenance,
+   interpretation_boundary:{
+    candidate_campaign:"Corrected-group 18-run exploratory smoke campaign; means and between-seed SDs are descriptive, not calibrated confidence intervals.",
+    assembly_proxy:"Separate exploratory assembly-integrated observations; physical units are undocumented; not absolute power or paired candidate-study data.",
+    planar_mesh:"Recorded 2D OpenMC tally displayed in multiple coordinated views; a 3D surface is only a representation of the 2D field.",
+    axial_volume:"Use the source run budget, convergence diagnostics and relative-error summary to distinguish diagnostic smoke evidence from production evidence."
+   }[targetId.startsWith("mesh")?"planar_mesh":targetId==="axial3dPlot"?"axial_volume":["assemblyMap","assemblyMatrix"].includes(targetId)?"assembly_proxy":"candidate_campaign"],
+   figure_caption_template:"State the source campaign, tally or metric, coordinate/units basis, reported uncertainty type, and all relevant diagnostic/validation limitations."
+  };
+  const sidecarBlob=new Blob([JSON.stringify(sidecar,null,2)+"\\n"],{type:"application/json"});
+  const sidecarUrl=URL.createObjectURL(sidecarBlob);
+  const jsonLink=document.createElement("a");
+  jsonLink.href=sidecarUrl;jsonLink.download="cbpfr_"+slug+".json";
+  document.body.appendChild(jsonLink);jsonLink.click();jsonLink.remove();
+  setTimeout(()=>URL.revokeObjectURL(sidecarUrl),10000);
+  if(status)status.textContent="Exported "+title+" as a high-resolution PNG (4400 × 2800 px) plus a JSON provenance/interpretation sidecar.";
  }catch(error){
   if(status)status.textContent="Figure export failed: "+String(error?.message||error).slice(0,180);
  }finally{
