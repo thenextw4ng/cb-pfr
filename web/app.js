@@ -411,13 +411,101 @@ if(typeof window.addEventListener==="function"){
 function chart(id,traces,layout={}){
  const el=$(id);if(!el)return Promise.resolve();
  if(!window.Plotly){updateVisualizationStackStatus();el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
+ const renderedLayout={...baseLayout,...layout};
+ // Keep the exact source arrays/layout used by the interactive chart so exports
+ // are rendered from the current recorded view rather than reconstructed data.
+ el._cbpfrFigureData=traces;
+ el._cbpfrFigureLayout=renderedLayout;
  try{
-  return Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
-   const msg=String(error?.message||error).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  return Promise.resolve(Plotly.react(el,traces,renderedLayout,config)).catch(error=>{
+   const msg=String(error?.message||error).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
    el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+msg+'</p></div>';
   });
  }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';return Promise.resolve();}
 }
+function paperAxis(axis){
+ if(!axis||typeof axis!=="object")return axis;
+ const next={...axis,color:"#17212b",gridcolor:"#dce4eb",zerolinecolor:"#9caab6",linecolor:"#6b7c8c",
+  tickfont:{...(axis.tickfont||{}),color:"#17212b",size:14}};
+ const titleText=typeof axis.title==="object"?(axis.title.text||""):(axis.title||"");
+ next.title={text:titleText,font:{...(typeof axis.title==="object"?(axis.title.font||{}):{}),color:"#17212b",size:16}};
+ return next;
+}
+function paperTrace(trace){
+ if(Array.isArray(trace))return trace.map(paperTrace);
+ if(!trace||typeof trace!=="object")return trace;
+ const next={};
+ for(const [key,value] of Object.entries(trace)){
+  if(key==="tickfont"&&value&&typeof value==="object")next[key]={...value,color:"#17212b"};
+  else if(key==="title"&&value&&typeof value==="object")next[key]={...value,font:{...(value.font||{}),color:"#17212b"}};
+  else next[key]=paperTrace(value);
+ }
+ return next;
+}
+async function exportPaperFigure(button){
+ const targetId=button.dataset.figureTarget;
+ const source=$(targetId);
+ const status=$("paperExportStatus");
+ if(!window.Plotly||!source||!Array.isArray(source._cbpfrFigureData)||!source._cbpfrFigureData.length){
+  if(status)status.textContent="Load the selected figure in the dashboard before exporting it.";
+  return;
+ }
+ if(button.dataset.exporting==="true")return;
+ button.dataset.exporting="true";
+ const originalLabel=button.textContent;
+ button.disabled=true;button.textContent="RENDERING PNG…";
+ let stage=null;
+ try{
+  const data=JSON.parse(JSON.stringify(source._cbpfrFigureData)).map(paperTrace);
+  const base=JSON.parse(JSON.stringify(source._cbpfrFigureLayout||{}));
+  const sourcePanel=source.closest(".panel");
+  const title=button.dataset.figureTitle||(sourcePanel?.querySelector(".panel-head h3")?.textContent||targetId);
+  let subtitle=sourcePanel?.querySelector(".panel-head p")?.textContent?.trim()||"";
+  if(targetId.startsWith("mesh")){
+   subtitle=[subtitle,$("meshScore")?.selectedOptions?.[0]?.textContent,$("meshView")?.selectedOptions?.[0]?.textContent,$("meshScale")?.selectedOptions?.[0]?.textContent].filter(Boolean).join(" · ");
+  }else if(targetId==="axial3dPlot"){
+   subtitle=[subtitle,$("axial3dScore")?.selectedOptions?.[0]?.textContent,$("axial3dView")?.selectedOptions?.[0]?.textContent,"Z bin "+($("axial3dSlice")?.value??"—")].filter(Boolean).join(" · ");
+  }else if(targetId==="candidateChart"){
+   subtitle=[subtitle,$("metricSelect")?.selectedOptions?.[0]?.textContent].filter(Boolean).join(" · ");
+  }
+  const font={...(base.font||{}),family:"Arial, Helvetica, sans-serif",size:16,color:"#17212b"};
+  const paperLayout={...base,autosize:false,width:2200,height:1400,paper_bgcolor:"#ffffff",plot_bgcolor:"#ffffff",font,
+   margin:{l:100,r:90,t:145,b:110,pad:6},
+   title:{text:title,x:0.025,xanchor:"left",y:0.99,yanchor:"top",font:{family:"Arial, Helvetica, sans-serif",size:24,color:"#111827"}},
+   xaxis:paperAxis(base.xaxis),yaxis:paperAxis(base.yaxis),
+   legend:{...(base.legend||{}),font:{...(base.legend?.font||{}),family:"Arial, Helvetica, sans-serif",size:14,color:"#17212b"}},
+   annotations:(base.annotations||[]).map(annotation=>({...annotation,font:{...(annotation.font||{}),color:"#17212b"}}))
+  };
+  if(subtitle)paperLayout.annotations.push({xref:"paper",yref:"paper",x:0.025,y:1.075,xanchor:"left",yanchor:"top",showarrow:false,text:subtitle,font:{family:"Arial, Helvetica, sans-serif",size:14,color:"#435365"},align:"left"});
+  if(base.scene){
+   paperLayout.scene={...base.scene,bgcolor:"#ffffff",xaxis:paperAxis(base.scene.xaxis),yaxis:paperAxis(base.scene.yaxis),zaxis:paperAxis(base.scene.zaxis)};
+  }
+  stage=document.createElement("div");
+  stage.setAttribute("aria-hidden","true");
+  stage.style.cssText="position:fixed;left:-10000px;top:0;width:2200px;height:1400px;opacity:0.01;pointer-events:none;z-index:-1";
+  document.body.appendChild(stage);
+  await Plotly.newPlot(stage,data,paperLayout,{displayModeBar:false,displaylogo:false,responsive:false,staticPlot:true});
+  const imageData=await Plotly.toImage(stage,{format:"png",width:2200,height:1400,scale:2});
+  const slug=[targetId,$("meshScore")?.value,$("meshView")?.value,$("meshScale")?.value].filter(Boolean).join("_").toLowerCase().replace(/[^a-z0-9_-]+/g,"-");
+  const link=document.createElement("a");
+  link.href=imageData;link.download="cbpfr_"+slug+".png";
+  document.body.appendChild(link);link.click();link.remove();
+  if(status)status.textContent="Exported "+title+" as a high-resolution PNG (4400 × 2800 px). Check the browser downloads.";
+ }catch(error){
+  if(status)status.textContent="Figure export failed: "+String(error?.message||error).slice(0,180);
+ }finally{
+  if(stage){try{Plotly.purge(stage);}catch(_){}stage.remove();}
+  button.disabled=false;button.textContent=originalLabel;delete button.dataset.exporting;
+ }
+}
+function bindPaperFigureExports(){
+ document.querySelectorAll("[data-figure-target]").forEach(button=>{
+  if(button.dataset.exportBound==="true")return;
+  button.dataset.exportBound="true";
+  button.addEventListener("click",()=>exportPaperFigure(button));
+ });
+}
+bindPaperFigureExports();
 function showCandidate(){
  const selector=$("candidateSelect");
  const id=String(selector?.value??"");
