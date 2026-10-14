@@ -96,8 +96,33 @@ function readCsv(relativePath) {
   });
 }
 
-// Use the same repository CSVs that feed the workstation APIs, not a separate mock dataset.
-const layouts = readCsv("results/c5g7_layout_smoke_2026-10-10/candidate_summary.csv");
+// Mirror the normalized /api/candidates shape using the same checked-in research files.
+const candidateSummary = readCsv("results/c5g7_corrected_group_repeatability_smoke_2026-10-11/fission_objective_repeatability_summary.csv");
+const candidateRuns = readCsv("results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv");
+const layouts = candidateSummary.map(summary => {
+  const runs = candidateRuns.filter(run => run.layout_signature === summary.layout_signature);
+  const n = Number(summary.n_runs);
+  return {
+    candidate_id: summary.candidate_id,
+    layout_signature: summary.layout_signature,
+    canonical_reference: false,
+    keff_mean: Number(summary.mean_keff),
+    keff_std_dev: Number(summary.between_seed_sd_keff),
+    keff_relative_sd_percent: 100 * Number(summary.between_seed_sd_keff) / Number(summary.mean_keff),
+    fission_peaking_mean: Number(summary.mean_fission_rate_peaking_factor),
+    fission_peaking_sd: Number(summary.between_seed_sd_fission_peaking_factor),
+    fission_peaking_cv_percent: Number(summary.fission_peaking_cv_percent),
+    descriptive_fission_peaking_rank: Number(summary.descriptive_rank_by_fission_peaking),
+    n_runs: n,
+    seed: runs.map(run => run.seed).join(" / "),
+    batches: 100,
+    inactive: 10,
+    particles_per_batch: 1000,
+    group_structure_audit_count: runs.filter(run => run.group_structure_audit === "PASS").length,
+    statepoint_hash_count: new Set(runs.map(run => run.statepoint_sha256)).size,
+    mgxs_sha256: runs[0]?.mgxs_sha256 || ""
+  };
+}).sort((a,b) => a.descriptive_fission_peaking_rank - b.descriptive_fission_peaking_rank);
 const proxyRows = readCsv("results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv");
 
 test("all six candidate selections update placement, detail, comparison highlight, and matching proxy", () => {
@@ -116,9 +141,10 @@ test("all six candidate selections update placement, detail, comparison highligh
     assert.match($("selectedCandidateMetaLine").textContent, new RegExp("Candidate " + (layouts.indexOf(row) + 1) + " of 6"));
     assert.match($("selectedCandidateMetrics").innerHTML, new RegExp(Number(row.keff_mean).toFixed(6)));
     assert.match($("selectedCandidateMetrics").innerHTML, new RegExp(Number(row.keff_std_dev).toFixed(6)));
-    assert.match($("selectedCandidateMetrics").innerHTML, /Aggregate fission score/);
-    assert.match($("selectedCandidateMetrics").innerHTML, /Not absolute power/);
-    assert.match($("selectedCandidateMetrics").innerHTML, /Aggregate flux score/);
+    assert.match($("selectedCandidateMetrics").innerHTML, /Mean fission-peaking factor/);
+    assert.match($("selectedCandidateMetrics").innerHTML, /not absolute power/);
+    assert.match($("selectedCandidateMetrics").innerHTML, /Between-seed sample SD/);
+    assert.doesNotMatch($("selectedCandidateMetrics").innerHTML, /Aggregate flux score/);
     assert.match($("selectedCandidateRunInfo").innerHTML, new RegExp(String(row.seed)));
     assert.match($("selectedCandidateRunInfo").innerHTML, /1000/);
 
@@ -172,10 +198,10 @@ test("all six candidate selections update placement, detail, comparison highligh
     const aggregate = charts.get("aggregateChart");
     assert.equal(aggregate.traces.length, 1, "aggregate indicators must not be combined on one shared scale");
     assert.equal(aggregate.traces[0].type, "scatter", "aggregate relationship should be shown as a two-metric scatter");
-    assert.match(aggregate.layout.xaxis.title, /aggregate flux score/i);
-    assert.match(aggregate.layout.yaxis.title, /aggregate fission score/i);
+    assert.match(aggregate.layout.xaxis.title, /mean k-effective/i);
+    assert.match(aggregate.layout.yaxis.title, /fission-rate peaking proxy/i);
     assert.equal(aggregate.traces[0].marker.color.filter(color=>color==="#ffffff").length,1, "selected candidate highlight must sync in neutral white, separate from the material palette");
-    assert.equal($("selectedRecordTag").textContent, String(row.canonical_reference).toLowerCase() === "true" ? "CANONICAL LAYOUT REFERENCE" : "LAYOUT VARIANT");
+    assert.equal($("selectedRecordTag").textContent, "EXPLORATORY · 3 RUNS");
   }
 });
 
@@ -210,6 +236,10 @@ test("Stage 2 scientific plots use ranking, uncertainty, separate score axes, an
   assert.match(aggregate.layout.xaxis.title, /flux score/i);
   assert.match(aggregate.layout.yaxis.title, /fission score/i);
   assert.doesNotMatch(aggregate.layout.xaxis.title, /absolute power/i);
+  assert.match(aggregate.layout.xaxis.title, /k-effective/i);
+  assert.match(aggregate.layout.yaxis.title, /peaking proxy/i);
+  assert.equal(aggregate.traces[0].x.length, 6);
+  assert.ok(aggregate.traces[0].error_x.visible && aggregate.traces[0].error_y.visible, "trade-off bars must carry between-seed spread on both source metrics");
 });
 
 test("missing numeric fields remain unavailable, not fabricated as zero", () => {
@@ -217,8 +247,8 @@ test("missing numeric fields remain unavailable, not fabricated as zero", () => 
   const incomplete = {
     candidate_id: "candidate-missing", layout_signature: "MMUU",
     keff_mean: null, keff_std_dev: "", keff_relative_sd_percent: "   ",
-    aggregate_fission_score: undefined, seed: null, batches: "",
-    inactive: 0, particles_per_batch: 1000
+    fission_peaking_mean: null, fission_peaking_sd: "", fission_peaking_cv_percent: "",
+    seed: null, batches: "", inactive: 0, particles_per_batch: 1000
   };
   hooks.setRecords([incomplete]);
   hooks.setAssemblyRecords([]);

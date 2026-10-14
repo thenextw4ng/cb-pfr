@@ -24,24 +24,54 @@ class ScientificVisualAcceptance(unittest.TestCase):
         cls.js = (ROOT / "web/app.js").read_text(encoding="utf-8")
         cls.css = (ROOT / "web/styles.css").read_text(encoding="utf-8")
         cls.server = (ROOT / "web_server.py").read_text(encoding="utf-8")
-        cls.candidates = read_csv(ROOT / "results/c5g7_layout_smoke_2026-10-10/candidate_summary.csv")
+        cls.candidates = read_csv(ROOT / "results/c5g7_corrected_group_repeatability_smoke_2026-10-11/fission_objective_repeatability_summary.csv")
+        cls.candidate_runs = read_csv(ROOT / "results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv")
+        cls.campaign = json.loads((ROOT / "results/c5g7_corrected_group_repeatability_smoke_2026-10-11/fission_objective_repeatability.json").read_text(encoding="utf-8"))
         cls.proxy = read_csv(ROOT / "results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv")
         cls.geometry = json.loads((ROOT / "evidence/c5g7_openmc_geometry_manifest_2026-10-13.json").read_text(encoding="utf-8"))
 
-    def test_six_candidates_and_layout_identity(self):
+    def test_corrected_group_candidate_summaries_match_all_18_run_records(self):
+        self.assertEqual(self.campaign["status"], "EXPLORATORY_DESCRIPTIVE_ONLY")
+        self.assertEqual(self.campaign["run_count"], 18)
+        self.assertEqual(self.campaign["round_count"], 3)
+        self.assertEqual(self.campaign["candidate_count"], 6)
+        self.assertTrue(self.campaign["all_group_structure_audits_passed"])
+        self.assertTrue(self.campaign["all_statepoint_hashes_unique"])
+        self.assertTrue(self.campaign["all_mgxs_hashes_identical"])
+        self.assertTrue(self.campaign["no_winner_claim"])
         self.assertEqual(len(self.candidates), 6)
+        self.assertEqual(len(self.candidate_runs), 18)
         self.assertEqual({row["layout_signature"] for row in self.candidates}, LAYOUTS)
         self.assertEqual(len({row["candidate_id"] for row in self.candidates}), 6)
+        self.assertEqual(len({row["seed"] for row in self.candidate_runs}), 18)
+        self.assertEqual(len({row["statepoint_sha256"] for row in self.candidate_runs}), 18)
+        self.assertEqual({row["mgxs_sha256"] for row in self.candidate_runs}, {self.campaign["corrected_mgxs_sha256"]})
         for row in self.candidates:
             signature = row["layout_signature"]
             self.assertEqual(row["candidate_id"], "c5g7-2x2-" + signature)
             self.assertEqual(signature.count("M"), 2)
             self.assertEqual(signature.count("U"), 2)
-            self.assertGreater(float(row["keff_mean"]), 0)
-            if row["keff_std_dev"]:
-                self.assertGreaterEqual(float(row["keff_std_dev"]), 0)
+            self.assertGreater(float(row["mean_keff"]), 0)
+            self.assertGreaterEqual(float(row["between_seed_sd_keff"]), 0)
+            runs = [item for item in self.candidate_runs if item["layout_signature"] == signature]
+            self.assertEqual(len(runs), 3)
+            self.assertEqual({item["group_structure_audit"] for item in runs}, {"PASS"})
+            keff = [float(item["keff_mean"]) for item in runs]
+            peak = [float(item["fission_rate_peaking_factor"]) for item in runs]
+            self.assertAlmostEqual(float(row["mean_keff"]), sum(keff) / 3, places=8)
+            self.assertAlmostEqual(float(row["between_seed_sd_keff"]), __import__("statistics").stdev(keff), places=8)
+            self.assertAlmostEqual(float(row["mean_fission_rate_peaking_factor"]), sum(peak) / 3, places=8)
+            self.assertAlmostEqual(float(row["between_seed_sd_fission_peaking_factor"]), __import__("statistics").stdev(peak), places=8)
         self.assertIn("descriptive only", self.html.lower())
         self.assertIn("not a physical-feasibility ranking", self.html.lower())
+        self.assertIn("corrected-group", self.html.lower())
+        self.assertIn("composition-only", self.html.lower())
+        self.assertIn("Research Dossier", self.html)
+        self.assertIn("Evidence-Bounded Claims", self.html)
+        self.assertIn("A–G Final Closeout", self.html)
+        self.assertNotIn("c5g7_layout_smoke_2026-10-10/candidate_summary.csv", self.server)
+        self.assertIn("fission_objective_repeatability_summary.csv", self.server)
+        self.assertIn("run_level_fission_objective.csv", self.server)
 
     def test_geometry_has_four_candidate_fuels_five_fixed_reflectors_and_source_pin_dimensions(self):
         g = self.geometry
@@ -80,9 +110,9 @@ class ScientificVisualAcceptance(unittest.TestCase):
     def test_assembly_proxy_is_four_discrete_positions_with_explicit_uncertainty_scope(self):
         self.assertEqual(len(self.proxy), 6)
         self.assertEqual({row["layout_signature"] for row in self.proxy}, LAYOUTS)
-        candidate_seeds = {int(row["seed"]) for row in self.candidates}
+        candidate_seeds = {int(row["seed"]) for row in self.candidate_runs}
         proxy_seeds = {int(row["seed"]) for row in self.proxy}
-        self.assertTrue(candidate_seeds.isdisjoint(proxy_seeds))
+        self.assertTrue(candidate_seeds.isdisjoint(proxy_seeds), "the assembly proxy campaign has independent seeds and is not paired with the corrected-group candidate study")
         for row in self.proxy:
             self.assertEqual(row["status"], "exploratory_smoke_only")
             for field in ("statepoint_sha256", "settings_sha256", "mgxs_sha256"):
@@ -187,8 +217,11 @@ class ScientificVisualAcceptance(unittest.TestCase):
 
     def test_missing_candidate_uncertainty_is_not_encoded_as_zero(self):
         # A missing SD must not look like a perfectly precise measurement in Plotly error bars.
-        self.assertIn('array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null)', self.js)
+        self.assertIn('array:valid.map(r=>has(r,sdKey)?Number(r[sdKey]):null)', self.js)
         self.assertIn('array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null)', self.js)
+        self.assertIn("Between-seed sample SD", self.js)
+        self.assertIn("fission_peaking_mean", self.js)
+        self.assertIn("records_validated_against_run_level_data", self.server)
 
     def test_responsive_and_provenance_contracts_exist(self):
         for breakpoint in ("680px", "1000px", "1100px", "1120px"):

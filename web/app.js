@@ -9,6 +9,7 @@ let axial3dDrawRevision = 0;
 let axial3dLoadStarted = false;
 let axial3dObserver = null;
 let assemblyRecords = [];
+let paperFigureDownloadUrls = [];
 let selectedAssemblyPosition = "P00";
 const candidateMarkColors = { selected: "#ffffff", default: "#788d9b" };
 const assemblyPositionDefs = [
@@ -331,36 +332,38 @@ function drawSelectedCandidate(row){
  const signature=normalizeLayoutSignature(row.layout_signature);
  const tag=$("selectedRecordTag");
  const layoutValid=isValidLayoutSignature(signature);
- const canonical=(row.canonical_reference===true||String(row.canonical_reference).toLowerCase()==="true")&&layoutValid;
  if(tag){
-  tag.textContent=!layoutValid?"INVALID LAYOUT":canonical?"CANONICAL LAYOUT REFERENCE":"LAYOUT VARIANT";
-  // A valid non-canonical layout is a candidate variant, not a failed integrity check.
+  tag.textContent=!layoutValid?"INVALID LAYOUT":"EXPLORATORY · 3 RUNS";
   tag.classList.toggle("warning",!layoutValid);
-  tag.classList.toggle("reference",canonical);
+  tag.classList.toggle("reference",false);
  }
  const selectedIndex=records.findIndex(item=>String(item.candidate_id)===String(row.candidate_id));
- const order=has(row,"descriptive_keff_order")?"descriptive k-effective order "+row.descriptive_keff_order+" / "+records.length:"order not recorded";
+ const order=has(row,"descriptive_fission_peaking_rank")
+  ?"descriptive fission-peaking rank "+row.descriptive_fission_peaking_rank+" / "+records.length
+  :"peaking-proxy rank not recorded";
  $("selectedCandidateId").textContent=String(row.candidate_id??"Candidate not identified");
  $("selectedCandidateMetaLine").textContent="Candidate "+(selectedIndex>=0?selectedIndex+1:"—")+" of "+records.length+" · Layout "+(signature||"not recorded")+" · "+order;
- $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?'<span class="signature-summary-code">'+signatureLettersHtml(signature)+'</span><span class="signature-summary-caption">2 MOX · 2 UO₂</span>':'<span class="muted">No validated layout signature</span>';
- const keffSd=has(row,"keff_std_dev")?"Reported SD ± "+number(row.keff_std_dev,6)+"; not a confidence interval":"Reported SD unavailable";
+ $("selectedCandidateSignature").innerHTML=isValidLayoutSignature(signature)?'<span class="signature-summary-code">'+signatureLettersHtml(signature)+'</span><span class="signature-summary-caption">2 MOX · 2 UO₂</span>':'<span class="muted">No valid layout signature</span>';
+ const keffSd=has(row,"keff_std_dev")?"Between-seed sample SD ± "+number(row.keff_std_dev,6)+"; descriptive across 3 runs, not a confidence interval":"Between-seed SD unavailable";
+ const peakSd=has(row,"fission_peaking_sd")?"Between-seed sample SD ± "+number(row.fission_peaking_sd,6)+"; dimensionless proxy":"Between-seed proxy SD unavailable";
  const metrics=[
-  ["k-effective mean",has(row,"keff_mean")?number(row.keff_mean,6):"Not recorded","keff",keffSd],
-  ["Relative SD",has(row,"keff_relative_sd_percent")?number(row.keff_relative_sd_percent,4)+"%":"Not recorded","uncertainty","Relative spread recorded in candidate summary"],
-  ["Aggregate flux score",has(row,"aggregate_flux_score")?number(row.aggregate_flux_score,5):"Not recorded","flux","Repository score; units not specified"],
-  ["Aggregate fission score",has(row,"aggregate_fission_score")?number(row.aggregate_fission_score,5):"Not recorded","proxy","Not absolute power"]
+  ["Mean k-effective",has(row,"keff_mean")?number(row.keff_mean,8):"Not recorded","keff",keffSd],
+  ["Mean fission-peaking factor",has(row,"fission_peaking_mean")?number(row.fission_peaking_mean,6):"Not recorded","proxy","Dimensionless max/mean of four integrated fission tallies; not absolute power"],
+  ["Between-seed SD of proxy",has(row,"fission_peaking_sd")?number(row.fission_peaking_sd,6):"Not recorded","uncertainty",peakSd],
+  ["Proxy coefficient of variation",has(row,"fission_peaking_cv_percent")?number(row.fission_peaking_cv_percent,3)+"%":"Not recorded","uncertainty","Descriptive variability over three independent smoke runs"]
  ];
  $("selectedCandidateMetrics").innerHTML=metrics.map(([name,value,type,detail])=>'<div class="candidate-stat candidate-stat-'+type+'"><span>'+name+'</span><strong>'+value+'</strong><small>'+detail+'</small></div>').join("");
  const runInfo=[
-  ["SEED",displayValue(row.seed)],
-  ["BATCHES",displayValue(row.batches)],
-  ["INACTIVE",displayValue(row.inactive)],
+  ["SEEDS (3)",displayValue(row.seed)],
+  ["BATCHES / RUN",displayValue(row.batches)],
+  ["INACTIVE / RUN",displayValue(row.inactive)],
   ["PARTICLES / BATCH",displayValue(row.particles_per_batch)]
  ];
  $("selectedCandidateRunInfo").innerHTML=runInfo.map(([name,value])=>'<div class="run-meta"><span>'+name+'</span><b>'+escapeHtml(value)+'</b></div>').join("");
- const unchanged=has(row,"mutated_preexisting_file_count")&&Number(row.mutated_preexisting_file_count)===0;
- const mgxsStable=Boolean(row.mgxs_sha256_before_transport&&row.mgxs_sha256_before_transport===row.mgxs_sha256_after_transport);
- $("selectedCandidateChecks").innerHTML='<span class="micro-check '+(unchanged?"ok":"")+'"><i></i>'+(unchanged?"No pre-existing file mutation recorded":"Mutation check unavailable")+'</span><span class="micro-check '+(mgxsStable?"ok":"")+'"><i></i>'+(mgxsStable?"MGXS hash unchanged across recorded run":"MGXS hash comparison unavailable")+'</span>';
+ const groupAudit=Number(row.group_structure_audit_count)===3;
+ const uniqueStatepoints=Number(row.statepoint_hash_count)===3;
+ const mgxsStable=Boolean(row.mgxs_sha256)&&String(row.mgxs_sha256).length===64;
+ $("selectedCandidateChecks").innerHTML='<span class="micro-check '+(groupAudit?"ok":"")+'"><i></i>'+(groupAudit?"Corrected-group audit · 3/3 PASS":"Group-structure audit incomplete")+'</span><span class="micro-check '+(uniqueStatepoints&&mgxsStable?"ok":"")+'"><i></i>'+(uniqueStatepoints&&mgxsStable?"3 unique statepoints · common corrected MGXS":"Run provenance incomplete")+'</span>';
 }
 function clearCandidateSelection(message="No candidate selected."){
  $("layoutView").innerHTML='<div class="empty-state"><b>No candidate selected</b><p>'+escapeHtml(message)+'</p></div>';
@@ -409,13 +412,152 @@ if(typeof window.addEventListener==="function"){
 function chart(id,traces,layout={}){
  const el=$(id);if(!el)return Promise.resolve();
  if(!window.Plotly){updateVisualizationStackStatus();el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js could not be loaded. Check network access to the chart CDN, then reload the page.</p></div>';return Promise.resolve();}
+ const renderedLayout={...baseLayout,...layout};
+ // Keep the exact source arrays/layout used by the interactive chart so exports
+ // are rendered from the current recorded view rather than reconstructed data.
+ el._cbpfrFigureData=traces;
+ el._cbpfrFigureLayout=renderedLayout;
  try{
-  return Promise.resolve(Plotly.react(el,traces,{...baseLayout,...layout},config)).catch(error=>{
-   const msg=String(error?.message||error).replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  return Promise.resolve(Plotly.react(el,traces,renderedLayout,config)).catch(error=>{
+   const msg=String(error?.message||error).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
    el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+msg+'</p></div>';
   });
  }catch(error){el.innerHTML='<div class="empty-state"><b>Chart render failed</b><p>'+String(error.message||error)+'</p></div>';return Promise.resolve();}
 }
+function paperAxis(axis){
+ if(!axis||typeof axis!=="object")return axis;
+ const next={...axis,color:"#17212b",gridcolor:"#dce4eb",zerolinecolor:"#9caab6",linecolor:"#6b7c8c",
+  tickfont:{...(axis.tickfont||{}),color:"#17212b",size:14}};
+ const titleText=typeof axis.title==="object"?(axis.title.text||""):(axis.title||"");
+ next.title={text:titleText,font:{...(typeof axis.title==="object"?(axis.title.font||{}):{}),color:"#17212b",size:16}};
+ return next;
+}
+function paperTrace(trace){
+ if(Array.isArray(trace))return trace.map(paperTrace);
+ if(!trace||typeof trace!=="object")return trace;
+ const next={};
+ for(const [key,value] of Object.entries(trace)){
+  if(key==="tickfont"&&value&&typeof value==="object")next[key]={...value,color:"#17212b"};
+  else if(key==="title"&&value&&typeof value==="object")next[key]={...value,font:{...(value.font||{}),color:"#17212b"}};
+  else next[key]=paperTrace(value);
+ }
+ return next;
+}
+async function exportPaperFigure(button){
+ const targetId=button.dataset.figureTarget;
+ const source=$(targetId);
+ const status=$("paperExportStatus");
+ if(!window.Plotly||!source||!Array.isArray(source._cbpfrFigureData)||!source._cbpfrFigureData.length){
+  if(status)status.textContent="Load the selected figure in the dashboard before exporting it.";
+  return;
+ }
+ if(button.dataset.exporting==="true")return;
+ button.dataset.exporting="true";
+ const originalLabel=button.textContent;
+ button.disabled=true;button.textContent="RENDERING PNG…";
+ let stage=null;
+ try{
+  const data=JSON.parse(JSON.stringify(source._cbpfrFigureData)).map(paperTrace);
+  const base=JSON.parse(JSON.stringify(source._cbpfrFigureLayout||{}));
+  const sourcePanel=source.closest(".panel");
+  const title=button.dataset.figureTitle||(sourcePanel?.querySelector(".panel-head h3")?.textContent||targetId);
+  let subtitle=sourcePanel?.querySelector(".panel-head p")?.textContent?.trim()||"";
+  if(targetId.startsWith("mesh")){
+   subtitle=[subtitle,$("meshScore")?.selectedOptions?.[0]?.textContent,$("meshView")?.selectedOptions?.[0]?.textContent,$("meshScale")?.selectedOptions?.[0]?.textContent].filter(Boolean).join(" · ");
+  }else if(targetId==="axial3dPlot"){
+   subtitle=[subtitle,$("axial3dScore")?.selectedOptions?.[0]?.textContent,$("axial3dView")?.selectedOptions?.[0]?.textContent,"Z bin "+($("axial3dSlice")?.value??"—")].filter(Boolean).join(" · ");
+  }else if(targetId==="candidateChart"){
+   subtitle=[subtitle,$("metricSelect")?.selectedOptions?.[0]?.textContent].filter(Boolean).join(" · ");
+  }
+  const font={...(base.font||{}),family:"Arial, Helvetica, sans-serif",size:16,color:"#17212b"};
+  const paperLayout={...base,autosize:false,width:2200,height:1400,paper_bgcolor:"#ffffff",plot_bgcolor:"#ffffff",font,
+   margin:{l:100,r:90,t:145,b:110,pad:6},
+   title:{text:title,x:0.025,xanchor:"left",y:0.99,yanchor:"top",font:{family:"Arial, Helvetica, sans-serif",size:24,color:"#111827"}},
+   xaxis:paperAxis(base.xaxis),yaxis:paperAxis(base.yaxis),
+   legend:{...(base.legend||{}),font:{...(base.legend?.font||{}),family:"Arial, Helvetica, sans-serif",size:14,color:"#17212b"}},
+   annotations:(base.annotations||[]).map(annotation=>({...annotation,font:{...(annotation.font||{}),color:"#17212b"}}))
+  };
+  if(subtitle)paperLayout.annotations.push({xref:"paper",yref:"paper",x:0.025,y:1.075,xanchor:"left",yanchor:"top",showarrow:false,text:subtitle,font:{family:"Arial, Helvetica, sans-serif",size:14,color:"#435365"},align:"left"});
+  if(base.scene){
+   paperLayout.scene={...base.scene,bgcolor:"#ffffff",xaxis:paperAxis(base.scene.xaxis),yaxis:paperAxis(base.scene.yaxis),zaxis:paperAxis(base.scene.zaxis)};
+  }
+  stage=document.createElement("div");
+  stage.setAttribute("aria-hidden","true");
+  stage.style.cssText="position:fixed;left:-10000px;top:0;width:2200px;height:1400px;opacity:0.01;pointer-events:none;z-index:-1";
+  document.body.appendChild(stage);
+  await Plotly.newPlot(stage,data,paperLayout,{displayModeBar:false,displaylogo:false,responsive:false,staticPlot:true});
+  const imageData=await Plotly.toImage(stage,{format:"png",width:2200,height:1400,scale:1});
+  const context={};
+  if(targetId.startsWith("mesh")){
+   context.score=$("meshScore")?.value||null;context.view=$("meshView")?.value||null;
+   context.display_scale=$("meshScale")?.value||null;context.palette=$("meshPalette")?.value||null;
+   context.vertical_exaggeration=$("meshExaggeration")?.value||null;
+  }else if(targetId==="axial3dPlot"){
+   context.score=$("axial3dScore")?.value||null;context.view=$("axial3dView")?.value||null;
+   context.z_bin=$("axial3dSlice")?.value||null;context.opacity=$("axial3dOpacity")?.value||null;
+   context.palette=$("axial3dPalette")?.value||null;
+  }else if(targetId==="candidateChart")context.metric=$("metricSelect")?.value||null;
+  const contextSlug=Object.values(context).filter(value=>value!==null&&value!=="").join("_");
+  const slug=[targetId,contextSlug].filter(Boolean).join("_").toLowerCase().replace(/[^a-z0-9_-]+/g,"-");
+  const imageFilename="cbpfr_"+slug+".png";
+  const provenance=targetId.startsWith("mesh")?(meshData?.provenance||null):
+   targetId==="axial3dPlot"?(axial3dData?.provenance||null):
+   ["candidateChart","distributionChart","aggregateChart"].includes(targetId)?metadata:
+   ["assemblyMap","assemblyMatrix"].includes(targetId)?{source:"results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv",records:assemblyRecords}:null;
+  const sidecar={
+   schema_version:"cbpfr-paper-figure-export-v1",
+   figure:{target_id:targetId,title,subtitle,exported_at_utc:new Date().toISOString()},
+   image:{filename:imageFilename,format:"PNG",pixel_width:2200,pixel_height:1400,background:"white"},
+   selected_view:context,
+   provenance,
+   interpretation_boundary:{
+    candidate_campaign:"Corrected-group 18-run exploratory smoke campaign; means and between-seed SDs are descriptive, not calibrated confidence intervals.",
+    assembly_proxy:"Separate exploratory assembly-integrated observations; physical units are undocumented; not absolute power or paired candidate-study data.",
+    planar_mesh:"Recorded 2D OpenMC tally displayed in multiple coordinated views; a 3D surface is only a representation of the 2D field.",
+    axial_volume:"Use the source run budget, convergence diagnostics and relative-error summary to distinguish diagnostic smoke evidence from production evidence."
+   }[targetId.startsWith("mesh")?"planar_mesh":targetId==="axial3dPlot"?"axial_volume":["assemblyMap","assemblyMatrix"].includes(targetId)?"assembly_proxy":"candidate_campaign"],
+   figure_caption_template:"State the source campaign, tally or metric, coordinate/units basis, reported uncertainty type, and all relevant diagnostic/validation limitations."
+  };
+  const dataUrlMatch=imageData.match(/^data:([^;,]+);base64,([\s\S]+)$/);
+  if(!dataUrlMatch)throw new Error("Plotly did not return a base64 PNG data URL.");
+  const binary=atob(dataUrlMatch[2]);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  const pngBlob=new Blob([bytes],{type:dataUrlMatch[1]||"image/png"});
+  const sidecarBlob=new Blob([JSON.stringify(sidecar,null,2)+"\n"],{type:"application/json"});
+  const pngUrl=URL.createObjectURL(pngBlob);
+  const jsonUrl=URL.createObjectURL(sidecarBlob);
+  paperFigureDownloadUrls.forEach(url=>URL.revokeObjectURL(url));
+  paperFigureDownloadUrls=[pngUrl,jsonUrl];
+  if(status){
+   status.replaceChildren();
+   const message=document.createElement("span");
+   message.textContent="Rendered "+title+" as a high-resolution PNG (2200 × 1400 px). PNG and JSON provenance/interpretation sidecar are ready to download: ";
+   status.appendChild(message);
+   const pngLink=document.createElement("a");
+   pngLink.className="action-button paper-export-download";pngLink.href=pngUrl;pngLink.download=imageFilename;
+   pngLink.dataset.exportKind="png";pngLink.textContent="Download PNG";
+   const jsonLink=document.createElement("a");
+   jsonLink.className="action-button paper-export-download";jsonLink.href=jsonUrl;
+   jsonLink.download=imageFilename.replace(/\.png$/i,".json");jsonLink.dataset.exportKind="json";jsonLink.textContent="Download JSON sidecar";
+   status.appendChild(pngLink);status.appendChild(document.createTextNode(" "));
+   status.appendChild(jsonLink);
+  }
+ }catch(error){
+  if(status)status.textContent="Figure export failed: "+String(error?.message||error).slice(0,180);
+ }finally{
+  if(stage){try{Plotly.purge(stage);}catch(_){}stage.remove();}
+  button.disabled=false;button.textContent=originalLabel;delete button.dataset.exporting;
+ }
+}
+function bindPaperFigureExports(){
+ document.querySelectorAll("[data-figure-target]").forEach(button=>{
+  if(button.dataset.exportBound==="true")return;
+  button.dataset.exportBound="true";
+  button.addEventListener("click",()=>exportPaperFigure(button));
+ });
+}
+bindPaperFigureExports();
 function showCandidate(){
  const selector=$("candidateSelect");
  const id=String(selector?.value??"");
@@ -423,7 +565,7 @@ function showCandidate(){
  if(!row){clearCandidateSelection(id?"The selected identifier does not match a recorded candidate.":"Choose a candidate from the selector.");return;}
  $("selectedRecordTag").classList.remove("warning");
  $("layoutView").innerHTML=layoutCells(row.layout_signature);
- $("layoutCaption").textContent=label(row)+" · seed "+displayValue(row.seed,"not recorded")+" · signature "+displayValue(row.layout_signature,"not recorded");
+ $("layoutCaption").textContent=label(row)+" · 3 independent seeds "+displayValue(row.seed,"not recorded")+" · exploratory only, not a winner claim · signature "+displayValue(row.layout_signature,"not recorded");
  drawSelectedCandidate(row);
  geometryArtifactActive=false;
  drawModelGeometry(row);
@@ -435,31 +577,32 @@ function drawCandidateChart(){
  const key=$("metricSelect").value;
  const valid=records.filter(r=>has(r,key)).sort((a,b)=>Number(a[key])-Number(b[key]));
  const selected=String($("candidateSelect").value||"");
- if(!valid.length){$("candidateChart").innerHTML='<div class="empty-state"><b>Metric unavailable</b><p>No finite recorded values are available for the selected metric.</p></div>';return;}
+ if(!valid.length){$("candidateChart").innerHTML='<div class="empty-state"><b>Metric unavailable</b><p>No finite recorded values are available in the corrected-group campaign.</p></div>';return;}
  const isKeff=key==="keff_mean";
- const metricName=isKeff?"Reported k-effective mean":key==="aggregate_flux_score"?"Aggregate flux score":"Aggregate fission score";
+ const isPeak=key==="fission_peaking_mean";
+ const metricName=isKeff?"Mean k-effective":isPeak?"Mean fission-rate peaking factor":"Recorded "+key;
+ const sdKey=isKeff?"keff_std_dev":isPeak?"fission_peaking_sd":null;
  const colors=valid.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
  const trace={
   type:"scatter",mode:"markers",name:metricName,
   x:valid.map(r=>Number(r[key])),y:valid.map(r=>String(r.layout_signature||label(r))),
   marker:{color:colors,size:valid.map(r=>String(r.candidate_id)===selected?13:9),symbol:valid.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:valid.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.2}},
-  customdata:valid.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),
-  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>"+metricName+" %{x:.7g}"+(isKeff?"<br>Reported SD ±%{customdata[3]:.4g}":"")+"<extra></extra>"
+  customdata:valid.map(r=>[r.candidate_id,r.layout_signature,r.seed,sdKey&&has(r,sdKey)?Number(r[sdKey]):null,r.n_runs,r.descriptive_fission_peaking_rank]),
+  hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seeds %{customdata[2]}<br>"+metricName+" %{x:.8g}"+(sdKey?"<br>Between-seed sample SD ±%{customdata[3]:.5g}":"")+"<br>Independent runs %{customdata[4]}<br>Descriptive fission-peaking rank %{customdata[5]}<extra></extra>"
  };
  const shapes=[],annotations=[];
- let min= Math.min(...valid.map(r=>Number(r[key]))), max=Math.max(...valid.map(r=>Number(r[key])));
- const spread=max-min, pad=spread>0?spread*0.14:Math.max(Math.abs(max)*0.01,0.001);
+ let min=Math.min(...valid.map(r=>Number(r[key]))),max=Math.max(...valid.map(r=>Number(r[key])));
+ const spread=max-min,pad=spread>0?spread*0.14:Math.max(Math.abs(max)*0.01,0.001);
+ if(sdKey)trace.error_x={type:"data",array:valid.map(r=>has(r,sdKey)?Number(r[sdKey]):null),visible:true,color:palette.muted,thickness:1.4,width:5};
  if(isKeff){
-  trace.error_x={type:"data",array:valid.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null),visible:true,color:palette.muted,thickness:1.4,width:5};
-  // Keep the k_eff=1 reference visible, but explicitly label it as interpretive rather than a safety limit.
-  min=Math.min(1,min-pad); max+=pad;
+  min=Math.min(1,min-pad);max+=pad;
   shapes.push({type:"line",xref:"x",yref:"paper",x0:1,x1:1,y0:0,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}});
   annotations.push({xref:"x",yref:"paper",x:1,y:1.02,text:"k_eff = 1 · reference only",showarrow:false,xanchor:"left",yanchor:"bottom",font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2});
- } else { min-=pad; max+=pad; }
+ }else{min-=pad;max+=pad;}
  chart("candidateChart",[trace],{
   autosize:true,margin:{l:70,r:25,t:isKeff?34:16,b:54},showlegend:false,hovermode:"closest",shapes,annotations,
-  xaxis:{...baseLayout.xaxis,title:isKeff?"Reported k-effective mean (± reported SD)":"Recorded "+metricName.toLowerCase()+" (source units unspecified)",automargin:true,gridcolor:palette.line,zeroline:false,tickangle:0,tickformat:isKeff?".3f":".4g",range:[min,max]},
-  yaxis:{...baseLayout.yaxis,title:"Candidate layout",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.55)"}
+  xaxis:{...baseLayout.xaxis,title:isKeff?"Mean k-effective (between-seed sample SD)":"Mean dimensionless fission-rate peaking factor (between-seed sample SD)",automargin:true,gridcolor:palette.line,zeroline:false,tickangle:0,tickformat:isKeff?".4f":".4g",range:[min,max]},
+  yaxis:{...baseLayout.yaxis,title:"Candidate layout · descriptive only",type:"category",autorange:"reversed",automargin:true,tickangle:0,tickfont:{size:11,color:palette.muted},gridcolor:"rgba(38,63,82,0.55)"}
  });
 }
 function drawOtherCharts(){
@@ -468,23 +611,23 @@ function drawOtherCharts(){
  if(!vals.length){
   $("distributionChart").innerHTML='<div class="empty-state"><b>k-effective data unavailable</b><p>No finite recorded means are available.</p></div>';
  } else {
-  const keffColors=vals.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
+  const colors=vals.map(r=>String(r.candidate_id)===selected?candidateMarkColors.selected:candidateMarkColors.default);
   const spread=Math.max(...vals.map(r=>Number(r.keff_mean)))-Math.min(...vals.map(r=>Number(r.keff_mean)));
   const pad=spread>0?spread*0.12:0.002;
-  const trace={type:"scatter",mode:"markers",name:"Ranked candidate k-effective",x:vals.map(r=>String(r.layout_signature||label(r))),y:vals.map(r=>Number(r.keff_mean)),customdata:vals.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null]),marker:{color:keffColors,size:vals.map(r=>String(r.candidate_id)===selected?12:9),symbol:vals.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:vals.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.1}},error_y:{type:"data",array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null),visible:true,color:palette.muted,thickness:1.2,width:4},hovertemplate:"Ranked layout %{x}<br>Candidate %{customdata[0]}<br>Seed %{customdata[2]}<br>k-effective mean %{y:.7f}<br>Reported SD ±%{customdata[3]:.4g}<extra></extra>"};
-  chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by recorded k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Reported k-effective mean (± SD)",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1 · reference only",showarrow:false,font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
+  const trace={type:"scatter",mode:"markers",name:"Corrected-group mean k-effective",x:vals.map(r=>String(r.layout_signature||label(r))),y:vals.map(r=>Number(r.keff_mean)),customdata:vals.map(r=>[r.candidate_id,r.layout_signature,r.seed,has(r,"keff_std_dev")?Number(r.keff_std_dev):null,r.n_runs]),marker:{color:colors,size:vals.map(r=>String(r.candidate_id)===selected?12:9),symbol:vals.map(r=>String(r.candidate_id)===selected?"diamond":"circle"),line:{color:vals.map(r=>String(r.candidate_id)===selected?palette.text:"#102536"),width:1.1}},error_y:{type:"data",array:vals.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null),visible:true,color:palette.muted,thickness:1.2,width:4},hovertemplate:"Layout %{x}<br>Candidate %{customdata[0]}<br>Seeds %{customdata[2]}<br>k-effective mean %{y:.8f}<br>Between-seed sample SD ±%{customdata[3]:.5g}<br>Independent smoke runs %{customdata[4]}<extra></extra>"};
+  chart("distributionChart",[trace],{autosize:true,margin:{l:62,r:20,t:18,b:42},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Candidate layout · sorted by corrected-group mean k-effective",type:"category",tickangle:0,automargin:true,gridcolor:"rgba(38,63,82,0.4)"},yaxis:{...baseLayout.yaxis,title:"Mean k-effective ± between-seed sample SD",range:[Math.min(1,Math.min(...vals.map(r=>Number(r.keff_mean)))-pad),Math.max(...vals.map(r=>Number(r.keff_mean)))+pad],automargin:true},shapes:[{type:"line",xref:"paper",yref:"y",x0:0,x1:1,y0:1,y1:1,line:{color:"#929aa5",width:1,dash:"dash"}}],annotations:[{xref:"paper",yref:"y",x:1,y:1,xanchor:"right",yanchor:"bottom",text:"k_eff = 1 · reference only",showarrow:false,font:{size:9,color:"#c1cbd2"},bgcolor:"rgba(7,17,27,0.82)",borderpad:2}]});
  }
- const pairs=records.filter(r=>has(r,"aggregate_flux_score")&&has(r,"aggregate_fission_score"));
+ const pairs=records.filter(r=>has(r,"keff_mean")&&has(r,"fission_peaking_mean"));
  if(!pairs.length){
-  $("aggregateChart").innerHTML='<div class="empty-state"><b>Score relationship unavailable</b><p>No candidates have both a finite aggregate flux score and aggregate fission score. The two metrics are not combined on a shared scale.</p></div>';
+  $("aggregateChart").innerHTML='<div class="empty-state"><b>Metric comparison unavailable</b><p>No exact candidate records contain both k-effective and the fission-peaking proxy.</p></div>';
   return;
  }
  const isSelected=r=>String(r.candidate_id)===selected;
- const aggTrace={type:"scatter",mode:"markers+text",name:"Candidate score pair",x:pairs.map(r=>Number(r.aggregate_flux_score)),y:pairs.map(r=>Number(r.aggregate_fission_score)),text:pairs.map(r=>String(r.layout_signature||"")),textposition:"top center",textfont:{size:9,color:palette.muted},customdata:pairs.map(r=>[r.candidate_id,r.layout_signature,r.seed]),marker:{color:pairs.map(r=>isSelected(r)?candidateMarkColors.selected:candidateMarkColors.default),size:pairs.map(r=>isSelected(r)?13:10),symbol:pairs.map(r=>isSelected(r)?"diamond":"circle"),line:{color:pairs.map(r=>isSelected(r)?palette.text:"#102536"),width:1.2}},hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seed %{customdata[2]}<br>Aggregate flux score %{x:.7g}<br>Aggregate fission score %{y:.7g}<extra></extra>"};
- const xValues=pairs.map(r=>Number(r.aggregate_flux_score)),yValues=pairs.map(r=>Number(r.aggregate_fission_score));
+ const trace={type:"scatter",mode:"markers+text",name:"k-effective vs fission-peaking proxy",x:pairs.map(r=>Number(r.keff_mean)),y:pairs.map(r=>Number(r.fission_peaking_mean)),text:pairs.map(r=>String(r.layout_signature||"")),textposition:"top center",textfont:{size:9,color:palette.muted},customdata:pairs.map(r=>[r.candidate_id,r.layout_signature,r.seed,r.keff_std_dev,r.fission_peaking_sd,r.n_runs,r.descriptive_fission_peaking_rank]),marker:{color:pairs.map(r=>isSelected(r)?candidateMarkColors.selected:candidateMarkColors.default),size:pairs.map(r=>isSelected(r)?13:10),symbol:pairs.map(r=>isSelected(r)?"diamond":"circle"),line:{color:pairs.map(r=>isSelected(r)?palette.text:"#102536"),width:1.2}},error_x:{type:"data",array:pairs.map(r=>has(r,"keff_std_dev")?Number(r.keff_std_dev):null),visible:true,color:palette.muted,thickness:1,width:3},error_y:{type:"data",array:pairs.map(r=>has(r,"fission_peaking_sd")?Number(r.fission_peaking_sd):null),visible:true,color:palette.muted,thickness:1,width:3},hovertemplate:"Candidate %{customdata[0]}<br>Layout %{customdata[1]}<br>Seeds %{customdata[2]}<br>Mean k-effective %{x:.8f} ± between-seed SD %{customdata[3]:.5g}<br>Mean dimensionless fission-peaking proxy %{y:.6g} ± between-seed SD %{customdata[4]:.5g}<br>Independent smoke runs %{customdata[5]}<br>Descriptive proxy rank %{customdata[6]}<br>Not an approved physical ranking or power/safety metric<extra></extra>"};
+ const xValues=pairs.map(r=>Number(r.keff_mean)),yValues=pairs.map(r=>Number(r.fission_peaking_mean));
  const xSpan=Math.max(...xValues)-Math.min(...xValues),ySpan=Math.max(...yValues)-Math.min(...yValues);
  const xPad=xSpan>0?xSpan*0.12:Math.max(Math.abs(xValues[0])*0.02,0.001),yPad=ySpan>0?ySpan*0.14:Math.max(Math.abs(yValues[0])*0.02,0.001);
- chart("aggregateChart",[aggTrace],{autosize:true,margin:{l:66,r:24,t:18,b:58},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Aggregate flux score (source units unspecified)",range:[Math.min(...xValues)-xPad,Math.max(...xValues)+xPad],automargin:true,gridcolor:"rgba(38,63,82,0.55)",tickformat:".4g"},yaxis:{...baseLayout.yaxis,title:"Aggregate fission score (source units unspecified)",range:[Math.min(...yValues)-yPad,Math.max(...yValues)+yPad],automargin:true,gridcolor:"rgba(38,63,82,0.55)",tickformat:".4g"}});
+ chart("aggregateChart",[trace],{autosize:true,margin:{l:66,r:24,t:18,b:58},showlegend:false,hovermode:"closest",xaxis:{...baseLayout.xaxis,title:"Corrected-group mean k-effective",range:[Math.min(...xValues)-xPad,Math.max(...xValues)+xPad],automargin:true,gridcolor:"rgba(38,63,82,0.55)",tickformat:".4f"},yaxis:{...baseLayout.yaxis,title:"Mean dimensionless fission-rate peaking proxy",range:[Math.min(...yValues)-yPad,Math.max(...yValues)+yPad],automargin:true,gridcolor:"rgba(38,63,82,0.55)",tickformat:".4g"}});
 }
 function showError(message){const el=$("apiError");el.hidden=false;el.textContent=message;}
 async function init(){
@@ -497,13 +640,22 @@ async function init(){
   if(!response.ok)throw new Error("API returned HTTP "+response.status);
   const payload=await response.json();records=validateCandidateRecords(payload.records);metadata=payload.metadata||{};
   $("sourcePath").textContent=metadata.source||"Source path not provided by API";
+  const campaignTitle=$("candidateCampaignTitle"),campaignDetail=$("candidateCampaignDetail");
+  if(campaignTitle)campaignTitle.textContent="CORRECTED-GROUP C5G7 · EXPLORATORY SMOKE";
+  if(campaignDetail)campaignDetail.textContent=String(metadata.run_count||18)+" audited run-level records across "+String(metadata.layout_count||6)+" layouts · "+String(metadata.runs_per_layout||3)+" independent seed runs each · "+JSON.stringify(metadata.settings||{})+" · group structure PASS; not benchmark-grade convergence. Source: "+String(metadata.source||"not recorded")+". Outcome: no layout winner or physical validation claim.";
+  const researchEvidence=$("researchEvidenceStatus");
+  if(researchEvidence)researchEvidence.textContent="Research evidence contract: "+String(metadata.campaign_status||"status unavailable")+" · source records cross-checked against run-level data: "+String(metadata.records_validated_against_run_level_data===true)+" · acceptance: "+String(metadata.acceptance_status||"not recorded")+". The composition-only QUBO objective ties all six feasible arrangements; it does not optimize physical performance.";
   const layouts=new Set(records.map(r=>r.layout_signature).filter(Boolean));
   const seeds=new Set(records.map(r=>String(r.seed)).filter(s=>s!=="undefined"&&s!=="null"));
   const ks=records.filter(r=>has(r,"keff_mean")).map(r=>Number(r.keff_mean));
-  const metrics=[["Candidate records",records.length.toLocaleString(),"Rows in current candidate summary"],["Unique layouts",layouts.size.toLocaleString(),"Distinct recorded signatures"],["k-effective span",ks.length?number(Math.min(...ks),5)+" – "+number(Math.max(...ks),5):"—","Reported mean values"],["Recorded seeds",seeds.size.toLocaleString(),"Distinct seed values"]];
+  const metrics=[["Candidate records",records.length.toLocaleString(),"Corrected-group layout summaries"],["Unique layouts",layouts.size.toLocaleString(),"Six feasible two-MOX/two-UO₂ arrangements"],["k-effective span",ks.length?number(Math.min(...ks),6)+" – "+number(Math.max(...ks),6):"—","Mean across three smoke runs / layout"],["Recorded seeds",Number(metadata.run_count||seeds.size).toLocaleString(),"Unique run-level seed records in source campaign"]];
   $("metrics").innerHTML=metrics.map(m=>'<article class="metric"><label>'+m[0]+'</label><strong>'+m[1]+'</strong><small>'+m[2]+'</small></article>').join("");
   $("candidateSelect").innerHTML=records.map(candidateOption).join("");
-  $("candidateSelect").addEventListener("change",showCandidate);$("metricSelect").addEventListener("change",drawCandidateChart);
+  $("candidateSelect").addEventListener("change",showCandidate);
+  if($("metricSelect")){
+    $("metricSelect").innerHTML='<option value="keff_mean">Mean k-effective</option><option value="fission_peaking_mean">Mean fission-peaking factor</option>';
+    $("metricSelect").addEventListener("change",drawCandidateChart);
+  }
   // Render the recorded candidate's scalar details immediately. Geometry manifest
   // parsing/network access is slower and should not block the core evidence card.
   showCandidate();drawOtherCharts();
@@ -1171,7 +1323,7 @@ async function initAssembly(){
   assemblyRecords=(payload.records||[]).filter(r=>assemblyPositionDefs.some(position=>has(r,position.key)));
   if(!assemblyRecords.length)throw new Error("No finite assembly-integrated proxy values are available.");
   $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
-  $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of the candidate-summary seeds; do not compare as paired runs.";
+  $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of all 18 corrected-group candidate-study seed records; do not compare these campaigns as paired runs.";
   drawAssemblyField();
  }catch(error){
   $("assemblyFieldStatus").textContent="ASSEMBLY DATA UNAVAILABLE";

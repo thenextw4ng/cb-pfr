@@ -2,27 +2,28 @@
 
 ## Scope
 
-Stage 2 replaces generic candidate histograms and grouped bars with scientific views while preserving the existing HTML workstation structure, Stage 1 Core Geometry Explorer, Plotly.js runtime, and OpenMC spatial tally views.
+Stage 2 uses scientific views while preserving the existing HTML workstation structure, Core Geometry Explorer, Plotly.js runtime, and OpenMC spatial tally views. This sync revision binds candidate metrics to the corrected-group 18-run research campaign rather than the older one-run candidate smoke summary.
 
 ## Implemented views
 
 ### Candidate comparison — point-range plot
 - Plotly scatter marks show each candidate's recorded metric against its layout signature.
-- For `keff_mean`, the horizontal error bar is populated from the matching record's `keff_std_dev`; missing values are not inferred.
+- For `keff_mean`, the horizontal error bar is the between-seed sample SD of the derived layout mean across three independent smoke runs; it is not a confidence interval. Missing values are not inferred.
+- The metric selector also supports the mean dimensionless fission-rate peaking factor, with its between-seed sample SD from the same three-run layout campaign.
 - A dashed `k_eff = 1` line is labelled **reference only**. It is not a safety criterion, feasibility certificate, or ranking threshold.
 - Selecting a candidate highlights its point. Alternative flux/fission score selections remain available, but are not given invented uncertainty intervals.
 
 ### Ranked k-effective candidates — dot plot
 - The six recorded candidate means are sorted from low to high and displayed as individual observations; no histogram binning is applied.
-- Reported `keff_std_dev` values are shown as vertical error bars.
+- Between-seed sample SD values are shown as vertical spread indicators; tooltips explicitly identify these as between-seed SD, not within-run Monte Carlo standard error or a calibrated confidence interval.
 - Candidate layout labels remain horizontal, hover data retain candidate ID, layout, seed, mean, and reported SD, and `k_eff = 1` remains an explicitly interpretive reference.
 - Candidate selection is highlighted in this plot as well as in the comparison plot.
 
-### Aggregate score relationship — scatter plot
-- `aggregate_flux_score` is plotted on the X-axis and `aggregate_fission_score` on the Y-axis.
-- The two repository scores are not combined on a common scale. Axes explicitly state that source units are unspecified.
-- Hover content retains candidate ID, layout signature, and seed. The selected candidate is highlighted.
-- These aggregate values remain scores, not absolute flux, power, or a physical-feasibility conclusion.
+### Physics-metric trade-off — scatter plot
+- The corrected-group mean k-effective is plotted against the mean fission-rate peaking proxy, both calculated from the same three-run candidate summary.
+- Error bars show the between-seed sample SD on each axis; hover preserves the candidate ID, layout, three seeds, and descriptive proxy rank.
+- The dimensionless objective is max(assembly-integrated fission tally) / mean(assembly-integrated fission tally); it is not absolute power or a reactor-safety metric.
+- The scatter is a descriptive trade-off only. It is not a physical feasibility ranking or winner certificate, and the k-effective reference line remains interpretive only.
 
 ### Candidate-by-position proxy matrix
 - A single Cividis heatmap contains the recorded `p00_fission_rate`, `p01_fission_rate`, `p10_fission_rate`, and `p11_fission_rate` values, shown as P00–P11 columns and candidate layout rows.
@@ -33,9 +34,11 @@ Stage 2 replaces generic candidate histograms and grouped bars with scientific v
 
 ## Source and limits
 
-The candidate plots use `results/c5g7_layout_smoke_2026-10-10/candidate_summary.csv`. The position matrix and selected-candidate 2 × 2 map use `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv`. They are different recorded evidence products with different run seeds and are not silently treated as paired observations.
+The candidate plots use `results/c5g7_corrected_group_repeatability_smoke_2026-10-11/fission_objective_repeatability_summary.csv`, cross-checked against the 18 rows in `run_level_fission_objective.csv` and `fission_objective_repeatability.json`. The server fails closed if the run counts, unique seeds/statepoint hashes, corrected MGXS hashes, group-structure audits, or recomputed means/SDs disagree.
+The four-position map uses `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv`, a separate exploratory campaign with independent seeds. Those discrete observations are not paired with the candidate study and their physical units are undocumented.
 
-Stage 2 does not run OpenMC, interpolate four assembly proxy values into a continuous field, manufacture values for missing records, or claim physical validation.
+The composition-only QUBO `E(y)=A(Σᵢyᵢ−2)²` enforces two MOX positions but gives all six feasible layouts equal zero energy; it does not encode physical performance. The legacy burnup-state formulation is not mapped to this C5G7 composition case. No design-specific acceptable k-effective band has been approved, so no layout is declared a winner.
+The dashboard does not run OpenMC, interpolate the four assembly proxy values into a continuous field, manufacture missing records, or claim physical validation, physical-data superiority of CB-PFR, or quantum advantage.
 
 ## Verification targets
 

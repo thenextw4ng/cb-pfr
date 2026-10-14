@@ -67,6 +67,12 @@ fs.mkdirSync(outDir, { recursive: true });
 
     assert.equal(api.health.status, "ok");
     assert.equal(api.candidates.records.length, 6);
+    assert.equal(api.candidates.metadata.campaign_status, "EXPLORATORY_DESCRIPTIVE_ONLY");
+    assert.equal(api.candidates.metadata.run_count, 18);
+    assert.equal(api.candidates.metadata.runs_per_layout, 3);
+    assert.equal(api.candidates.metadata.records_validated_against_run_level_data, true);
+    assert.match(api.candidates.metadata.source, /c5g7_corrected_group_repeatability_smoke_2026-10-11/);
+    assert.match(api.candidates.metadata.acceptance_status, /BLOCKED_NO_DESIGN_SPECIFIC_KEFF_BAND/);
     assert.equal(api.geometry.candidates.length, 6);
     assert.equal(api.assembly.records.length, 6);
     assert.deepEqual(api.mesh.mesh_tallies[0].dimensions, [51, 51, 1]);
@@ -124,9 +130,38 @@ fs.mkdirSync(outDir, { recursive: true });
       }
     }
     assert.match(candidateStats.hover, /k-effective mean/i);
-    assert.match(candidateStats.hover, /Reported SD/i);
-    assert.match(candidateStats.xTitle, /recorded k-effective/i);
-    assert.match(candidateStats.yTitle, /k-effective mean.*SD/i);
+    assert.match(candidateStats.hover, /Between-seed sample SD/i);
+    assert.match(candidateStats.xTitle, /k-effective/i);
+    assert.match(candidateStats.yTitle, /between-seed sample SD/i);
+
+    // Verify the paper export renders a publication-sized image, offers explicit
+    // user-initiated downloads, and writes a JSON provenance sidecar.
+    const paperExportButton = page.locator('[data-figure-target="distributionChart"]');
+    assert.equal(await paperExportButton.count(), 1, "paper export control for corrected-group k-effective must exist");
+    await paperExportButton.click();
+    await page.waitForFunction(() => {
+      const status = document.querySelector("#paperExportStatus")?.textContent || "";
+      return status.includes("JSON provenance/interpretation sidecar are ready to download");
+    }, null, { timeout: 60000 });
+    const [paperPng] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30000 }),
+      page.locator('#paperExportStatus a[data-export-kind="png"]').click()
+    ]);
+    const [paperJson] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30000 }),
+      page.locator('#paperExportStatus a[data-export-kind="json"]').click()
+    ]);
+    assert.match(paperPng.suggestedFilename(), /\.png$/i);
+    assert.match(paperJson.suggestedFilename(), /\.json$/i);
+    const pngPath = await paperPng.path();
+    const jsonPath = await paperJson.path();
+    assert.ok(fs.statSync(pngPath).size > 10000, "exported PNG must contain rendered figure data");
+    const sidecar = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+    assert.equal(sidecar.schema_version, "cbpfr-paper-figure-export-v1");
+    assert.equal(sidecar.figure.target_id, "distributionChart");
+    assert.equal(sidecar.image.pixel_width, 2200);
+    assert.equal(sidecar.image.pixel_height, 1400);
+    assert.match(sidecar.interpretation_boundary, /smoke-budget|descriptive/i);
 
     const assemblyView = await page.evaluate(() => {
       const select = document.querySelector("#candidateSelect");
@@ -449,6 +484,7 @@ fs.mkdirSync(outDir, { recursive: true });
       field_heatmap_contour_surface_values_match: true,
       hover_preserves_mean_and_error: true,
       candidate_chart_values_match_source: true,
+      paper_png_and_json_sidecar_export_passed: true,
       spatial_field_values_match_source: true,
       spatial_coordinates_match_recorded_mesh: true,
       spatial_hash_status: api.mesh.provenance.hash_matches === true ? "verified" : api.mesh.provenance.hash_matches === false ? "mismatch" : "not-checked",
