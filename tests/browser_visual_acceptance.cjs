@@ -124,9 +124,9 @@ fs.mkdirSync(outDir, { recursive: true });
       }
     }
     assert.match(candidateStats.hover, /k-effective mean/i);
-    assert.match(candidateStats.hover, /Reported SD/i);
-    assert.match(candidateStats.xTitle, /recorded k-effective/i);
-    assert.match(candidateStats.yTitle, /k-effective mean.*SD/i);
+    assert.match(candidateStats.hover, /Between-seed sample SD/i);
+    assert.match(candidateStats.xTitle, /k-effective/i);
+    assert.match(candidateStats.yTitle, /between-seed sample SD/i);
 
     const assemblyView = await page.evaluate(() => {
       const select = document.querySelector("#candidateSelect");
