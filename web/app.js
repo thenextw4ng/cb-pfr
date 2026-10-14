@@ -520,7 +520,7 @@ async function exportPaperFigure(button){
    }[targetId.startsWith("mesh")?"planar_mesh":targetId==="axial3dPlot"?"axial_volume":["assemblyMap","assemblyMatrix"].includes(targetId)?"assembly_proxy":"candidate_campaign"],
    figure_caption_template:"State the source campaign, tally or metric, coordinate/units basis, reported uncertainty type, and all relevant diagnostic/validation limitations."
   };
-  const sidecarBlob=new Blob([JSON.stringify(sidecar,null,2)+"\\n"],{type:"application/json"});
+  const sidecarBlob=new Blob([JSON.stringify(sidecar,null,2)+"\n"],{type:"application/json"});
   const sidecarUrl=URL.createObjectURL(sidecarBlob);
   const jsonLink=document.createElement("a");
   jsonLink.href=sidecarUrl;jsonLink.download="cbpfr_"+slug+".json";
