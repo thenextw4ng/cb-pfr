@@ -518,10 +518,12 @@ async function exportPaperFigure(button){
    }[targetId.startsWith("mesh")?"planar_mesh":targetId==="axial3dPlot"?"axial_volume":["assemblyMap","assemblyMatrix"].includes(targetId)?"assembly_proxy":"candidate_campaign"],
    figure_caption_template:"State the source campaign, tally or metric, coordinate/units basis, reported uncertainty type, and all relevant diagnostic/validation limitations."
   };
-  const pngBlob=await fetch(imageData).then(response=>{
-   if(!response.ok)throw new Error("Could not materialise the rendered PNG.");
-   return response.blob();
-  });
+  const dataUrlMatch=imageData.match(/^data:([^;,]+);base64,([\\s\\S]+)$/);
+  if(!dataUrlMatch)throw new Error("Plotly did not return a base64 PNG data URL.");
+  const binary=atob(dataUrlMatch[2]);
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  const pngBlob=new Blob([bytes],{type:dataUrlMatch[1]||"image/png"});
   const sidecarBlob=new Blob([JSON.stringify(sidecar,null,2)+"\n"],{type:"application/json"});
   const pngUrl=URL.createObjectURL(pngBlob);
   const jsonUrl=URL.createObjectURL(sidecarBlob);
