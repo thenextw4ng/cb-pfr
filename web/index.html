@@ -203,7 +203,31 @@
         </article>
         <div class="note-row"><span class="note-icon">i</span><p><b>Physics interpretation.</b> Relative Monte Carlo standard error is calculated as 100 × standard error / mean for positive mean bins. Log scale is applied only to positive mean values. Spatial bins are not assigned to fuel, reflector, or assembly coordinates in this view, so no physical core orientation is inferred.</p></div>
       </section>
-      <section class="section" id="integrity"><div class="section-head"><div><div class="eyebrow">06 / EVIDENCE INTEGRITY</div><h2>Data provenance</h2><p>Current source and limitations reported by the backend.</p></div></div><article class="panel integrity-panel"><div class="integrity-row"><span class="check">✓</span><div><b>Candidate summary loaded from repository</b><p id="sourcePath">Waiting for API…</p></div><span class="tag">SOURCE FILE</span></div><div class="integrity-row"><span class="warn">!</span><div><b>Physical validation not established</b><p>No claim of physical feasibility certification is made by this UI.</p></div><span class="tag warning">NOT CERTIFIED</span></div><div class="integrity-row"><span class="warn">!</span><div><b>QUBO → physical objective mapping</b><p>The composition-only objective maps to the two-MOX constraint but gives all six feasible layouts equal zero energy; the legacy burnup-state encoding has no defensible mapping to this C5G7 UO₂/MOX case.</p></div><span class="tag warning">PHYSICS NOT ENCODED</span></div><div id="apiError" class="error" hidden></div></article></section>
+      <section class="section" id="integrity"><div class="section-head"><div><div class="eyebrow">06 / EVIDENCE INTEGRITY</div><h2>Data provenance</h2><p>Current source and limitations reported by the backend.</p></div></div><article class="panel integrity-panel"><div class="integrity-row"><span class="check">✓</span><div><b>Candidate summary loaded from repository</b><p id="sourcePath">Waiting for API…</p></div><span class="tag">SOURCE FILE</span></div><div class="integrity-row"><span class="warn">!</span><div><b>Physical validation not established</b><p>No claim of physical feasibility certification is made by this UI.</p></div><span class="tag warning">NOT CERTIFIED</span></div><div class="integrity-row"><span class="warn">!</span><div><b>QUBO → physical objective mapping</b><p>The composition-only objective maps to the two-MOX constraint but gives all six feasible layouts equal zero energy; the legacy burnup-state encoding has no defensible mapping to this C5G7 UO₂/MOX case.</p></div><span class="tag warning">PHYSICS NOT ENCODED</span></div><div id="apiError" class="error" hidden></div></article>
+        <article class="panel paper-export-panel">
+          <div class="panel-head"><div><h3>Paper figure export</h3><p>Render a white-background, high-resolution PNG from the current source-backed Plotly view. Axis labels, plot values, selected field settings and uncertainty payloads are retained; the export does not increase the evidence quality of a tally.</p></div><span class="tag">PNG · 4400 × 2800 px</span></div>
+          <div class="paper-export-groups">
+            <div class="paper-export-group"><h4>Candidate evidence</h4><div class="paper-export-grid">
+              <button class="action-button paper-export-button" type="button" data-figure-target="candidateChart" data-figure-title="Candidate metric by layout">Export · Candidate metric</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="distributionChart" data-figure-title="Corrected-group k-effective by layout">Export · k-effective</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="aggregateChart" data-figure-title="k-effective versus fission-peaking proxy">Export · Metric trade-off</button>
+            </div></div>
+            <div class="paper-export-group"><h4>Assembly proxy evidence</h4><div class="paper-export-grid">
+              <button class="action-button paper-export-button" type="button" data-figure-target="assemblyMap" data-figure-title="Assembly-integrated fission-rate proxy map">Export · Position map</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="assemblyMatrix" data-figure-title="Candidate by position fission-rate proxy matrix">Export · Candidate matrix</button>
+            </div></div>
+            <div class="paper-export-group"><h4>OpenMC spatial tally evidence</h4><div class="paper-export-grid">
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshHeatmap" data-figure-title="Recorded OpenMC spatial tally heatmap">Export · Heatmap</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshContour" data-figure-title="Recorded OpenMC spatial tally contour field">Export · Contour field</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshProfile" data-figure-title="Recorded OpenMC central-row tally profile">Export · Central-row profile</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshSurface" data-figure-title="2D OpenMC tally displayed as a 3D surface">Export · 3D surface</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="axial3dPlot" data-figure-title="Recorded multi-layer OpenMC axial tally">Export · Axial volume</button>
+            </div></div>
+          </div>
+          <p id="paperExportStatus" class="paper-export-status" role="status" aria-live="polite">Select the intended metric/scale and load a plot before exporting. The axial-volume image must be labeled as diagnostic or production evidence according to its recorded run metadata.</p>
+          <p class="panel-footnote">The browser export is a figure-rendering aid, not an analysis report. Use the accompanying guide for source citations and captions. Do not crop away the campaign label, uncertainty, provenance note or diagnostic status when interpreting the result.</p>
+        </article>
+      </section>
       <footer><span>CB-PFR · Confidence-Bounded Physical Feasibility Ranking</span><span>Research prototype / evidence-aware interface</span></footer>
     </main>
   </div>
