@@ -3,7 +3,7 @@
 ## Purpose
 
 Use the dashboard's **Paper figure export** controls to render individual source-backed Plotly views on a white background. Each export should produce:
-- a high-resolution PNG (4400 × 2800 pixels); and
+- a high-resolution PNG (2200 × 1400 pixels); and
 - a JSON sidecar with plot identity, export settings, selected metric/view, available provenance, and interpretation boundaries.
 
 Keep the PNG and same-stem JSON sidecar together in the paper's figure directory. These files help prepare reproducible figures; they do not replace raw data, uncertainty definitions, simulation settings, or validation limitations in the manuscript.
