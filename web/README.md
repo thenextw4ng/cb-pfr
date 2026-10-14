@@ -68,3 +68,11 @@ The helper uses OpenMC `--plot` mode only. It does not modify authoritative XML 
 PNG plots are previewed directly. VTK/VTI files are listed as real 3D datasets and can be opened in ParaView; the dashboard does not pretend that a 2D tally surface is a volumetric reactor geometry.
 
 Official OpenMC geometry visualization guide: https://docs.openmc.org/en/latest/usersguide/plots.html
+
+## Paper figure exports
+
+The Evidence Integrity section includes a **Paper figure export** panel. It exports the current source-backed Plotly chart as a white-background 4400 × 2800 PNG and writes a same-stem JSON sidecar containing the figure identity, selected view settings, available source provenance, and interpretation boundaries.
+
+Export only after selecting the intended metric/score and display mode. Keep the PNG and JSON together. Before publication, inspect the PNG at 100%, confirm labels and coordinate/unit basis, and cross-check the sidecar against raw campaign records. This feature does not improve convergence or turn a diagnostic tally into validation evidence.
+
+See [CB-PFR Paper Figure Export and Caption Guide](../docs/CBPFR_PAPER_FIGURE_EXPORT_GUIDE.md) for recommended source records, caption templates, and limitations.
