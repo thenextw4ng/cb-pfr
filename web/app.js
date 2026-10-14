@@ -1183,7 +1183,7 @@ async function initAssembly(){
   assemblyRecords=(payload.records||[]).filter(r=>assemblyPositionDefs.some(position=>has(r,position.key)));
   if(!assemblyRecords.length)throw new Error("No finite assembly-integrated proxy values are available.");
   $("assemblyFieldStatus").textContent="RECORDED PROXY DATA";
-  $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of the candidate-summary seeds; do not compare as paired runs.";
+  $("assemblyFieldProvenance").textContent=payload.source+" · "+payload.status_scope+". Values are recorded assembly-integrated fission-rate proxies; they are not absolute power and do not establish feasibility. Proxy seeds are independent of all 18 corrected-group candidate-study seed records; do not compare these campaigns as paired runs.";
   drawAssemblyField();
  }catch(error){
   $("assemblyFieldStatus").textContent="ASSEMBLY DATA UNAVAILABLE";
