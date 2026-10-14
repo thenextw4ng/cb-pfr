@@ -134,22 +134,25 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.match(candidateStats.xTitle, /k-effective/i);
     assert.match(candidateStats.yTitle, /between-seed sample SD/i);
 
-    // Verify the paper export really renders a publication-sized image and
-    // writes a JSON provenance sidecar from the current source-backed chart.
-    const paperDownloads = [];
-    page.on("download", download => paperDownloads.push(download));
+    // Verify the paper export renders a publication-sized image, offers explicit
+    // user-initiated downloads, and writes a JSON provenance sidecar.
     const paperExportButton = page.locator('[data-figure-target="distributionChart"]');
     assert.equal(await paperExportButton.count(), 1, "paper export control for corrected-group k-effective must exist");
     await paperExportButton.click();
     await page.waitForFunction(() => {
       const status = document.querySelector("#paperExportStatus")?.textContent || "";
-      return status.includes("JSON provenance/interpretation sidecar");
+      return status.includes("JSON provenance/interpretation sidecar are ready to download");
     }, null, { timeout: 60000 });
-    for (let attempt = 0; attempt < 30 && paperDownloads.length < 2; attempt++) await page.waitForTimeout(100);
-    const paperPng = paperDownloads.find(download => /\\.png$/i.test(download.suggestedFilename()));
-    const paperJson = paperDownloads.find(download => /\\.json$/i.test(download.suggestedFilename()));
-    assert.ok(paperPng, "paper export must download a high-resolution PNG");
-    assert.ok(paperJson, "paper export must download a companion JSON sidecar");
+    const [paperPng] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30000 }),
+      page.locator('#paperExportStatus a[data-export-kind="png"]').click()
+    ]);
+    const [paperJson] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30000 }),
+      page.locator('#paperExportStatus a[data-export-kind="json"]').click()
+    ]);
+    assert.match(paperPng.suggestedFilename(), /\.png$/i);
+    assert.match(paperJson.suggestedFilename(), /\.json$/i);
     const pngPath = await paperPng.path();
     const jsonPath = await paperJson.path();
     assert.ok(fs.statSync(pngPath).size > 10000, "exported PNG must contain rendered figure data");
@@ -159,7 +162,6 @@ fs.mkdirSync(outDir, { recursive: true });
     assert.equal(sidecar.image.pixel_width, 4400);
     assert.equal(sidecar.image.pixel_height, 2800);
     assert.match(sidecar.interpretation_boundary, /smoke-budget|descriptive/i);
-
 
     const assemblyView = await page.evaluate(() => {
       const select = document.querySelector("#candidateSelect");
