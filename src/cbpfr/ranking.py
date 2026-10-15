@@ -102,7 +102,12 @@ def assess_physical(metrics: Sequence[MetricLimit], estimate: PhysicalEstimate |
         width = None if uniform_margins is None else uniform_margins.get(metric.name)
         assessments.append(_assessment_for_metric(metric, None if estimate is None else estimate.values.get(metric.name), width))
     indicator = int(any(not assessment.passes for assessment in assessments))
-    aggregate = sum(metric.weight * assessment.normalized_violation for metric, assessment in zip(metrics, assessments))
+    # Missing or invalid required evidence is a hard failure even when a
+    # metric has zero weight; prevent 0 * inf from creating NaN.
+    if any(not math.isfinite(assessment.normalized_violation) for assessment in assessments):
+        aggregate = math.inf
+    else:
+        aggregate = sum(metric.weight * assessment.normalized_violation for metric, assessment in zip(metrics, assessments))
     return PhysicalAssessment(tuple(assessments), indicator, aggregate)
 
 def _rank(method: str, model: QuboModel, candidates: Sequence[Candidate], estimates: Mapping[str, PhysicalEstimate], metrics: Sequence[MetricLimit], *, mode: str, uniform_margins: Mapping[str, float] | None = None) -> list[RankedCandidate]:
