@@ -55,7 +55,7 @@ def ranking_to_records(
         raise ValueError("data_kind must be synthetic, mock, or physical")
     records: list[dict[str, object]] = []
     for method, ranked_candidates in rankings.items():
-        for rank, item in enumerate(ranked_candidates, start=1):
+        for item in ranked_candidates:
             physical = None
             if item.physical is not None:
                 physical = {
@@ -76,7 +76,8 @@ def ranking_to_records(
             records.append({
                 "data_kind": data_kind,
                 "method": method,
-                "rank": rank,
+                "rank": item.rank,
+                "tie_group": item.tie_group,
                 "candidate_id": item.candidate.candidate_id,
                 "candidate_vector": list(item.candidate.vector),
                 "qubo_feasible": item.qubo_indicator == 0,
