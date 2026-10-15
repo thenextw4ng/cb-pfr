@@ -69,7 +69,7 @@ This audit verifies repository metadata, documented dependencies, installation i
 
 - **Software snapshot commit:** `442de59e40e440aad37da495b50a487992c8f096`
 - **CI runs for that snapshot:** [38674523991](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674523991) and [38674518908](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674518908), both completed successfully on the 3.10/3.11/3.12 matrix.
-- **Anonymized review PDF SHA-256:** `5038318b3af49b4cc1d1f1db75018edbf98647e5a035411624db4c82fa309960`
+- **Anonymized review PDF SHA-256:** `70197aa91c92ecf8fcf772d98c4c12261b90253ce134af74ecc7ed5848283875`
 - **LaTeX source SHA-256:** `1b9c28bdc52f9d4b513a5e6bbb41dd059d8b23d27502f2da2db86ac8e4fc2d72`
 - **BibTeX SHA-256:** `481cbb04c6110f857630ecbdbfa52797ba998845785bac50803b95295212cac8`
 - **Primary six-layout evidence archive SHA-256:** `be48b17c2c336a97d08673d191457b9c695853759180116f5382f636b4c93019`
