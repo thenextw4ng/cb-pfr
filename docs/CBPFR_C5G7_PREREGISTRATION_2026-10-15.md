@@ -19,6 +19,19 @@ C5G7 is a computational benchmark whose reference results are produced by other 
 
 ## 2. B0: predeclared common settings and gates
 
+### Locked design objective and the role of k-effective
+
+For the six-layout and expanded 5 × 5 design studies, the registered exploratory objective is to **minimize the assembly-integrated fission-rate peaking factor**:
+
+\[
+F_{\mathrm{fission}} = \frac{\max_a R_a}{\operatorname{mean}_a(R_a)}, \qquad
+R_a = \sum_{i \in \text{assembly }a} \bar f_i .
+\]
+
+Here \(\bar f_i\) is the mean mesh fission-score tally in mesh bin \(i\), summed over the verified 17 × 17 bin footprint of fuel assembly \(a\). This is a dimensionless relative fission-rate shape proxy—not absolute power, a safety limit, or an experimental measurement. The mesh-to-pin/assembly mapping and tally normalization must be audited before any ranking is treated as more than descriptive.
+
+The C5G7 reference \(k_{\mathrm{eff}} = 1.18655\) is used only for the canonical UMMU code-to-reference check. **It is not automatically an acceptance band for noncanonical layouts.** For the other layouts, record \(k_{\mathrm{eff}}\) and uncertainty as separate responses; do not call the highest- or lowest-\(k\) layout better, safer, or feasible. A design-specific hard physical acceptance band remains **not authorized** until an independent domain reviewer signs off a defensible criterion. B7 must therefore limit its primary endpoint to selecting the best candidate under the registered \(F_{\mathrm{fission}}\) objective, unless a later versioned amendment registers additional physically justified hard constraints before those results are inspected.
+
 ### Model identity and common run conditions
 
 - Reference source: `mit-crpg/benchmarks`, pinned commit `ba41bee54320ada0b4ac39a0dd2ca3c1d090a450`.
