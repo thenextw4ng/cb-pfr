@@ -398,6 +398,8 @@ jobs:
       selected_inactive: ${{ steps.finalize.outputs.selected_inactive }}
       selected_batches: ${{ steps.finalize.outputs.selected_batches }}
     steps:
+      - name: Checkout analysis code
+        uses: actions/checkout@v4
       - name: Download initial B1 pilot aggregate
         uses: actions/download-artifact@v4
         with:
