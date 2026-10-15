@@ -1,0 +1,50 @@
+name: Cancel obsolete C5G7 campaigns using the pre-fix entropy mesh
+
+on:
+  push:
+    branches:
+      - ops/cancel-obsolete-c5g7-mesh-runs-20261016
+    paths:
+      - .github/workflows/cancel-obsolete-c5g7-mesh-runs.yml
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel-obsolete-runs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Cancel only non-completed runs pinned to the known-bad mesh commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BAD_SHA='efce863ca4af85a42287207d28fa7e6235fe037b'
+          RUNS=(38744205073 38744209062 38744213041 38744216322 38744219825 38744223498)
+          for RUN_ID in "${RUNS[@]}"; do
+            echo "--- run $RUN_ID ---"
+            META="$(gh api "repos/${REPOSITORY}/actions/runs/${RUN_ID}")"
+            SHA="$(jq -r '.head_sha // ""' <<< "$META")"
+            STATUS="$(jq -r '.status // "unknown"' <<< "$META")"
+            NAME="$(jq -r '.name // "unknown"' <<< "$META")"
+            echo "name=$NAME status=$STATUS sha=$SHA"
+            if [[ "$SHA" != "$BAD_SHA" ]]; then
+              echo "SKIP: run does not match the known-bad commit; refusing to cancel."
+              continue
+            fi
+            if [[ "$STATUS" == "completed" ]]; then
+              echo "SKIP: run is already completed."
+              continue
+            fi
+            if gh api --method POST "repos/${REPOSITORY}/actions/runs/${RUN_ID}/cancel" -H 'Accept: application/vnd.github+json'; then
+              echo "CANCEL_REQUESTED: $RUN_ID"
+            else
+              echo "CANCEL_REQUEST_RETURNED_ERROR: $RUN_ID (it may have completed concurrently; checking status below)"
+            fi
+          done
+          echo 'Cancellation requests processed. Verify final status via Actions before considering the queue clear.'
