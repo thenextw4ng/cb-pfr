@@ -13,6 +13,11 @@ on:
     branches:
       - research/c5g7-b0-prereg-b1-pilot-20261015
   workflow_dispatch:
+    inputs:
+      campaign_sha:
+        description: "Commit SHA of the existing campaign to audit; leave blank when triggered by a campaign run"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -34,7 +39,7 @@ jobs:
         id: discover
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_SHA: ${{ inputs.campaign_sha || github.event.workflow_run.head_sha || github.sha }}
           CAMPAIGN_BRANCH: research/c5g7-b0-prereg-b1-pilot-20261015
         run: |
           set -euo pipefail
@@ -77,13 +82,20 @@ jobs:
             "official_benchmark_acceptance": false
           }
           JSON
-      - name: Audit the 1,200 V2a observations against independent high-budget data
+      - name: Audit all 1,200 V2a observations and 60 high-budget references against the seed ledger
         if: steps.discover.outputs.all_ready == 'true'
-        continue-on-error: true
+        shell: bash
         run: |
+          set -euo pipefail
+          SEED_LEDGER="$(find /tmp/production-artifacts -type f -name campaign_plan.json -print -quit)"
+          if [ -z "$SEED_LEDGER" ]; then
+            echo "Required campaign_plan.json seed ledger is missing; V2a aggregation cannot pass."
+            exit 1
+          fi
           python scripts/analyze_c5g7_v2a_selection.py \
             --v2a-root /tmp/v2a-artifacts \
             --production-root /tmp/production-artifacts \
+            --seed-ledger "$SEED_LEDGER" \
             --outdir /tmp/v2a-summary
       - name: Preserve current aggregation status
         if: always()
