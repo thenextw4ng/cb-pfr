@@ -163,6 +163,14 @@ def _rank(method: str, model: QuboModel, candidates: Sequence[Candidate], estima
 def rank_all_methods(model: QuboModel, candidates: Sequence[Candidate], estimates: Mapping[str, PhysicalEstimate], metrics: Sequence[MetricLimit], uniform_margins: Mapping[str, float]) -> dict[str, list[RankedCandidate]]:
     if not candidates:
         raise ValueError("candidate pool cannot be empty")
+    candidate_ids = [candidate.candidate_id for candidate in candidates]
+    if any(not isinstance(candidate_id, str) or not candidate_id.strip() for candidate_id in candidate_ids):
+        raise ValueError("candidate IDs must be non-empty strings")
+    if len(candidate_ids) != len(set(candidate_ids)):
+        raise ValueError("candidate IDs must be unique")
+    metric_names = [metric.name for metric in metrics]
+    if len(metric_names) != len(set(metric_names)):
+        raise ValueError("metric names must be unique")
     if not metrics:
         raise ValueError("at least one physical metric must be declared")
     expected = {metric.name for metric in metrics}
