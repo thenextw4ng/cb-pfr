@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -150,8 +151,10 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     source = source.replace(seed_anchor, seed_anchor + f"\nsettings_file.seed = {seed}")
     if source_profile not in SOURCE_PROFILES:
         raise ValueError(f"unknown initial source profile: {source_profile!r}")
-    source_anchor = "settings_file.source = openmc.Source(space=openmc.stats.Box([-32.13, -10.71, -1.0], [10.71, 32.13, 1.0], only_fissionable=True))"
-    if source.count(source_anchor) != 1:
+    source_anchor_pattern = re.compile(
+        r"settings_file\.source\s*=\s*openmc\.Source\(space=openmc\.stats\.Box\(\s*\[-32\.13,\s*-10\.71,\s*-1\.0\],\s*\[10\.71,\s*32\.13,\s*1\.0\],\s*only_fissionable=True\)\)"
+    )
+    if len(source_anchor_pattern.findall(source)) != 1:
         raise ValueError("upstream initial source differs from the audited template; refusing to patch")
     source_lower, source_upper = SOURCE_PROFILES[source_profile]
     source_replacement = (
@@ -159,7 +162,7 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
         + repr(source_lower) + ", " + repr(source_upper)
         + ", only_fissionable=True))"
     )
-    source = source.replace(source_anchor, source_replacement)
+    source = source_anchor_pattern.sub(source_replacement, source, count=1)
     entropy_anchor = (
         "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\n"
         "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\n"
