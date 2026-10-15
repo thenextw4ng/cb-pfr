@@ -19,6 +19,27 @@ def sha256(p):
   for b in iter(lambda:f.read(1048576),b""):h.update(b)
  return h.hexdigest()
 
+def audit_entropy_mesh(mesh):
+ if mesh.get("derived_from_geometry_bounding_box") is not True:raise ValueError("entropy mesh is not certified as geometry-derived")
+ if mesh.get("entropy_dimension")!=[24,24]:raise ValueError(f"entropy mesh dimension mismatch: {mesh.get('entropy_dimension')!r}")
+ if mesh.get("z_axis_unbounded") is not True:raise ValueError("entropy mesh is not recorded as a 2-D x-y mesh with unbounded z")
+ names=("geometry_lower_xy","geometry_upper_xy","entropy_lower_left","entropy_upper_right")
+ pairs={}
+ for name in names:
+  value=mesh.get(name)
+  if not isinstance(value,list) or len(value)!=2:raise ValueError(f"entropy mesh audit field {name} must be a 2-vector")
+  pairs[name]=[float(v) for v in value]
+  if not all(math.isfinite(v) for v in pairs[name]):raise ValueError(f"entropy mesh audit field {name} contains non-finite bounds")
+ padding=float(mesh.get("padding_cm",math.nan))
+ if not math.isfinite(padding) or padding<0:raise ValueError("entropy mesh padding must be finite and non-negative")
+ for axis in range(2):
+  gl,gu=pairs["geometry_lower_xy"][axis],pairs["geometry_upper_xy"][axis]
+  el,eu=pairs["entropy_lower_left"][axis],pairs["entropy_upper_right"][axis]
+  if not gu>gl:raise ValueError(f"invalid geometry bounding-box bounds on axis {axis}")
+  if not math.isclose(el,gl-padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy lower bound axis {axis} does not equal geometry lower bound minus padding")
+  if not math.isclose(eu,gu+padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy upper bound axis {axis} does not equal geometry upper bound plus padding")
+ return True
+
 def gather(root, expected_stage, expected_profile=None):
  rows=[];errors=[]
  for p in sorted(root.rglob("STUDY_SUMMARY.json")):
@@ -58,7 +79,7 @@ def gather(root, expected_stage, expected_profile=None):
    raw=json.loads(files["raw_audit"].read_text());tr=json.loads(files["source_trace"].read_text());f=json.loads(files["assembly"].read_text())
    if raw.get("status")!="PASS" or raw.get("candidate_count")!=1:raise ValueError("raw HDF5 audit failure")
    if tr.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or tr.get("automatic_convergence_claim") is not False or not tr.get("entropy") or not tr.get("k_generation"):raise ValueError("source diagnostics absent or status is not explicitly non-certifying")
-   if mesh.get("derived_from_geometry_bounding_box") is not True or mesh.get("entropy_dimension")!=[24,24]:raise ValueError("geometry-derived entropy mesh audit failed")
+   audit_entropy_mesh(mesh)
    if files["log"].read_text(errors="replace").count("Fission source site(s) outside of entropy box"):raise ValueError("entropy mesh warning")
    if manifest.get("openmc_version")!="0.16.0" or manifest.get("seed")!=seed:raise ValueError("manifest version or seed mismatch")
    for key in ("threads","batches","inactive","particles"):
