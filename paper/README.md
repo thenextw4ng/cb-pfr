@@ -1,7 +1,7 @@
 # Paper artifacts
 
-The conference review build is maintained as a separate publication artifact from the software's tagged release. The anonymized LaTeX source and bibliography are included in this research branch for build traceability; the author block remains anonymous in the review PDF.
+The methodological working paper and the anonymized ICIMCIS review build are publication artifacts, separate from a tagged software release. The public repository retains the methodological Markdown draft and bibliography; the compiled anonymized conference PDF and its matching LaTeX source are supplied in the Stage 8–10 submission package.
 
-The current paper is a methodological working paper and bounded C5G7/OpenMC case study. It does not claim physical validation, certified reactor-safety, a physically optimal layout, calibrated uncertainty coverage, or CB-PFR superiority. The source repository has no published software release tag or archival DOI as of 15 October 2026; there is therefore no release DOI to cite yet.
+As of 15 October 2026, no software release tag or archival DOI has been published. Therefore, there is no release DOI to cite. For the code snapshot use the immutable commit SHA listed in the closeout audit; do not add author names to the review PDF until the venue's camera-ready instructions call for them.
 
-For the exact software snapshot, use the immutable Git commit SHA in the Stage 8–10 closeout audit. For the LaTeX build, see `paper/source/README.md`. Do not add author names to the anonymized review PDF until the venue's camera-ready instructions require them.
+The paper describes an evidence-bounded C5G7/OpenMC case study. It does not establish full physical validation, safety qualification, a physically optimal layout, calibrated uncertainty coverage, or CB-PFR superiority.
