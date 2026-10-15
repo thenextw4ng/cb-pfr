@@ -47,6 +47,7 @@ def gather(root, expected_stage, expected_profile=None):
     "mesh_audit":cd/"model/2d/entropy_mesh_audit.json",
     "raw_audit":p.parent/"analysis/raw_hdf5_audit.json",
     "source_trace":p.parent/"analysis/source_convergence.json",
+    "source_trace_csv":p.parent/"analysis/source_convergence.csv",
     "assembly":p.parent/"analysis/assembly_fission.json",
     "settings":cd/"model/2d/settings.xml",
     "log":cd/"openmc.log",
@@ -56,7 +57,7 @@ def gather(root, expected_stage, expected_profile=None):
    manifest=json.loads(files["manifest"].read_text());mesh=json.loads(files["mesh_audit"].read_text())
    raw=json.loads(files["raw_audit"].read_text());tr=json.loads(files["source_trace"].read_text());f=json.loads(files["assembly"].read_text())
    if raw.get("status")!="PASS" or raw.get("candidate_count")!=1:raise ValueError("raw HDF5 audit failure")
-   if tr.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or not tr.get("entropy"):raise ValueError("source trace absent")
+   if tr.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or tr.get("automatic_convergence_claim") is not False or not tr.get("entropy") or not tr.get("k_generation"):raise ValueError("source diagnostics absent or status is not explicitly non-certifying")
    if mesh.get("derived_from_geometry_bounding_box") is not True or mesh.get("entropy_dimension")!=[24,24]:raise ValueError("geometry-derived entropy mesh audit failed")
    if files["log"].read_text(errors="replace").count("Fission source site(s) outside of entropy box"):raise ValueError("entropy mesh warning")
    if manifest.get("openmc_version")!="0.16.0" or manifest.get("seed")!=seed:raise ValueError("manifest version or seed mismatch")
@@ -81,6 +82,15 @@ def gather(root, expected_stage, expected_profile=None):
     "threads":int(study["settings"]["threads"]),"source":meta["source"],
     "keff_mean":float(phys["keff_mean"]),"keff_sd":float(phys["keff_std_dev"]),
     "F_fission":float(f["fission_rate_peaking_factor"]),
+    "convergence_status":tr["status"],"convergence_certified":False,
+    "k_generation_half_delta_pcm":float(tr["k_generation_second_minus_first_half_pcm"]),
+    "k_generation_first_quarter_mean":float(tr["k_generation"]["first_quarter_mean"]),
+    "k_generation_last_quarter_mean":float(tr["k_generation"]["last_quarter_mean"]),
+    "k_generation_last_minus_first_quarter_mean":float(tr["k_generation"]["last_minus_first_quarter_mean"]),
+    "k_generation_ols_slope_per_1000_active_batches":float(tr["k_generation"]["ols_slope_per_1000_active_batches"]),
+    "entropy_first_quarter_mean":float(tr["entropy"]["first_quarter_mean"]),
+    "entropy_last_quarter_mean":float(tr["entropy"]["last_quarter_mean"]),
+    "entropy_last_minus_first_quarter_mean":float(tr["entropy"]["last_minus_first_quarter_mean"]),
     "statepoint_sha256":statepoint_hash,"settings_sha256":settings_hash,
     "mgxs_sha256":manifest["mgxs_sha256"],"trace_sha256":trace_hash,
     "run_wallclock_seconds":float(manifest.get("run_wallclock_seconds",math.nan)),
@@ -161,7 +171,7 @@ def main():
   "integrity_pass":integrity,"observed_v2a_runs":len(low),"expected_v2a_runs":EXPECTED,
   "complete_six-layout_pools":len(complete_pools),"distinct_seed_count":len(per_seed),
   "settings":{"batches":800,"inactive":500,"particles":2000,"threads":1},
-  "seed_ledger_audit":seed_ledger_audit,
+  "seed_ledger_audit":seed_ledger_audit,"convergence_certified":False,
   "objective":FUEL_OBJECTIVE,"high_budget_empirical_reference_by_layout":truth,
   "high_budget_empirical_best_layout":truth_best,"point_estimate_selection_summary":{
    "n_pools":len(decisions),"matches_empirical_high_budget_best":sum(d["selection_matches_empirical_high_budget_best"] is True for d in decisions),
