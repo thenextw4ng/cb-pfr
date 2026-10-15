@@ -106,7 +106,7 @@ jobs:
           raw=json.loads((root/"analysis/raw_hdf5_audit.json").read_text())
           assert study["status"]=="all_runs_completed_needs_independent_validation"
           assert one["seed"]==int(os.environ["SEED"]) and manifest["openmc_version"]=="0.16.0"
-          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24,1]
+          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24]
           assert raw["status"]=="PASS"
           assert manifest["required_balance_scores_present"]
           warnings=(case/"openmc.log").read_text(errors="replace").count("Fission source site(s) outside of entropy box")
