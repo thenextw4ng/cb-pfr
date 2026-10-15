@@ -15,8 +15,8 @@ class TinyModel:
         return float(vector[1])
 
 
-def metric(*, upper=10.0, z=1.0):
-    return MetricLimit(name="F", upper=upper, z=z, scale=1.0, weight=1.0,
+def metric(*, upper=10.0, z=1.0, weight=1.0):
+    return MetricLimit(name="F", upper=upper, z=z, scale=1.0, weight=weight,
                        uncertainty_kind="between-run SD (test fixture)", units="arb.")
 
 
@@ -42,6 +42,7 @@ class TestCBPFRProperties(unittest.TestCase):
         missing = assess_physical([m], PhysicalEstimate("missing", {}))
         nan_value = assess_physical([m], estimate("nan", math.nan))
         nan_uncertainty = assess_physical([m], estimate("nan-sd", 2.0, math.nan))
+        zero_weight_missing = assess_physical([metric(weight=0.0)], PhysicalEstimate("missing-zero-weight", {}))
         self.assertEqual(missing.indicator, 1)
         self.assertEqual(missing.metric_assessments[0].status, "missing")
         self.assertEqual(nan_value.indicator, 1)
@@ -49,6 +50,7 @@ class TestCBPFRProperties(unittest.TestCase):
         self.assertTrue(math.isinf(missing.aggregate_violation))
         self.assertTrue(math.isinf(nan_value.aggregate_violation))
         self.assertTrue(math.isinf(nan_uncertainty.aggregate_violation))
+        self.assertTrue(math.isinf(zero_weight_missing.aggregate_violation))
 
     def test_rank_order_and_tie_groups_are_input_permutation_invariant(self):
         model = TinyModel()
