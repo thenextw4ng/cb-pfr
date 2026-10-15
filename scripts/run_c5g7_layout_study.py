@@ -14,6 +14,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -308,6 +309,7 @@ def file_manifest(case_dir: Path) -> dict:
 
 
 def run_case(case_dir: Path, threads: int) -> dict:
+    overall_started = time.monotonic()
     workdir = case_dir / "model" / "2d"
     env = os.environ.copy()
     commands = [
@@ -402,8 +404,14 @@ def run_case(case_dir: Path, threads: int) -> dict:
             statepoints[-1], case_dir, threads, provenance.get("mgxs_sha256_after_transport")
         )
         result["openmc_version"] = result["diagnostics_manifest"]["openmc_version"]
+        result["run_wallclock_seconds"] = round(time.monotonic() - overall_started, 3)
         result["run_manifest"] = "RUN_MANIFEST.json"
         result["trace_file"] = "trace.npz"
+        manifest_path = case_dir / "RUN_MANIFEST.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["run_wallclock_seconds"] = result["run_wallclock_seconds"]
+        manifest["command_records"] = records
+        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         return result
     except Exception as exc:
         return {
@@ -465,7 +473,7 @@ def main() -> int:
         "design_space_sha256": sha256(design_path),
         "mode": args.mode,
         "initial_source_profile": args.source_profile,
-        "source_mode": args.source or ("bad" if args.source_profile == "bad_initial_source" else "custom_profile"),
+        "source_mode": args.source or ("bad" if args.source_profile == "bad_initial_source" else "good" if args.source_profile == "baseline_all_fuel" else "custom_profile"),
         "git_commit": git_commit_sha(),
         "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed": args.seed, "seed_policy": "explicit NumPy SeedSequence seed when --seed is set; otherwise legacy base plus stable candidate offset"},
         "profile_warning": "Default settings are smoke-test settings only; do not compare to benchmark reference or claim converged physics without a separate convergence study.",
