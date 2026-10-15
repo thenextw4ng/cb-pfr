@@ -1,4 +1,4 @@
-name: Cancel C5G7 layout run started before preregistration gate
+name: Cancel C5G7 layout runs that were started before the B0/B1/B2 gates
 
 on:
   push:
@@ -10,14 +10,14 @@ permissions:
   contents: read
 
 jobs:
-  cancel-premature-matrix:
+  cancel-premature-runs:
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel layout matrix before B2 gate
+      - name: Cancel premature high-budget and duplicate early B1 runs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh api --method POST \
-            repos/thenextw4ng/cb-pfr/actions/runs/38729573477/cancel \
-            -H "Accept: application/vnd.github+json"
-          echo "Cancellation requested for run 38729573477: B3 must wait for the B2 canonical gate."
+          for RUN_ID in 38729573477 38735056737 38735162993; do
+            gh api --method POST "repos/thenextw4ng/cb-pfr/actions/runs/$RUN_ID/cancel" -H "Accept: application/vnd.github+json" || true
+          done
+          echo "Requested cancellation of the premature six-layout matrix and early duplicate B1 runs. Latest B1 run 38735301955 is authoritative."
