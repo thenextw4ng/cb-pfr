@@ -85,14 +85,15 @@ def gather(root):
    manifest_path=case_dir/"RUN_MANIFEST.json";trace_path=case_dir/"trace.npz"
    settings_path=case_dir/"model/2d/settings.xml"
    raw_path=p.parent/"analysis/raw_hdf5_audit.json";source_path=p.parent/"analysis/source_convergence.json"
+   source_csv=p.parent/"analysis/source_convergence.csv"
    fission_path=p.parent/"analysis/assembly_fission.json";mesh_audit=case_dir/"model/2d/entropy_mesh_audit.json"
    statepoint=case_dir/phys["statepoint"]
-   for f in (manifest_path,trace_path,settings_path,raw_path,source_path,fission_path,mesh_audit,statepoint):
+   for f in (manifest_path,trace_path,settings_path,raw_path,source_path,source_csv,fission_path,mesh_audit,statepoint):
     if not f.is_file():raise ValueError("missing evidence: "+str(f))
    manifest=json.loads(manifest_path.read_text());raw=json.loads(raw_path.read_text())
    source=json.loads(source_path.read_text());fission=json.loads(fission_path.read_text());entropy=json.loads(mesh_audit.read_text())
    if raw.get("status")!="PASS":raise ValueError("raw HDF5 audit failed")
-   if source.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or not source.get("entropy"):raise ValueError("source traces missing")
+   if source.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or source.get("automatic_convergence_claim") is not False or not source.get("entropy") or not source.get("k_generation"):raise ValueError("source diagnostics absent or status is not explicitly non-certifying")
    if manifest.get("openmc_version")!="0.16.0":raise ValueError("OpenMC version mismatch")
    for key in ("seed","threads","batches","inactive","particles"):
     expected=int(case["seed"]) if key=="seed" else int(settings[key])
@@ -117,7 +118,14 @@ def gather(root):
     "threads":int(study["settings"]["threads"]),"source":meta["source"],
     "keff_mean":float(phys["keff_mean"]),"keff_std_dev":float(phys["keff_std_dev"]),
     "fission_rate_peaking_factor":float(fission["fission_rate_peaking_factor"]),
+    "convergence_status":source["status"],"convergence_certified":False,
     "k_generation_half_delta_pcm":float(source["k_generation_second_minus_first_half_pcm"]),
+    "k_generation_first_quarter_mean":float(source["k_generation"]["first_quarter_mean"]),
+    "k_generation_last_quarter_mean":float(source["k_generation"]["last_quarter_mean"]),
+    "k_generation_last_minus_first_quarter_mean":float(source["k_generation"]["last_minus_first_quarter_mean"]),
+    "k_generation_ols_slope_per_1000_active_batches":float(source["k_generation"]["ols_slope_per_1000_active_batches"]),
+    "entropy_first_quarter_mean":float(source["entropy"]["first_quarter_mean"]),
+    "entropy_last_quarter_mean":float(source["entropy"]["last_quarter_mean"]),
     "entropy_last_minus_first_quarter":float(source["entropy"]["last_minus_first_quarter_mean"]),
     "run_wallclock_seconds":float(manifest.get("run_wallclock_seconds",math.nan)),
     "statepoint_sha256":sha256(statepoint),"mgxs_sha256":manifest.get("mgxs_sha256"),
@@ -185,7 +193,7 @@ def main():
  integrity=integrity and len(set(hashes))==len(hashes) and len(mgxs)==1 and None not in mgxs and all(r["status"]=="PASS_INTEGRITY" for r in rows)
  result={"schema_version":"1.0","protocol_id":"CBPFR-C5G7-NIGHT-CAMPAIGN-2026-10-15",
   "status":"MAIN_CAMPAIGN_INTEGRITY_PASS_PENDING_SCIENTIFIC_REVIEW" if integrity else "MAIN_CAMPAIGN_INCOMPLETE_OR_INTEGRITY_FAIL",
-  "integrity_pass":integrity,"expected_run_count":a.expected_main_runs,"observed_run_count":len(rows),
+  "integrity_pass":integrity,"convergence_certified":False,"expected_run_count":a.expected_main_runs,"observed_run_count":len(rows),
   "seed_ledger_audit":seed_ledger_audit,"run_counts_by_stage":actual,"errors":errors,"global_unique_statepoint_hashes":len(set(hashes))==len(hashes),
   "single_common_mgxs_sha256":len(mgxs)==1 and None not in mgxs,"stage_summaries":by_stage,
   "run_level_results":rows,"official_benchmark_acceptance":False,
