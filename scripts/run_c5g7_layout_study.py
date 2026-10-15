@@ -30,11 +30,13 @@ MGXS_GROUPS_REPLACEMENT = """energy_boundaries = np.array([1.0e-5, 0.0635, 10.0,
 groups = openmc.mgxs.EnergyGroups(energy_boundaries)"""
 POSITION_ORDER = ("p00", "p01", "p10", "p11")
 SOURCE_PROFILES = {
-    # Initial-generation distributions; all boxes are restricted to fissionable material.
+    # Initial-source boxes; only_fissionable=True rejects non-fissionable locations.
     "baseline_all_fuel": ([-32.13, -10.71, -1.0], [10.71, 32.13, 1.0]),
     "left_column_only": ([-32.13, -10.71, -1.0], [-10.71, 32.13, 1.0]),
     "right_column_only": ([-10.71, -10.71, -1.0], [10.71, 32.13, 1.0]),
     "upper_row_only": ([-32.13, 10.71, -1.0], [10.71, 32.13, 1.0]),
+    # Deliberately pathological initial source confined to the top-left fuel assembly.
+    "bad_initial_source": ([-32.13, 10.71, -1.0], [-10.71, 32.13, 1.0]),
 }
 
 
@@ -171,15 +173,129 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     if source.count(entropy_anchor) != 1:
         raise ValueError("upstream entropy-mesh construction differs from audited template; refusing to patch")
     entropy_replacement = (
-        "# The model is 2-D and extends infinitely along z; use an x-y mesh, not an artificial finite z slab.\n"
+        "# Derive entropy coverage from the complete model geometry, not a hard-coded source box.\n"
+        "entropy_bbox = geometry.bounding_box\n"
+        "entropy_lower = [float(v) for v in entropy_bbox.lower_left]\n"
+        "entropy_upper = [float(v) for v in entropy_bbox.upper_right]\n"
+        "if not all(np.isfinite(v) for v in entropy_lower[:2] + entropy_upper[:2]):\n"
+        "    raise ValueError('geometry.bounding_box has non-finite x/y bounds; refusing an incomplete entropy mesh')\n"
+        "# The benchmark is two-dimensional; replace unbounded z geometry with a unit-thick diagnostic slab.\n"
+        "if not np.isfinite(entropy_lower[2]): entropy_lower[2] = -0.5\n"
+        "if not np.isfinite(entropy_upper[2]): entropy_upper[2] = 0.5\n"
+        "if entropy_upper[2] <= entropy_lower[2]:\n"
+        "    entropy_lower[2], entropy_upper[2] = -0.5, 0.5\n"
         "entropy_mesh = openmc.RegularMesh()\n"
-        "entropy_mesh.dimension = [51, 51]\n"
-        "entropy_mesh.lower_left = [-32.14, -32.14]\n"
-        "entropy_mesh.upper_right = [32.14, 32.14]\n"
+        "entropy_mesh.dimension = [24, 24, 1]\n"
+        "entropy_mesh.lower_left = entropy_lower\n"
+        "entropy_mesh.upper_right = entropy_upper\n"
         "settings_file.entropy_mesh = entropy_mesh"
     )
     source = source.replace(entropy_anchor, entropy_replacement)
     builder.write_text(source, encoding="utf-8")
+
+
+def patch_tally_scores(tally_file: Path) -> None:
+    """Ensure the archived statepoint includes spatial and global balance responses."""
+    source = tally_file.read_text(encoding="utf-8")
+    old_mesh = "tallies['Mesh Rates'].scores = ['flux', 'fission', 'nu-fission']"
+    new_mesh = "tallies['Mesh Rates'].scores = ['flux', 'fission', 'nu-fission', 'absorption']"
+    old_global = "tallies['Global Rates'].scores = ['flux', 'fission', 'nu-fission']"
+    new_global = "tallies['Global Rates'].scores = ['flux', 'fission', 'nu-fission', 'absorption']"
+    for old, new, label in ((old_mesh, new_mesh, "mesh tally scores"), (old_global, new_global, "global tally scores")):
+        if source.count(old) != 1:
+            raise ValueError(f"upstream {label} differ from the audited template; refusing to patch")
+        source = source.replace(old, new)
+    tally_file.write_text(source, encoding="utf-8")
+
+
+def git_commit_sha() -> str | None:
+    env_sha = os.environ.get("GITHUB_SHA")
+    if env_sha and len(env_sha) == 40:
+        return env_sha
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        proc = subprocess.run(["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+                              text=True, capture_output=True, check=True)
+        return proc.stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def preserve_statepoint_diagnostics(statepoint: Path, case_dir: Path, threads: int,
+                                    mgxs_sha256: str | None) -> dict:
+    """Persist raw source, global-balance and every tally array next to each statepoint."""
+    import numpy as np
+    import openmc  # type: ignore
+
+    with openmc.StatePoint(statepoint) as sp:
+        global_table = sp.global_tallies
+        global_names = [x.decode("utf-8").rstrip("\x00") if isinstance(x, bytes) else str(x)
+                        for x in global_table["name"]]
+        tally_manifest = {}
+        payload = {
+            "k_generation": np.asarray(sp.k_generation, dtype=float),
+            "entropy": np.asarray(sp.entropy if sp.entropy is not None else [], dtype=float),
+            "seed": np.asarray([int(sp.seed)], dtype=np.int64),
+            "n_inactive": np.asarray([int(sp.n_inactive)], dtype=np.int64),
+            "n_batches": np.asarray([int(sp.n_batches)], dtype=np.int64),
+            "n_particles": np.asarray([int(sp.n_particles)], dtype=np.int64),
+            "keff_mean": np.asarray([float(sp.keff.nominal_value)], dtype=float),
+            "keff_std_dev": np.asarray([float(sp.keff.std_dev)], dtype=float),
+            "global_tallies_name": np.asarray(global_names, dtype="U32"),
+            "global_tallies_mean": np.asarray(global_table["mean"], dtype=float),
+            "global_tallies_std_dev": np.asarray(global_table["std_dev"], dtype=float),
+        }
+        for name in ("tally 1", "tally 2"):
+            try:
+                tally = sp.get_tally(name=name)
+                safe = name.replace(" ", "_")
+                payload[f"{safe}_scores"] = np.asarray(tally.scores, dtype="U32")
+                payload[f"{safe}_mean"] = np.asarray(tally.mean, dtype=float)
+                payload[f"{safe}_std_dev"] = np.asarray(tally.std_dev, dtype=float)
+                tally_manifest[name] = {
+                    "scores": list(tally.scores),
+                    "filter_types": [type(f).__name__ for f in tally.filters],
+                    "mean_shape": list(tally.mean.shape),
+                    "std_dev_shape": list(tally.std_dev.shape),
+                }
+            except (LookupError, ValueError):
+                tally_manifest[name] = {"status": "not_found"}
+        trace_path = case_dir / "trace.npz"
+        np.savez_compressed(trace_path, **payload)
+        gt_summary = {
+            name: {"mean": float(global_table[i]["mean"]),
+                   "std_dev": float(global_table[i]["std_dev"])}
+            for i, name in enumerate(global_names)
+        }
+        version = getattr(openmc, "__version__", "unknown")
+        manifest = {
+            "schema_version": "1.0",
+            "openmc_version": str(version),
+            "mgxs_sha256": mgxs_sha256,
+            "seed": int(sp.seed),
+            "threads": int(threads),
+            "git_commit": git_commit_sha(),
+            "statepoint": str(statepoint.relative_to(case_dir)),
+            "statepoint_sha256": sha256(statepoint),
+            "trace_file": "trace.npz",
+            "trace_sha256": sha256(trace_path),
+            "batches": int(sp.n_batches),
+            "inactive": int(sp.n_inactive),
+            "particles": int(sp.n_particles),
+            "keff": {"mean": float(sp.keff.nominal_value), "std_dev": float(sp.keff.std_dev)},
+            "global_tallies": gt_summary,
+            "tallies": tally_manifest,
+            "leakage_global_tally_present": "leakage" in gt_summary,
+            "required_balance_scores_present": (
+                "nu-fission" in tally_manifest.get("tally 2", {}).get("scores", [])
+                and "absorption" in tally_manifest.get("tally 2", {}).get("scores", [])
+                and "leakage" in gt_summary
+            ),
+        }
+        (case_dir / "RUN_MANIFEST.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        return manifest
 
 
 def file_manifest(case_dir: Path) -> dict:
@@ -280,7 +396,14 @@ def run_case(case_dir: Path, threads: int) -> dict:
                     }
                 except (LookupError, ValueError):
                     result["tallies"][name] = {"status": "not_found"}
-            return result
+        # Reopen once to archive all batch traces, global balance tallies and full tally arrays.
+        result["diagnostics_manifest"] = preserve_statepoint_diagnostics(
+            statepoints[-1], case_dir, threads, provenance.get("mgxs_sha256_after_transport")
+        )
+        result["openmc_version"] = result["diagnostics_manifest"]["openmc_version"]
+        result["run_manifest"] = "RUN_MANIFEST.json"
+        result["trace_file"] = "trace.npz"
+        return result
     except Exception as exc:
         return {
             "status": "completed_unparsed",
@@ -302,12 +425,18 @@ def main() -> int:
     parser.add_argument("--inactive", type=int, default=10, help="inactive batches; default is a smoke-test profile")
     parser.add_argument("--particles", type=int, default=1000, help="particles per batch; default is a smoke-test profile")
     parser.add_argument("--threads", type=int, default=1)
-    parser.add_argument("--seed-base", type=int, default=620000, help="base seed; each candidate gets a deterministic consecutive seed")
+    parser.add_argument("--seed-base", type=int, default=620000, help="legacy deterministic seed base; prefer --seed from the preregistered SeedSequence list")
+    parser.add_argument("--seed", type=int, help="explicit pseudorandom seed generated from the preregistered NumPy SeedSequence list")
     parser.add_argument("--candidate-ids", nargs="+", help="optional subset of candidate IDs; default runs all six layouts")
-    parser.add_argument("--source-profile", choices=tuple(SOURCE_PROFILES), default="baseline_all_fuel", help="initial fission-source spatial distribution; default is the upstream baseline")
+    parser.add_argument("--source-profile", choices=tuple(SOURCE_PROFILES), help="legacy explicit initial source box profile")
+    parser.add_argument("--source", choices=("good", "bad"), help="good=uniform over the complete fuel region; bad=initial source restricted to one assembly")
     args = parser.parse_args()
-    if args.batches < 2 or args.inactive < 0 or args.inactive >= args.batches or args.particles < 1 or args.threads < 1 or args.seed_base < 0:
-        parser.error("require batches >= 2, 0 <= inactive < batches, particles >= 1, threads >= 1, and seed-base >= 0")
+    if args.source is not None:
+        args.source_profile = "bad_initial_source" if args.source == "bad" else "baseline_all_fuel"
+    elif args.source_profile is None:
+        args.source_profile = "baseline_all_fuel"
+    if args.batches < 2 or args.inactive < 0 or args.inactive >= args.batches or args.particles < 1 or args.threads < 1 or args.seed_base < 0 or (args.seed is not None and args.seed < 1):
+        parser.error("require batches >= 2, 0 <= inactive < batches, particles >= 1, threads >= 1, and a positive seed")
 
     source_root = Path(args.source_root).expanduser().resolve()
     design_path = Path(args.design_space).expanduser().resolve()
@@ -335,7 +464,9 @@ def main() -> int:
         "design_space_sha256": sha256(design_path),
         "mode": args.mode,
         "initial_source_profile": args.source_profile,
-        "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed_policy": "seed_base + stable candidate order index"},
+        "source_mode": args.source or ("bad" if args.source_profile == "bad_initial_source" else "custom_profile"),
+        "git_commit": git_commit_sha(),
+        "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed": args.seed, "seed_policy": "explicit NumPy SeedSequence seed when --seed is set; otherwise legacy base plus stable candidate offset"},
         "profile_warning": "Default settings are smoke-test settings only; do not compare to benchmark reference or claim converged physics without a separate convergence study.",
         "mgxs_generation_policy": "The copied upstream materials.py is patched to replace nonstandard log-spaced boundaries with the OECD/NEA C5G7 standard seven-group boundaries [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV; the generated MGXS group-structure attribute is audited before transport.",
         "cases": [],
@@ -360,12 +491,13 @@ def main() -> int:
         ordered_candidates = all_ordered_candidates
     summary["selected_candidate_ids"] = [candidate["candidate_id"] for candidate in ordered_candidates]
     for candidate in ordered_candidates:
-        seed = args.seed_base + seed_offsets[candidate["candidate_id"]]
+        seed = int(args.seed) if args.seed is not None else args.seed_base + seed_offsets[candidate["candidate_id"]]
         case_dir = output / candidate["candidate_id"]
         case_dir.mkdir()
         model_copy = case_dir / "model"
         shutil.copytree(upstream_model, model_copy)
         patch_mgxs_energy_boundaries(model_copy / "materials.py")
+        patch_tally_scores(model_copy / "tally.py")
         builder = model_copy / BUILDER_RELATIVE
         patch_builder(builder, candidate["fuel_assembly_layout"], args.batches, args.inactive, args.particles, seed=seed, source_profile=args.source_profile)
         case = {
