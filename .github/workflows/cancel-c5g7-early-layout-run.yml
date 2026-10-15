@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Cancel layout matrix before B2 gate
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api --method POST \
             repos/thenextw4ng/cb-pfr/actions/runs/38729573477/cancel \
