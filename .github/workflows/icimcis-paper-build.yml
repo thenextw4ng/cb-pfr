@@ -9,6 +9,7 @@ on:
       - paper/submission/references.bib
       - paper/submission/canonical_high_budget_summary.csv
       - paper/submission/REVISION_AUDIT.md
+      - tests/test_cbpfr_properties.py
       - paper/submission/analyze_symmetry_screen.py
       - scripts/analyze_c5g7_canonical_convergence.py
       - .github/workflows/icimcis-paper-build.yml
