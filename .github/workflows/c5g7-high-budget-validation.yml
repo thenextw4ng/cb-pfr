@@ -56,9 +56,9 @@ jobs:
       - name: Run one high-budget layout replicate
         shell: bash -el {0}
         env:
-          CANDIDATE_ID: ${{ matrix.candidate.id }
-          EXPECTED_SIGNATURE: ${{ matrix.candidate.signature }
-          SEED_BASE: ${{ matrix.seed_base }
+          CANDIDATE_ID: ${{ matrix.candidate.id }}
+          EXPECTED_SIGNATURE: ${{ matrix.candidate.signature }}
+          SEED_BASE: ${{ matrix.seed_base }}
         run: |
           set -euo pipefail
           ROUND="$GITHUB_WORKSPACE/high-budget-results/$CANDIDATE_ID/seed_$SEED_BASE"
@@ -73,8 +73,8 @@ jobs:
       - name: Audit raw HDF5 statepoint
         shell: bash -el {0}
         env:
-          CANDIDATE_ID: ${{ matrix.candidate.id }
-          SEED_BASE: ${{ matrix.seed_base }
+          CANDIDATE_ID: ${{ matrix.candidate.id }}
+          SEED_BASE: ${{ matrix.seed_base }}
         run: |
           set -euo pipefail
           ROUND="$GITHUB_WORKSPACE/high-budget-results/$CANDIDATE_ID/seed_$SEED_BASE"
@@ -92,14 +92,14 @@ jobs:
           python scripts/analyze_c5g7_assembly_fission.py \
             --statepoint "$STATEPOINT" \
             --candidate-id "$CANDIDATE_ID" \
-            --layout-signature ${{ matrix.candidate.signature } \
+            --layout-signature ${{ matrix.candidate.signature }} \
             --out "$ROUND/analysis/assembly_fission.json"
       - name: Verify high-budget run, seed, mesh, group structure, and tally
         shell: bash -el {0}
         env:
-          CANDIDATE_ID: ${{ matrix.candidate.id }
-          EXPECTED_SIGNATURE: ${{ matrix.candidate.signature }
-          SEED_BASE: ${{ matrix.seed_base }
+          CANDIDATE_ID: ${{ matrix.candidate.id }}
+          EXPECTED_SIGNATURE: ${{ matrix.candidate.signature }}
+          SEED_BASE: ${{ matrix.seed_base }}
         run: |
           python - <<'PY'
           import hashlib, json, os
@@ -171,8 +171,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: c5g7-high-budget-${{ matrix.candidate.id }-seedbase-${{ matrix.seed_base }
-          path: high-budget-results/${{ matrix.candidate.id }/seed_${{ matrix.seed_base }/
+          name: c5g7-high-budget-${{ matrix.candidate.id }}-seedbase-${{ matrix.seed_base }}
+          path: high-budget-results/${{ matrix.candidate.id }}/seed_${{ matrix.seed_base }}/
           if-no-files-found: warn
           retention-days: 30
 
@@ -213,7 +213,7 @@ jobs:
       - name: Mark incomplete campaign as non-passing
         if: always()
         run: |
-          if [ "${{ needs.high-budget-case.result }" != "success" ] || [ "${{ steps.aggregate.outcome }" != "success" ]; then
+          if [ "${{ needs.high-budget-case.result }}" != "success" ] || [ "${{ steps.aggregate.outcome }}" != "success" ]; then
             echo "Campaign is incomplete or failed a data-integrity audit; no benchmark-validation claim."
             exit 1
           fi
