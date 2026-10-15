@@ -1,7 +1,7 @@
 # CB-PFR fixed-budget synthetic effectiveness benchmark — 2026-10-15
 
-**Workflow:** https://github.com/thenextw4ng/cb-pfr/actions/runs/38727150294  
-**Commit:** `ad71cd6243a73cd4b851e7d32e68e24f7acb83ab`  
+**Workflow:** https://github.com/thenextw4ng/cb-pfr/actions/runs/38727945029  
+**Final audited runner commit:** `8384298300074e092b216a1009f20d4eedea910c`  
 **Protocol:** `CBPFR-FIXED-BUDGET-SYNTHETIC-EFFECTIVENESS-2026-10-15`  
 **Decision:** `NO_SYNTHETIC_SUPERIORITY_DEMONSTRATED`  
 **Scope:** synthetic ranking-and-selection only. No physical validation claim.
@@ -16,7 +16,7 @@
 - Evaluator latent truth was kept in a separate data table and joined only after selections were made.
 - Paired pool-level bootstrap intervals use 5,000 resamples.
 
-The GitHub Actions workflow passed compile, execution, and output-integrity checks. The full raw CSV tables and protocol snapshot are preserved in artifact `CBPFR-fixed-budget-effectiveness-2026-10-15` from the workflow above (artifact retention is 30 days).
+The final corrected-metadata rerun passed compile, execution, and output-integrity checks; the Python 3.10, 3.11, and 3.12 test matrix also passed. The full raw CSV tables and protocol snapshot are preserved in artifact `CBPFR-fixed-budget-effectiveness-2026-10-15` from the workflow above (artifact retention is 30 days). The corrected summary explicitly records all three stress regimes, including the no-feasible-candidate condition.
 
 ## Primary endpoint: latent feasible-selection rate
 
