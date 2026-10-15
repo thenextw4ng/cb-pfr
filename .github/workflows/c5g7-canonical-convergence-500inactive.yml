@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 360
     env:
       BATCHES: ${{ inputs.batches || '7000' }}
-      INACTIVE: ${{ inputs.inactive || '100' }}
+      INACTIVE: ${{ inputs.inactive || '500' }}
       PARTICLES: ${{ inputs.particles || '10000' }}
       SEED_BASES: "920000 930000 940000"
     steps:
