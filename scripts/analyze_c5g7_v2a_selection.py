@@ -8,6 +8,7 @@ official C5G7 acceptance or experimental validation.
 from __future__ import annotations
 import argparse,csv,hashlib,json,math,statistics
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 SIGS=("MMUU","MUMU","MUUM","UMMU","UMUM","UUMM")
 EXPECTED=1200
@@ -19,7 +20,7 @@ def sha256(p):
   for b in iter(lambda:f.read(1048576),b""):h.update(b)
  return h.hexdigest()
 
-def audit_entropy_mesh(mesh):
+def audit_entropy_mesh(mesh, settings_path):
  if mesh.get("derived_from_geometry_bounding_box") is not True:raise ValueError("entropy mesh is not certified as geometry-derived")
  if mesh.get("entropy_dimension")!=[24,24]:raise ValueError(f"entropy mesh dimension mismatch: {mesh.get('entropy_dimension')!r}")
  if mesh.get("z_axis_unbounded") is not True:raise ValueError("entropy mesh is not recorded as a 2-D x-y mesh with unbounded z")
@@ -38,6 +39,18 @@ def audit_entropy_mesh(mesh):
   if not gu>gl:raise ValueError(f"invalid geometry bounding-box bounds on axis {axis}")
   if not math.isclose(el,gl-padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy lower bound axis {axis} does not equal geometry lower bound minus padding")
   if not math.isclose(eu,gu+padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy upper bound axis {axis} does not equal geometry upper bound plus padding")
+ settings=ET.parse(settings_path).getroot()
+ mesh_id=settings.findtext("entropy_mesh")
+ actual_mesh=settings.find(f"mesh[@id='{mesh_id}']") if mesh_id else None
+ if actual_mesh is None:raise ValueError("settings.xml entropy_mesh reference does not resolve to a mesh element")
+ dims=[int(v) for v in (actual_mesh.findtext("dimension") or "").split()]
+ lower=[float(v) for v in (actual_mesh.findtext("lower_left") or "").split()]
+ upper=[float(v) for v in (actual_mesh.findtext("upper_right") or "").split()]
+ if dims!=[24,24]:raise ValueError(f"settings.xml entropy mesh dimension mismatch: {dims!r}")
+ if len(lower)!=2 or len(upper)!=2:raise ValueError("settings.xml entropy mesh bounds must be two-dimensional")
+ for axis in range(2):
+  if not math.isclose(lower[axis],pairs["entropy_lower_left"][axis],rel_tol=0.0,abs_tol=1e-8):raise ValueError("settings.xml lower-left does not match entropy mesh audit JSON")
+  if not math.isclose(upper[axis],pairs["entropy_upper_right"][axis],rel_tol=0.0,abs_tol=1e-8):raise ValueError("settings.xml upper-right does not match entropy mesh audit JSON")
  return True
 
 def gather(root, expected_stage, expected_profile=None):
@@ -71,6 +84,8 @@ def gather(root, expected_stage, expected_profile=None):
     "source_trace_csv":p.parent/"analysis/source_convergence.csv",
     "assembly":p.parent/"analysis/assembly_fission.json",
     "settings":cd/"model/2d/settings.xml",
+    "tally_output":cd/"model/2d/tallies.out",
+    "tally_xml":cd/"model/2d/tallies.xml",
     "log":cd/"openmc.log",
    }
    for name,path in files.items():
@@ -78,8 +93,9 @@ def gather(root, expected_stage, expected_profile=None):
    manifest=json.loads(files["manifest"].read_text());mesh=json.loads(files["mesh_audit"].read_text())
    raw=json.loads(files["raw_audit"].read_text());tr=json.loads(files["source_trace"].read_text());f=json.loads(files["assembly"].read_text())
    if raw.get("status")!="PASS" or raw.get("candidate_count")!=1:raise ValueError("raw HDF5 audit failure")
+   if not manifest.get("required_balance_scores_present") or not manifest.get("tallies"):raise ValueError("manifest tally/balance-score evidence missing")
    if tr.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or tr.get("automatic_convergence_claim") is not False or not tr.get("entropy") or not tr.get("k_generation"):raise ValueError("source diagnostics absent or status is not explicitly non-certifying")
-   audit_entropy_mesh(mesh)
+   audit_entropy_mesh(mesh,files['settings'])
    if files["log"].read_text(errors="replace").count("Fission source site(s) outside of entropy box"):raise ValueError("entropy mesh warning")
    if manifest.get("openmc_version")!="0.16.0" or manifest.get("seed")!=seed:raise ValueError("manifest version or seed mismatch")
    for key in ("threads","batches","inactive","particles"):
@@ -92,6 +108,8 @@ def gather(root, expected_stage, expected_profile=None):
    if expected_hashes.get(str(Path(phys["statepoint"])))!=statepoint_hash:raise ValueError("statepoint hash disagrees with study output manifest")
    if expected_hashes.get("trace.npz")!=trace_hash:raise ValueError("trace hash disagrees with study output manifest")
    if expected_hashes.get("model/2d/settings.xml")!=settings_hash:raise ValueError("settings.xml hash disagrees with study output manifest")
+   if expected_hashes.get("model/2d/tallies.out")!=sha256(files["tally_output"]):raise ValueError("tallies.out hash disagrees with study output manifest")
+   if expected_hashes.get("model/2d/tallies.xml")!=sha256(files["tally_xml"]):raise ValueError("tallies.xml hash disagrees with study output manifest")
    if expected_profile and (int(study["settings"]["batches"]),int(study["settings"]["inactive"]),int(study["settings"]["particles"]))!=expected_profile:
     raise ValueError(f"wrong profile; expected {expected_profile}")
    if f.get("candidate_id")!=case["candidate_id"] or f.get("layout_signature")!=sig:raise ValueError("assembly tally identity mismatch")
