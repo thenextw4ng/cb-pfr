@@ -7,6 +7,7 @@ on:
       - paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex
       - paper/submission/references.bib
       - paper/submission/canonical_high_budget_summary.csv
+      - paper/submission/c5g7_entropy_mesh_recheck_2026-10-15.csv
       - paper/submission/REVISION_AUDIT.md
       - paper/submission/analyze_symmetry_screen.py
       - scripts/analyze_c5g7_canonical_convergence.py
@@ -154,6 +155,7 @@ jobs:
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.pdf /tmp/cbpfr-review-package/
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex paper/submission/references.bib /tmp/cbpfr-review-package/
           cp paper/submission/canonical_high_budget_summary.csv /tmp/cbpfr-review-package/supplementary/data/ummu_run_level_protocol_audit.csv
+          cp paper/submission/c5g7_entropy_mesh_recheck_2026-10-15.csv /tmp/cbpfr-review-package/supplementary/data/corrected_mesh_recheck_run_level.csv
           cp results/cbpfr_physical_feasibility_bridge_2026-10-12.csv /tmp/cbpfr-review-package/supplementary/data/six_layout_run_level_results.csv
           cp -R paper/submission/supplementary/cbpfr/. /tmp/cbpfr-review-package/supplementary/cbpfr/
           cp paper/submission/supplementary/tests/test_formal_properties.py /tmp/cbpfr-review-package/supplementary/tests/
@@ -170,6 +172,7 @@ jobs:
           ## Contents
           - `supplementary/data/six_layout_run_level_results.csv`: archived 18-run, six-layout data table.
           - `supplementary/data/ummu_run_level_protocol_audit.csv`: six archived UMMU run records for two separate inactive-batch protocols.
+          - `supplementary/data/corrected_mesh_recheck_run_level.csv`: statepoint-derived diagnostics from six corrected-mesh reruns of the same seed/protocol cells; zero source-outside-mesh warnings, but convergence is not certified.
           - `supplementary/data/mirror_pair_comparison.csv`: descriptive Welch intervals for the two mirror-label pairs.
           - `supplementary/cbpfr/`: portable QUBO and CB-PFR ranking implementation used by the formal-property tests.
           - `supplementary/tests/`: software-property regression tests.
@@ -182,7 +185,7 @@ jobs:
           These tests cover uncertainty-violation monotonicity, permutation-invariant substantive ranks and tie groups, fail-closed handling of missing or invalid evidence, and the zero-multiplier point-estimate limit. They test software behavior only.
 
           ## Evidence limits
-          The archived thresholds are retrospective illustrative settings, not engineering or safety limits. All six layouts were enumerated; this case study did not run a pre-physics optimizer or annealer and establishes no optimizer superiority or quantum advantage. The two UMMU run sets remain separate because their run-to-run dispersion differs and the 100-inactive protocol historically emitted entropy-mesh warnings. The archived data do not establish source-convergence certification, calibrated interval coverage, physical optimum, or full benchmark validation. The corrected-mesh follow-up must be evaluated separately from this archived review package.
+          The archived thresholds are retrospective illustrative settings, not engineering or safety limits. All six layouts were enumerated; this case study did not run a pre-physics optimizer or annealer and establishes no optimizer superiority or quantum advantage. The original 100-inactive protocol logs emitted entropy-mesh warnings; the corrected-mesh follow-up removed those warnings for all six reruns, but the anomalously low between-run dispersion persisted. The rerun used the same seed/protocol cells and is not an independent replication campaign. Neither archived nor corrected-mesh results certify source convergence, calibrated interval coverage, physical optimum, or full benchmark validation.
 
           The package deliberately omits internal audit logs and internal project links to preserve double-blind review.
           EOF
@@ -190,7 +193,7 @@ jobs:
           Anonymous ICIMCIS 2026 review package
           - PDF: anonymous review manuscript, maximum six pages.
           - TeX/BibTeX: editable source and references.
-          - Supplement: 18-run six-layout OpenMC table, six individual UMMU runs from two inactive-batch protocols, CB-PFR ranking/screen code, diagnostic scripts, and four mirror-label Welch intervals with their reproducing script.
+          - Supplement: 18-run six-layout OpenMC table, six individual UMMU runs from two inactive-batch protocols, CB-PFR ranking/screen code, diagnostic scripts, and four mirror-label Welch intervals with their reproducing script. The corrected-mesh run-level audit CSV is included separately and is not an independent-seed replication.
           - Reproducibility notes: methods, test command, data inventory, and evidence limitations. This reader-facing note excludes internal repository links, branch names, workflow URLs, and author identities.
           - Formal-property unit tests cover uncertainty monotonicity, permutation-invariant ranks/ties, fail-closed evidence handling, and the zero-multiplier point-estimate rule.
           - The portable bundled `supplementary/cbpfr` package includes the QUBO and ranking implementation and is tested before packaging. Re-run it from the extracted ZIP with: `PYTHONPATH=supplementary python -m unittest discover -s supplementary/tests -v`.
