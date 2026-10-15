@@ -7,12 +7,12 @@ from streamlit.testing.v1 import AppTest
 APP_PATH = str(Path(__file__).resolve().parents[1] / "app.py")
 
 
-class ReactorQDashboardSmokeTests(unittest.TestCase):
+class CBPFRDashboardSmokeTests(unittest.TestCase):
     def test_dashboard_starts_and_exposes_core_tabs(self):
         app = AppTest.from_file(APP_PATH, default_timeout=30).run()
         self.assertEqual(app.exception, [])
         visible_text = "\n".join(element.value for element in app.markdown)
-        self.assertIn("ReactorQ Studio", visible_text)
+        self.assertIn("CB-PFR Simulator", visible_text)
         self.assertIn("synthetic", visible_text.lower())
         tab_labels = [element.label for element in app.tabs]
         self.assertIn("Repeatability", tab_labels)
