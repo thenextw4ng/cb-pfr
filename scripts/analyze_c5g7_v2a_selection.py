@@ -8,7 +8,6 @@ official C5G7 acceptance or experimental validation.
 from __future__ import annotations
 import argparse,csv,hashlib,json,math,statistics
 from pathlib import Path
-import numpy as np
 
 SIGS=("MMUU","MUMU","MUUM","UMMU","UMUM","UUMM")
 EXPECTED=1200
