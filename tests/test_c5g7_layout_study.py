@@ -9,6 +9,7 @@ from scripts.run_c5g7_layout_study import (
     PINNED_UPSTREAM_COMMIT,
     patch_builder,
     patch_mgxs_energy_boundaries,
+    patch_tally_scores,
     validate_design_space,
     validate_source,
 )
@@ -32,6 +33,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             "inactive = 500\n"
             "particles = 10000\n"
             "settings_file.particles = particles\n"
+            "settings_file.source = openmc.Source(space=openmc.stats.Box([-32.13, -10.71, -1.0], [10.71, 32.13, 1.0], only_fissionable=True))\n"
             "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\n"
             "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\n"
             "settings_file.entropy_dimension = [51, 51, 1]\n",
@@ -60,6 +62,12 @@ class C5G7LayoutStudyTests(unittest.TestCase):
                 "fuel_assembly_layout": layout,
                 "is_canonical_reference_arrangement": layout == {"p00":"UO2","p01":"MOX","p10":"MOX","p11":"UO2"},
             })
+        self.tally = model / "tally.py"
+        self.tally.write_text(
+            "tallies['Mesh Rates'].scores = ['flux', 'fission', 'nu-fission']\n"
+            "tallies['Global Rates'].scores = ['flux', 'fission', 'nu-fission']\n",
+            encoding="utf-8",
+        )
         self.design.write_text(json.dumps({
             "design_study_id":"C5G7-2x2-two-UO2-two-MOX-layout-enumeration",
             "candidate_layouts":candidates,
@@ -110,6 +118,17 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         self.assertIn("settings_file.entropy_mesh = entropy_mesh", text)
         self.assertNotIn("settings_file.entropy_lower_left", text)
         self.assertNotIn(CANONICAL_ASSIGNMENT, text)
+
+    def test_tally_patch_adds_absorption_without_losing_existing_scores(self):
+        patch_tally_scores(self.tally)
+        text = self.tally.read_text()
+        self.assertIn("['flux', 'fission', 'nu-fission', 'absorption']", text)
+        self.assertEqual(text.count("'absorption'"), 2)
+
+    def test_tally_patch_fails_closed_when_template_changes(self):
+        self.tally.write_text("tallies['Mesh Rates'].scores = ['something-else']\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "mesh tally scores"):
+            patch_tally_scores(self.tally)
 
     def test_patch_fails_closed_when_upstream_template_changes(self):
         self.builder.write_text("lattices['Core'].universes = changed\nbatches = 20000\ninactive = 500\nparticles = 10000\n")
