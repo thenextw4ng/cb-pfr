@@ -88,3 +88,11 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 - The artifact-builder environment itself does not require OpenMC, so the physical reruns are delegated to a separate GitHub Actions workflow that installs pinned OpenMC and prepares the pinned upstream C5G7 model. Its six corrected-mesh replicates remain a separate physics-evidence gate; until that workflow finishes and its warning/convergence audits are reviewed, no mesh or source-convergence pass is claimed.
 - The anonymous supplement now bundles the minimal QUBO and ranking modules under `supplementary/cbpfr/` and the formal-property tests under `supplementary/tests/`. The source-level supplement-test step passed in GitHub Actions run [38715855752](https://github.com/thenextw4ng/cb-pfr/actions/runs/38715855752). The build workflow also now extracts the exact generated review ZIP and reruns the tests from that extracted package before committing the PDF or uploading the ZIP; the archive-level result must be taken from the final run's step status.
 - These formal-property tests establish implementation behavior only. They do not validate OpenMC physics, certify convergence, demonstrate calibrated coverage, or establish an engineering acceptance criterion.
+
+
+## Final-package visual and archive review update (2026-10-15)
+
+- Build run [38716047654](https://github.com/thenextw4ng/cb-pfr/actions/runs/38716047654) completed successfully on the 2026-10-15 revision: the PDF compiled, text/anonymity checks passed, and both the source-level and extracted-ZIP test suites passed (5 tests each; 10 combined).
+- PDF metadata check reported five letter-sized pages and a blank Author field. A visual page render then identified one repeated paragraph describing source-entropy and k-generation quartile shifts; that duplicate has been removed from the TeX source in the following rebuild.
+- The first successful package inspection also found generated Python `__pycache__` files in the ZIP. The next build removes bytecode caches before packaging and fails closed if any cache/`.pyc`/`.pyo` files appear in the archive.
+- These editorial/package fixes do not change the archived numerical results or strengthen any physics claim. The corrected-entropy-mesh OpenMC workflow is still a separate, ongoing run; no new entropy-warning or convergence pass is claimed here.
