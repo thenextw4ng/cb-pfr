@@ -126,7 +126,7 @@ jobs:
           assert run["seed"]==int(os.environ["SEED"]) and manifest["seed"]==int(os.environ["SEED"])
           assert manifest["threads"]==int(os.environ["THREADS"])
           assert manifest["openmc_version"]=="0.16.0",manifest["openmc_version"]
-          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24,1]
+          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24]
           assert raw["status"]=="PASS",raw
           assert manifest["required_balance_scores_present"],manifest
           log=(case/"openmc.log").read_text(errors="replace")
