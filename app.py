@@ -1,4 +1,4 @@
-"""ReactorQ Studio: transparent dashboard for QUBO/CB-PFR research experiments.
+"""CB-PFR Simulator: transparent dashboard for QUBO/CB-PFR research experiments.
 
 The bundled demo estimates are synthetic. This application does not claim to run
 OpenMC unless a separately configured, validated OpenMC model is supplied.
@@ -20,7 +20,7 @@ from cbpfr.qubo import CoreSpec, build_usmanov_style_qubo, enumerate_feasible_ca
 from cbpfr.ranking import MetricLimit, PhysicalEstimate
 from cbpfr.repeatability import summarize_repeated_rankings
 
-st.set_page_config(page_title="ReactorQ Studio", page_icon="⚛️", layout="wide")
+st.set_page_config(page_title="CB-PFR Simulator", page_icon="⚛️", layout="wide")
 st.markdown("""
 <style>
 .block-container {padding-top: 1.5rem; max-width: 1440px;}
@@ -29,8 +29,8 @@ st.markdown("""
 .muted {color: #8b949e;}
 </style>
 <div class="hero">
-  <h1>⚛️ ReactorQ Studio</h1>
-  <p>QUBO optimization · uncertainty-aware ranking · OpenMC readiness</p>
+  <h1>⚛️ CB-PFR Simulator</h1>
+  <p>QUBO candidate generation · CB-PFR screening · OpenMC evidence</p>
   <p class="muted">Research prototype — demo data is synthetic, not reactor simulation evidence.</p>
 </div>
 """, unsafe_allow_html=True)
