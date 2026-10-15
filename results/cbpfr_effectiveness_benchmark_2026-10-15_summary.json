@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "CBPFR-FIXED-BUDGET-SYNTHETIC-EFFECTIVENESS-2026-10-15",
+  "run_status": "COMPLETED_INTEGRITY_CHECKS_PENDING_EXTERNAL_REVIEW",
+  "scientific_decision": "NO_SYNTHETIC_SUPERIORITY_DEMONSTRATED",
+  "protocol_sha256": "c6b712cee0125ff1e7cd0289c18a7059cd4f2b4c502095c29ea81e77cbd00ba9",
+  "runner_sha256": "9a1fff5d71b9e34034ba2e3e9c2d6f900442cc2c7ae876daab1bc17a49e39c3e",
+  "executed_commit": "ad71cd6243a73cd4b851e7d32e68e24f7acb83ab",
+  "report_commit": "ad71cd6243a73cd4b851e7d32e68e24f7acb83ab",
+  "workflow_run": 38727150294,
+  "artifact_id": 11968473957,
+  "development_pools": 200,
+  "selected_uniform_margin": 0.02,
+  "candidate_count_in_space": 20,
+  "candidate_pool_size": 12,
+  "confirmatory_pools_per_regime": 1000,
+  "regime_count": 6,
+  "confirmatory_pool_count": 6000,
+  "confirmatory_selection_rows": 24000,
+  "candidate_observation_rows": 74400,
+  "evaluator_truth_rows": 74400,
+  "same_pool_and_observations_for_all_methods": true,
+  "equal_fixed_budget_asserted": true,
+  "truth_table_kept_separate_until_after_selection": true,
+  "primary_superiority_gate_met": false,
+  "primary_regimes": [
+    "calibrated_high",
+    "calibrated_low",
+    "calibrated_moderate"
+  ],
+  "stress_regimes_excluded_from_primary_gate": [
+    "underreported_uncertainty",
+    "heavy_tail_noise",
+    "no_feasible_candidate"
+  ],
+  "physical_validation": false,
+  "official_benchmark_acceptance": false,
+  "quantum_hardware_run": false,
+  "summary": {
+    "calibrated_low": {
+      "qubo_only": 0.841,
+      "point_estimate": 0.937,
+      "cb_pfr": 0.978,
+      "uniform_margin": 1
+    },
+    "calibrated_moderate": {
+      "qubo_only": 0.831,
+      "point_estimate": 0.917,
+      "cb_pfr": 0.971,
+      "uniform_margin": 0.987
+    },
+    "calibrated_high": {
+      "qubo_only": 0.865,
+      "point_estimate": 0.923,
+      "cb_pfr": 0.969,
+      "uniform_margin": 0.946
+    },
+    "underreported_uncertainty": {
+      "qubo_only": 0.849,
+      "point_estimate": 0.922,
+      "cb_pfr": 0.958,
+      "uniform_margin": 0.983
+    },
+    "heavy_tail_noise": {
+      "qubo_only": 0.847,
+      "point_estimate": 0.921,
+      "cb_pfr": 0.963,
+      "uniform_margin": 0.969
+    },
+    "no_feasible_candidate": {
+      "qubo_only": 0,
+      "point_estimate": 0,
+      "cb_pfr": 0,
+      "uniform_margin": 0
+    }
+  },
+  "interpretation": "CB-PFR beats point-estimate ranking in all three calibrated regimes, but does not beat the development-tuned uniform-margin baseline in the calibrated low- and moderate-noise regimes. The prespecified superiority gate is not met. This is synthetic method evidence only, not physical validation."
+}
