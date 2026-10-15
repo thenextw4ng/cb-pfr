@@ -1,0 +1,139 @@
+name: C5G7 V2a physical-candidate data shard 2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shard_matrix: ${{ steps.plan.outputs.v2a_2_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rebuild the deterministic V2a matrix
+        id: plan
+        run: |
+          python -m pip install numpy
+          python scripts/build_c5g7_campaign_plan.py --out /tmp/campaign_plan.json --github-output "$GITHUB_OUTPUT"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("/tmp/campaign_plan.json").read_text())
+          m=p["V2a_shards"][2]
+          assert len(m)==240, len(m)
+          assert len({(x["seed"],x["signature"]) for x in m})==240
+          print(json.dumps({"shard":2,"runs":len(m),"replicates":40,"layouts_per_replicate":6},indent=2))
+          PY
+  v2a-run:
+    needs: seed-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        include: ${{ fromJSON(needs.seed-plan.outputs.shard_matrix) }}
+    env:
+      UCX_TLS: self,tcp
+      STAGE: ${{ matrix.stage }}
+      RUN_ID: ${{ matrix.run_id }}
+      CANDIDATE_ID: ${{ matrix.candidate_id }}
+      SIGNATURE: ${{ matrix.signature }}
+      SEED: ${{ matrix.seed }}
+      BATCHES: ${{ matrix.batches }}
+      INACTIVE: ${{ matrix.inactive }}
+      PARTICLES: ${{ matrix.particles }}
+      THREADS: ${{ matrix.threads }}
+      SOURCE: ${{ matrix.source }}
+      REPLICATE: ${{ matrix.replicate }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-v2a
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned C5G7 source
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run V2a candidate observation
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/night-v2a/$RUN_ID"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_layout.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches "$BATCHES" --inactive "$INACTIVE" --particles "$PARTICLES" \
+            --threads "$THREADS" --seed "$SEED" --candidate-ids "$CANDIDATE_ID" --source good
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=Path(os.environ["GITHUB_WORKSPACE"])/"night-v2a"/os.environ["RUN_ID"]
+          d={"stage":"V2a","run_id":os.environ["RUN_ID"],"candidate_id":os.environ["CANDIDATE_ID"],
+             "signature":os.environ["SIGNATURE"],"seed":int(os.environ["SEED"]),"replicate":int(os.environ["REPLICATE"]),
+             "batches":int(os.environ["BATCHES"]),"inactive":int(os.environ["INACTIVE"]),
+             "particles":int(os.environ["PARTICLES"]),"threads":int(os.environ["THREADS"]),"source":"good"}
+          (r/"NIGHT_RUN_METADATA.json").write_text(json.dumps(d,indent=2,sort_keys=True)+"\n")
+          PY
+      - name: Audit statepoint and source traces
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/night-v2a/$RUN_ID"; CASE="$ROUND/$CANDIDATE_ID"
+          mkdir -p "$ROUND/analysis"
+          python scripts/audit_c5g7_smoke_statepoints.py --study-summary "$ROUND/STUDY_SUMMARY.json" --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
+          STATEPOINT_REL="$(python -c 'import json,sys;print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$CASE/CASE_RESULT.json")"
+          STATEPOINT="$CASE/$STATEPOINT_REL"
+          python scripts/audit_c5g7_source_convergence.py --statepoint "$STATEPOINT" --out-json "$ROUND/analysis/source_convergence.json" --out-csv "$ROUND/analysis/source_convergence.csv"
+          python scripts/analyze_c5g7_assembly_fission.py --statepoint "$STATEPOINT" --candidate-id "$CANDIDATE_ID" --layout-signature "$SIGNATURE" --out "$ROUND/analysis/assembly_fission.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["GITHUB_WORKSPACE"])/"night-v2a"/os.environ["RUN_ID"]
+          cid=os.environ["CANDIDATE_ID"];case=root/cid
+          study=json.loads((root/"STUDY_SUMMARY.json").read_text());one=study["cases"][0];phys=one["physical_results"]
+          manifest=json.loads((case/"RUN_MANIFEST.json").read_text());mesh=json.loads((case/"model/2d/entropy_mesh_audit.json").read_text())
+          raw=json.loads((root/"analysis/raw_hdf5_audit.json").read_text())
+          assert study["status"]=="all_runs_completed_needs_independent_validation"
+          assert one["seed"]==int(os.environ["SEED"]) and manifest["openmc_version"]=="0.16.0"
+          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24,1]
+          assert raw["status"]=="PASS"
+          assert manifest["required_balance_scores_present"]
+          warnings=(case/"openmc.log").read_text(errors="replace").count("Fission source site(s) outside of entropy box")
+          assert warnings==0,warnings
+          (root/"analysis"/"night_run_audit.json").write_text(json.dumps({
+            "run_id":os.environ["RUN_ID"],"signature":os.environ["SIGNATURE"],"seed":one["seed"],
+            "keff_mean":phys["keff_mean"],"keff_std_dev":phys["keff_std_dev"],
+            "F_fission":json.loads((root/"analysis/assembly_fission.json").read_text())["fission_rate_peaking_factor"],
+            "openmc_version":manifest["openmc_version"],"mgxs_sha256":manifest["mgxs_sha256"],
+            "statepoint_sha256":manifest["statepoint_sha256"],"trace_sha256":manifest["trace_sha256"],
+            "zero_mesh_warnings":warnings,"official_benchmark_acceptance":False,"convergence_certified":False
+          },indent=2,sort_keys=True)+"\n")
+          PY
+      - name: Preserve V2a statepoint and observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-v2a-${{ matrix.run_id }}
+          path: night-v2a/${{ matrix.run_id }}/
+          if-no-files-found: warn
+          retention-days: 30
+  shard-summary:
+    if: always()
+    needs: [seed-plan,v2a-run]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record this V2a shard completion state
+        run: |
+          echo "V2a shard 2 contains 240 intended single-case OpenMC runs. Individual statepoints are stored as c5g7-night-v2a-* artifacts."
+          echo "Final 1,200-run integrity analysis runs after production data and all five shards are complete."
