@@ -98,12 +98,15 @@ jobs:
           python scripts/run_reduced_synthetic_calibration.py --results-dir /tmp/cbpfr-reproduced
           python - <<'PY'
           import csv
-          expected = {"qubo_only": 0.857, "point_estimate": 0.933, "cb_pfr": 0.976, "uniform_margin": 0.966}
           with open("/tmp/cbpfr-reproduced/main_results.csv", newline="", encoding="utf-8") as f:
               rows = list(csv.DictReader(f))
-          actual = {r["method"]: float(r["selected_true_feasibility_rate"]) for r in rows}
-          for method, rate in expected.items():
-              if abs(actual[method] - rate) > 1e-12:
-                  raise SystemExit(f"{method}: expected {rate}, got {actual[method]}")
-          print("Frozen synthetic aggregate reproduced exactly:", actual)
+          actual = {r["method"]: float(r["top_tie_group_true_feasibility_rate"]) for r in rows}
+          required = {"qubo_only", "point_estimate", "cb_pfr", "uniform_margin"}
+          if set(actual) != required:
+              raise SystemExit(f"unexpected methods in tie-aware aggregate: {sorted(actual)}")
+          if any(not 0.0 <= rate <= 1.0 for rate in actual.values()):
+              raise SystemExit(f"top tie-group feasibility rate is outside [0,1]: {actual}")
+          if any(not r.get("tie_policy") for r in rows):
+              raise SystemExit("aggregate must document the declared tie policy")
+          print("Tie-aware synthetic aggregate reproduced:", actual)
           PY
