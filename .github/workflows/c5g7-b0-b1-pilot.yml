@@ -1,0 +1,589 @@
+name: C5G7 B1 preregistered convergence pilot and gated B2
+
+on:
+  push:
+    branches:
+      - research/c5g7-b0-prereg-b1-pilot-20261015
+    paths:
+      - .github/workflows/c5g7-b0-b1-pilot.yml
+      - scripts/run_c5g7_layout_study.py
+      - scripts/analyze_c5g7_b1_pilot.py
+      - config/benchmarks/cbpfr_c5g7_preregistration_B0_2026-10-15.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  b1-pilot-runs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - group: initial
+            condition_id: baseline_all_fuel
+            source_profile: baseline_all_fuel
+            inactive: 500
+            seed_base: 810001
+          - group: initial
+            condition_id: baseline_all_fuel
+            source_profile: baseline_all_fuel
+            inactive: 500
+            seed_base: 810002
+          - group: initial
+            condition_id: baseline_all_fuel
+            source_profile: baseline_all_fuel
+            inactive: 500
+            seed_base: 810003
+          - group: initial
+            condition_id: left_column_only
+            source_profile: left_column_only
+            inactive: 500
+            seed_base: 810001
+          - group: initial
+            condition_id: left_column_only
+            source_profile: left_column_only
+            inactive: 500
+            seed_base: 810002
+          - group: initial
+            condition_id: left_column_only
+            source_profile: left_column_only
+            inactive: 500
+            seed_base: 810003
+          - group: initial
+            condition_id: right_column_only
+            source_profile: right_column_only
+            inactive: 500
+            seed_base: 810001
+          - group: initial
+            condition_id: right_column_only
+            source_profile: right_column_only
+            inactive: 500
+            seed_base: 810002
+          - group: initial
+            condition_id: right_column_only
+            source_profile: right_column_only
+            inactive: 500
+            seed_base: 810003
+          - group: initial
+            condition_id: upper_row_only
+            source_profile: upper_row_only
+            inactive: 500
+            seed_base: 810001
+          - group: initial
+            condition_id: upper_row_only
+            source_profile: upper_row_only
+            inactive: 500
+            seed_base: 810002
+          - group: initial
+            condition_id: upper_row_only
+            source_profile: upper_row_only
+            inactive: 500
+            seed_base: 810003
+          - group: inactive
+            condition_id: inactive-100
+            source_profile: baseline_all_fuel
+            inactive: 100
+            seed_base: 820001
+          - group: inactive
+            condition_id: inactive-100
+            source_profile: baseline_all_fuel
+            inactive: 100
+            seed_base: 820002
+          - group: inactive
+            condition_id: inactive-100
+            source_profile: baseline_all_fuel
+            inactive: 100
+            seed_base: 820003
+          - group: inactive
+            condition_id: inactive-300
+            source_profile: baseline_all_fuel
+            inactive: 300
+            seed_base: 820001
+          - group: inactive
+            condition_id: inactive-300
+            source_profile: baseline_all_fuel
+            inactive: 300
+            seed_base: 820002
+          - group: inactive
+            condition_id: inactive-300
+            source_profile: baseline_all_fuel
+            inactive: 300
+            seed_base: 820003
+          - group: inactive
+            condition_id: inactive-500
+            source_profile: baseline_all_fuel
+            inactive: 500
+            seed_base: 820001
+          - group: inactive
+            condition_id: inactive-500
+            source_profile: baseline_all_fuel
+            inactive: 500
+            seed_base: 820002
+          - group: inactive
+            condition_id: inactive-500
+            source_profile: baseline_all_fuel
+            inactive: 500
+            seed_base: 820003
+          - group: inactive
+            condition_id: inactive-1000
+            source_profile: baseline_all_fuel
+            inactive: 1000
+            seed_base: 820001
+          - group: inactive
+            condition_id: inactive-1000
+            source_profile: baseline_all_fuel
+            inactive: 1000
+            seed_base: 820002
+          - group: inactive
+            condition_id: inactive-1000
+            source_profile: baseline_all_fuel
+            inactive: 1000
+            seed_base: 820003
+    env:
+      UCX_TLS: self,tcp
+      BATCHES: "7000"
+      PARTICLES: "10000"
+      THREADS: "1"
+    steps:
+      - name: Checkout frozen B0 protocol and pilot code
+        uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-b1-pilot
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream model
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run one preregistered B1 condition
+        shell: bash -el {0}
+        env:
+          GROUP: ${{ matrix.group }}
+          CONDITION_ID: ${{ matrix.condition_id }}
+          SOURCE_PROFILE: ${{ matrix.source_profile }}
+          INACTIVE: ${{ matrix.inactive }}
+          SEED_BASE: ${{ matrix.seed_base }}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/b1-results/$GROUP/$CONDITION_ID/seed_$SEED_BASE"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches "$BATCHES" --inactive "$INACTIVE" \
+            --particles "$PARTICLES" --threads "$THREADS" \
+            --seed-base "$SEED_BASE" --candidate-ids c5g7-2x2-UMMU \
+            --source-profile "$SOURCE_PROFILE"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          round_dir = Path(os.environ["GITHUB_WORKSPACE"]) / "b1-results" / os.environ["GROUP"] / os.environ["CONDITION_ID"] / f"seed_{os.environ['SEED_BASE']}"
+          metadata = {
+            "group": os.environ["GROUP"],
+            "condition_id": os.environ["CONDITION_ID"],
+            "source_profile": os.environ["SOURCE_PROFILE"],
+            "inactive": int(os.environ["INACTIVE"]),
+            "seed_base": int(os.environ["SEED_BASE"]),
+          }
+          (round_dir / "B1_CASE_METADATA.json").write_text(json.dumps(metadata, indent=2) + "\n")
+          PY
+      - name: Audit statepoint and source convergence traces
+        shell: bash -el {0}
+        env:
+          GROUP: ${{ matrix.group }}
+          CONDITION_ID: ${{ matrix.condition_id }}
+          SEED_BASE: ${{ matrix.seed_base }}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/b1-results/$GROUP/$CONDITION_ID/seed_$SEED_BASE"
+          mkdir -p "$ROUND/analysis"
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary "$ROUND/STUDY_SUMMARY.json" \
+            --out "$ROUND/analysis/raw_hdf5_audit.json" \
+            --expected-candidates 1
+          STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$ROUND/c5g7-2x2-UMMU/CASE_RESULT.json")"
+          STATEPOINT="$ROUND/c5g7-2x2-UMMU/$STATEPOINT_REL"
+          python scripts/audit_c5g7_source_convergence.py \
+            --statepoint "$STATEPOINT" \
+            --out-json "$ROUND/analysis/source_convergence.json" \
+            --out-csv "$ROUND/analysis/source_convergence.csv"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["GITHUB_WORKSPACE"]) / "b1-results" / os.environ["GROUP"] / os.environ["CONDITION_ID"] / f"seed_{os.environ['SEED_BASE']}"
+          study = json.loads((root / "STUDY_SUMMARY.json").read_text())
+          case = study["cases"][0]
+          physical = case["physical_results"]
+          log = (root / "c5g7-2x2-UMMU" / "model" / "2d" / "openmc.log").read_text(errors="replace")
+          warnings = log.count("Fission source site(s) outside of entropy box")
+          edges = [float(x) for x in physical["mgxs_energy_group_boundaries"]]
+          expected = [1e-5, .0635, 10., 100., 1000., 500000., 1000000., 20000000.]
+          assert physical["mgxs_group_structure_audit"] == "PASS", physical
+          assert len(edges) == len(expected) and all(abs(a-b) <= max(1e-12,abs(b)*1e-12) for a,b in zip(edges,expected)), edges
+          assert warnings == 0, f"source-outside-mesh warnings={warnings}"
+          (root / "analysis" / "pilot_run_audit.json").write_text(json.dumps({
+            "warning_count": warnings,
+            "standard_group_structure": True,
+            "keff_mean": physical["keff_mean"],
+            "keff_std_dev": physical["keff_std_dev"],
+            "seed": case["seed"],
+            "initial_source_profile": case["initial_source_profile"],
+            "convergence_certified": False
+          }, indent=2) + "\n")
+          PY
+      - name: Preserve full pilot run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-b1-pilot-${{ matrix.group }}-${{ matrix.condition_id }}-seed-${{ matrix.seed_base }}
+          path: b1-results/${{ matrix.group }}/${{ matrix.condition_id }}/seed_${{ matrix.seed_base }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  b1-pilot-aggregate:
+    if: always()
+    needs: b1-pilot-runs
+    runs-on: ubuntu-latest
+    outputs:
+      preliminary_pass: ${{ steps.outputs.outputs.preliminary_pass }}
+      source_at_500_pass: ${{ steps.outputs.outputs.source_at_500_pass }}
+      recommended_inactive: ${{ steps.outputs.outputs.recommended_inactive }}
+      source_confirmation_needed: ${{ steps.outputs.outputs.source_confirmation_needed }}
+    steps:
+      - name: Download all available B1 pilot artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-b1-pilot-*
+          path: /tmp/c5g7-b1-pilot-artifacts
+          merge-multiple: false
+      - name: Checkout analyzer and protocol
+        uses: actions/checkout@v4
+      - name: Analyze all available B1 pilot conditions
+        id: analyze
+        continue-on-error: true
+        run: |
+          python scripts/analyze_c5g7_b1_pilot.py \
+            --artifacts-root /tmp/c5g7-b1-pilot-artifacts \
+            --outdir /tmp/c5g7-b1-pilot-summary \
+            --batches 7000 --mode full_pilot
+      - name: Export B1 gate decisions
+        id: outputs
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path("/tmp/c5g7-b1-pilot-summary/b1_pilot_summary.json")
+          report=json.loads(p.read_text()) if p.is_file() else {}
+          values={
+            "preliminary_pass": str(bool(report.get("preliminary_gate_pass"))).lower(),
+            "source_at_500_pass": str(bool(report.get("source_equivalence",{}).get("pass"))).lower(),
+            "recommended_inactive": str(report.get("recommended_inactive_batches") if report.get("recommended_inactive_batches") is not None else "NONE"),
+            "source_confirmation_needed": str(bool(report.get("selected_source_confirmation_needed"))).lower(),
+          }
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+            for k,v in values.items(): f.write(f"{k}={v}\n")
+          print(json.dumps(values,indent=2))
+          PY
+      - name: Preserve B1 pilot aggregate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-b1-pilot-summary
+          path: /tmp/c5g7-b1-pilot-summary/
+          if-no-files-found: warn
+          retention-days: 30
+
+  b1-selected-inactive-source-confirmation:
+    if: needs.b1-pilot-aggregate.outputs.preliminary_pass == 'true' && needs.b1-pilot-aggregate.outputs.recommended_inactive != '500'
+    needs: b1-pilot-aggregate
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        source_profile: [baseline_all_fuel, left_column_only, right_column_only, upper_row_only]
+        seed_base: [830001, 830002, 830003]
+    env:
+      UCX_TLS: self,tcp
+      BATCHES: "7000"
+      PARTICLES: "10000"
+      THREADS: "1"
+      INACTIVE: ${{ needs.b1-pilot-aggregate.outputs.recommended_inactive }}
+    steps:
+      - name: Checkout frozen B0 protocol and pilot code
+        uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-b1-source-confirm
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream model
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run source-start confirmation at selected inactive count
+        shell: bash -el {0}
+        env:
+          SOURCE_PROFILE: ${{ matrix.source_profile }}
+          SEED_BASE: ${{ matrix.seed_base }}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/b1-sourceconfirm/$SOURCE_PROFILE/seed_$SEED_BASE"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches "$BATCHES" --inactive "$INACTIVE" \
+            --particles "$PARTICLES" --threads "$THREADS" \
+            --seed-base "$SEED_BASE" --candidate-ids c5g7-2x2-UMMU \
+            --source-profile "$SOURCE_PROFILE"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          rd=Path(os.environ["GITHUB_WORKSPACE"])/"b1-sourceconfirm"/os.environ["SOURCE_PROFILE"]/f"seed_{os.environ['SEED_BASE']}"
+          (rd/"B1_CASE_METADATA.json").write_text(json.dumps({
+            "group":"source_confirmation","condition_id":os.environ["SOURCE_PROFILE"],
+            "source_profile":os.environ["SOURCE_PROFILE"],"inactive":int(os.environ["INACTIVE"]),
+            "seed_base":int(os.environ["SEED_BASE"])
+          },indent=2)+"\n")
+          PY
+      - name: Audit source confirmation run
+        shell: bash -el {0}
+        env:
+          SOURCE_PROFILE: ${{ matrix.source_profile }}
+          SEED_BASE: ${{ matrix.seed_base }}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/b1-sourceconfirm/$SOURCE_PROFILE/seed_$SEED_BASE"
+          mkdir -p "$ROUND/analysis"
+          python scripts/audit_c5g7_smoke_statepoints.py --study-summary "$ROUND/STUDY_SUMMARY.json" --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
+          STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$ROUND/c5g7-2x2-UMMU/CASE_RESULT.json")"
+          python scripts/audit_c5g7_source_convergence.py --statepoint "$ROUND/c5g7-2x2-UMMU/$STATEPOINT_REL" --out-json "$ROUND/analysis/source_convergence.json" --out-csv "$ROUND/analysis/source_convergence.csv"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          rd=Path(os.environ["GITHUB_WORKSPACE"])/"b1-sourceconfirm"/os.environ["SOURCE_PROFILE"]/f"seed_{os.environ['SEED_BASE']}"
+          case=json.loads((rd/"c5g7-2x2-UMMU/CASE_RESULT.json").read_text())
+          physical=case["physical_results"]
+          log=(rd/"c5g7-2x2-UMMU/model/2d/openmc.log").read_text(errors="replace")
+          edges=[float(x) for x in physical["mgxs_energy_group_boundaries"]]
+          expected=[1e-5,.0635,10.,100.,1000.,500000.,1000000.,20000000.]
+          assert physical["mgxs_group_structure_audit"]=="PASS" and len(edges)==len(expected) and all(abs(a-b)<=max(1e-12,abs(b)*1e-12) for a,b in zip(edges,expected))
+          assert log.count("Fission source site(s) outside of entropy box")==0
+          PY
+      - name: Preserve selected-inactive source confirmation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-b1-sourceconfirm-${{ matrix.source_profile }}-seed-${{ matrix.seed_base }}
+          path: b1-sourceconfirm/${{ matrix.source_profile }}/seed_${{ matrix.seed_base }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  b1-final-gate:
+    if: always()
+    needs: [b1-pilot-aggregate, b1-selected-inactive-source-confirmation]
+    runs-on: ubuntu-latest
+    outputs:
+      b1_pass: ${{ steps.finalize.outputs.b1_pass }}
+      selected_inactive: ${{ steps.finalize.outputs.selected_inactive }}
+      selected_batches: ${{ steps.finalize.outputs.selected_batches }}
+    steps:
+      - name: Download initial B1 pilot aggregate
+        uses: actions/download-artifact@v4
+        with:
+          name: c5g7-b1-pilot-summary
+          path: /tmp/b1-summary
+      - name: Download selected-inactive source confirmation if it was required
+        if: needs.b1-pilot-aggregate.outputs.source_confirmation_needed == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-b1-sourceconfirm-*
+          path: /tmp/b1-sourceconfirm-artifacts
+          merge-multiple: false
+      - name: Analyze selected-inactive source confirmation
+        if: needs.b1-pilot-aggregate.outputs.source_confirmation_needed == 'true'
+        continue-on-error: true
+        run: |
+          python scripts/analyze_c5g7_b1_pilot.py \
+            --artifacts-root /tmp/b1-sourceconfirm-artifacts \
+            --outdir /tmp/b1-sourceconfirm-summary \
+            --batches 7000 --mode source_confirmation
+      - name: Finalize B1 gate
+        id: finalize
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pilot=json.loads(Path("/tmp/b1-summary/b1_pilot_summary.json").read_text())
+          inactive=pilot.get("recommended_inactive_batches")
+          if inactive is None:
+            passed=False
+          elif int(inactive)==500:
+            passed=bool(pilot.get("preliminary_gate_pass") and pilot.get("source_equivalence",{}).get("pass"))
+          else:
+            p=Path("/tmp/b1-sourceconfirm-summary/b1_pilot_summary.json")
+            confirm=json.loads(p.read_text()) if p.is_file() else {}
+            passed=bool(pilot.get("preliminary_gate_pass") and confirm.get("b1_gate_pass") and confirm.get("recommended_inactive_batches")==int(inactive))
+          final={
+            "protocol_id":pilot.get("protocol_id"),"status":"B1_PASS" if passed else "B1_INCONCLUSIVE",
+            "b1_gate_pass":passed,"selected_inactive_batches":inactive if passed else None,
+            "selected_total_batches":7000 if passed else None,
+            "pilot_status":pilot.get("status"),
+            "pilot_source_equivalence":pilot.get("source_equivalence"),
+            "inactive_sweep":pilot.get("inactive_sweep"),
+          }
+          out=Path("/tmp/b1-summary/final_b1_gate.json")
+          out.write_text(json.dumps(final,indent=2,sort_keys=True)+"\n")
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+            f.write(f"b1_pass={str(passed).lower()}\n")
+            f.write(f"selected_inactive={inactive if passed else 'NONE'}\n")
+            f.write(f"selected_batches={7000 if passed else 'NONE'}\n")
+          print(json.dumps(final,indent=2))
+          PY
+      - name: Preserve final B1 gate decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-b1-final-gate
+          path: /tmp/b1-summary/
+          if-no-files-found: warn
+          retention-days: 30
+
+  b2-canonical-confirmatory-runs:
+    if: needs.b1-final-gate.outputs.b1_pass == 'true'
+    needs: b1-final-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        seed_base: [8200001,8200002,8200003,8200004,8200005,8200006,8200007,8200008,8200009,8200010]
+    env:
+      UCX_TLS: self,tcp
+      BATCHES: ${{ needs.b1-final-gate.outputs.selected_batches }}
+      INACTIVE: ${{ needs.b1-final-gate.outputs.selected_inactive }}
+      PARTICLES: "10000"
+      THREADS: "1"
+    steps:
+      - name: Checkout frozen B0 protocol
+        uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-b2-confirmatory
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream model
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run one B2 independent seed
+        shell: bash -el {0}
+        env:
+          SEED_BASE: ${{ matrix.seed_base }}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/b2-results/seed_$SEED_BASE"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches "$BATCHES" --inactive "$INACTIVE" \
+            --particles "$PARTICLES" --threads "$THREADS" \
+            --seed-base "$SEED_BASE" --candidate-ids c5g7-2x2-UMMU \
+            --source-profile baseline_all_fuel
+      - name: Audit each B2 statepoint and convergence trace
+        shell: bash -el {0}
+        env:
+          SEED_BASE: ${{ matrix.seed_base }}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/b2-results/seed_$SEED_BASE"
+          mkdir -p "$ROUND/analysis"
+          python scripts/audit_c5g7_smoke_statepoints.py --study-summary "$ROUND/STUDY_SUMMARY.json" --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
+          STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$ROUND/c5g7-2x2-UMMU/CASE_RESULT.json")"
+          STATEPOINT="$ROUND/c5g7-2x2-UMMU/$STATEPOINT_REL"
+          python scripts/audit_c5g7_source_convergence.py --statepoint "$STATEPOINT" --out-json "$ROUND/analysis/source_convergence.json" --out-csv "$ROUND/analysis/source_convergence.csv"
+          python scripts/analyze_c5g7_assembly_fission.py --statepoint "$STATEPOINT" --candidate-id c5g7-2x2-UMMU --layout-signature UMMU --out "$ROUND/analysis/assembly_fission.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          rd=Path(os.environ["GITHUB_WORKSPACE"])/"b2-results"/("seed_"+os.environ["SEED_BASE"])
+          study=json.loads((rd/"STUDY_SUMMARY.json").read_text())
+          case=study["cases"][0];physical=case["physical_results"]
+          log=(rd/"c5g7-2x2-UMMU/model/2d/openmc.log").read_text(errors="replace")
+          edges=[float(x) for x in physical["mgxs_energy_group_boundaries"]]
+          expected=[1e-5,.0635,10.,100.,1000.,500000.,1000000.,20000000.]
+          assert study["settings"]["batches"]==int(os.environ.get("BATCHES",study["settings"]["batches"]))
+          assert case["seed"]==int(os.environ["SEED_BASE"])
+          assert physical["mgxs_group_structure_audit"]=="PASS"
+          assert len(edges)==len(expected) and all(abs(a-b)<=max(1e-12,abs(b)*1e-12) for a,b in zip(edges,expected))
+          assert log.count("Fission source site(s) outside of entropy box")==0
+          PY
+      - name: Preserve full B2 replicate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-b2-confirmatory-seed-${{ matrix.seed_base }}
+          path: b2-results/seed_${{ matrix.seed_base }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  b2-confirmatory-aggregate:
+    if: always() && needs.b1-final-gate.outputs.b1_pass == 'true'
+    needs: [b1-final-gate,b2-canonical-confirmatory-runs]
+    runs-on: ubuntu-latest
+    outputs:
+      b2_pass: ${{ steps.result.outputs.b2_pass }}
+    steps:
+      - name: Download B2 replicate artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-b2-confirmatory-seed-*
+          path: /tmp/c5g7-b2-artifacts
+          merge-multiple: false
+      - name: Checkout analysis scripts
+        uses: actions/checkout@v4
+      - name: Analyze B2 canonical reference screen
+        id: analyze
+        continue-on-error: true
+        run: |
+          python scripts/analyze_c5g7_b2_confirmatory.py \
+            --artifacts-root /tmp/c5g7-b2-artifacts \
+            --protocol config/benchmarks/cbpfr_c5g7_preregistration_B0_2026-10-15.json \
+            --expected-batches ${{ needs.b1-final-gate.outputs.selected_batches }} \
+            --expected-inactive ${{ needs.b1-final-gate.outputs.selected_inactive }} \
+            --outdir /tmp/c5g7-b2-summary
+      - name: Export B2 gate decision
+        id: result
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path("/tmp/c5g7-b2-summary/b2_confirmatory_summary.json")
+          report=json.loads(p.read_text()) if p.is_file() else {}
+          passed=bool(report.get("b2_gate_pass"))
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:f.write(f"b2_pass={str(passed).lower()}\n")
+          print(json.dumps({"status":report.get("status"),"b2_gate_pass":passed},indent=2))
+          PY
+      - name: Preserve B2 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-b2-confirmatory-summary
+          path: /tmp/c5g7-b2-summary/
+          if-no-files-found: warn
+          retention-days: 30
