@@ -98,7 +98,7 @@ def make_plan():
                      "official_benchmark_acceptance":False}
     }
     assert plan["run_count_main"]==1275,plan["run_count_by_stage"]
-    assert len(set(s for k in ("P1","V1a","P2","P3","P4","P5","P6") for r in plan["stages"][k] for s in [r["seed"]])) == 75 - 0
+    assert len(set(r["seed"] for k in ("P1","V1a","P2","P3","P4","P5","P6") for r in plan["stages"][k])) == 55
     return plan
 
 def main():
