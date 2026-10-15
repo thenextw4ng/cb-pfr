@@ -49,7 +49,7 @@ def gather(root, expected_stage, expected_profile=None):
    raw=json.loads(files["raw_audit"].read_text());tr=json.loads(files["source_trace"].read_text());f=json.loads(files["assembly"].read_text())
    if raw.get("status")!="PASS" or raw.get("candidate_count")!=1:raise ValueError("raw HDF5 audit failure")
    if tr.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or not tr.get("entropy"):raise ValueError("source trace absent")
-   if mesh.get("derived_from_geometry_bounding_box") is not True or mesh.get("entropy_dimension")!=[24,24,1]:raise ValueError("geometry-derived entropy mesh audit failed")
+   if mesh.get("derived_from_geometry_bounding_box") is not True or mesh.get("entropy_dimension")!=[24,24]:raise ValueError("geometry-derived entropy mesh audit failed")
    if files["log"].read_text(errors="replace").count("Fission source site(s) outside of entropy box"):raise ValueError("entropy mesh warning")
    if manifest.get("openmc_version")!="0.16.0" or manifest.get("seed")!=seed:raise ValueError("manifest version or seed mismatch")
    if manifest.get("mgxs_sha256")!=phys.get("mgxs_sha256_after_transport"):raise ValueError("MGXS hash mismatch")
