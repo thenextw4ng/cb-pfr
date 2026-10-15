@@ -10,6 +10,10 @@ on:
       - paper/submission/REVISION_AUDIT.md
       - paper/submission/analyze_symmetry_screen.py
       - scripts/analyze_c5g7_canonical_convergence.py
+      - paper/submission/analyze_mirror_pairs.py
+      - tests/test_cbpfr_formal_properties.py
+      - src/cbpfr/ranking.py
+      - src/cbpfr/integration.py
       - .github/workflows/icimcis-paper-build.yml
 concurrency:
   group: icimcis-manuscript-${{ github.ref }}
@@ -91,6 +95,24 @@ jobs:
                   assert ratio < 0.1
                   assert {int(r["entropy_mesh_warning_count"]) for r in rows} == {7000}
           PY
+      - name: Test formal properties and compute mirror-label intervals
+        shell: bash
+        run: |
+          python3 -m pip install -e . scipy
+          python3 -m unittest discover -s tests -p 'test_cbpfr_formal_properties.py' -v
+          python3 paper/submission/analyze_mirror_pairs.py \\
+            --input results/cbpfr_physical_feasibility_bridge_2026-10-12.csv \\
+            --output paper/submission/mirror_pair_comparison.csv
+          python3 - <<'PY'
+          import csv
+          p = "paper/submission/mirror_pair_comparison.csv"
+          with open(p, newline="", encoding="utf-8") as handle:
+              rows = list(csv.DictReader(handle))
+          assert len(rows) == 4, rows
+          assert all(r["equivalence_margin_prespecified"] == "False" for r in rows)
+          assert all(r["equivalence_conclusion"] == "NOT_TESTED_MARGIN_NOT_PRESPECIFIED" for r in rows)
+          print("Four descriptive mirror-label intervals reproduced; no equivalence claim is emitted.")
+          PY
       - name: Compile IEEE conference PDF
         uses: xu-cheng/latex-action@v3
         with:
@@ -125,14 +147,19 @@ jobs:
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex paper/submission/references.bib paper/submission/REVISION_AUDIT.md /tmp/cbpfr-review-package/
           cp paper/submission/canonical_high_budget_summary.csv /tmp/cbpfr-review-package/supplementary/data/ummu_run_level_protocol_audit.csv
           cp results/cbpfr_physical_feasibility_bridge_2026-10-12.csv /tmp/cbpfr-review-package/supplementary/data/six_layout_run_level_results.csv
-          cp src/cbpfr/ranking.py /tmp/cbpfr-review-package/supplementary/scripts/
-          cp paper/submission/analyze_symmetry_screen.py /tmp/cbpfr-review-package/supplementary/scripts/
+          mkdir -p /tmp/cbpfr-review-package/supplementary/tests
+          cp src/cbpfr/ranking.py src/cbpfr/integration.py /tmp/cbpfr-review-package/supplementary/scripts/
+          cp paper/submission/analyze_symmetry_screen.py paper/submission/analyze_mirror_pairs.py /tmp/cbpfr-review-package/supplementary/scripts/
+          cp paper/submission/mirror_pair_comparison.csv /tmp/cbpfr-review-package/supplementary/data/
+          cp tests/test_cbpfr_formal_properties.py /tmp/cbpfr-review-package/supplementary/tests/
           cp scripts/run_c5g7_cbpfr_physical_selection.py scripts/analyze_c5g7_canonical_convergence.py scripts/audit_c5g7_source_convergence.py /tmp/cbpfr-review-package/supplementary/scripts/
           cat > /tmp/cbpfr-review-package/README_SUBMISSION.md <<'EOF'
           Anonymous ICIMCIS 2026 review package
           - PDF: anonymous review manuscript, maximum six pages.
           - TeX/BibTeX: editable source and references.
-          - Supplement: 18-run six-layout OpenMC table, six individual UMMU runs from two inactive-batch protocols, CB-PFR ranking/screen code, and diagnostic scripts.
+          - Supplement: 18-run six-layout OpenMC table, six individual UMMU runs from two inactive-batch protocols, CB-PFR ranking/screen code, diagnostic scripts, and four mirror-label Welch intervals with their reproducing script.
+          - Formal-property unit tests cover uncertainty monotonicity, permutation-invariant ranks/ties, fail-closed evidence handling, and the zero-multiplier point-estimate rule.
+          - Mirror intervals are descriptive only; no equivalence margin was specified before data acquisition, so no statistical-equivalence claim is made.
           - The two UMMU protocols have materially different between-run dispersion; the 100-inactive runs contain repeated entropy-mesh warnings. Neither protocol is presented as a validated benchmark estimate.
           - Illustrative acceptance thresholds were selected retrospectively; the sensitivity analysis is exploratory.
           - Model/tally correspondence and source convergence remain unresolved, and the results do not establish full benchmark validation.
