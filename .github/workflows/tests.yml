@@ -101,12 +101,18 @@ jobs:
           with open("/tmp/cbpfr-reproduced/main_results.csv", newline="", encoding="utf-8") as f:
               rows = list(csv.DictReader(f))
           actual = {r["method"]: float(r["top_tie_group_true_feasibility_rate"]) for r in rows}
-          required = {"qubo_only", "point_estimate", "cb_pfr", "uniform_margin"}
-          if set(actual) != required:
+          expected = {"qubo_only": 0.8526666666666667, "point_estimate": 0.9261921717171717, "cb_pfr": 0.972925468975469, "uniform_margin": 0.9634491341991341}
+          expected_tie_sizes = {"qubo_only": 12.0, "point_estimate": 9.561, "cb_pfr": 7.226, "uniform_margin": 7.034}
+          if set(actual) != set(expected):
               raise SystemExit(f"unexpected methods in tie-aware aggregate: {sorted(actual)}")
-          if any(not 0.0 <= rate <= 1.0 for rate in actual.values()):
-              raise SystemExit(f"top tie-group feasibility rate is outside [0,1]: {actual}")
+          for method, rate in expected.items():
+              if abs(actual[method] - rate) > 1e-12:
+                  raise SystemExit(f"{method}: expected tie-aware rate {rate}, got {actual[method]}")
+          actual_sizes = {r["method"]: float(r["mean_top_tie_group_size"]) for r in rows}
+          for method, size in expected_tie_sizes.items():
+              if abs(actual_sizes[method] - size) > 1e-12:
+                  raise SystemExit(f"{method}: expected mean top tie size {size}, got {actual_sizes[method]}")
           if any(not r.get("tie_policy") for r in rows):
               raise SystemExit("aggregate must document the declared tie policy")
-          print("Tie-aware synthetic aggregate reproduced:", actual)
+          print("Tie-aware synthetic aggregate reproduced exactly:", actual, "mean tie sizes:", actual_sizes)
           PY
