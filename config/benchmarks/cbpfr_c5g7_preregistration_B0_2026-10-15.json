@@ -1,0 +1,240 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "CBPFR-C5G7-PREREG-B0-2026-10-15",
+  "frozen_date": "2026-10-15",
+  "evidence_scope": "C5G7 is a computational transport benchmark, not an experiment. Numerical agreement is benchmark verification, not physical validation of unmeasured layouts.",
+  "claim_ladder": {
+    "L1": "Software verification",
+    "L2": "Numerical verification against canonical C5G7 UMMU reference only; requires B1, B2 and B4",
+    "L3": "Layout ordering reproducibility and symmetry; requires L2, B3 and B5",
+    "L4": "CB-PFR selection-effect evaluation on physical candidate simulations; requires L3, B6 and B7; negative outcomes must be reported",
+    "L5": "Experimental toolchain validation only; B8 does not validate layout ranking"
+  },
+  "upstream": {
+    "repository": "https://github.com/mit-crpg/benchmarks",
+    "pinned_commit": "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",
+    "openmc_version": "0.16.0",
+    "standard_energy_group_boundaries_eV": [
+      0.00001,
+      0.0635,
+      10,
+      100,
+      1000,
+      500000,
+      1000000,
+      20000000
+    ],
+    "entropy_mesh": {
+      "dimensions": [
+        51,
+        51
+      ],
+      "lower_left": [
+        -32.14,
+        -32.14
+      ],
+      "upper_right": [
+        32.14,
+        32.14
+      ]
+    },
+    "required_zero_warning": "Fission source site(s) outside of entropy box"
+  },
+  "physical_objective": {
+    "name": "minimize_assembly_integrated_fission_rate_peaking_factor",
+    "formula": "F_fission = max_a(R_a) / mean_a(R_a)",
+    "R_a": "sum of mesh fission-score means over the 17x17 bin block mapped to fuel assembly a",
+    "direction": "minimize",
+    "role": "exploratory relative fission-rate shape proxy",
+    "explicit_nonclaims": [
+      "not absolute power",
+      "not a safety limit",
+      "not an experimental outcome"
+    ],
+    "keff_role": "report and verify k-effective separately; do not use the canonical UMMU reference as a hard acceptance band for noncanonical layouts without independent domain sign-off",
+    "hard_design_feasibility_threshold": "NOT_SET_PENDING_INDEPENDENT_DOMAIN_SIGNOFF; B7 cannot claim physical feasibility beyond the fixed material-count/geometry constraints until this is resolved"
+  },
+  "B1": {
+    "purpose": "pilot only; choose inactive batch count and determine whether 7000 total batches is adequate",
+    "profile": {
+      "batches": 7000,
+      "particles_per_batch": 10000,
+      "threads": 1
+    },
+    "source_initialization": {
+      "inactive": 500,
+      "profiles": [
+        "baseline_all_fuel",
+        "left_column_only",
+        "right_column_only",
+        "upper_row_only"
+      ],
+      "seed_bases": [
+        810001,
+        810002,
+        810003
+      ],
+      "run_count": 12,
+      "pairing": "same seed across the four source-start profiles",
+      "note": "source profiles use initial source sampling boxes restricted to fissionable material; they do not restrict subsequent eigenvalue transport"
+    },
+    "inactive_sweep": {
+      "inactive_batches": [
+        100,
+        300,
+        500,
+        1000
+      ],
+      "source_profile": "baseline_all_fuel",
+      "seed_bases": [
+        820001,
+        820002,
+        820003
+      ],
+      "run_count": 12,
+      "pairing": "same seed across all four inactive-batch conditions"
+    },
+    "total_initial_runs": 24,
+    "per_run_histories": 70000000,
+    "total_initial_histories": 1680000000,
+    "gates": {
+      "integrity": "24/24 completed with raw HDF5 audit pass, standard energy groups, unique statepoint hashes, seed/settings correspondence, entropy trace, k-generation trace, and zero entropy-mesh warnings",
+      "k_generation_drift_pcm_max": 25,
+      "entropy_first_to_last_quarter_difference_abs_max_nat": 0.01,
+      "inactive_choice": "smallest inactive count for which all 3 replicate traces satisfy both drift criteria",
+      "source_start_equivalence": "For each alternative vs baseline, paired 90% Student-t CI (df=2) for mean delta k-effective must lie entirely inside [-25,+25] pcm",
+      "chosen_profile_confirmation": "If selected inactive count differs from 500, repeat all four source profiles at that inactive count with three fresh paired seeds before B1 passes",
+      "fail_action": "If no inactive profile passes, source-start equivalence fails, or 7000-batch drift screen is inadequate, B1 is inconclusive; run a versioned higher-batch pilot and do not start B2"
+    }
+  },
+  "B2": {
+    "purpose": "confirmatory canonical UMMU numerical screen",
+    "candidate": "c5g7-2x2-UMMU",
+    "seed_bases": [
+      8200001,
+      8200002,
+      8200003,
+      8200004,
+      8200005,
+      8200006,
+      8200007,
+      8200008,
+      8200009,
+      8200010
+    ],
+    "run_count": 10,
+    "seeds_must_be_new_vs_B1": true,
+    "reference_keff": 1.18655,
+    "reference_standard_uncertainty": 0.000095,
+    "max_absolute_delta_pcm": 100,
+    "max_absolute_z": 2,
+    "ratio_between_seed_sd_to_within_run_sd": {
+      "min": 0.55,
+      "max": 1.45,
+      "df": 9,
+      "nominal_interval": "rounded 95% chi-square interval"
+    },
+    "source_trace_review": "required; no scalar-only convergence certification",
+    "gate_rule": "B1 must pass first. Keep B2 seeds distinct from B1 and all pre-correction runs."
+  },
+  "B4": {
+    "uses_B2_statepoints": true,
+    "additional_transport_runs_initially": 0,
+    "requirement": "reviewed official pin-power reference table, verified 51x51-to-pin mapping and normalization, AVG/RMS/MAX relative errors and uncertainty",
+    "blocks_L2_if_missing": true
+  },
+  "B3": {
+    "dependency": "B2_pass_and_B4_pass",
+    "candidate_layouts": [
+      "MMUU",
+      "MUMU",
+      "MUUM",
+      "UMMU",
+      "UMUM",
+      "UUMM"
+    ],
+    "seeds_per_layout": 10,
+    "total_runs": 60,
+    "mirror_pairs": [
+      [
+        "MMUU",
+        "MUMU"
+      ],
+      [
+        "UMUM",
+        "UUMM"
+      ]
+    ],
+    "equivalence_method": "TOST",
+    "equivalence_margin_pcm": 12,
+    "ci_level": 0.9,
+    "rule": "90% CI of each preregistered pairwise mean-k difference must lie wholly within ±12 pcm; otherwise report not equivalent/inconclusive"
+  },
+  "B5": {
+    "dependency": "B3_pass",
+    "candidates": [
+      "UMMU",
+      "MMUU",
+      "MUMU",
+      "UMUM"
+    ],
+    "requirement": "independent second transport code, matched model/material/nuclear-data definitions, compatible tallies, reported k-effective differences and ordering; block if code or matched 7-group data unavailable"
+  },
+  "B6": {
+    "dependency": "B5_pass",
+    "geometry": "5x5 assembly lattice with fixed outer reflector row/column and 3x3 fuel interior",
+    "positions": 9,
+    "MOX_count": 4,
+    "UO2_count": 5,
+    "raw_assignments": 126,
+    "symmetry": "recompute equivalence classes under actual boundary-condition-preserving transformations; 23 applies only under full D4 symmetry",
+    "replicates_per_verified_symmetry_class": 5,
+    "target_total_batches": 7000,
+    "gate": "only use 7000 batches if a new-geometry pilot has passed; otherwise amend and raise budget"
+  },
+  "B7": {
+    "dependency": "B6_pass",
+    "candidate_policies": [
+      "random",
+      "point_estimate",
+      "uniform_margin",
+      "equal_allocation_RS",
+      "adaptive_OCBA",
+      "CB-PFR"
+    ],
+    "endpoint": "probability of selecting the best layout under the registered F_fission objective and regret F, with paired pool-level bootstrap intervals",
+    "equal_budget": "must be genuinely equal across methods; 690 physical runs total cannot independently fund 690 runs per each of six policies",
+    "smoke_profile": {
+      "batches": 100,
+      "particles_per_batch": 1000,
+      "inactive": 10
+    },
+    "smoke_profile_warning": "may carry source-convergence bias and may not define physical truth or validated uncertainty",
+    "workload_amendment_required": true,
+    "status": "BLOCKED_PENDING_B6_TRUTH_DEFINITION_AND_B7_BUDGET_RECONCILIATION"
+  },
+  "B8": {
+    "purpose": "independent experimental toolchain check",
+    "options": [
+      "audit BEAVRS registration/orientation against measured geometry",
+      "select documented KRITZ-2 case"
+    ],
+    "rule": "does not validate unmeasured six-layout ranking"
+  },
+  "global_order": [
+    "B0",
+    "B1",
+    "B2",
+    "B4",
+    "B3",
+    "B5",
+    "B6",
+    "B7"
+  ],
+  "no_result_rules": [
+    "No downstream block starts before its explicit gate passes.",
+    "No rerun because a result is unfavorable; only documented infrastructure failure, integrity mismatch, or preregistered extension is eligible.",
+    "Failed jobs, exclusions, inconclusive tests, and negative comparisons remain reportable.",
+    "No official benchmark acceptance, experimental ranking validation, reactor safety, quantum advantage, or CB-PFR physical superiority claim is authorized by this protocol."
+  ]
+}
