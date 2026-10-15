@@ -43,6 +43,7 @@ jobs:
     env:
       RUN_ID: entropy-mesh-preflight
       CANDIDATE_ID: c5g7-2x2-UMMU
+      UCX_TLS: self,tcp
     steps:
       - uses: actions/checkout@v4
       - uses: mamba-org/setup-micromamba@v2
@@ -70,7 +71,7 @@ jobs:
             --study-summary "$ROUND/STUDY_SUMMARY.json" \
             --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
           python - <<'PY'
-          import json, os
+          import json, math, os
           from pathlib import Path
           import xml.etree.ElementTree as ET
 
@@ -92,6 +93,13 @@ jobs:
           assert mesh_audit.get("entropy_dimension") == [24, 24], mesh_audit
           assert len(mesh_audit.get("entropy_lower_left", [])) == 2, mesh_audit
           assert len(mesh_audit.get("entropy_upper_right", [])) == 2, mesh_audit
+          assert mesh_audit.get("padding_cm") == 0.01, mesh_audit
+          geometry_lower = mesh_audit["geometry_lower_xy"]
+          geometry_upper = mesh_audit["geometry_upper_xy"]
+          entropy_lower = mesh_audit["entropy_lower_left"]
+          entropy_upper = mesh_audit["entropy_upper_right"]
+          assert all(math.isclose(a, b - 0.01, rel_tol=0.0, abs_tol=1e-10) for a, b in zip(entropy_lower, geometry_lower)), mesh_audit
+          assert all(math.isclose(a, b + 0.01, rel_tol=0.0, abs_tol=1e-10) for a, b in zip(entropy_upper, geometry_upper)), mesh_audit
           assert mesh is not None, "Entropy mesh entry missing from settings.xml"
           assert [int(x) for x in mesh.findtext("dimension", "").split()] == [24, 24], ET.tostring(mesh, encoding="unicode")
           assert len(mesh.findtext("lower_left", "").split()) == 2, ET.tostring(mesh, encoding="unicode")
