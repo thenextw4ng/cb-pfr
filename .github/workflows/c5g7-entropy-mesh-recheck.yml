@@ -38,7 +38,7 @@ jobs:
           python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
           python scripts/enumerate_c5g7_layouts.py --output /tmp/c5g7-layout-design-space.json
       - name: Run one canonical UMMU replicate with the corrected 2-D entropy mesh
-        shell: bash
+        shell: bash -el {0}
         env:
           INACTIVE: ${{ matrix.protocol.inactive }}
           SEED: ${{ matrix.seed }}
