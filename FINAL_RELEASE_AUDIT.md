@@ -48,7 +48,7 @@ The separate UMMU confirmation uses seeds 720000, 730000 and 740000 at 7,000 bat
 
 ## CI and audit scope
 
-The test workflow compiles Python sources, runs unit tests and examples, audits committed evidence and reproduces the frozen synthetic benchmark across the declared Python matrix. Passing CI supports the tested software behavior. It is not a reactor-physics validation certificate. The branding update initially exposed a stale dashboard test assertion. The assertion and test-class name were updated. For the software snapshot at commit `2b8252466db09014bc9d4c9e033e44214d9c0f93`, GitHub Actions runs [38674279123](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674279123) and [38674274152](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674274152) completed successfully across Python 3.10, 3.11, and 3.12. This confirms automated tests on that code snapshot, not physical validation.
+The test workflow compiles Python sources, runs unit tests and examples, audits committed evidence and reproduces the frozen synthetic benchmark across the declared Python matrix. Passing CI supports the tested software behavior. It is not a reactor-physics validation certificate. The branding update initially exposed a stale dashboard test assertion. The assertion and test-class name were updated. For the software snapshot at commit `442de59e40e440aad37da495b50a487992c8f096`, GitHub Actions runs [38674523991](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674523991) and [38674518908](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674518908) completed successfully across Python 3.10, 3.11, and 3.12. This confirms automated tests on that snapshot, not physical validation.
 
 ## Remaining release steps
 
