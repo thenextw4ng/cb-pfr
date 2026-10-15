@@ -105,6 +105,22 @@
       "source_start_equivalence": "For each alternative vs baseline, paired 90% Student-t CI (df=2) for mean delta k-effective must lie entirely inside [-25,+25] pcm",
       "chosen_profile_confirmation": "If selected inactive count differs from 500, repeat all four source profiles at that inactive count with three fresh paired seeds before B1 passes",
       "fail_action": "If no inactive profile passes, source-start equivalence fails, or 7000-batch drift screen is inadequate, B1 is inconclusive; run a versioned higher-batch pilot and do not start B2"
+    },
+    "selected_inactive_source_confirmation": {
+      "purpose": "Only required when the initial inactive sweep selects a value other than 500 and the source-start equivalence screen at inactive=500 passes",
+      "profiles": [
+        "baseline_all_fuel",
+        "left_column_only",
+        "right_column_only",
+        "upper_row_only"
+      ],
+      "seed_bases": [
+        830001,
+        830002,
+        830003
+      ],
+      "seed_rule": "fresh paired seeds, not used by initial B1 or B2",
+      "expected_run_count": 12
     }
   },
   "B2": {
@@ -135,7 +151,8 @@
       "nominal_interval": "rounded 95% chi-square interval"
     },
     "source_trace_review": "required; no scalar-only convergence certification",
-    "gate_rule": "B1 must pass first. Keep B2 seeds distinct from B1 and all pre-correction runs."
+    "gate_rule": "B1 must pass first. Keep B2 seeds distinct from B1 and all pre-correction runs.",
+    "batch_count_source": "B1 selected total batch count after the drift screen; currently the pilot uses 7000 batches. If the 7000-batch screen fails, B1 must be extended at a higher batch count and B2 remains blocked."
   },
   "B4": {
     "uses_B2_statepoints": true,
