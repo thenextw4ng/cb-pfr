@@ -124,7 +124,8 @@ def main():
    if planned is None:continue
    for key in ("stage","candidate_id","signature","seed","replicate","batches","inactive","particles","threads","source"):
     if row.get(key)!=planned.get(key):errors.append(f"seed ledger mismatch {row['run_id']} field {key}: observed={row.get(key)!r}, planned={planned.get(key)!r}")
-  seed_ledger_audit={"status":"PASS" if not missing and not unexpected else "FAIL","expected_total_count":len(plan_rows),"expected_v2a_count":len(low_plan),"expected_high_budget_count":len(high_plan),"observed_total_count":len(observed_rows),"missing_run_ids":missing,"unexpected_run_ids":unexpected,"sha256":sha256(a.seed_ledger)}
+  field_mismatch_count=sum(1 for message in errors if message.startswith("seed ledger mismatch "))
+  seed_ledger_audit={"status":"PASS" if not missing and not unexpected and field_mismatch_count==0 else "FAIL","expected_total_count":len(plan_rows),"expected_v2a_count":len(low_plan),"expected_high_budget_count":len(high_plan),"observed_total_count":len(observed_rows),"missing_run_ids":missing,"unexpected_run_ids":unexpected,"field_mismatch_count":field_mismatch_count,"sha256":sha256(a.seed_ledger)}
  except Exception as e:
   errors.append(f"seed ledger audit: {type(e).__name__}: {e}")
   seed_ledger_audit={"status":"FAIL","error":f"{type(e).__name__}: {e}","sha256":sha256(a.seed_ledger) if a.seed_ledger.is_file() else None}
