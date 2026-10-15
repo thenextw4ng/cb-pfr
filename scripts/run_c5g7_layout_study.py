@@ -149,10 +149,11 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     if source.count(entropy_anchor) != 1:
         raise ValueError("upstream entropy-mesh construction differs from audited template; refusing to patch")
     entropy_replacement = (
+        "# The model is 2-D and extends infinitely along z; use an x-y mesh, not an artificial finite z slab.\n"
         "entropy_mesh = openmc.RegularMesh()\n"
-        "entropy_mesh.dimension = [51, 51, 1]\n"
-        "entropy_mesh.lower_left = [-32.13, -32.13, -1.0]\n"
-        "entropy_mesh.upper_right = [32.13, 32.13, 1.0]\n"
+        "entropy_mesh.dimension = [51, 51]\n"
+        "entropy_mesh.lower_left = [-32.14, -32.14]\n"
+        "entropy_mesh.upper_right = [32.14, 32.14]\n"
         "settings_file.entropy_mesh = entropy_mesh"
     )
     source = source.replace(entropy_anchor, entropy_replacement)
