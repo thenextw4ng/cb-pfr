@@ -51,12 +51,19 @@ def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
     if any(not math.isfinite(v) for v in means + sds) or any(v <= 0 for v in sds):
         raise ValueError("keff means/standard deviations must be finite and SD positive")
     mean_keff = statistics.mean(means)
-    between_sd = statistics.stdev(means) if len(means) > 1 else 0.0
-    pooled_within_sd = math.sqrt(sum(v*v for v in sds) / len(sds))
-    mean_se = between_sd / math.sqrt(len(means))
-    combined_se = math.sqrt(REFERENCE_SD**2 + mean_se**2)
+    n_runs = len(means)
+    between_sd = statistics.stdev(means) if n_runs > 1 else 0.0
+    pooled_within_sd = math.sqrt(sum(v*v for v in sds) / n_runs)
+    within_run_se_of_mean = pooled_within_sd / math.sqrt(n_runs)
+    between_run_se_of_mean = between_sd / math.sqrt(n_runs)
+    # Conservative descriptive rule: retain the larger replicate-mean uncertainty
+    # implied by within-run Monte Carlo estimates or observed between-run spread.
+    # This is a project diagnostic, not a calibrated confidence procedure.
+    run_mean_se = max(within_run_se_of_mean, between_run_se_of_mean)
+    combined_se = math.sqrt(REFERENCE_SD**2 + run_mean_se**2)
     delta_pcm = (mean_keff - REFERENCE_KEFF) * 1e5
     z_score = (mean_keff - REFERENCE_KEFF) / combined_se
+    between_to_within_sd_ratio = between_sd / pooled_within_sd
     max_run_sd_pcm_observed = max(sds) * 1e5
     numerical_screen_pass = (
         all(global_checks.values())
@@ -97,9 +104,14 @@ def evaluate_runs(rows: list[dict], *, min_replicates: int = 3,
             "mean_keff": mean_keff,
             "between_run_sample_sd": between_sd,
             "pooled_within_run_reported_sd": pooled_within_sd,
+            "within_run_se_of_mean": within_run_se_of_mean,
+            "between_run_se_of_mean": between_run_se_of_mean,
+            "conservative_run_mean_se": run_mean_se,
             "mean_combined_standard_uncertainty": combined_se,
-            "reference_delta_pcm": delta_pcm,
-            "combined_uncertainty_z": z_score,
+            "reference_delta_pcm_absolute_pcm": delta_pcm,
+            "reference_delta_pcm_relative_convention": delta_pcm / REFERENCE_KEFF,
+            "combined_uncertainty_z_conservative_descriptive": z_score,
+            "between_to_within_sd_ratio": between_to_within_sd_ratio,
             "max_single_run_sd_pcm": max_run_sd_pcm_observed,
             "numerical_screen_pass": numerical_screen_pass,
         },
