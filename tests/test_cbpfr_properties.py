@@ -39,14 +39,25 @@ def estimate(candidate_id, mean, sd=0.2):
     return PhysicalEstimate(candidate_id, {"F": (mean, sd)})
 
 
-def test_violation_is_non_decreasing_as_z_increases():
-    values = []
+def test_violation_is_non_decreasing_in_z_and_uncertainty():
+    by_z = []
     for z in (0.0, 0.5, 1.0, 2.0):
-        result = assess_physical([metric(upper=10.0, z=z)], estimate("near-limit", 9.95))
-        values.append(result.aggregate_violation)
-    assert values == sorted(values)
-    assert values[0] == 0.0
-    assert values[-1] > values[0]
+        result = assess_physical([metric(upper=10.0, z=z)], estimate("near-limit", 9.95, 0.2))
+        by_z.append(result.aggregate_violation)
+    assert by_z == sorted(by_z)
+    assert by_z[0] == 0.0
+    assert by_z[-1] > by_z[0]
+
+    by_uncertainty = []
+    for uncertainty in (0.0, 0.02, 0.05, 0.1, 0.2, 0.5):
+        result = assess_physical(
+            [metric(upper=10.0, z=1.0)],
+            estimate("near-limit", 9.95, uncertainty),
+        )
+        by_uncertainty.append(result.aggregate_violation)
+    assert by_uncertainty == sorted(by_uncertainty)
+    assert by_uncertainty[0] == 0.0
+    assert by_uncertainty[-1] > by_uncertainty[0]
 
 
 def test_missing_and_nonfinite_inputs_fail_closed():
