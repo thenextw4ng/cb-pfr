@@ -1,0 +1,97 @@
+name: C5G7 V2a final data audit and selection summary
+
+on:
+  workflow_run:
+    workflows:
+      - C5G7 night campaign production runs
+      - C5G7 V2a physical-candidate data shard 0
+      - C5G7 V2a physical-candidate data shard 1
+      - C5G7 V2a physical-candidate data shard 2
+      - C5G7 V2a physical-candidate data shard 3
+      - C5G7 V2a physical-candidate data shard 4
+    types: [completed]
+    branches:
+      - research/c5g7-b0-prereg-b1-pilot-20261015
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  aggregate-when-complete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout campaign analyzers
+        uses: actions/checkout@v4
+        with:
+          ref: research/c5g7-b0-prereg-b1-pilot-20261015
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install analysis dependencies
+        run: python -m pip install numpy openmc==0.16.0
+      - name: Find all five V2a shards and production run for this commit
+        id: discover
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          CAMPAIGN_BRANCH: research/c5g7-b0-prereg-b1-pilot-20261015
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v2a-artifacts /tmp/production-artifacts
+          ALL_READY=true
+          RID_PROD=""
+          for FILE in c5g7-main-production-runs.yml c5g7-v2a-shard-0.yml c5g7-v2a-shard-1.yml c5g7-v2a-shard-2.yml c5g7-v2a-shard-3.yml c5g7-v2a-shard-4.yml; do
+            JSON="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$FILE/runs?branch=$CAMPAIGN_BRANCH&per_page=100")"
+            MATCH="$(printf '%s' "$JSON" | jq -r --arg SHA "$EXPECTED_SHA" '.workflow_runs | map(select(.head_sha==$SHA)) | sort_by(.created_at) | last // empty | [.id,.status,.conclusion] | @tsv')"
+            if [ -z "$MATCH" ]; then
+              echo "$FILE has no run for commit $EXPECTED_SHA yet"
+              ALL_READY=false
+              continue
+            fi
+            IFS=$'\t' read -r RID STATUS CONCLUSION <<< "$MATCH"
+            echo "$FILE id=$RID status=$STATUS conclusion=$CONCLUSION"
+            if [ "$STATUS" != "completed" ]; then
+              ALL_READY=false
+              continue
+            fi
+            if [ "$FILE" = "c5g7-main-production-runs.yml" ]; then
+              RID_PROD="$RID"
+              gh run download "$RID" --repo "$GITHUB_REPOSITORY" --dir /tmp/production-artifacts
+            else
+              SHARD="$(printf '%s' "$FILE" | sed 's/^c5g7-v2a-shard-//; s/\.yml$//')"
+              gh run download "$RID" --repo "$GITHUB_REPOSITORY" --dir "/tmp/v2a-artifacts/shard-$SHARD"
+            fi
+          done
+          echo "all_ready=$ALL_READY" >> "$GITHUB_OUTPUT"
+          echo "production_run_id=$RID_PROD" >> "$GITHUB_OUTPUT"
+          echo "expected_sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+      - name: Write pending status when any workload is still queued or running
+        if: steps.discover.outputs.all_ready != 'true'
+        run: |
+          mkdir -p /tmp/v2a-summary
+          cat > /tmp/v2a-summary/v2a_pending.json <<'JSON'
+          {
+            "status": "V2A_PENDING",
+            "reason": "One or more of the 75 production jobs or five V2a shards has not completed yet. This is a resource-discovery/poll result, not a data-analysis failure.",
+            "official_benchmark_acceptance": false
+          }
+          JSON
+      - name: Audit the 1,200 V2a observations against independent high-budget data
+        if: steps.discover.outputs.all_ready == 'true'
+        continue-on-error: true
+        run: |
+          python scripts/analyze_c5g7_v2a_selection.py \
+            --v2a-root /tmp/v2a-artifacts \
+            --production-root /tmp/production-artifacts \
+            --outdir /tmp/v2a-summary
+      - name: Preserve current aggregation status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-v2a-final-audit-${{ github.run_id }}
+          path: /tmp/v2a-summary/
+          if-no-files-found: warn
+          retention-days: 30
