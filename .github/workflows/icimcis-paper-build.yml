@@ -100,8 +100,8 @@ jobs:
         run: |
           python3 -m pip install -e . scipy
           python3 -m unittest discover -s tests -p 'test_cbpfr_formal_properties.py' -v
-          python3 paper/submission/analyze_mirror_pairs.py \\
-            --input results/cbpfr_physical_feasibility_bridge_2026-10-12.csv \\
+          python3 paper/submission/analyze_mirror_pairs.py \
+            --input results/cbpfr_physical_feasibility_bridge_2026-10-12.csv \
             --output paper/submission/mirror_pair_comparison.csv
           python3 - <<'PY'
           import csv
@@ -179,6 +179,10 @@ jobs:
             paper/submission/references.bib \
             paper/submission/canonical_high_budget_summary.csv \
             scripts/analyze_c5g7_canonical_convergence.py \
+            scripts/run_reduced_synthetic_calibration.py \
+            paper/submission/analyze_mirror_pairs.py \
+            tests/test_cbpfr_formal_properties.py \
+            src/cbpfr/ranking.py src/cbpfr/integration.py \
             paper/submission/REVISION_AUDIT.md \
             .github/workflows/icimcis-paper-build.yml; then
             echo "Manuscript source advanced during this build; skipping stale PDF commit."
