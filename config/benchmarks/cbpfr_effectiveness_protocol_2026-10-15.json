@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "CBPFR-FIXED-BUDGET-SYNTHETIC-EFFECTIVENESS-2026-10-15",
+  "protocol_frozen_date": "2026-10-15",
+  "status": "PRE_REGISTERED_SYNTHETIC_METHOD_BENCHMARK",
+  "scientific_scope": "Synthetic ranking-and-selection method evaluation only; no OpenMC transport, reactor physics validation, benchmark acceptance, fuel-management recommendation, or safety claim.",
+  "primary_endpoint": "Fraction of independent candidate pools in which the selected candidate satisfies the predeclared latent synthetic feasibility rule.",
+  "confirmatory_unit": "candidate pool; methods compared pairwise on the exact same pool and same candidate observations",
+  "methods": [
+    "qubo_only",
+    "point_estimate",
+    "cb_pfr",
+    "uniform_margin"
+  ],
+  "development": {
+    "pools": 200,
+    "seed_base": 20261015,
+    "regime": "calibrated_moderate",
+    "purpose": "Choose uniform-margin baseline only; do not pool development results into confirmatory estimates.",
+    "uniform_margin_grid": [
+      0,
+      0.004,
+      0.008,
+      0.012,
+      0.016,
+      0.02
+    ],
+    "selection_rule": "Maximize development-pool latent feasible-selection rate; break ties in favor of the smallest margin."
+  },
+  "confirmation": {
+    "pools_per_regime": 1000,
+    "seed_base": 20262026,
+    "candidate_pool_size": 12,
+    "equal_physical_evaluation_budget_per_method_per_pool": 12,
+    "candidate_pool_draw": "sample 12 distinct feasible candidates from the 7-position toy QUBO candidate space; each method receives the same candidate set and the same noisy observations",
+    "regimes": [
+      {
+        "id": "calibrated_low",
+        "low_sigma": 0.002,
+        "high_sigma": 0.006,
+        "uncertainty_report_fraction": 1,
+        "noise_model": "gaussian",
+        "latent_offset": 0,
+        "role": "confirmatory_calibrated_regime"
+      },
+      {
+        "id": "calibrated_moderate",
+        "low_sigma": 0.004,
+        "high_sigma": 0.01,
+        "uncertainty_report_fraction": 1,
+        "noise_model": "gaussian",
+        "latent_offset": 0,
+        "role": "confirmatory_calibrated_regime"
+      },
+      {
+        "id": "calibrated_high",
+        "low_sigma": 0.006,
+        "high_sigma": 0.015,
+        "uncertainty_report_fraction": 1,
+        "noise_model": "gaussian",
+        "latent_offset": 0,
+        "role": "confirmatory_calibrated_regime"
+      },
+      {
+        "id": "underreported_uncertainty",
+        "low_sigma": 0.004,
+        "high_sigma": 0.01,
+        "uncertainty_report_fraction": 0.65,
+        "noise_model": "gaussian",
+        "latent_offset": 0,
+        "role": "stress_only"
+      },
+      {
+        "id": "heavy_tail_noise",
+        "low_sigma": 0.004,
+        "high_sigma": 0.01,
+        "uncertainty_report_fraction": 1,
+        "noise_model": "gaussian_with_5pct_3sigma_contamination",
+        "latent_offset": 0,
+        "role": "stress_only"
+      },
+      {
+        "id": "no_feasible_candidate",
+        "low_sigma": 0.004,
+        "high_sigma": 0.01,
+        "uncertainty_report_fraction": 1,
+        "noise_model": "gaussian",
+        "latent_offset": 0.03,
+        "role": "stress_only_all_latent_candidates_infeasible"
+      }
+    ]
+  },
+  "synthetic_truth": {
+    "response_base": 0.954,
+    "fresh_ring_pair_increment": 0.013,
+    "arrangement_indicator_increment": 0.002,
+    "upper_feasibility_limit": 0.98,
+    "heteroscedastic_rule": "sigma is low when arrangement_indicator is 0 and high when it is 1",
+    "arrangement_indicator": "sum of one-based positions with fresh label, modulo 2",
+    "note": "The latent response generator is artificial and intentionally labeled synthetic; it is not a physical model."
+  },
+  "fixed_method_parameters": {
+    "cb_pfr_z": 1,
+    "cb_pfr_bound_kind": "operational_heuristic",
+    "point_estimate_z": 0,
+    "QUBO_method": "lowest QUBO energy in the same candidate pool",
+    "uniform_margin": "chosen on 200 development pools only and frozen before confirmatory scoring"
+  },
+  "statistics": {
+    "confidence_interval": "paired pool-level percentile bootstrap, 5000 resamples, deterministic bootstrap seed",
+    "primary_pairwise_comparisons": [
+      "cb_pfr minus point_estimate",
+      "cb_pfr minus uniform_margin"
+    ],
+    "superiority_gate": "demonstrate synthetic superiority only if the paired 95% interval lower bound is greater than zero against both point-estimate and development-tuned uniform-margin baseline in each of the three calibrated Gaussian regimes; stress regimes are reported separately and cannot rescue a failed primary gate",
+    "stress_interpretation": "No-feasible and misspecified-noise results are robustness diagnostics, not part of the superiority gate."
+  },
+  "explicit_nonclaims": [
+    "Not OpenMC or C5G7 physical validation.",
+    "Not experimental validation against BEAVRS.",
+    "Not evidence of reactor safety or fuel-management benefit.",
+    "Not quantum hardware execution or quantum advantage.",
+    "A favorable synthetic result does not validate the uncertainty model used on physical simulations."
+  ]
+}
