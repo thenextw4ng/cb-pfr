@@ -1,14 +1,6 @@
 name: C5G7 B1 preregistered convergence pilot and gated B2
 
 on:
-  push:
-    branches:
-      - research/c5g7-b0-prereg-b1-pilot-20261015
-    paths:
-      - .github/workflows/c5g7-b0-b1-pilot.yml
-      - scripts/run_c5g7_layout_study.py
-      - scripts/analyze_c5g7_b1_pilot.py
-      - config/benchmarks/cbpfr_c5g7_preregistration_B0_2026-10-15.json
   workflow_dispatch:
 
 permissions:
