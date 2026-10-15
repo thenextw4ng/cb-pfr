@@ -174,7 +174,7 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     if source.count(entropy_anchor) != 1:
         raise ValueError("upstream entropy-mesh construction differs from audited template; refusing to patch")
     entropy_replacement = (
-        "import math\n"
+        "import math, json\n"
         "# Derive entropy coverage from the complete model geometry, not a hard-coded source box.\n"
         "entropy_bbox = geometry.bounding_box\n"
         "entropy_lower = [float(v) for v in entropy_bbox.lower_left]\n"
@@ -190,7 +190,9 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
         "entropy_mesh.dimension = [24, 24, 1]\n"
         "entropy_mesh.lower_left = entropy_lower\n"
         "entropy_mesh.upper_right = entropy_upper\n"
-        "settings_file.entropy_mesh = entropy_mesh"
+        "settings_file.entropy_mesh = entropy_mesh\n"
+        "with open('entropy_mesh_audit.json', 'w', encoding='utf-8') as audit_handle:\n"
+        "    json.dump({'geometry_lower_left': [float(v) for v in entropy_bbox.lower_left], 'geometry_upper_right': [float(v) for v in entropy_bbox.upper_right], 'entropy_dimension': [24, 24, 1], 'entropy_lower_left': entropy_lower, 'entropy_upper_right': entropy_upper, 'derived_from_geometry_bounding_box': True}, audit_handle, indent=2)\n"
     )
     source = source.replace(entropy_anchor, entropy_replacement)
     builder.write_text(source, encoding="utf-8")
