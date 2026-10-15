@@ -1,9 +1,8 @@
 cff-version: 1.2.0
-message: "If you use CB-PFR in research, please cite the methodological working paper and repository release."
+message: "For this untagged development snapshot, cite the repository and immutable commit SHA. Add release DOI metadata only after a tagged release has been archived."
 title: "Confidence-Bounded Physical Feasibility Ranking (CB-PFR)"
 type: software
-version: 0.1.0
-date-released: 2026-10-05
+version: 0.3.0
 authors:
   - family-names: Adiputra
     given-names: Fahry Bagus
