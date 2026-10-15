@@ -58,3 +58,33 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 - Confirm anonymous PDF metadata and body; keep author names/affiliations in EDAS metadata.
 - Update the title in EDAS to the title above and upload the anonymous PDF under **Review manuscript**. Leave **Final manuscript** empty until camera-ready submission.
 - This is not the camera-ready version. No repository DOI or permanent public release is claimed in the anonymous review package.
+
+
+## Decision-support and formal-rule revision (2026-10-15)
+
+- Reframed the information-systems contribution as an auditable decision-support component, without hiding the OpenMC/fuel-layout case study or claiming a reactor-design validation.
+- Added four formal rule properties (monotone violation in \(z\), permutation-invariant substantive ranking/tie groups, fail-closed invalid data, and point-estimate reduction at \(z=0\)).
+- Fixed the substantive rank key in \`src/cbpfr/ranking.py\`: input index is no longer part of the score; candidate identifier is only a deterministic display tie-breaker. Added unit tests in \`tests/test_cbpfr_properties.py\`.
+- Added exploratory Welch intervals for the mirror-pair differences using three runs per label. Because no equivalence margin was prospectively registered before examining these runs, the intervals are descriptive and do not establish formal equivalence.
+- Expanded the decision table to show \(V_k\), \(V_F\), \(V_{\mathrm{total}}\), and rank/tie group. \(V_k=0\) for all classes under the current illustrative setting; the screen is therefore \(F\)-driven in this case.
+- Reworked the figure to show \(B_F^+\) for \(z=0,1,2\) and a zoomed, explicitly illustrative threshold-crossing panel. The zoom threshold is explanatory only; it is not used as an acceptance limit.
+- Added Runarsson and Yao's stochastic-ranking reference, separately from Deb's feasibility-first rule and NIST uncertainty guidance.
+- The manuscript build, unit-test outcome, and PDF anonymity scan must be rechecked after these edits before submission. The OpenMC entropy mesh has not been repaired or rerun in this revision, and no replication experiment has been run.
+
+
+## Follow-up: tie-aware benchmark and entropy-mesh diagnostic (2026-10-15)
+
+- The fixed-score ranking now preserves ties substantively. The reduced synthetic evaluation had previously converted the first displayed ID into a unique winner; this was not consistent with the tie-preserving decision rule. The calibration script now evaluates the entire top substantive-score tie group and reports its mean latent feasibility fraction, tie-group size, and paired fractional differences. This changes the metric definition, so the older single-winner aggregate values are not directly comparable; the revised deterministic aggregates are frozen in the CI test.
+- The replicate experiment protocol is preregistered at `research/protocols/CBPFR_RANKING_REPLICATION_PREREG_2026-10-15.md` (commit `b5d0fcb41589fcc6ca49312992cc55ea9e94293d`). The 200-replicate calibration experiment is **not yet run**. Its reference labels are explicitly provisional rather than physical truth.
+- The C5G7 canonical diagnostic workflow was changed to use an x-y-only entropy mesh for a geometry that is two-dimensional and axially unbounded, with x-y limits slightly outside the core boundary. It is running as GitHub Actions run `38703453033` on three new seeds (920000, 930000, 940000), with 7,000 total batches, 100 inactive batches, and 10,000 particles per batch. A corrected input configuration is not enough to claim success: the run logs must confirm the out-of-mesh warnings are absent and the source/k-generation diagnostics are reviewable.
+- The latest completed anonymous IEEE PDF build before this audit-note refresh is workflow run `38705368192` (source branch commit `1e8bb554805ab972404cbef083a000b28d3bacae`): the output is five pages after moving the UMMU summary to a compact single-column table, Author metadata is empty, and the text/anonymity checks passed. The workflow build triggered by this audit-note refresh must be checked before treating that run ID as the newest PDF. This does not mean the OpenMC physical evidence is validated.
+- The repository-wide test matrix previously failed in the frozen synthetic benchmark because it asserted single-winner aggregate rates. That assertion was updated to the new explicitly tie-aware outcome definition; this is a methodological change, not a claim that the simulated rates demonstrate physical benefit.
+
+
+## Matched-seed mesh-corrected repeatability follow-up (2026-10-15)
+
+- The corrected-mesh 100-inactive Protocol B run is still pending as GitHub Actions run `38703453033`; the actual log must be inspected for residual out-of-mesh warnings, statepoint/raw-HDF5 integrity, and source/k-generation behavior before any convergence statement.
+- A companion 500-inactive Protocol A run with the same three seeds (`920000`, `930000`, `940000`) is running as `38705588315`, to permit a matched-seed descriptive comparison between inactive-batch protocols.
+- Workflow run `38705459965` was initiated before correcting the push-event fallback value for Protocol A and in fact inherited 100 inactive batches. It is not treated as Protocol A evidence; use the corrected explicit-500 run instead. This preserves audit integrity rather than relabeling a misconfigured run.
+- The ranking property tests are now discoverable through the repository's `unittest` runner, including the zero-weight/missing-data edge case. The full repository CI matrix passed on Python 3.10, 3.11, and 3.12 for the pre-audit-refresh commit `1e8bb554805ab972404cbef083a000b28d3bacae` (runs `38705368292` and `38705376501`). The test suite must be rerun after this documentation-only commit.
+- No new OpenMC numerical results have been added to the paper. Both matched-seed physics workflows remain pending, and the 200-replicate short-run calibration preregistered earlier remains not run.

@@ -3,11 +3,13 @@ on:
   push:
     branches:
       - paper/icimcis-high-compute-revision-2026-10-15
+      - paper/icimcis-dss-formal-revision-2026-10-15
     paths:
       - paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex
       - paper/submission/references.bib
       - paper/submission/canonical_high_budget_summary.csv
       - paper/submission/REVISION_AUDIT.md
+      - tests/test_cbpfr_properties.py
       - paper/submission/analyze_symmetry_screen.py
       - scripts/analyze_c5g7_canonical_convergence.py
       - .github/workflows/icimcis-paper-build.yml
@@ -23,7 +25,7 @@ jobs:
       - name: Check out manuscript branch
         uses: actions/checkout@v4
         with:
-          ref: paper/icimcis-high-compute-revision-2026-10-15
+          ref: ${{ github.ref_name }}
           persist-credentials: true
       - name: Recompute symmetry-class screen from archived run-level CSV
         shell: bash
@@ -120,12 +122,13 @@ jobs:
         shell: bash
         run: |
           rm -rf /tmp/cbpfr-review-package
-          mkdir -p /tmp/cbpfr-review-package/supplementary/scripts /tmp/cbpfr-review-package/supplementary/data
+          mkdir -p /tmp/cbpfr-review-package/supplementary/scripts /tmp/cbpfr-review-package/supplementary/data /tmp/cbpfr-review-package/supplementary/tests
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.pdf /tmp/cbpfr-review-package/
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex paper/submission/references.bib paper/submission/REVISION_AUDIT.md /tmp/cbpfr-review-package/
           cp paper/submission/canonical_high_budget_summary.csv /tmp/cbpfr-review-package/supplementary/data/ummu_run_level_protocol_audit.csv
           cp results/cbpfr_physical_feasibility_bridge_2026-10-12.csv /tmp/cbpfr-review-package/supplementary/data/six_layout_run_level_results.csv
           cp src/cbpfr/ranking.py /tmp/cbpfr-review-package/supplementary/scripts/
+          cp tests/test_cbpfr_properties.py /tmp/cbpfr-review-package/supplementary/tests/
           cp paper/submission/analyze_symmetry_screen.py /tmp/cbpfr-review-package/supplementary/scripts/
           cp scripts/run_c5g7_cbpfr_physical_selection.py scripts/analyze_c5g7_canonical_convergence.py scripts/audit_c5g7_source_convergence.py /tmp/cbpfr-review-package/supplementary/scripts/
           cat > /tmp/cbpfr-review-package/README_SUBMISSION.md <<'EOF'
@@ -142,7 +145,7 @@ jobs:
       - name: Commit built PDF to manuscript branch
         shell: bash
         run: |
-          BRANCH="paper/icimcis-high-compute-revision-2026-10-15"
+          BRANCH="${GITHUB_REF_NAME}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # A build must never commit a PDF if manuscript source changed while compiling.
