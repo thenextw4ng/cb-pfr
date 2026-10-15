@@ -172,12 +172,21 @@ jobs:
           pattern: c5g7-night-production-*
           path: /tmp/c5g7-night-production
           merge-multiple: false
-      - name: Aggregate run-level evidence
+      - name: Aggregate run-level evidence against the frozen seed ledger
         id: analyze
-        continue-on-error: true
         shell: bash -el {0}
         run: |
-          python scripts/analyze_c5g7_night_campaign.py --artifacts-root /tmp/c5g7-night-production --outdir /tmp/c5g7-night-production-summary --expected-main-runs 75
+          set -euo pipefail
+          SEED_LEDGER="$(find /tmp/c5g7-night-production -type f -name campaign_plan.json -print -quit)"
+          if [ -z "$SEED_LEDGER" ]; then
+            echo "Required campaign_plan.json seed ledger is missing; production aggregation cannot pass."
+            exit 1
+          fi
+          python scripts/analyze_c5g7_night_campaign.py \
+            --artifacts-root /tmp/c5g7-night-production \
+            --seed-ledger "$SEED_LEDGER" \
+            --outdir /tmp/c5g7-night-production-summary \
+            --expected-main-runs 75
       - name: Export completion decision
         id: decide
         if: always()
