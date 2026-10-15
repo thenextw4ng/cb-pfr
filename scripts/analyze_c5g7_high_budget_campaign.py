@@ -132,7 +132,7 @@ def load_records(root: Path) -> tuple[list[dict[str, Any]], list[str]]:
                 "entropy_lag1_acf": (source.get("entropy") or {}).get("lag1_autocorrelation"),
                 "k_generation_half_delta_pcm": source.get("k_generation_second_minus_first_half_pcm"),
                 "upstream_commit": study.get("upstream_commit"),
-                "openmc_version": physical.get("openmc_version),
+                "openmc_version": physical.get("openmc_version"),
             })
         except Exception as exc:
             errors.append(f"{summary_path}: {type(exc).__name__}: {exc}")
