@@ -1,27 +1,7 @@
 name: C5G7 repeated-seed smoke reliability audit
 
 on:
-  push:
-    paths:
-      - ".github/workflows/c5g7-repeatability-smoke.yml"
-      - "scripts/analyze_c5g7_repeatability.py"
-      - "scripts/run_c5g7_layout_study.py"
-      - "scripts/audit_c5g7_smoke_statepoints.py"
-      - "scripts/prepare_c5g7_reference.py"
-      - "config/benchmarks/c5g7_2x2_design_space.json"
-  pull_request:
-    paths:
-      - ".github/workflows/c5g7-repeatability-smoke.yml"
-      - "scripts/analyze_c5g7_repeatability.py"
-      - "scripts/run_c5g7_layout_study.py"
-      - "scripts/audit_c5g7_smoke_statepoints.py"
-      - "scripts/prepare_c5g7_reference.py"
-      - "config/benchmarks/c5g7_2x2_design_space.json"
   workflow_dispatch:
-
-concurrency:
-  group: c5g7-repeatability-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   repeated-smoke-runs:
