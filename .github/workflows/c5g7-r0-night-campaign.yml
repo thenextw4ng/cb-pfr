@@ -1,4 +1,5 @@
 name: C5G7 R0 quick characterization and gated campaign launch
+# R0 code uses an entropy z slab [-1.1,+1.1] so the full initial source interval [-1,+1] is inside it.
 
 on:
   push:
