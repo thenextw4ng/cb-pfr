@@ -19,7 +19,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          for RUN_ID in 38735056737 38735162993; do
+          for RUN_ID in 38735056737 38735162993 38735301955 38740238807 38723127815; do
             CURRENT_STATUS="$(gh api "repos/thenextw4ng/cb-pfr/actions/runs/$RUN_ID" --jq '.status' 2>/dev/null)"
             echo "run=$RUN_ID status_before=$CURRENT_STATUS"
             if [ "$CURRENT_STATUS" = "queued" ] || [ "$CURRENT_STATUS" = "in_progress" ] || [ "$CURRENT_STATUS" = "requested" ]; then
