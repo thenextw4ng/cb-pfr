@@ -32,6 +32,7 @@ class C5G7LayoutStudyTests(unittest.TestCase):
             "inactive = 500\n"
             "particles = 10000\n"
             "settings_file.particles = particles\n"
+            "settings_file.source = openmc.Source(space=openmc.stats.Box([-32.13, -10.71, -1.0], [10.71, 32.13, 1.0], only_fissionable=True))\n"
             "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\n"
             "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\n"
             "settings_file.entropy_dimension = [51, 51, 1]\n",
