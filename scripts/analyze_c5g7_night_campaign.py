@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse,csv,hashlib,json,math,statistics
 from pathlib import Path
+import xml.etree.ElementTree as ET
 import numpy as np
 import openmc
 
@@ -24,7 +25,7 @@ def sha256(p):
   for b in iter(lambda:f.read(1048576),b""):h.update(b)
  return h.hexdigest()
 
-def audit_entropy_mesh(mesh):
+def audit_entropy_mesh(mesh, settings_path):
  if mesh.get("derived_from_geometry_bounding_box") is not True:raise ValueError("entropy mesh is not certified as geometry-derived")
  if mesh.get("entropy_dimension")!=[24,24]:raise ValueError(f"entropy mesh dimension mismatch: {mesh.get('entropy_dimension')!r}")
  if mesh.get("z_axis_unbounded") is not True:raise ValueError("entropy mesh is not recorded as a 2-D x-y mesh with unbounded z")
@@ -43,6 +44,18 @@ def audit_entropy_mesh(mesh):
   if not gu>gl:raise ValueError(f"invalid geometry bounding-box bounds on axis {axis}")
   if not math.isclose(el,gl-padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy lower bound axis {axis} does not equal geometry lower bound minus padding")
   if not math.isclose(eu,gu+padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy upper bound axis {axis} does not equal geometry upper bound plus padding")
+ settings=ET.parse(settings_path).getroot()
+ mesh_id=settings.findtext("entropy_mesh")
+ actual_mesh=settings.find(f"mesh[@id='{mesh_id}']") if mesh_id else None
+ if actual_mesh is None:raise ValueError("settings.xml entropy_mesh reference does not resolve to a mesh element")
+ dims=[int(v) for v in (actual_mesh.findtext("dimension") or "").split()]
+ lower=[float(v) for v in (actual_mesh.findtext("lower_left") or "").split()]
+ upper=[float(v) for v in (actual_mesh.findtext("upper_right") or "").split()]
+ if dims!=[24,24]:raise ValueError(f"settings.xml entropy mesh dimension mismatch: {dims!r}")
+ if len(lower)!=2 or len(upper)!=2:raise ValueError("settings.xml entropy mesh bounds must be two-dimensional")
+ for axis in range(2):
+  if not math.isclose(lower[axis],pairs["entropy_lower_left"][axis],rel_tol=0.0,abs_tol=1e-8):raise ValueError("settings.xml lower-left does not match entropy mesh audit JSON")
+  if not math.isclose(upper[axis],pairs["entropy_upper_right"][axis],rel_tol=0.0,abs_tol=1e-8):raise ValueError("settings.xml upper-right does not match entropy mesh audit JSON")
  return True
 
 def pin_max_min(statepoint):
@@ -105,15 +118,17 @@ def gather(root):
    phys=case["physical_results"];case_dir=p.parent/cid
    manifest_path=case_dir/"RUN_MANIFEST.json";trace_path=case_dir/"trace.npz"
    settings_path=case_dir/"model/2d/settings.xml"
+   tally_output=case_dir/"model/2d/tallies.out";tally_xml=case_dir/"model/2d/tallies.xml"
    raw_path=p.parent/"analysis/raw_hdf5_audit.json";source_path=p.parent/"analysis/source_convergence.json"
    source_csv=p.parent/"analysis/source_convergence.csv"
    fission_path=p.parent/"analysis/assembly_fission.json";mesh_audit=case_dir/"model/2d/entropy_mesh_audit.json"
    statepoint=case_dir/phys["statepoint"]
-   for f in (manifest_path,trace_path,settings_path,raw_path,source_path,source_csv,fission_path,mesh_audit,statepoint):
+   for f in (manifest_path,trace_path,settings_path,tally_output,tally_xml,raw_path,source_path,source_csv,fission_path,mesh_audit,statepoint):
     if not f.is_file():raise ValueError("missing evidence: "+str(f))
    manifest=json.loads(manifest_path.read_text());raw=json.loads(raw_path.read_text())
    source=json.loads(source_path.read_text());fission=json.loads(fission_path.read_text());entropy=json.loads(mesh_audit.read_text())
-   if raw.get("status")!="PASS":raise ValueError("raw HDF5 audit failed")
+   if raw.get("status")!="PASS" or raw.get("candidate_count")!=1:raise ValueError("raw HDF5 audit failed or candidate count mismatch")
+   if not manifest.get("required_balance_scores_present") or not manifest.get("tallies"):raise ValueError("manifest tally/balance-score evidence missing")
    if source.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or source.get("automatic_convergence_claim") is not False or not source.get("entropy") or not source.get("k_generation"):raise ValueError("source diagnostics absent or status is not explicitly non-certifying")
    if manifest.get("openmc_version")!="0.16.0":raise ValueError("OpenMC version mismatch")
    for key in ("seed","threads","batches","inactive","particles"):
@@ -126,7 +141,9 @@ def gather(root):
    if expected_hashes.get(str(Path(phys["statepoint"])))!=sha256(statepoint):raise ValueError("statepoint hash disagrees with study output manifest")
    if expected_hashes.get("trace.npz")!=sha256(trace_path):raise ValueError("trace hash disagrees with study output manifest")
    if expected_hashes.get("model/2d/settings.xml")!=sha256(settings_path):raise ValueError("settings.xml hash disagrees with study output manifest")
-   audit_entropy_mesh(entropy)
+   if expected_hashes.get("model/2d/tallies.out")!=sha256(tally_output):raise ValueError("tallies.out hash disagrees with study output manifest")
+   if expected_hashes.get("model/2d/tallies.xml")!=sha256(tally_xml):raise ValueError("tallies.xml hash disagrees with study output manifest")
+   audit_entropy_mesh(entropy,settings_path)
    log=(case_dir/"openmc.log")
    if not log.is_file():raise ValueError("captured OpenMC log absent")
    warnings=log.read_text(errors="replace").count("Fission source site(s) outside of entropy box")
