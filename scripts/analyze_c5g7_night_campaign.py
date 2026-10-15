@@ -8,7 +8,7 @@ import openmc
 
 REFERENCE_KEFF=1.18655
 REFERENCE_KEFF_SD=0.000095
-EXPECTED_MAIN={"P1":10,"V1a":5,"P2":10,"P3":20,"P4":20,"P5":5,"P6":5,"V2a":1200}
+EXPECTED_MAIN={"P1":10,"V1a":5,"P2":10,"P3":20,"P4":20,"P5":5,"P6":5}
 NON_FUEL={
  (r,c)
  for r,cols in {
@@ -69,29 +69,49 @@ def gather(root):
    cid=case["candidate_id"];sig="".join("M" if case["layout"][pos]=="MOX" else "U" for pos in ("p00","p01","p10","p11"))
    if cid!="c5g7-2x2-"+sig:raise ValueError("candidate signature mismatch")
    if sig not in SIGS:raise ValueError("unregistered layout signature")
+   stage=meta.get("stage")
+   if stage not in EXPECTED_MAIN:raise ValueError(f"unexpected stage in production-only aggregator: {stage!r}")
+   settings=study.get("settings") or {}
+   seed=int(case["seed"])
+   expected_source="bad" if stage=="P6" else "good"
+   if meta.get("source")!=expected_source:raise ValueError(f"source profile mismatch for {stage}: {meta.get('source')!r}")
+   expected_run_id=f"{stage}-{sig}-s{seed}-b{int(settings['batches'])}-i{int(settings['inactive'])}-p{int(settings['particles'])}-t{int(settings['threads'])}-{expected_source}"
+   if meta.get("run_id")!=expected_run_id:raise ValueError(f"run_id does not match stage/layout/seed/settings: {meta.get('run_id')!r} != {expected_run_id!r}")
+   if meta.get("signature")!=sig:raise ValueError("metadata layout signature mismatch")
+   if int(meta.get("replicate",-1))<1:raise ValueError("invalid replicate metadata")
+   for key in ("batches","inactive","particles","threads"):
+    if int(meta.get(key,-1))!=int(settings[key]):raise ValueError(f"metadata {key} does not match STUDY_SUMMARY settings")
    phys=case["physical_results"];case_dir=p.parent/cid
    manifest_path=case_dir/"RUN_MANIFEST.json";trace_path=case_dir/"trace.npz"
+   settings_path=case_dir/"model/2d/settings.xml"
    raw_path=p.parent/"analysis/raw_hdf5_audit.json";source_path=p.parent/"analysis/source_convergence.json"
    fission_path=p.parent/"analysis/assembly_fission.json";mesh_audit=case_dir/"model/2d/entropy_mesh_audit.json"
    statepoint=case_dir/phys["statepoint"]
-   for f in (manifest_path,trace_path,raw_path,source_path,fission_path,mesh_audit,statepoint):
+   for f in (manifest_path,trace_path,settings_path,raw_path,source_path,fission_path,mesh_audit,statepoint):
     if not f.is_file():raise ValueError("missing evidence: "+str(f))
    manifest=json.loads(manifest_path.read_text());raw=json.loads(raw_path.read_text())
    source=json.loads(source_path.read_text());fission=json.loads(fission_path.read_text());entropy=json.loads(mesh_audit.read_text())
    if raw.get("status")!="PASS":raise ValueError("raw HDF5 audit failed")
    if source.get("status")!="DIAGNOSTIC_REVIEW_REQUIRED" or not source.get("entropy"):raise ValueError("source traces missing")
    if manifest.get("openmc_version")!="0.16.0":raise ValueError("OpenMC version mismatch")
-   if manifest.get("seed")!=int(case["seed"]) or manifest.get("threads")!=int(study["settings"]["threads"]):raise ValueError("manifest seed/thread mismatch")
+   for key in ("seed","threads","batches","inactive","particles"):
+    expected=int(case["seed"]) if key=="seed" else int(settings[key])
+    if int(manifest.get(key,-1))!=expected:raise ValueError(f"manifest {key} mismatch")
    if manifest.get("mgxs_sha256")!=phys.get("mgxs_sha256_after_transport"):raise ValueError("MGXS hash mismatch")
    if manifest.get("statepoint_sha256")!=sha256(statepoint):raise ValueError("statepoint hash mismatch")
+   if manifest.get("trace_file")!="trace.npz" or manifest.get("trace_sha256")!=sha256(trace_path):raise ValueError("trace hash mismatch")
+   expected_hashes=case.get("output_hashes_after_run") or {}
+   if expected_hashes.get(str(Path(phys["statepoint"])))!=sha256(statepoint):raise ValueError("statepoint hash disagrees with study output manifest")
+   if expected_hashes.get("trace.npz")!=sha256(trace_path):raise ValueError("trace hash disagrees with study output manifest")
+   if expected_hashes.get("model/2d/settings.xml")!=sha256(settings_path):raise ValueError("settings.xml hash disagrees with study output manifest")
    if entropy.get("derived_from_geometry_bounding_box") is not True or entropy.get("entropy_dimension")!=[24,24]:raise ValueError("entropy mesh provenance mismatch")
    log=(case_dir/"openmc.log")
    if not log.is_file():raise ValueError("captured OpenMC log absent")
    warnings=log.read_text(errors="replace").count("Fission source site(s) outside of entropy box")
    if warnings:raise ValueError(f"entropy-mesh warnings={warnings}")
    if fission.get("candidate_id")!=cid or fission.get("layout_signature")!=sig:raise ValueError("assembly tally signature mismatch")
-   if meta.get("candidate_id")!=cid or meta.get("seed")!=int(case["seed"]):raise ValueError("matrix metadata mismatch")
-   row={"run_id":meta["run_id"],"stage":meta["stage"],"candidate_id":cid,"signature":sig,
+   if meta.get("candidate_id")!=cid or int(meta.get("seed",-1))!=seed:raise ValueError("matrix metadata mismatch")
+   row={"run_id":meta["run_id"],"stage":stage,"candidate_id":cid,"signature":sig,
     "seed":int(case["seed"]),"replicate":int(meta["replicate"]),"batches":int(study["settings"]["batches"]),
     "inactive":int(study["settings"]["inactive"]),"particles":int(study["settings"]["particles"]),
     "threads":int(study["settings"]["threads"]),"source":meta["source"],
@@ -134,17 +154,39 @@ def stage_summary(rows,stage):
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument("--artifacts-root",type=Path,required=True);p.add_argument("--outdir",type=Path,required=True)
+ p.add_argument("--seed-ledger",type=Path,required=True,help="Deterministic campaign_plan.json archived before transport")
  p.add_argument("--expected-main-runs",type=int,default=75);a=p.parse_args()
  if a.outdir.exists() and any(a.outdir.iterdir()):p.error("refusing to overwrite non-empty output directory")
+ if a.expected_main_runs!=sum(EXPECTED_MAIN.values()):p.error(f"expected-main-runs must be {sum(EXPECTED_MAIN.values())} for this production-only aggregator")
  rows,errors=gather(a.artifacts_root);by_stage={s:stage_summary(rows,s) for s in ("P1","V1a","P2","P3","P4","P5","P6","V2a")}
  expected={**EXPECTED_MAIN};actual={s:by_stage[s]["run_count"] for s in by_stage}
- integrity=not errors and sum(actual.values())==a.expected_main_runs and all(actual[s]==EXPECTED_MAIN[s] for s in EXPECTED_MAIN)
+ try:
+  ledger=json.loads(a.seed_ledger.read_text())
+  plan_rows=ledger.get("production_matrix",[])
+  if len(plan_rows)!=a.expected_main_runs:raise ValueError(f"seed ledger production_matrix has {len(plan_rows)} entries, expected {a.expected_main_runs}")
+  plan_by_id={x["run_id"]:x for x in plan_rows}
+  if len(plan_by_id)!=len(plan_rows):raise ValueError("duplicate run_id in seed ledger")
+  observed_ids=[r["run_id"] for r in rows]
+  if len(set(observed_ids))!=len(observed_ids):raise ValueError("duplicate run_id among observed production artifacts")
+  missing=sorted(set(plan_by_id)-set(observed_ids));unexpected=sorted(set(observed_ids)-set(plan_by_id))
+  if missing:errors.append(f"seed ledger missing observed production runs: {missing[:20]}")
+  if unexpected:errors.append(f"observed run IDs not present in seed ledger: {unexpected[:20]}")
+  for row in rows:
+   planned=plan_by_id.get(row["run_id"])
+   if planned is None:continue
+   for key in ("stage","candidate_id","signature","seed","replicate","batches","inactive","particles","threads","source"):
+    if row.get(key)!=planned.get(key):errors.append(f"seed ledger mismatch {row['run_id']} field {key}: observed={row.get(key)!r}, planned={planned.get(key)!r}")
+  seed_ledger_audit={"status":"PASS" if not errors else "FAIL","expected_count":len(plan_rows),"observed_count":len(rows),"missing_run_ids":missing,"unexpected_run_ids":unexpected,"sha256":sha256(a.seed_ledger)}
+ except Exception as e:
+  errors.append(f"seed ledger audit: {type(e).__name__}: {e}")
+  seed_ledger_audit={"status":"FAIL","error":f"{type(e).__name__}: {e}","sha256":sha256(a.seed_ledger) if a.seed_ledger.is_file() else None}
  hashes=[r["statepoint_sha256"] for r in rows];mgxs={r["mgxs_sha256"] for r in rows}
+ integrity=not errors and seed_ledger_audit["status"]=="PASS" and sum(actual.values())==a.expected_main_runs and all(actual[s]==EXPECTED_MAIN[s] for s in EXPECTED_MAIN)
  integrity=integrity and len(set(hashes))==len(hashes) and len(mgxs)==1 and None not in mgxs and all(r["status"]=="PASS_INTEGRITY" for r in rows)
  result={"schema_version":"1.0","protocol_id":"CBPFR-C5G7-NIGHT-CAMPAIGN-2026-10-15",
   "status":"MAIN_CAMPAIGN_INTEGRITY_PASS_PENDING_SCIENTIFIC_REVIEW" if integrity else "MAIN_CAMPAIGN_INCOMPLETE_OR_INTEGRITY_FAIL",
   "integrity_pass":integrity,"expected_run_count":a.expected_main_runs,"observed_run_count":len(rows),
-  "run_counts_by_stage":actual,"errors":errors,"global_unique_statepoint_hashes":len(set(hashes))==len(hashes),
+  "seed_ledger_audit":seed_ledger_audit,"run_counts_by_stage":actual,"errors":errors,"global_unique_statepoint_hashes":len(set(hashes))==len(hashes),
   "single_common_mgxs_sha256":len(mgxs)==1 and None not in mgxs,"stage_summaries":by_stage,
   "run_level_results":rows,"official_benchmark_acceptance":False,
   "selection_claim_status":"NOT_EVALUATED_BY_THIS_AGGREGATOR",
