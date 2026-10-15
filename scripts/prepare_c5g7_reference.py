@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 UPSTREAM_URL = "https://github.com/mit-crpg/benchmarks.git"
+PINNED_UPSTREAM_COMMIT = "ba41bee54320ada0b4ac39a0dd2ca3c1d090a450"
 
 
 def main() -> int:
@@ -22,6 +23,11 @@ def main() -> int:
         "--destination",
         required=True,
         help="new directory to clone into; existing paths are never overwritten",
+    )
+    parser.add_argument(
+        "--commit",
+        default=PINNED_UPSTREAM_COMMIT,
+        help="pinned full upstream commit; defaults to the reviewed C5G7 source revision",
     )
     args = parser.parse_args()
 
@@ -49,12 +55,21 @@ def main() -> int:
             check=True,
             text=True,
         )
+        if len(args.commit) != 40 or any(ch not in "0123456789abcdef" for ch in args.commit):
+            raise RuntimeError(f"expected a full lowercase commit SHA, got {args.commit!r}")
+        subprocess.run(
+            ["git", "-C", str(destination), "checkout", "--detach", args.commit],
+            check=True,
+            text=True,
+        )
         revision = subprocess.run(
             ["git", "-C", str(destination), "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
             text=True,
         ).stdout.strip()
+        if revision != args.commit:
+            raise RuntimeError(f"requested upstream commit {args.commit!r}, checked out {revision!r}")
         if len(revision) != 40 or any(ch not in "0123456789abcdef" for ch in revision):
             raise RuntimeError(f"unexpected full Git commit SHA: {revision!r}")
 
