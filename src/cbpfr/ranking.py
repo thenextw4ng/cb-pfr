@@ -72,6 +72,7 @@ class RankedCandidate:
     qubo_indicator: int
     qubo_energy: float
     physical: PhysicalAssessment | None
+    # Substantive score only; equal keys remain tied irrespective of input order.
     ranking_key: tuple[float | int, ...]
 
 def _assessment_for_metric(metric: MetricLimit, supplied: tuple[float, float] | None, width_override: float | None) -> MetricAssessment:
@@ -111,7 +112,7 @@ def _rank(method: str, model: QuboModel, candidates: Sequence[Candidate], estima
         energy = model.energy(candidate.vector)
         if mode == "qubo":
             physical = None
-            key = (qubo_indicator, energy, index)
+            key = (qubo_indicator, energy)
         else:
             if mode == "point":
                 margins = {metric.name: 0.0 for metric in metrics}
@@ -122,9 +123,11 @@ def _rank(method: str, model: QuboModel, candidates: Sequence[Candidate], estima
             else:
                 raise ValueError(f"unknown ranking mode: {mode}")
             physical = assess_physical(metrics, estimates.get(candidate.candidate_id), uniform_margins=margins)
-            key = (qubo_indicator, physical.indicator, physical.aggregate_violation, energy, index)
+            key = (qubo_indicator, physical.indicator, physical.aggregate_violation, energy)
         ranked.append(RankedCandidate(method, candidate, index, qubo_indicator, energy, physical, key))
-    return sorted(ranked, key=lambda item: item.ranking_key)
+    # Candidate ID is a deterministic display-only tie breaker. It is deliberately
+    # excluded from ranking_key so tied candidates remain in the same tie group.
+    return sorted(ranked, key=lambda item: (item.ranking_key, item.candidate.candidate_id))
 
 def rank_all_methods(model: QuboModel, candidates: Sequence[Candidate], estimates: Mapping[str, PhysicalEstimate], metrics: Sequence[MetricLimit], uniform_margins: Mapping[str, float]) -> dict[str, list[RankedCandidate]]:
     if not candidates:
@@ -143,6 +146,19 @@ def rank_all_methods(model: QuboModel, candidates: Sequence[Candidate], estimate
         "cb_pfr": _rank("cb_pfr", model, candidates, estimates, metrics, mode="cbpfr"),
         "uniform_margin": _rank("uniform_margin", model, candidates, estimates, metrics, mode="uniform", uniform_margins=uniform_margins),
     }
+
+def tie_groups(ranked: Sequence[RankedCandidate]) -> tuple[tuple[RankedCandidate, ...], ...]:
+    """Return consecutive groups with identical substantive ranking keys.
+
+    The order within a tie group is canonical by candidate_id, while group
+    membership depends only on the substantive score and is invariant to input
+    permutation. No physical preference is implied by the display order.
+    """
+    from itertools import groupby
+
+    ordered = sorted(ranked, key=lambda item: (item.ranking_key, item.candidate.candidate_id))
+    return tuple(tuple(group) for _, group in groupby(ordered, key=lambda item: item.ranking_key))
+
 
 def selected_is_conservatively_feasible(result: RankedCandidate) -> bool:
     return result.qubo_indicator == 0 and result.physical is not None and result.physical.indicator == 0
