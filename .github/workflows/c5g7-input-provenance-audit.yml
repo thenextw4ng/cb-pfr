@@ -1,18 +1,6 @@
 name: C5G7 production-input provenance comparison
 
 on:
-  push:
-    paths:
-      - ".github/workflows/c5g7-input-provenance-audit.yml"
-      - "scripts/compare_c5g7_input_provenance.py"
-      - "scripts/run_c5g7_layout_study.py"
-      - "OpenMC_HDF5_Evidence_2026-10-11.zip"
-  pull_request:
-    paths:
-      - ".github/workflows/c5g7-input-provenance-audit.yml"
-      - "scripts/compare_c5g7_input_provenance.py"
-      - "scripts/run_c5g7_layout_study.py"
-      - "OpenMC_HDF5_Evidence_2026-10-11.zip"
   workflow_dispatch:
 
 permissions:
