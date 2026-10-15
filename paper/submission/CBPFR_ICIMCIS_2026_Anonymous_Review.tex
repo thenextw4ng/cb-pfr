@@ -136,7 +136,7 @@ The measured \(F\) means separate the four classes descriptively, while mirror m
 \end{figure*}
 
 \subsection{CB-PFR Status and Threshold Sensitivity}
-For \(z=1\), the illustrative \(k_{\mathrm{eff}}\) bounds all fall within \([1.14,1.21]\), so \(V_k=0\) for all classes. Table~\ref{tab:screen} reports \(B_k^-\), \(B_k^+\), the upper operational bound \(B_F^+\), and the normalized violation \(V_F=\max(0,B_F^+-F_{\max})/d_F\). Two classes pass (S1 and S2), represented by three layout labels; S3 and S4 fail. Since \(F_{\max}\) was selected retrospectively, this result demonstrates code behavior only.
+For \(z=1\), the illustrative \(k_{\mathrm{eff}}\) bounds all fall within \([1.14,1.21]\), so \(V_k=0\) for all classes. Table~\ref{tab:screen} reports \(B_k^-\), \(B_k^+\), the upper operational bound \(B_F^+\), and aggregate normalized violation \(V_i\). Since \(V_k=0\) for all classes in this scenario, \(V_i=V_F=\max(0,B_F^+-F_{\max})/d_F\). Two classes pass (S1 and S2), represented by three layout labels; S3 and S4 fail. Since \(F_{\max}\) was selected retrospectively, this result demonstrates code behavior only.
 
 \begin{table}[t]
 \caption{Illustrative class-level CB-PFR screen: \(k\in[1.14,1.21]\), \(F_{\max}=1.35\), \(z=1\).}
@@ -146,7 +146,7 @@ For \(z=1\), the illustrative \(k_{\mathrm{eff}}\) bounds all fall within \([1.1
 \setlength{\tabcolsep}{2.4pt}
 \begin{tabular}{c c c r r l}
 \toprule
-Class & \(B_k^-\) & \(B_k^+\) & \(B_F^+\) & \(V_F\) & Status\\
+Class & \(B_k^-\) & \(B_k^+\) & \(B_F^+\) & \(V_i\) & Status\\
 \midrule
 S1 & 1.143591 & 1.143781 & 1.296827 & 0.0000 & Pass\\
 S2 & 1.156168 & 1.156358 & 1.317446 & 0.0000 & Pass\\
