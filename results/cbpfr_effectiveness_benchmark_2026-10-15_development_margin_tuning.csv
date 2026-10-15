@@ -1,0 +1,7 @@
+regime,margin,development_pools,feasible_selections,feasible_selection_rate,selection_rule,selected_for_confirmation
+calibrated_moderate,0.0,200,187,0.935,maximize development rate; ties choose smaller margin,False
+calibrated_moderate,0.004,200,194,0.97,maximize development rate; ties choose smaller margin,False
+calibrated_moderate,0.008,200,192,0.96,maximize development rate; ties choose smaller margin,False
+calibrated_moderate,0.012,200,195,0.975,maximize development rate; ties choose smaller margin,False
+calibrated_moderate,0.016,200,198,0.99,maximize development rate; ties choose smaller margin,False
+calibrated_moderate,0.02,200,199,0.995,maximize development rate; ties choose smaller margin,True
