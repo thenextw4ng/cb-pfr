@@ -147,7 +147,7 @@ The current evidence establishes an implemented decision procedure, not a physic
 
 ## 8. Data and code availability
 
-Code, tests, protocol specifications, evidence reports, and the archived-run audit tools are maintained in the CB-PFR repository: https://github.com/thenextw4ng/cb-pfr. The paper's final version should identify the exact release commit, archive DOI or durable artifact identifier, and the hashes of all analyzed inputs before submission. The raw high-budget archive checksum recorded in the current closeout is `be48b17c2c336a97d08673d191457b9c695853759180116f5382f636b4c93019`.
+The software source, tests, protocols, and audit reports are maintained at https://github.com/thenextw4ng/cb-pfr. The reviewed software snapshot is identified by commit `442de59e40e440aad37da495b50a487992c8f096`; the package metadata reports version 0.3.0, but no GitHub release tag or archival DOI had been published at the time of this review. The main 18-run six-layout archive has SHA-256 `be48b17c2c336a97d08673d191457b9c695853759180116f5382f636b4c93019`. The separate three-seed canonical UMMU archive used for the scalar screen is supplied as a supplemental artifact with this review package (SHA-256 `b996708634ff41491b0323bdac11d5ab2574c6716d42fca1a8bf449795aca953)); its raw archive is not currently committed to the repository. The repository also contains the dashboard statepoint archive, which serves a distinct visualization/provenance role. A permanent software DOI should be added only after an exact tagged release is deposited and the DOI has been assigned.
 
 ## 9. References
 
