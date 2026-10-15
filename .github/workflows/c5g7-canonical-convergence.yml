@@ -6,6 +6,7 @@ on:
       - research/c5g7-corrected-canonical-run-20261011
     paths:
       - ".github/workflows/c5g7-canonical-convergence.yml"
+      - "scripts/run_c5g7_layout_study.py"
   workflow_dispatch:
     inputs:
       batches:
@@ -34,7 +35,7 @@ jobs:
       BATCHES: ${{ inputs.batches || '7000' }}
       INACTIVE: ${{ inputs.inactive || '100' }}
       PARTICLES: ${{ inputs.particles || '10000' }}
-      SEED_BASES: "720000 730000 740000"
+      SEED_BASES: "920000 930000 940000"
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned OpenMC 0.16.0
