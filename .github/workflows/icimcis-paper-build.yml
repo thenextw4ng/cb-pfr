@@ -24,6 +24,29 @@ jobs:
         with:
           ref: paper/icimcis-high-compute-revision-2026-10-15
           persist-credentials: true
+      - name: Recompute symmetry-class screen from archived run-level CSV
+        shell: bash
+        run: |
+          python3 paper/submission/analyze_symmetry_screen.py \
+            --input results/cbpfr_physical_feasibility_bridge_2026-10-12.csv \
+            --output /tmp/cbpfr-symmetry-screen.json --sweep
+          python3 - <<'PY'
+          import json
+          with open("/tmp/cbpfr-symmetry-screen.json", encoding="utf-8") as handle:
+              report = json.load(handle)
+          classes = {row["class"]: row for row in report["class_summary"]}
+          assert len(classes) == 4
+          assert round(classes["S1"]["mean_F"], 6) == 1.295867
+          assert round(classes["S2"]["mean_F"], 6) == 1.316149
+          assert report["screen"]["passing_classes"] == 2
+          assert report["screen"]["passing_layout_labels"] == 3
+          sweep = {row["F_max"]: row for row in report["retrospective_sensitivity_sweep"]}
+          assert sweep[1.87]["z_0"]["passing_layout_labels"] == 6
+          assert sweep[1.87]["z_1"]["passing_layout_labels"] == 6
+          assert sweep[1.87]["z_2"]["passing_layout_labels"] == 5
+          assert sweep[1.87]["z_2"]["passing_symmetry_classes"] == 3
+          print("Class table and retrospective sensitivity reproduce the manuscript's key counts.")
+          PY
       - name: Compile IEEE conference PDF
         uses: xu-cheng/latex-action@v3
         with:
