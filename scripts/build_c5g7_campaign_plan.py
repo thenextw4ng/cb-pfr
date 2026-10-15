@@ -5,7 +5,7 @@ import argparse, json
 from pathlib import Path
 import numpy as np
 
-ROOT_ENTROPY = 20261015
+ROOT_ENTROPY = 2026101502
 LAYOUTS = {
     "MMUU": "c5g7-2x2-MMUU",
     "MUMU": "c5g7-2x2-MUMU",
@@ -20,6 +20,8 @@ EXCLUDED = {
     *range(8200001,8200011),
     1720000,2720000,3720000,4720000,5720000,6720000,7720000,
     20261015,20262015,20263015,
+    # Seeds consumed by the discarded finite-z entropy-mesh R0 attempt (not reused after the mesh amendment).
+    1882476668,1034011552,2213845949,
 }
 USED = set(EXCLUDED)
 
