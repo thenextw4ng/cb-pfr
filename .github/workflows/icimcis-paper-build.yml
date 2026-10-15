@@ -48,6 +48,49 @@ jobs:
           assert sweep[1.87]["z_2"]["passing_symmetry_classes"] == 3
           print("Class table and retrospective sensitivity reproduce the manuscript's key counts.")
           PY
+      - name: Recompute two-protocol UMMU audit and descriptive uncertainty scores
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import csv, math, statistics
+          from collections import defaultdict
+          path = "paper/submission/canonical_high_budget_summary.csv"
+          groups = defaultdict(list)
+          with open(path, newline="", encoding="utf-8") as handle:
+              for row in csv.DictReader(handle):
+                  groups[row["protocol"]].append(row)
+          assert set(groups) == {"A_500_inactive", "B_100_inactive"}
+          assert all(len(rows) == 3 for rows in groups.values())
+          expected_inactive = {"A_500_inactive": "500", "B_100_inactive": "100"}
+          ref, uref = 1.18655, 0.000095
+          for name, rows in groups.items():
+              assert {r["seed"] for r in rows} == {"720000", "730000", "740000"}
+              assert len({r["statepoint_sha256"] for r in rows}) == 3
+              assert {r["inactive_batches"] for r in rows} == {expected_inactive[name]}
+              assert {r["raw_hdf5_audit"] for r in rows} == {"PASS"}
+              assert {r["mgxs_group_structure_audit"] for r in rows} == {"PASS"}
+              assert len({r["mgxs_sha256"] for r in rows}) == 1
+              means = [float(r["keff_mean"]) for r in rows]
+              sds = [float(r["keff_std_dev"]) for r in rows]
+              mean = statistics.mean(means)
+              between = statistics.stdev(means)
+              within = math.sqrt(sum(x*x for x in sds) / len(sds))
+              run_se = max(between / math.sqrt(len(rows)), within / math.sqrt(len(rows)))
+              combined = math.sqrt(uref*uref + run_se*run_se)
+              z = (mean-ref) / combined
+              ratio = between / within
+              print(f"{name}: mean={mean:.11f}; between/within SD={ratio:.4f}; z={z:.4f}")
+              if name == "A_500_inactive":
+                  assert round(mean, 8) == 1.18649321
+                  assert round((mean-ref)*1e5, 2) == -5.68
+                  assert round(z, 3) == -0.434
+              else:
+                  assert round(mean, 8) == 1.18647358
+                  assert round((mean-ref)*1e5, 2) == -7.64
+                  assert round(z, 3) == -0.698
+                  assert ratio < 0.1
+                  assert {int(r["entropy_mesh_warning_count"]) for r in rows} == {7000}
+          PY
       - name: Compile IEEE conference PDF
         uses: xu-cheng/latex-action@v3
         with:
