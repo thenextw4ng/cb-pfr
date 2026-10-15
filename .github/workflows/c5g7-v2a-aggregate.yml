@@ -82,8 +82,25 @@ jobs:
             "official_benchmark_acceptance": false
           }
           JSON
+      - name: Audit P1-P6 and V1a production evidence against the seed ledger
+        if: steps.discover.outputs.all_ready == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          SEED_LEDGER="$(find /tmp/production-artifacts -type f -name campaign_plan.json -print -quit)"
+          if [ -z "$SEED_LEDGER" ]; then
+            echo "Required campaign_plan.json seed ledger is missing; production aggregation cannot pass."
+            exit 1
+          fi
+          python scripts/analyze_c5g7_night_campaign.py \
+            --artifacts-root /tmp/production-artifacts \
+            --seed-ledger "$SEED_LEDGER" \
+            --outdir /tmp/v2a-summary/production \
+            --expected-main-runs 75
       - name: Audit all 1,200 V2a observations and 60 high-budget references against the seed ledger
         if: steps.discover.outputs.all_ready == 'true'
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -96,7 +113,43 @@ jobs:
             --v2a-root /tmp/v2a-artifacts \
             --production-root /tmp/production-artifacts \
             --seed-ledger "$SEED_LEDGER" \
-            --outdir /tmp/v2a-summary
+            --outdir /tmp/v2a-summary/v2a
+      - name: Write a combined closeout decision without implying convergence or benchmark acceptance
+        if: steps.discover.outputs.all_ready == 'true' && always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path("/tmp/v2a-summary")
+          prod_p=root/"production/night_campaign_summary.json"
+          v2a_p=root/"v2a/v2a_selection_summary.json"
+          prod=json.loads(prod_p.read_text()) if prod_p.is_file() else {}
+          v2a=json.loads(v2a_p.read_text()) if v2a_p.is_file() else {}
+          p_ok=prod.get("integrity_pass") is True and prod.get("observed_run_count")==75
+          v_ok=v2a.get("integrity_pass") is True and v2a.get("observed_v2a_runs")==1200 and v2a.get("high_budget_empirical_reference_by_layout") is not None
+          report={
+            "schema_version":"1.0",
+            "campaign_sha":${{ toJSON(steps.discover.outputs.expected_sha) }},
+            "status":"ALL_DATA_INTEGRITY_PASS_PENDING_SCIENTIFIC_REVIEW" if p_ok and v_ok else "CAMPAIGN_INCOMPLETE_OR_INTEGRITY_FAIL",
+            "production_integrity_pass":p_ok,
+            "production_observed_runs":prod.get("observed_run_count"),
+            "production_expected_runs":75,
+            "v2a_integrity_pass":v_ok,
+            "v2a_observed_runs":v2a.get("observed_v2a_runs"),
+            "v2a_expected_runs":1200,
+            "convergence_certified":False,
+            "official_benchmark_acceptance":False,
+            "physical_best_layout_claim":False,
+            "production_report":"production/night_campaign_summary.json" if prod_p.is_file() else None,
+            "v2a_report":"v2a/v2a_selection_summary.json" if v2a_p.is_file() else None
+          }
+          root.mkdir(parents=True,exist_ok=True)
+          (root/"campaign_closeout.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(report,indent=2))
+          if not (p_ok and v_ok):
+            raise SystemExit("Campaign closeout remains blocked: one or more integrity/completeness gates did not pass.")
+          PY
       - name: Preserve current aggregation status
         if: always()
         uses: actions/upload-artifact@v4
