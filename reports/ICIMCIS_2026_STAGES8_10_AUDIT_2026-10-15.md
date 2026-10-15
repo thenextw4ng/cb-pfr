@@ -63,3 +63,16 @@ This audit verifies repository metadata, documented dependencies, installation i
 2. Deposit that exact tag in Zenodo and only then add the assigned DOI to README/CITATION metadata and the camera-ready software citation.
 3. Attach a resolved dependency lock or environment/container recipe if strict environment reproduction is required.
 4. Keep all validation claims bounded until independent model-fidelity/source-convergence review and prospective physical criteria exist.
+
+
+## Exact reproducibility identifiers (review build)
+
+- **Software snapshot commit:** `2b8252466db09014bc9d4c9e033e44214d9c0f93`
+- **CI runs for that snapshot:** [38674279123](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674279123) and [38674274152](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674274152), both completed successfully on the 3.10/3.11/3.12 matrix.
+- **Anonymized review PDF SHA-256:** `5038318b3af49b4cc1d1f1db75018edbf98647e5a035411624db4c82fa309960`
+- **LaTeX source SHA-256:** `1b9c28bdc52f9d4b513a5e6bbb41dd059d8b23d27502f2da2db86ac8e4fc2d72`
+- **BibTeX SHA-256:** `481cbb04c6110f857630ecbdbfa52797ba998845785bac50803b95295212cac8`
+- **Primary six-layout evidence archive SHA-256:** `be48b17c2c336a97d08673d191457b9c695853759180116f5382f636b4c93019`
+- **Supplemental canonical UMMU evidence archive SHA-256:** `b996708634ff41491b0323bdac11d5ab2574c6716d42fca1a8bf449795aca953`
+
+The software snapshot commit predates this audit-note update, so its hash is a stable identifier for the reviewed code/metadata state. The additional audit-note commit records results about that immutable snapshot; neither is a tagged release, and no DOI is implied.
