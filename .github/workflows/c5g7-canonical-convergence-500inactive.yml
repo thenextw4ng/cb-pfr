@@ -1,0 +1,95 @@
+name: C5G7 corrected-mesh protocol A 500 inactive batches
+
+on:
+  push:
+    branches:
+      - research/c5g7-corrected-canonical-run-20261011
+    paths:
+      - ".github/workflows/c5g7-canonical-convergence-500inactive.yml"
+  workflow_dispatch:
+    inputs:
+      batches:
+        description: "Active+inactive total batch count"
+        required: true
+        default: "7000"
+      inactive:
+        description: "Inactive batches"
+        required: true
+        default: "500"
+      particles:
+        description: "Particles per batch"
+        required: true
+        default: "10000"
+
+permissions:
+  contents: read
+
+# Corrected-run invariant: the runner rejects MGXS unless all eight official C5G7 group boundaries match.
+# Source entropy is recorded through Settings.entropy_mesh, not deprecated arbitrary attributes.
+jobs:
+  canonical-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      BATCHES: ${{ inputs.batches || '7000' }}
+      INACTIVE: ${{ inputs.inactive || '100' }}
+      PARTICLES: ${{ inputs.particles || '10000' }}
+      SEED_BASES: "920000 930000 940000"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-canonical-screen
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream C5G7 model
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run three independent mesh-corrected UMMU cases for Protocol A and raw HDF5 audits
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          OUT=/tmp/c5g7-canonical-convergence
+          mkdir -p "$OUT"
+          for SEED in $SEED_BASES; do
+            ROUND="$OUT/seed_$SEED"
+            python scripts/run_c5g7_layout_study.py \
+              --source-root /tmp/mit-crpg-benchmarks \
+              --design-space config/benchmarks/c5g7_2x2_design_space.json \
+              --output "$ROUND" \
+              --mode run --candidate-ids c5g7-2x2-UMMU \
+              --batches "$BATCHES" --inactive "$INACTIVE" --particles "$PARTICLES" \
+              --threads 1 --seed-base "$SEED"
+            python scripts/audit_c5g7_smoke_statepoints.py \
+              --study-summary "$ROUND/STUDY_SUMMARY.json" \
+              --out "$ROUND/analysis/raw_hdf5_audit.json" \
+              --expected-candidates 1
+            CASE_DIR="$ROUND/c5g7-2x2-UMMU"
+            STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+            python scripts/audit_c5g7_source_convergence.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --out-json "$ROUND/analysis/source_convergence.json" \
+              --out-csv "$ROUND/analysis/source_convergence.csv"
+            python scripts/analyze_c5g7_assembly_fission.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --candidate-id c5g7-2x2-UMMU --layout-signature UMMU \
+              --out "$ROUND/analysis/assembly_fission.json"
+          done
+      - name: Aggregate canonical numerical gates
+        shell: bash -el {0}
+        run: |
+          python scripts/analyze_c5g7_canonical_convergence.py \
+            --rounds-root /tmp/c5g7-canonical-convergence \
+            --out-json /tmp/c5g7-canonical-convergence/canonical_convergence_analysis.json \
+            --out-md /tmp/c5g7-canonical-convergence/canonical_convergence_analysis.md
+          cat /tmp/c5g7-canonical-convergence/canonical_convergence_analysis.md
+      - name: Preserve canonical statepoints, audits, and numerical analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-canonical-mesh-corrected-500inactive-${{ inputs.batches || '7000' }}-${{ inputs.particles || '10000' }}
+          path: /tmp/c5g7-canonical-convergence/
+          if-no-files-found: error
