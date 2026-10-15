@@ -1,0 +1,150 @@
+name: Discover official NEA C5G7 pin-power reference resource
+
+on:
+  push:
+    branches:
+      - research/c5g7-b0-prereg-b1-pilot-20261015
+    paths:
+      - .github/workflows/c5g7-reference-resource-discovery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover-official-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout preregistration
+        uses: actions/checkout@v4
+      - name: Resolve NEA official Appendix D-I download links
+        run: |
+          python - <<'PY'
+          import html, json, re, urllib.parse, urllib.request, zipfile
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          OUT = Path("nea-reference-discovery")
+          OUT.mkdir(exist_ok=True)
+          pages = [
+            "https://www.oecd-nea.org/jcms/pl_73373/appendices-d-i-benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation-a-2-d/3-d-mox-fuel-assembly-benchmark?details=true",
+            "https://www.cms.oecd-nea.org/jcms/pl_73373/appendices-d-i-benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation-a-2-d/3-d-mox-fuel-assembly-benchmark?details=true",
+            "https://www.oecd-nea.org/science/wprs/eg3drtb/NEA-C5G7MOX.PDF",
+          ]
+          allowed = ("oecd-nea.org", "www.oecd-nea.org", "cms.oecd-nea.org", "www.cms.oecd-nea.org")
+
+          class LinkParser(HTMLParser):
+            def __init__(self):
+              super().__init__(convert_charrefs=True)
+              self.links, self.anchor = [], None
+            def handle_starttag(self, tag, attrs):
+              a = dict(attrs)
+              if tag == "a":
+                self.anchor = {"href": a.get("href", ""), "text": "", "img_alt": [], "img_src": []}
+              elif tag == "img" and self.anchor is not None:
+                self.anchor["img_alt"].append(a.get("alt", ""))
+                self.anchor["img_src"].append(a.get("src", ""))
+            def handle_data(self, data):
+              if self.anchor is not None:
+                self.anchor["text"] += data
+            def handle_endtag(self, tag):
+              if tag == "a" and self.anchor is not None:
+                self.anchor["text"] = " ".join(self.anchor["text"].split())
+                self.links.append(self.anchor)
+                self.anchor = None
+
+          report = {"status":"RESOURCE_DISCOVERY_ONLY", "pages":[], "candidate_downloads":[], "data_found":False}
+          candidates = []
+          opener = urllib.request.build_opener()
+          opener.addheaders = [("User-Agent","CB-PFR research resource audit/1.0"),("Accept","text/html,application/zip,application/octet-stream,*/*")]
+          for i, url in enumerate(pages):
+            entry = {"url":url, "fetch_status":"NOT_ATTEMPTED"}
+            try:
+              req = urllib.request.Request(url, headers={"User-Agent":"CB-PFR research resource audit/1.0"})
+              with opener.open(req, timeout=45) as response:
+                body = response.read()
+                content_type = response.headers.get("Content-Type","")
+                final_url = response.geturl()
+              entry.update({"fetch_status":"OK","final_url":final_url,"content_type":content_type,"bytes":len(body)})
+              if "pdf" in content_type.lower() or final_url.lower().endswith(".pdf") or body.startswith(b"%PDF"):
+                (OUT / "official_c5g7_specification.pdf").write_bytes(body)
+              else:
+                (OUT / f"page_{i}.html").write_bytes(body)
+                text = body.decode("utf-8",errors="replace")
+                parser = LinkParser(); parser.feed(text)
+                entry["links_found"] = len(parser.links)
+                for link in parser.links:
+                  href = html.unescape(link.get("href","")).strip()
+                  absolute = urllib.parse.urljoin(final_url, href)
+                  host = urllib.parse.urlparse(absolute).hostname or ""
+                  material = " ".join([link.get("text",""), *link.get("img_alt",[]), *link.get("img_src",[]), href]).lower()
+                  if any(key in material for key in ("zip","appendix d","reference multi-group","download","attachment","excel","xls","spreadsheet","pin power","mcnp")):
+                    report["candidate_downloads"].append({"page":final_url,"href":href,"absolute_url":absolute,"host":host,"anchor_text":link.get("text",""),"img_alt":link.get("img_alt",[]),"img_src":link.get("img_src",[])})
+                    if host in allowed and (any(key in material for key in ("zip","download","attachment","excel","xls","spreadsheet")) or absolute.lower().split("?")[0].endswith((".zip",".xlsx",".xls",".csv"))):
+                      candidates.append(absolute)
+                # Preserve relevant embedded strings for diagnosing JavaScript-rendered attachments.
+                embedded = sorted(set(re.findall(r"""(?i)(?:href|src|url|downloadUrl|attachment)[^'"\n]{0,260}(?:zip|xlsx|xls|csv|download|attachment)[^'"\n]{0,260}""", text)))
+                entry["embedded_download_like_strings"] = embedded[:100]
+            except Exception as exc:
+              entry.update({"fetch_status":"ERROR","error":f"{type(exc).__name__}: {exc}"})
+            report["pages"].append(entry)
+
+          saved = set()
+          for index, url in enumerate(candidates[:20]):
+            if url in saved: continue
+            saved.add(url)
+            item = {"url":url, "status":"NOT_ATTEMPTED"}
+            try:
+              req=urllib.request.Request(url,headers={"User-Agent":"CB-PFR research resource audit/1.0"})
+              with opener.open(req,timeout=60) as resp:
+                data=resp.read(); ctype=resp.headers.get("Content-Type",""); final=resp.geturl()
+              item.update({"status":"DOWNLOADED","final_url":final,"content_type":ctype,"bytes":len(data),"magic_hex":data[:16].hex()})
+              suffix=".zip" if data.startswith(b"PK\x03\x04") else ".bin"
+              path=OUT/f"candidate_{index}{suffix}"
+              path.write_bytes(data);item["saved_as"]=str(path)
+              if data.startswith(b"PK\x03\x04"):
+                try:
+                  with zipfile.ZipFile(path) as z:
+                    names=z.namelist();item["archive_members"]=names[:300]
+                    target=OUT/f"archive_{index}";target.mkdir(exist_ok=True)
+                    for name in names:
+                      low=name.lower()
+                      if any(key in low for key in ("pin","power","reference","appendix","c5g7","xls","xlsx","csv","mcnp")) and not name.endswith("/"):
+                        info=z.getinfo(name)
+                        if info.file_size <= 50_000_000:
+                          dst=target/name
+                          dst.parent.mkdir(parents=True,exist_ok=True)
+                          dst.write_bytes(z.read(name))
+                    if any(re.search(r"(pin.?power|reference|appendix.?d|mcnp).*(xls|xlsx|csv|txt|dat)$",n,re.I) for n in names):
+                      report["data_found"]=True
+                except Exception as exc:
+                  item["zip_error"]=str(exc)
+            except Exception as exc:
+              item.update({"status":"ERROR","error":f"{type(exc).__name__}: {exc}"})
+            report["candidate_downloads"].append(item)
+
+          report["official_data_discovery_result"] = (
+            "OFFICIAL_PIN_POWER_DATA_LOCATED" if report["data_found"] else
+            "DOWNLOAD_LINKS_RESOLVED_NO_PIN_POWER_TABLE_IDENTIFIED" if saved else
+            "OFFICIAL_PIN_POWER_TABLE_NOT_RESOLVED_AUTOMATICALLY"
+          )
+          (OUT/"discovery_report.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          summary={
+            "status":report["official_data_discovery_result"],
+            "pages_fetched":sum(p["fetch_status"]=="OK" for p in report["pages"]),
+            "candidate_links":len([x for x in report["candidate_downloads"] if "status" not in x]),
+            "downloads_attempted":len(saved),
+            "data_found":report["data_found"],
+            "report":str(OUT/"discovery_report.json"),
+          }
+          print(json.dumps(summary,indent=2))
+          PY
+      - name: Preserve official resource discovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-official-reference-resource-discovery
+          path: nea-reference-discovery/
+          if-no-files-found: warn
+          retention-days: 30
