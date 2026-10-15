@@ -84,7 +84,7 @@ def gather(root):
    if manifest.get("seed")!=int(case["seed"]) or manifest.get("threads")!=int(study["settings"]["threads"]):raise ValueError("manifest seed/thread mismatch")
    if manifest.get("mgxs_sha256")!=phys.get("mgxs_sha256_after_transport"):raise ValueError("MGXS hash mismatch")
    if manifest.get("statepoint_sha256")!=sha256(statepoint):raise ValueError("statepoint hash mismatch")
-   if entropy.get("derived_from_geometry_bounding_box") is not True or entropy.get("entropy_dimension")!=[24,24,1]:raise ValueError("entropy mesh provenance mismatch")
+   if entropy.get("derived_from_geometry_bounding_box") is not True or entropy.get("entropy_dimension")!=[24,24]:raise ValueError("entropy mesh provenance mismatch")
    log=(case_dir/"openmc.log")
    if not log.is_file():raise ValueError("captured OpenMC log absent")
    warnings=log.read_text(errors="replace").count("Fission source site(s) outside of entropy box")
