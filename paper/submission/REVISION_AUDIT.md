@@ -58,3 +58,15 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 - Confirm anonymous PDF metadata and body; keep author names/affiliations in EDAS metadata.
 - Update the title in EDAS to the title above and upload the anonymous PDF under **Review manuscript**. Leave **Final manuscript** empty until camera-ready submission.
 - This is not the camera-ready version. No repository DOI or permanent public release is claimed in the anonymous review package.
+
+
+## Decision-support and formal-rule revision (2026-10-15)
+
+- Reframed the information-systems contribution as an auditable decision-support component, without hiding the OpenMC/fuel-layout case study or claiming a reactor-design validation.
+- Added four formal rule properties (monotone violation in \(z\), permutation-invariant substantive ranking/tie groups, fail-closed invalid data, and point-estimate reduction at \(z=0\)).
+- Fixed the substantive rank key in \`src/cbpfr/ranking.py\`: input index is no longer part of the score; candidate identifier is only a deterministic display tie-breaker. Added unit tests in \`tests/test_cbpfr_properties.py\`.
+- Added exploratory Welch intervals for the mirror-pair differences using three runs per label. Because no equivalence margin was prospectively registered before examining these runs, the intervals are descriptive and do not establish formal equivalence.
+- Expanded the decision table to show \(V_k\), \(V_F\), \(V_{\mathrm{total}}\), and rank/tie group. \(V_k=0\) for all classes under the current illustrative setting; the screen is therefore \(F\)-driven in this case.
+- Reworked the figure to show \(B_F^+\) for \(z=0,1,2\) and a zoomed, explicitly illustrative threshold-crossing panel. The zoom threshold is explanatory only; it is not used as an acceptance limit.
+- Added Runarsson and Yao's stochastic-ranking reference, separately from Deb's feasibility-first rule and NIST uncertainty guidance.
+- The manuscript build, unit-test outcome, and PDF anonymity scan must be rechecked after these edits before submission. The OpenMC entropy mesh has not been repaired or rerun in this revision, and no replication experiment has been run.
