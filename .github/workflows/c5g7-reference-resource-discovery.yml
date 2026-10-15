@@ -1,11 +1,6 @@
 name: Discover official NEA C5G7 pin-power reference resource
 
 on:
-  push:
-    branches:
-      - research/c5g7-b0-prereg-b1-pilot-20261015
-    paths:
-      - .github/workflows/c5g7-reference-resource-discovery.yml
   workflow_dispatch:
 
 permissions:
