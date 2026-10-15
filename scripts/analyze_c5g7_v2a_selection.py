@@ -27,7 +27,7 @@ def gather(root, expected_stage, expected_profile=None):
    meta_p=p.parent/"NIGHT_RUN_METADATA.json"
    if not meta_p.is_file():raise ValueError("missing NIGHT_RUN_METADATA.json")
    meta=json.loads(meta_p.read_text());study=json.loads(p.read_text())
-   if meta.get("stage")!=expected_stage:raise ValueError(f"wrong stage {meta.get('stage')}")
+   if meta.get("stage")!=expected_stage:continue
    cases=study.get("cases",[])
    if len(cases)!=1 or cases[0].get("status")!="completed":raise ValueError("case not completed")
    case=cases[0];sig="".join("M" if case["layout"][k]=="MOX" else "U" for k in ("p00","p01","p10","p11"))
