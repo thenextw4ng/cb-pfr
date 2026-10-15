@@ -32,6 +32,14 @@ def gather(root, expected_stage, expected_profile=None):
    case=cases[0];sig="".join("M" if case["layout"][k]=="MOX" else "U" for k in ("p00","p01","p10","p11"))
    if sig not in SIGS or case["candidate_id"]!="c5g7-2x2-"+sig:raise ValueError("candidate identity mismatch")
    seed=int(case["seed"]);phys=case["physical_results"];cd=p.parent/case["candidate_id"]
+   settings=study.get("settings") or {}
+   if meta.get("signature")!=sig:raise ValueError("metadata layout signature mismatch")
+   if meta.get("source")!="good":raise ValueError("unexpected source profile; V2a/P1-P4 require source=good")
+   if int(meta.get("replicate",-1))<1:raise ValueError("invalid replicate metadata")
+   for key in ("batches","inactive","particles","threads"):
+    if int(meta.get(key,-1))!=int(settings[key]):raise ValueError(f"metadata {key} does not match STUDY_SUMMARY settings")
+   expected_run_id=f"{expected_stage}-{sig}-s{seed}-b{int(settings['batches'])}-i{int(settings['inactive'])}-p{int(settings['particles'])}-t{int(settings['threads'])}-good"
+   if meta.get("run_id")!=expected_run_id:raise ValueError(f"run_id does not match stage/layout/seed/settings: {meta.get('run_id')!r} != {expected_run_id!r}")
    files={
     "statepoint":cd/phys["statepoint"],
     "manifest":cd/"RUN_MANIFEST.json",
@@ -52,10 +60,16 @@ def gather(root, expected_stage, expected_profile=None):
    if mesh.get("derived_from_geometry_bounding_box") is not True or mesh.get("entropy_dimension")!=[24,24]:raise ValueError("geometry-derived entropy mesh audit failed")
    if files["log"].read_text(errors="replace").count("Fission source site(s) outside of entropy box"):raise ValueError("entropy mesh warning")
    if manifest.get("openmc_version")!="0.16.0" or manifest.get("seed")!=seed:raise ValueError("manifest version or seed mismatch")
+   for key in ("threads","batches","inactive","particles"):
+    if int(manifest.get(key,-1))!=int(settings[key]):raise ValueError(f"manifest {key} mismatch")
    if manifest.get("mgxs_sha256")!=phys.get("mgxs_sha256_after_transport"):raise ValueError("MGXS hash mismatch")
-   if manifest.get("statepoint_sha256")!=sha256(files["statepoint"]):raise ValueError("statepoint hash mismatch")
-   if int(study["settings"]["batches"])!=int(meta["batches"]) or int(study["settings"]["inactive"])!=int(meta["inactive"]) or int(study["settings"]["particles"])!=int(meta["particles"]) or int(study["settings"]["threads"])!=int(meta["threads"]):
-    raise ValueError("run settings disagree with metadata")
+   statepoint_hash=sha256(files["statepoint"]);trace_hash=sha256(files["trace"]);settings_hash=sha256(files["settings"])
+   if manifest.get("statepoint_sha256")!=statepoint_hash:raise ValueError("statepoint hash mismatch")
+   if manifest.get("trace_file")!="trace.npz" or manifest.get("trace_sha256")!=trace_hash:raise ValueError("trace hash mismatch")
+   expected_hashes=case.get("output_hashes_after_run") or {}
+   if expected_hashes.get(str(Path(phys["statepoint"])))!=statepoint_hash:raise ValueError("statepoint hash disagrees with study output manifest")
+   if expected_hashes.get("trace.npz")!=trace_hash:raise ValueError("trace hash disagrees with study output manifest")
+   if expected_hashes.get("model/2d/settings.xml")!=settings_hash:raise ValueError("settings.xml hash disagrees with study output manifest")
    if expected_profile and (int(study["settings"]["batches"]),int(study["settings"]["inactive"]),int(study["settings"]["particles"]))!=expected_profile:
     raise ValueError(f"wrong profile; expected {expected_profile}")
    if f.get("candidate_id")!=case["candidate_id"] or f.get("layout_signature")!=sig:raise ValueError("assembly tally identity mismatch")
@@ -67,8 +81,8 @@ def gather(root, expected_stage, expected_profile=None):
     "threads":int(study["settings"]["threads"]),"source":meta["source"],
     "keff_mean":float(phys["keff_mean"]),"keff_sd":float(phys["keff_std_dev"]),
     "F_fission":float(f["fission_rate_peaking_factor"]),
-    "statepoint_sha256":sha256(files["statepoint"]),"settings_sha256":sha256(files["settings"]),
-    "mgxs_sha256":manifest["mgxs_sha256"],"trace_sha256":sha256(files["trace"]),
+    "statepoint_sha256":statepoint_hash,"settings_sha256":settings_hash,
+    "mgxs_sha256":manifest["mgxs_sha256"],"trace_sha256":trace_hash,
     "run_wallclock_seconds":float(manifest.get("run_wallclock_seconds",math.nan)),
     "status":"PASS_INTEGRITY","study_path":str(p),"statepoint_path":str(files["statepoint"])
    })
@@ -81,6 +95,7 @@ def main():
  p.add_argument("--v2a-root",type=Path,required=True)
  p.add_argument("--production-root",type=Path,required=True)
  p.add_argument("--outdir",type=Path,required=True)
+ p.add_argument("--seed-ledger",type=Path,required=True,help="Deterministic campaign_plan.json archived before transport")
  a=p.parse_args()
  if a.outdir.exists() and any(a.outdir.iterdir()):p.error("refusing to overwrite non-empty output directory")
  low,low_errors=gather(a.v2a_root,"V2a",(800,500,2000))
@@ -89,6 +104,30 @@ def main():
   r,e=gather(a.production_root,stage)
   high.extend(r);high_errors.extend(e)
  errors=low_errors+high_errors
+ try:
+  ledger=json.loads(a.seed_ledger.read_text())
+  low_plan=[item for shard in ledger.get("V2a_shards",[]) for item in shard]
+  high_plan=[item for item in ledger.get("production_matrix",[]) if item.get("stage") in ("P1","P2","P3","P4")]
+  plan_rows=low_plan+high_plan
+  if len(low_plan)!=EXPECTED:raise ValueError(f"seed ledger has {len(low_plan)} V2a entries, expected {EXPECTED}")
+  if len(high_plan)!=60:raise ValueError(f"seed ledger has {len(high_plan)} P1-P4 high-budget entries, expected 60")
+  plan_by_id={x["run_id"]:x for x in plan_rows}
+  if len(plan_by_id)!=len(plan_rows):raise ValueError("duplicate run_id in seed ledger")
+  observed_rows=low+high
+  observed_ids=[r["run_id"] for r in observed_rows]
+  if len(set(observed_ids))!=len(observed_ids):raise ValueError("duplicate run_id among observed V2a/high-budget artifacts")
+  missing=sorted(set(plan_by_id)-set(observed_ids));unexpected=sorted(set(observed_ids)-set(plan_by_id))
+  if missing:errors.append(f"seed ledger missing observed run IDs: {missing[:20]}")
+  if unexpected:errors.append(f"observed run IDs not present in seed ledger: {unexpected[:20]}")
+  for row in observed_rows:
+   planned=plan_by_id.get(row["run_id"])
+   if planned is None:continue
+   for key in ("stage","candidate_id","signature","seed","replicate","batches","inactive","particles","threads","source"):
+    if row.get(key)!=planned.get(key):errors.append(f"seed ledger mismatch {row['run_id']} field {key}: observed={row.get(key)!r}, planned={planned.get(key)!r}")
+  seed_ledger_audit={"status":"PASS" if not missing and not unexpected else "FAIL","expected_total_count":len(plan_rows),"expected_v2a_count":len(low_plan),"expected_high_budget_count":len(high_plan),"observed_total_count":len(observed_rows),"missing_run_ids":missing,"unexpected_run_ids":unexpected,"sha256":sha256(a.seed_ledger)}
+ except Exception as e:
+  errors.append(f"seed ledger audit: {type(e).__name__}: {e}")
+  seed_ledger_audit={"status":"FAIL","error":f"{type(e).__name__}: {e}","sha256":sha256(a.seed_ledger) if a.seed_ledger.is_file() else None}
  expected_pairs={(seed,sig) for seed in {r["seed"] for r in low} for sig in SIGS}
  observed={(r["seed"],r["signature"]) for r in low}
  per_seed={s:sorted([r["signature"] for r in low if r["seed"]==s]) for s in {r["seed"] for r in low}}
@@ -113,14 +152,15 @@ def main():
    "selection_matches_empirical_high_budget_best":chosen==truth_best if truth_best else None,
    "empirical_regret_F":(selected_value-true_value) if selected_value is not None and true_value is not None else None,
    "note":"This is one point-estimate rule. CB-PFR, uniform-margin and adaptive/equal-allocation R&S policy comparison needs its own equal-budget policy simulation and is not implied by these run outputs."})
- integrity=(not errors and len(low)==EXPECTED and len({r["run_id"] for r in low})==EXPECTED and len(observed)==EXPECTED and
+ integrity=(not errors and seed_ledger_audit["status"]=="PASS" and len(low)==EXPECTED and len({r["run_id"] for r in low})==EXPECTED and len(observed)==EXPECTED and
   len(complete_pools)==200 and len(set(hashes))==len(hashes) and len(mgxs)==1 and None not in mgxs and
-  all(len(v)==10 for v in high_by.values()) and truth_best is not None)
+  all(len(v)==10 for v in high_by.values()) and len(high)==60 and len({r["run_id"] for r in high})==len(high) and truth_best is not None)
  result={"schema_version":"1.0","protocol_id":"CBPFR-C5G7-NIGHT-CAMPAIGN-2026-10-15",
   "status":"V2A_DATA_INTEGRITY_PASS_POLICY_ANALYSIS_PENDING" if integrity else "V2A_INCOMPLETE_OR_INTEGRITY_FAIL",
   "integrity_pass":integrity,"observed_v2a_runs":len(low),"expected_v2a_runs":EXPECTED,
   "complete_six-layout_pools":len(complete_pools),"distinct_seed_count":len(per_seed),
   "settings":{"batches":800,"inactive":500,"particles":2000,"threads":1},
+  "seed_ledger_audit":seed_ledger_audit,
   "objective":FUEL_OBJECTIVE,"high_budget_empirical_reference_by_layout":truth,
   "high_budget_empirical_best_layout":truth_best,"point_estimate_selection_summary":{
    "n_pools":len(decisions),"matches_empirical_high_budget_best":sum(d["selection_matches_empirical_high_budget_best"] is True for d in decisions),
