@@ -1,11 +1,6 @@
 name: C5G7 high-budget six-layout validation screen
 
 on:
-  push:
-    branches:
-      - research/c5g7-high-budget-layout-validation-20261015
-    paths:
-      - .github/workflows/c5g7-high-budget-validation.yml
   workflow_dispatch:
 
 permissions:
@@ -122,11 +117,12 @@ jobs:
           seed = int(settings.findtext("seed"))
           assert seed == int(case["seed"]), (seed,case["seed"])
           assert (int(settings.findtext("batches")), int(settings.findtext("inactive")), int(settings.findtext("particles"))) == (20000,500,10000)
-          mesh = settings.find("mesh")
-          dimension = [int(x) for x in mesh.findtext("dimension").split()]
-          lower = [float(x) for x in mesh.findtext("lower_left").split()]
-          upper = [float(x) for x in mesh.findtext("upper_right").split()]
-          assert dimension == [51,51], dimension
+          entropy_audit = json.loads((case_dir / "model" / "2d" / "entropy_mesh_audit.json").read_text())
+          dimension = entropy_audit["entropy_dimension"]
+          lower = entropy_audit["entropy_lower_left"]
+          upper = entropy_audit["entropy_upper_right"]
+          assert entropy_audit["derived_from_geometry_bounding_box"] is True
+          assert dimension == [24,24,1], dimension
           assert lower[0] <= -32.13 and lower[1] <= -32.13, lower
           assert upper[0] >= 32.13 and upper[1] >= 32.13, upper
           physical = case["physical_results"]
@@ -137,7 +133,7 @@ jobs:
           statepoint_rel = physical["statepoint"]
           statepoint = case_dir / statepoint_rel
           assert statepoint.is_file() and statepoint.stat().st_size > 0, statepoint
-          log_path = case_dir / "model" / "2d" / "openmc.log"
+          log_path = case_dir / "openmc.log"
           log = log_path.read_text(errors="replace")
           warnings = log.count("Fission source site(s) outside of entropy box")
           assert warnings == 0, f"entropy-mesh warnings={warnings}"
@@ -152,7 +148,7 @@ jobs:
               "seed": seed, "seed_base": int(os.environ["SEED_BASE"]),
               "settings_profile": study["settings"], "settings_profile_pass": True,
               "upstream_commit": study["upstream_commit"], "openmc_version": physical["openmc_version"],
-              "mesh_dimension": dimension, "mesh_lower_left": lower, "mesh_upper_right": upper,
+              "entropy_mesh_dimension": dimension, "entropy_mesh_lower_left": lower, "entropy_mesh_upper_right": upper, "entropy_mesh_derived_from_geometry": entropy_audit["derived_from_geometry_bounding_box"],
               "mgxs_energy_group_boundaries_eV": group_edges, "mgxs_group_structure_audit": physical["mgxs_group_structure_audit"],
               "keff_mean": physical["keff_mean"], "keff_std_dev": physical["keff_std_dev"],
               "statepoint_path": statepoint_rel,
