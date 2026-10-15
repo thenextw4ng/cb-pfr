@@ -70,7 +70,7 @@ The substantive ranking key is lexicographic: QUBO-feasibility indicator, physic
 \subsection{Formal Properties and Regression Tests}
 Let \(s_{ij}\geq0\) be the supplied uncertainty summary for candidate \(i\) and metric \(j\), with fixed declared limits. The implementation and unit tests target the following properties.
 
-\textbf{P1 (monotone violation).} For \(z\geq0\), each metric violation \(v_{ij}(z)\) is non-decreasing in \(z\). Indeed, \(B^-_{ij}=\bar{x}_{ij}-zs_{ij}\) is non-increasing and \(B^+_{ij}=\bar{x}_{ij}+zs_{ij}\) is non-decreasing; each positive-part violation term therefore cannot decrease as \(z\) grows. Thus the pass set can only stay unchanged or shrink.
+\textbf{P1 (monotone violation).} For \(z\geq0\), each metric violation \(v_{ij}\) is non-decreasing in the bound multiplier \(z\) and in the supplied uncertainty \(s_{ij}\), with the other held fixed. Since the operational half-width is \(z s_{ij}\), increasing either nonnegative factor cannot narrow \([B^-_{ij},B^+_{ij}]\); the positive-part violation terms therefore cannot decrease. Thus, for any fixed candidate, the pass set can only stay unchanged or shrink as either quantity increases.
 
 \textbf{P2 (permutation-invariant ranks and ties).} For fixed candidate identifiers, estimates, and model, permuting the input sequence does not change candidate order after canonical display sorting or the membership of tie groups. The implementation excludes input index from the substantive ranking key; the stable identifier only orders items for presentation. This statement concerns ranking results, not the input-index field, which records original provenance.
 
