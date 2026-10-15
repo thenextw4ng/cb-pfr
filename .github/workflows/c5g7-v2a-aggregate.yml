@@ -39,7 +39,7 @@ jobs:
         id: discover
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_SHA: ${{ inputs.campaign_sha || github.event.workflow_run.head_sha || github.sha }}
+          EXPECTED_SHA: ${{ github.event.inputs.campaign_sha || github.event.workflow_run.head_sha || github.sha }}
           CAMPAIGN_BRANCH: research/c5g7-b0-prereg-b1-pilot-20261015
         run: |
           set -euo pipefail
