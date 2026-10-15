@@ -58,13 +58,14 @@ jobs:
         run: |
           set -euo pipefail
           ROUND="$GITHUB_WORKSPACE/night-results/$RUN_ID"
-          mkdir -p "$ROUND/analysis"
+          mkdir -p "$(dirname "$ROUND")"
           python scripts/run_layout.py \
             --source-root /tmp/mit-crpg-preflight \
             --design-space config/benchmarks/c5g7_2x2_design_space.json \
             --output "$ROUND" --mode run \
             --batches 100 --inactive 10 --particles 1000 --threads 1 \
             --seed 20261015 --candidate-ids "$CANDIDATE_ID" --source good
+          mkdir -p "$ROUND/analysis"
           python scripts/audit_c5g7_smoke_statepoints.py \
             --study-summary "$ROUND/STUDY_SUMMARY.json" \
             --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
