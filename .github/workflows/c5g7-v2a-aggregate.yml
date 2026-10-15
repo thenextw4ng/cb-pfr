@@ -30,8 +30,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install analysis dependencies
-        run: python -m pip install numpy openmc==0.16.0
       - name: Find all five V2a shards and production run for this commit
         id: discover
         env:
@@ -40,7 +38,7 @@ jobs:
           CAMPAIGN_BRANCH: research/c5g7-b0-prereg-b1-pilot-20261015
         run: |
           set -euo pipefail
-          mkdir -p /tmp/v2a-artifacts /tmp/production-artifacts
+          mkdir -p /tmp/v2a-artifacts /tmp/production-artifacts /tmp/v2a-summary
           ALL_READY=true
           RID_PROD=""
           for FILE in c5g7-main-production-runs.yml c5g7-v2a-shard-0.yml c5g7-v2a-shard-1.yml c5g7-v2a-shard-2.yml c5g7-v2a-shard-3.yml c5g7-v2a-shard-4.yml; do
