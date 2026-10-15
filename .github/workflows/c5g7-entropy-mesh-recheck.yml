@@ -40,6 +40,9 @@ jobs:
       - name: Run one canonical UMMU replicate with the corrected 2-D entropy mesh
         shell: bash -el {0}
         env:
+          # The conda-forge OpenMC binary initializes MPI even for one process.
+          # Restrict UCX transports on hosted runners that expose a broken MANA/verbs device.
+          UCX_TLS: self,tcp
           INACTIVE: ${{ matrix.protocol.inactive }}
           SEED: ${{ matrix.seed }}
           PROTOCOL: ${{ matrix.protocol.name }}
