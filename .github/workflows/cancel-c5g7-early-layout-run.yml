@@ -1,4 +1,4 @@
-name: Cancel C5G7 layout runs that were started before the B0/B1/B2 gates
+name: Cancel superseded C5G7 pilot duplicates
 
 on:
   push:
@@ -10,14 +10,22 @@ permissions:
   contents: read
 
 jobs:
-  cancel-premature-runs:
+  cancel-superseded-runs:
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel premature high-budget and duplicate early B1 runs
+      - name: Cancel only superseded B1 attempts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          for RUN_ID in 38729573477 38735056737 38735162993; do
-            gh api --method POST "repos/thenextw4ng/cb-pfr/actions/runs/$RUN_ID/cancel" -H "Accept: application/vnd.github+json" || true
+          set +e
+          for RUN_ID in 38735056737 38735162993; do
+            CURRENT_STATUS="$(gh api "repos/thenextw4ng/cb-pfr/actions/runs/$RUN_ID" --jq '.status' 2>/dev/null)"
+            echo "run=$RUN_ID status_before=$CURRENT_STATUS"
+            if [ "$CURRENT_STATUS" = "queued" ] || [ "$CURRENT_STATUS" = "in_progress" ] || [ "$CURRENT_STATUS" = "requested" ]; then
+              gh api --method POST "repos/thenextw4ng/cb-pfr/actions/runs/$RUN_ID/cancel" -H "Accept: application/vnd.github+json"
+              sleep 2
+              NEXT_STATUS="$(gh api "repos/thenextw4ng/cb-pfr/actions/runs/$RUN_ID" --jq '.status' 2>/dev/null)"
+              echo "run=$RUN_ID status_after=$NEXT_STATUS"
+            fi
           done
-          echo "Requested cancellation of the premature six-layout matrix and early duplicate B1 runs. Latest B1 run 38735301955 is authoritative."
