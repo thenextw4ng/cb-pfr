@@ -131,7 +131,7 @@ jobs:
           assert study["status"]=="all_runs_completed_needs_independent_validation"
           assert raw["status"]=="PASS",raw
           assert manifest["openmc_version"]=="0.16.0"
-          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24,1]
+          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24]
           assert manifest["required_balance_scores_present"]
           log=(r/os.environ["CANDIDATE_ID"]/"openmc.log").read_text(errors="replace")
           warnings=log.count("Fission source site(s) outside of entropy box")
