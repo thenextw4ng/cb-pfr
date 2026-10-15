@@ -269,16 +269,6 @@ jobs:
           path: CBPFR_ICIMCIS_2026_Review_Submission_Package.zip
           if-no-files-found: error
           retention-days: 30
-; then
-            echo "An internal-audit, identity-like, or OS metadata filename was found in the submission ZIP."
-            exit 1
-          fi
-          if grep -RInE 'github\.com/thenextw4ng|paper/icimcis-high-compute-revision|/Users/[^/[:space:]]+|/home/[^/[:space:]]+|Fachry Bagus Adiputra|Nicholas Ardi Tirta|gambaranfachry03@gmail\.com|nicholas\.ardi@santa-laurensia\.sch\.id' "$CHECK_DIR"; then
-            echo "Potential internal repository, absolute path, or author identity leak found in the extracted ZIP."
-            exit 1
-          fi
-          cd "$CHECK_DIR"
-          PYTHONPATH=supplementary python3 -m unittest discover -s supplementary/tests -v
 
       - name: Commit built PDF to manuscript branch
         shell: bash
