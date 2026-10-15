@@ -389,7 +389,7 @@ def run(protocol_path: Path, outdir: Path):
         "primary_superiority_gate_met": gate_pass,
         "primary_regimes": sorted(CALIBRATED_REGIMES),
         "stress_regimes_excluded_from_primary_gate": [
-            item["id"] for item in regimes if item["role"] == "stress_only"
+            item["id"] for item in regimes if item["id"] not in CALIBRATED_REGIMES
         ],
         "physical_validation": False,
         "official_benchmark_acceptance": False,
