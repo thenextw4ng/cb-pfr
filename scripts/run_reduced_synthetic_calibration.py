@@ -49,10 +49,21 @@ def main()->int:
             coverage_count+=int(latent<=observed+metric.z*standard_error); observation_count+=1
         rankings=rank_all_methods(model,pool,estimates,[metric],{metric.name:float(config["uniform_margin"])})
         require_equal_evaluation_budget({method:len(pool) for method in methods},len(pool))
-        selected_truth=held_out_lookup({method:rankings[method][0].candidate.candidate_id for method in methods},truth)
+        # The ranker preserves substantive ties. For this synthetic top-1
+        # benchmark only, resolve a tied top group by the seeded candidate-pool
+        # order (which is randomly sampled per trial), never by candidate ID.
+        # This is an evaluation tie policy, not a CB-PFR physical preference.
+        selected_by_method={}
         for method in methods:
-            selected=rankings[method][0]; latent_truth=selected_truth[method]
-            all_rows.append({"kind":"synthetic_reduced_benchmark_post_evaluation_ranking","not_physical_validation":True,"study_id":config["study_id"],"trial_index":trial_index,"seed":trial_seed,"method":method,"candidate_id":selected.candidate.candidate_id,"selected_latent_true_response":latent_truth,"selected_true_feasible":latent_truth<=float(config["metric"]["upper"]),"ranking_observed_estimate":estimates[selected.candidate.candidate_id].values[metric.name][0],"ranking_reported_standard_error":estimates[selected.candidate.candidate_id].values[metric.name][1],"physical_evaluations_per_method":len(pool),"role":"post-evaluation ranking; all methods receive the identical synthetic observation pool"})
+            rows=rankings[method]
+            top_rank=rows[0].rank
+            top_group=rows[0].tie_group
+            tied=[row for row in rows if row.rank==top_rank and row.tie_group==top_group]
+            selected_by_method[method]=min(tied,key=lambda row:pool.index(row.candidate))
+        selected_truth=held_out_lookup({method:selected_by_method[method].candidate.candidate_id for method in methods},truth)
+        for method in methods:
+            selected=selected_by_method[method]; latent_truth=selected_truth[method]
+            all_rows.append({"kind":"synthetic_reduced_benchmark_post_evaluation_ranking","not_physical_validation":True,"study_id":config["study_id"],"trial_index":trial_index,"seed":trial_seed,"method":method,"candidate_id":selected.candidate.candidate_id,"selected_latent_true_response":latent_truth,"selected_true_feasible":latent_truth<=float(config["metric"]["upper"]),"ranking_observed_estimate":estimates[selected.candidate.candidate_id].values[metric.name][0],"ranking_reported_standard_error":estimates[selected.candidate.candidate_id].values[metric.name][1],"physical_evaluations_per_method":len(pool),"tie_resolution_policy":"seeded_random_pool_order_within_top_rank_group","substantive_rank":selected.rank,"substantive_tie_group":selected.tie_group,"role":"post-evaluation ranking; all methods receive the identical synthetic observation pool; top-rank ties are not physically distinguished"})
     args.results_dir.mkdir(parents=True,exist_ok=True)
     with (args.results_dir/"per_seed_results.csv").open("w",newline="",encoding="utf-8") as handle:
         writer=csv.DictWriter(handle,fieldnames=list(all_rows[0])); writer.writeheader(); writer.writerows(all_rows)
