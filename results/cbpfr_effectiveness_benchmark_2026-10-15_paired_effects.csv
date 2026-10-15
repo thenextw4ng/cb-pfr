@@ -1,0 +1,13 @@
+regime,regime_role,comparison,pools,cb_pfr_feasible_selections,baseline_feasible_selections,paired_rate_difference,paired_bootstrap_95_low,paired_bootstrap_95_high,cb_pfr_only_success,baseline_only_success,paired_ties,bootstrap_resamples,bootstrap_seed,superiority_supported_for_this_comparison
+calibrated_low,confirmatory_calibrated_regime,cb_pfr_minus_point_estimate,1000,978,937,0.041,0.028,0.054,44,3,953,5000,20263015,True
+calibrated_low,confirmatory_calibrated_regime,cb_pfr_minus_uniform_margin,1000,978,1000,-0.022,-0.032,-0.013,0,22,978,5000,20263016,False
+calibrated_moderate,confirmatory_calibrated_regime,cb_pfr_minus_point_estimate,1000,971,917,0.054,0.039,0.07,59,5,936,5000,20263115,True
+calibrated_moderate,confirmatory_calibrated_regime,cb_pfr_minus_uniform_margin,1000,971,987,-0.016,-0.027,-0.005,9,25,966,5000,20263116,False
+calibrated_high,confirmatory_calibrated_regime,cb_pfr_minus_point_estimate,1000,969,923,0.046,0.032,0.06,50,4,946,5000,20263215,True
+calibrated_high,confirmatory_calibrated_regime,cb_pfr_minus_uniform_margin,1000,969,946,0.023,0.01,0.037,36,13,951,5000,20263216,True
+underreported_uncertainty,stress_only,cb_pfr_minus_point_estimate,1000,958,922,0.036,0.023,0.049,41,5,954,5000,20263315,True
+underreported_uncertainty,stress_only,cb_pfr_minus_uniform_margin,1000,958,983,-0.025,-0.04,-0.011,14,39,947,5000,20263316,False
+heavy_tail_noise,stress_only,cb_pfr_minus_point_estimate,1000,963,921,0.042,0.028,0.056,48,6,946,5000,20263415,True
+heavy_tail_noise,stress_only,cb_pfr_minus_uniform_margin,1000,963,969,-0.006,-0.019,0.007,19,25,956,5000,20263416,False
+no_feasible_candidate,stress_only_all_latent_candidates_infeasible,cb_pfr_minus_point_estimate,1000,0,0,0.0,0.0,0.0,0,0,1000,5000,20263515,False
+no_feasible_candidate,stress_only_all_latent_candidates_infeasible,cb_pfr_minus_uniform_margin,1000,0,0,0.0,0.0,0.0,0,0,1000,5000,20263516,False
