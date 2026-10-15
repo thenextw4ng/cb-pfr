@@ -166,8 +166,8 @@ def main():
  p.add_argument("--expected-main-runs",type=int,default=75);a=p.parse_args()
  if a.outdir.exists() and any(a.outdir.iterdir()):p.error("refusing to overwrite non-empty output directory")
  if a.expected_main_runs!=sum(EXPECTED_MAIN.values()):p.error(f"expected-main-runs must be {sum(EXPECTED_MAIN.values())} for this production-only aggregator")
- rows,errors=gather(a.artifacts_root);by_stage={s:stage_summary(rows,s) for s in ("P1","V1a","P2","P3","P4","P5","P6","V2a")}
- expected={**EXPECTED_MAIN};actual={s:by_stage[s]["run_count"] for s in by_stage}
+ rows,errors=gather(a.artifacts_root);by_stage={s:stage_summary(rows,s) for s in ("P1","V1a","P2","P3","P4","P5","P6")}
+ actual={s:by_stage[s]["run_count"] for s in by_stage}
  try:
   ledger=json.loads(a.seed_ledger.read_text())
   plan_rows=ledger.get("production_matrix",[])
