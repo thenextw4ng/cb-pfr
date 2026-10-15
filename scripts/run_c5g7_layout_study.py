@@ -28,6 +28,13 @@ MGXS_GROUPS_REPLACEMENT = """energy_boundaries = np.array([1.0e-5, 0.0635, 10.0,
 # OECD/NEA C5G7 standard seven-group energy boundaries (eV).
 groups = openmc.mgxs.EnergyGroups(energy_boundaries)"""
 POSITION_ORDER = ("p00", "p01", "p10", "p11")
+SOURCE_PROFILES = {
+    # Initial-generation distributions; all boxes are restricted to fissionable material.
+    "baseline_all_fuel": ([-32.13, -10.71, -1.0], [10.71, 32.13, 1.0]),
+    "left_column_only": ([-32.13, -10.71, -1.0], [-10.71, 32.13, 1.0]),
+    "right_column_only": ([-10.71, -10.71, -1.0], [10.71, 32.13, 1.0]),
+    "upper_row_only": ([-32.13, 10.71, -1.0], [10.71, 32.13, 1.0]),
+}
 
 
 def sha256(path: Path) -> str:
@@ -109,7 +116,7 @@ def audit_mgxs_group_structure(mgxs_file: Path) -> tuple[float, ...]:
     return actual
 
 
-def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int, seed: int = 620000) -> None:
+def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, particles: int, seed: int = 620000, source_profile: str = "baseline_all_fuel") -> None:
     source = builder.read_text(encoding="utf-8")
     if source.count(CANONICAL_ASSIGNMENT) != 1:
         raise ValueError("upstream lattice assignment differs from audited template; refusing to patch")
@@ -141,6 +148,18 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     if source.count(seed_anchor) != 1:
         raise ValueError(f"upstream runtime setting differs from audited template: {seed_anchor!r}")
     source = source.replace(seed_anchor, seed_anchor + f"\nsettings_file.seed = {seed}")
+    if source_profile not in SOURCE_PROFILES:
+        raise ValueError(f"unknown initial source profile: {source_profile!r}")
+    source_anchor = "settings_file.source = openmc.Source(space=openmc.stats.Box([-32.13, -10.71, -1.0], [10.71, 32.13, 1.0], only_fissionable=True))"
+    if source.count(source_anchor) != 1:
+        raise ValueError("upstream initial source differs from the audited template; refusing to patch")
+    source_lower, source_upper = SOURCE_PROFILES[source_profile]
+    source_replacement = (
+        "settings_file.source = openmc.Source(space=openmc.stats.Box("
+        + repr(source_lower) + ", " + repr(source_upper)
+        + ", only_fissionable=True))"
+    )
+    source = source.replace(source_anchor, source_replacement)
     entropy_anchor = (
         "settings_file.entropy_lower_left = [-32.13, -32.13, -1.E50]\n"
         "settings_file.entropy_upper_right = [32.13, 32.13, 1.E50]\n"
@@ -282,6 +301,7 @@ def main() -> int:
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--seed-base", type=int, default=620000, help="base seed; each candidate gets a deterministic consecutive seed")
     parser.add_argument("--candidate-ids", nargs="+", help="optional subset of candidate IDs; default runs all six layouts")
+    parser.add_argument("--source-profile", choices=tuple(SOURCE_PROFILES), default="baseline_all_fuel", help="initial fission-source spatial distribution; default is the upstream baseline")
     args = parser.parse_args()
     if args.batches < 2 or args.inactive < 0 or args.inactive >= args.batches or args.particles < 1 or args.threads < 1 or args.seed_base < 0:
         parser.error("require batches >= 2, 0 <= inactive < batches, particles >= 1, threads >= 1, and seed-base >= 0")
@@ -311,6 +331,7 @@ def main() -> int:
         "upstream_model_builder_sha256": sha256(upstream_model / BUILDER_RELATIVE),
         "design_space_sha256": sha256(design_path),
         "mode": args.mode,
+        "initial_source_profile": args.source_profile,
         "settings": {"batches": args.batches, "inactive": args.inactive, "particles": args.particles, "threads": args.threads, "seed_base": args.seed_base, "seed_policy": "seed_base + stable candidate order index"},
         "profile_warning": "Default settings are smoke-test settings only; do not compare to benchmark reference or claim converged physics without a separate convergence study.",
         "mgxs_generation_policy": "The copied upstream materials.py is patched to replace nonstandard log-spaced boundaries with the OECD/NEA C5G7 standard seven-group boundaries [1e-5, 0.0635, 10, 100, 1000, 500000, 1000000, 20000000] eV; the generated MGXS group-structure attribute is audited before transport.",
@@ -343,10 +364,11 @@ def main() -> int:
         shutil.copytree(upstream_model, model_copy)
         patch_mgxs_energy_boundaries(model_copy / "materials.py")
         builder = model_copy / BUILDER_RELATIVE
-        patch_builder(builder, candidate["fuel_assembly_layout"], args.batches, args.inactive, args.particles, seed=seed)
+        patch_builder(builder, candidate["fuel_assembly_layout"], args.batches, args.inactive, args.particles, seed=seed, source_profile=args.source_profile)
         case = {
             "candidate_id": candidate["candidate_id"],
             "seed": seed,
+            "initial_source_profile": args.source_profile,
             "layout": candidate["fuel_assembly_layout"],
             "is_canonical_reference_arrangement": candidate["is_canonical_reference_arrangement"],
             "status": "prepared",
