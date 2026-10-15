@@ -9,6 +9,7 @@ on:
       - paper/submission/canonical_high_budget_summary.csv
       - paper/submission/REVISION_AUDIT.md
       - paper/submission/analyze_symmetry_screen.py
+      - scripts/analyze_c5g7_canonical_convergence.py
       - .github/workflows/icimcis-paper-build.yml
 concurrency:
   group: icimcis-manuscript-${{ github.ref }}
@@ -62,9 +63,13 @@ jobs:
           PAGES=$(awk '/^Pages:/ {print $2}' /tmp/pdfinfo.txt)
           test -n "$PAGES" && test "$PAGES" -le 6
           pdftotext -layout paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.pdf /tmp/manuscript.txt
+          grep -q "1.18649321" /tmp/manuscript.txt
+          grep -q "5.68" /tmp/manuscript.txt
+          grep -q "15.57" /tmp/manuscript.txt
           grep -q "1.18647358" /tmp/manuscript.txt
           grep -q "7.64" /tmp/manuscript.txt
-          ! grep -Eiq "missing from the earlier paper draft|review-required|this distinction resolves an important interpretive point" /tmp/manuscript.txt
+          grep -q "0.698" /tmp/manuscript.txt
+          ! grep -Eiq "missing from the earlier paper draft|review-required|this distinction resolves an important interpretive point|corrected-group|saved scalar reference|saved project screen|high-compute|NUMERICAL_SCREEN_PASS_FULL_BENCHMARK_STILL_BLOCKED|This is a useful warning" /tmp/manuscript.txt
           ! grep -Eiq "Fachry Bagus Adiputra|Nicholas Ardi Tirta|gambaranfachry03@gmail.com|nicholas.ardi@santa-laurensia.sch.id" /tmp/manuscript.txt
           ! grep -Eiq "^[[:space:]]*Page[[:space:]]+[0-9]+" /tmp/manuscript.txt
           echo "PDF checks passed: pages=$PAGES"
@@ -75,7 +80,7 @@ jobs:
           mkdir -p /tmp/cbpfr-review-package/supplementary/scripts /tmp/cbpfr-review-package/supplementary/data
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.pdf /tmp/cbpfr-review-package/
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex paper/submission/references.bib paper/submission/REVISION_AUDIT.md /tmp/cbpfr-review-package/
-          cp paper/submission/canonical_high_budget_summary.csv /tmp/cbpfr-review-package/supplementary/data/
+          cp paper/submission/canonical_high_budget_summary.csv /tmp/cbpfr-review-package/supplementary/data/ummu_run_level_protocol_audit.csv
           cp results/cbpfr_physical_feasibility_bridge_2026-10-12.csv /tmp/cbpfr-review-package/supplementary/data/six_layout_run_level_results.csv
           cp src/cbpfr/ranking.py /tmp/cbpfr-review-package/supplementary/scripts/
           cp paper/submission/analyze_symmetry_screen.py /tmp/cbpfr-review-package/supplementary/scripts/
@@ -84,9 +89,10 @@ jobs:
           Anonymous ICIMCIS 2026 review package
           - PDF: anonymous review manuscript, maximum six pages.
           - TeX/BibTeX: editable source and references.
-          - Supplement: 18-row six-layout OpenMC results, canonical high-compute summary, CB-PFR ranking/screen code, and diagnostic scripts.
-          - The illustrative acceptance thresholds were selected retrospectively; the sensitivity analysis is exploratory.
-          - The canonical numerical screen is not full benchmark validation; convergence and independent model/tally sign-off remain unresolved.
+          - Supplement: 18-run six-layout OpenMC table, six individual UMMU runs from two inactive-batch protocols, CB-PFR ranking/screen code, and diagnostic scripts.
+          - The two UMMU protocols have materially different between-run dispersion; the 100-inactive runs contain repeated entropy-mesh warnings. Neither protocol is presented as a validated benchmark estimate.
+          - Illustrative acceptance thresholds were selected retrospectively; the sensitivity analysis is exploratory.
+          - Model/tally correspondence and source convergence remain unresolved, and the results do not establish full benchmark validation.
           EOF
           cd /tmp/cbpfr-review-package
           zip -qr "$GITHUB_WORKSPACE/CBPFR_ICIMCIS_2026_Review_Submission_Package.zip" .
@@ -102,6 +108,7 @@ jobs:
             paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex \
             paper/submission/references.bib \
             paper/submission/canonical_high_budget_summary.csv \
+            scripts/analyze_c5g7_canonical_convergence.py \
             paper/submission/REVISION_AUDIT.md \
             .github/workflows/icimcis-paper-build.yml; then
             echo "Manuscript source advanced during this build; skipping stale PDF commit."
