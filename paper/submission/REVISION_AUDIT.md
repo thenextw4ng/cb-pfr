@@ -58,3 +58,22 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 - Confirm anonymous PDF metadata and body; keep author names/affiliations in EDAS metadata.
 - Update the title in EDAS to the title above and upload the anonymous PDF under **Review manuscript**. Leave **Final manuscript** empty until camera-ready submission.
 - This is not the camera-ready version. No repository DOI or permanent public release is claimed in the anonymous review package.
+
+
+## Revision pass after the 2026-10-15 audit
+
+- The framing is explicitly decision-support / auditable workflow. Deb-style feasibility-first and Runarsson–Yao stochastic ranking are cited as prior methods, not as claims of novelty or comparative superiority.
+- The manuscript now states four formal software properties with corresponding unit tests: violation monotonicity with the common uncertainty multiplier; candidate permutation invariance and substantive tie preservation; fail-closed handling of missing/non-finite required inputs (even at zero metric weight); and the zero-multiplier point-estimate limit.
+- The ranking implementation no longer uses input index as a score component. Rank and tie-group are assigned from substantive scores; candidate IDs order only the display records. Infeasible candidates with equal declared violation remain tied instead of being sorted by QUBO energy.
+- The illustrative decision table now includes lower/upper $k$ bounds, $F$ upper bound, $V_k$, $V_F$, total violation, rank/tie-group, and status. In the $F_{\max}=1.35$, $z=1$ screen, $V_k=0$ for every class; therefore the split is driven by $F$ and the paper says so explicitly.
+- Mirror-label differences are reported with independent-run Welch intervals in mirror_pair_comparison.csv. No equivalence margin was declared before data acquisition; the analysis intentionally makes no equivalence conclusion. The unit test checks only software properties; it does not test physical mirror symmetry.
+- Figure 1 now plots class means and operational upper bounds at $z=0,1,2$ and includes a zoom near $F_{\max}=1.87$. Both cutoffs remain retrospective sensitivity settings, not engineering thresholds.
+- The scalar C5G7 reference $k_{\mathrm{ref}}=1.18655$ and 9.5-pcm standard uncertainty are attributed to the NEA benchmark context and the cited reference study. They are not treated as validation of this model.
+- Double-blind checks must be rerun on the rebuilt PDF and the entire assembled ZIP. The paper must remain at or below six pages; metadata author must remain blank; the package must not expose absolute paths, personal names, internal repository paths, or a claim of DOI/permanent release.
+
+## Open B-level items (not silently marked complete)
+
+- Protocol B still has 7,000 entropy-mesh warnings per run and an implausibly low between-run/within-run SD ratio. Re-running after correcting and auditing mesh bounds is a distinct OpenMC job, not covered by the TeX or unit-test build.
+- Protocol A's $k$-generation trace shifts still require a prospective convergence criterion and re-evaluation.
+- The replication experiment (R0/R1/R2/R3 methods over declared distances to threshold, Wilson intervals, coverage and rank/tie metrics) remains separate confirmatory work; it cannot be substituted by synthetic-only unit tests.
+- No optimization-benefit claim is permitted without running a real pre-physics optimizer on an informative objective. This ICIMCIS revision retains the explicit nonclaim.
