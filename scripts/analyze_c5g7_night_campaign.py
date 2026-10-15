@@ -24,6 +24,27 @@ def sha256(p):
   for b in iter(lambda:f.read(1048576),b""):h.update(b)
  return h.hexdigest()
 
+def audit_entropy_mesh(mesh):
+ if mesh.get("derived_from_geometry_bounding_box") is not True:raise ValueError("entropy mesh is not certified as geometry-derived")
+ if mesh.get("entropy_dimension")!=[24,24]:raise ValueError(f"entropy mesh dimension mismatch: {mesh.get('entropy_dimension')!r}")
+ if mesh.get("z_axis_unbounded") is not True:raise ValueError("entropy mesh is not recorded as a 2-D x-y mesh with unbounded z")
+ names=("geometry_lower_xy","geometry_upper_xy","entropy_lower_left","entropy_upper_right")
+ pairs={}
+ for name in names:
+  value=mesh.get(name)
+  if not isinstance(value,list) or len(value)!=2:raise ValueError(f"entropy mesh audit field {name} must be a 2-vector")
+  pairs[name]=[float(v) for v in value]
+  if not all(math.isfinite(v) for v in pairs[name]):raise ValueError(f"entropy mesh audit field {name} contains non-finite bounds")
+ padding=float(mesh.get("padding_cm",math.nan))
+ if not math.isfinite(padding) or padding<0:raise ValueError("entropy mesh padding must be finite and non-negative")
+ for axis in range(2):
+  gl,gu=pairs["geometry_lower_xy"][axis],pairs["geometry_upper_xy"][axis]
+  el,eu=pairs["entropy_lower_left"][axis],pairs["entropy_upper_right"][axis]
+  if not gu>gl:raise ValueError(f"invalid geometry bounding-box bounds on axis {axis}")
+  if not math.isclose(el,gl-padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy lower bound axis {axis} does not equal geometry lower bound minus padding")
+  if not math.isclose(eu,gu+padding,rel_tol=0.0,abs_tol=1e-8):raise ValueError(f"entropy upper bound axis {axis} does not equal geometry upper bound plus padding")
+ return True
+
 def pin_max_min(statepoint):
  with openmc.StatePoint(statepoint) as sp:
   tally=sp.get_tally(name="tally 1")
@@ -105,7 +126,7 @@ def gather(root):
    if expected_hashes.get(str(Path(phys["statepoint"])))!=sha256(statepoint):raise ValueError("statepoint hash disagrees with study output manifest")
    if expected_hashes.get("trace.npz")!=sha256(trace_path):raise ValueError("trace hash disagrees with study output manifest")
    if expected_hashes.get("model/2d/settings.xml")!=sha256(settings_path):raise ValueError("settings.xml hash disagrees with study output manifest")
-   if entropy.get("derived_from_geometry_bounding_box") is not True or entropy.get("entropy_dimension")!=[24,24]:raise ValueError("entropy mesh provenance mismatch")
+   audit_entropy_mesh(entropy)
    log=(case_dir/"openmc.log")
    if not log.is_file():raise ValueError("captured OpenMC log absent")
    warnings=log.read_text(errors="replace").count("Fission source site(s) outside of entropy box")
