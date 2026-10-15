@@ -1,0 +1,306 @@
+name: C5G7 R0 quick characterization and gated campaign launch
+
+on:
+  push:
+    branches:
+      - research/c5g7-b0-prereg-b1-pilot-20261015
+    paths:
+      - .github/workflows/c5g7-r0-night-campaign.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  seed-plan:
+    runs-on: ubuntu-latest
+    outputs:
+      r0_matrix: ${{ steps.plan.outputs.r0_matrix }}
+      protocol_replay_matrix: ${{ steps.plan.outputs.protocol_replay_matrix }}
+      production_matrix: ${{ steps.plan.outputs.production_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Freeze deterministic campaign seed ledger
+        id: plan
+        run: |
+          python -m pip install numpy
+          python scripts/build_c5g7_campaign_plan.py --out /tmp/cbpfr-night-plan.json --github-output "$GITHUB_OUTPUT"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("/tmp/cbpfr-night-plan.json").read_text())
+          assert p["run_count_main"]==1275
+          assert len(p["stages"]["R0"])==5
+          assert len(p["production_matrix"])==75
+          assert [len(x) for x in p["V2a_shards"]]==[240,240,240,240,240]
+          assert len(p["stages"]["AB_replay_conditional"])==6
+          print(json.dumps({"protocol_id":p["protocol_id"],"R0":len(p["stages"]["R0"]),
+             "main_runs":p["run_count_main"],"production_matrix":len(p["production_matrix"]),
+             "V2a_shards":[len(x) for x in p["V2a_shards"]],"conditional_replay":6,
+             "seed_policy":p["seed_policy"]},indent=2))
+          PY
+      - name: Archive the seed ledger before any transport run
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-campaign-seed-ledger
+          path: /tmp/cbpfr-night-plan.json
+          retention-days: 30
+
+  r0-run:
+    needs: seed-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        include: ${{ fromJSON(needs.seed-plan.outputs.r0_matrix) }}
+    env:
+      UCX_TLS: self,tcp
+      STAGE: ${{ matrix.stage }}
+      PLAN_RUN_ID: ${{ matrix.run_id }}
+      CANDIDATE_ID: ${{ matrix.candidate_id }}
+      SIGNATURE: ${{ matrix.signature }}
+      SEED: ${{ matrix.seed }}
+      BATCHES: ${{ matrix.batches }}
+      INACTIVE: ${{ matrix.inactive }}
+      PARTICLES: ${{ matrix.particles }}
+      THREADS: ${{ matrix.threads }}
+      SOURCE: ${{ matrix.source }}
+      REPLICATE: ${{ matrix.replicate }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-r0
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare the pinned C5G7 source
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run R0 transport characterization
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/r0-results/$STAGE"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_layout.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches "$BATCHES" --inactive "$INACTIVE" \
+            --particles "$PARTICLES" --threads "$THREADS" --seed "$SEED" \
+            --candidate-ids "$CANDIDATE_ID" --source good
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=Path(os.environ["GITHUB_WORKSPACE"])/"r0-results"/os.environ["STAGE"]
+          meta={"stage":os.environ["STAGE"],"run_id":os.environ["STAGE"],"plan_run_id":os.environ["PLAN_RUN_ID"],
+             "candidate_id":os.environ["CANDIDATE_ID"],"signature":os.environ["SIGNATURE"],
+             "seed":int(os.environ["SEED"]),"replicate":int(os.environ["REPLICATE"]),
+             "batches":int(os.environ["BATCHES"]),"inactive":int(os.environ["INACTIVE"]),
+             "particles":int(os.environ["PARTICLES"]),"threads":int(os.environ["THREADS"]),"source":"good"}
+          (r/"R0_METADATA.json").write_text(json.dumps(meta,indent=2,sort_keys=True)+"\n")
+          (r/"NIGHT_RUN_METADATA.json").write_text(json.dumps(meta,indent=2,sort_keys=True)+"\n")
+          PY
+      - name: Audit the R0 trace and tally output
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/r0-results/$STAGE"; CASE="$ROUND/$CANDIDATE_ID"
+          mkdir -p "$ROUND/analysis"
+          python scripts/audit_c5g7_smoke_statepoints.py --study-summary "$ROUND/STUDY_SUMMARY.json" --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
+          STATEPOINT_REL="$(python -c 'import json,sys;print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$CASE/CASE_RESULT.json")"
+          STATEPOINT="$CASE/$STATEPOINT_REL"
+          python scripts/audit_c5g7_source_convergence.py --statepoint "$STATEPOINT" --out-json "$ROUND/analysis/source_convergence.json" --out-csv "$ROUND/analysis/source_convergence.csv"
+          python scripts/analyze_c5g7_assembly_fission.py --statepoint "$STATEPOINT" --candidate-id "$CANDIDATE_ID" --layout-signature "$SIGNATURE" --out "$ROUND/analysis/assembly_fission.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=Path(os.environ["GITHUB_WORKSPACE"])/"r0-results"/os.environ["STAGE"]
+          study=json.loads((r/"STUDY_SUMMARY.json").read_text());case=study["cases"][0];phys=case["physical_results"]
+          manifest=json.loads((r/os.environ["CANDIDATE_ID"]/"RUN_MANIFEST.json").read_text())
+          raw=json.loads((r/"analysis/raw_hdf5_audit.json").read_text())
+          mesh=json.loads((r/os.environ["CANDIDATE_ID"]/"model/2d/entropy_mesh_audit.json").read_text())
+          assert study["status"]=="all_runs_completed_needs_independent_validation"
+          assert raw["status"]=="PASS",raw
+          assert manifest["openmc_version"]=="0.16.0"
+          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24,1]
+          assert manifest["required_balance_scores_present"]
+          log=(r/os.environ["CANDIDATE_ID"]/"openmc.log").read_text(errors="replace")
+          warnings=log.count("Fission source site(s) outside of entropy box")
+          assert warnings==0,warnings
+          print(json.dumps({"stage":os.environ["STAGE"],"seed":case["seed"],"keff":phys["keff_mean"],
+             "runtime_seconds":manifest.get("run_wallclock_seconds"),"zero_mesh_warnings":warnings,
+             "raw_hdf5_audit":raw["status"],"trace":"present"},indent=2))
+          PY
+      - name: Preserve complete R0 statepoint and settings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-r0-${{ matrix.stage }}
+          path: r0-results/${{ matrix.stage }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  r0-aggregate:
+    if: always()
+    needs: [seed-plan,r0-run]
+    runs-on: ubuntu-latest
+    outputs:
+      r0_pass: ${{ steps.decide.outputs.r0_pass }}
+      protocol_replay_needed: ${{ steps.decide.outputs.protocol_replay_needed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install numeric analysis dependency
+        run: python -m pip install numpy
+      - name: Download all R0 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-night-r0-*
+          path: /tmp/c5g7-r0-artifacts
+          merge-multiple: false
+      - name: Retrieve archived Protocol A/B settings files for R0d
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          mkdir -p /tmp/r0-old
+          for SEED in 720000 730000 740000; do
+            gh run download 38714545029 --repo "$GITHUB_REPOSITORY" \
+              --name "c5g7-entropy-mesh-recheck-protocol-a-500-inactive-seed-$SEED" \
+              --dir "/tmp/r0-old/protocol-a-seed-$SEED"
+            echo "download A seed=$SEED exit=$?"
+            gh run download 38714545029 --repo "$GITHUB_REPOSITORY" \
+              --name "c5g7-entropy-mesh-recheck-protocol-b-100-inactive-seed-$SEED" \
+              --dir "/tmp/r0-old/protocol-b-seed-$SEED"
+            echo "download B seed=$SEED exit=$?"
+          done
+          exit 0
+      - name: Compare old settings.xml A/B pairs
+        run: python scripts/compare_old_c5g7_settings.py --root /tmp/r0-old --out /tmp/r0-old-settings-diff.json
+      - name: Analyze R0a, R0b and R0c from new statepoints
+        id: analyze
+        continue-on-error: true
+        run: |
+          python scripts/analyze_c5g7_r0.py \
+            --artifacts-root /tmp/c5g7-r0-artifacts \
+            --old-settings-diff /tmp/r0-old-settings-diff.json \
+            --outdir /tmp/c5g7-r0-summary
+      - name: Export the gate that controls campaign dispatch
+        id: decide
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path("/tmp/c5g7-r0-summary/r0_summary.json")
+          d=json.loads(p.read_text()) if p.is_file() else {}
+          complete=d.get("status")=="R0_COMPLETE" and d.get("run_count")==5
+          replay=bool(d.get("R0a",{}).get("protocol_A_B_replay_needed",False))
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:
+            f.write("r0_pass="+str(complete).lower()+"\n")
+            f.write("protocol_replay_needed="+str(replay).lower()+"\n")
+          print(json.dumps({"r0_status":d.get("status"),"run_count":d.get("run_count"),
+             "r0_pass":complete,"protocol_replay_needed":replay,
+             "R0a":d.get("R0a"),"R0b":d.get("R0b"),"R0c":d.get("R0c"),"R0d":d.get("R0d")},indent=2))
+          PY
+      - name: Preserve R0 decision and old-settings diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-r0-summary
+          path: /tmp/c5g7-r0-summary/
+          if-no-files-found: warn
+          retention-days: 30
+
+  protocol-ab-replay:
+    if: needs.r0-aggregate.outputs.r0_pass == 'true' && needs.r0-aggregate.outputs.protocol_replay_needed == 'true'
+    needs: [seed-plan,r0-aggregate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include: ${{ fromJSON(needs.seed-plan.outputs.protocol_replay_matrix) }}
+    env:
+      UCX_TLS: self,tcp
+      STAGE: ${{ matrix.stage }}
+      RUN_ID: ${{ matrix.run_id }}
+      CANDIDATE_ID: ${{ matrix.candidate_id }}
+      SIGNATURE: ${{ matrix.signature }}
+      SEED: ${{ matrix.seed }}
+      BATCHES: ${{ matrix.batches }}
+      INACTIVE: ${{ matrix.inactive }}
+      PARTICLES: ${{ matrix.particles }}
+      THREADS: ${{ matrix.threads }}
+      SOURCE: ${{ matrix.source }}
+      REPLICATE: ${{ matrix.replicate }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-ab-replay
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream source
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run conditional paired A/B replay
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/ab-replay/$RUN_ID"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_layout.py --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run --batches "$BATCHES" --inactive "$INACTIVE" \
+            --particles "$PARTICLES" --threads "$THREADS" --seed "$SEED" \
+            --candidate-ids "$CANDIDATE_ID" --source good
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=Path(os.environ["GITHUB_WORKSPACE"])/"ab-replay"/os.environ["RUN_ID"]
+          d={"stage":os.environ["STAGE"],"run_id":os.environ["RUN_ID"],"candidate_id":os.environ["CANDIDATE_ID"],
+             "signature":os.environ["SIGNATURE"],"seed":int(os.environ["SEED"]),"replicate":int(os.environ["REPLICATE"]),
+             "batches":int(os.environ["BATCHES"]),"inactive":int(os.environ["INACTIVE"]),
+             "particles":int(os.environ["PARTICLES"]),"threads":int(os.environ["THREADS"]),"source":"good"}
+          (r/"NIGHT_RUN_METADATA.json").write_text(json.dumps(d,indent=2,sort_keys=True)+"\n")
+          PY
+      - name: Audit replay data and preserve traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-ab-replay-${{ matrix.run_id }}
+          path: ab-replay/${{ matrix.run_id }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  dispatch-main-campaign:
+    if: always() && needs.r0-aggregate.outputs.r0_pass == 'true' && (needs.protocol-ab-replay.result == 'success' || needs.protocol-ab-replay.result == 'skipped')
+    needs: [r0-aggregate,protocol-ab-replay]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch the registered 75 production runs and all 1,200 V2a runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/c5g7-main-production-runs.yml/dispatches" -f ref="$REF_NAME"
+          for SHARD in 0 1 2 3 4; do
+            gh api --method POST "repos/$GITHUB_REPOSITORY/actions/workflows/c5g7-v2a-shard-$SHARD.yml/dispatches" -f ref="$REF_NAME"
+          done
+          echo "Dispatched one 75-job production matrix and five 240-job V2a shards. Raw artifacts and analysis will persist to GitHub Actions."
