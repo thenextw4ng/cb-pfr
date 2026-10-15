@@ -1,0 +1,115 @@
+name: C5G7 independent-seed dispersion extension
+
+on:
+  push:
+    branches:
+      - research/c5g7-entropy-mesh-recheck-20261015
+    paths:
+      - .github/workflows/c5g7-protocol-b-dispersion-followup.yml
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-ummu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        protocol:
+          - name: protocol-a-500-inactive
+            inactive: 500
+          - name: protocol-b-100-inactive
+            inactive: 100
+        seed: [1720000, 2720000, 3720000, 4720000, 5720000, 6720000, 7720000]
+    steps:
+      - name: Check out audited C5G7 run tooling
+        uses: actions/checkout@v4
+        with:
+          ref: research/c5g7-entropy-mesh-recheck-20261015
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-seed-dispersion-extension
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream model and the six-layout design space
+        shell: bash -el {0}
+        run: |
+          python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+          python scripts/enumerate_c5g7_layouts.py --output /tmp/c5g7-layout-design-space.json
+      - name: Run corrected-mesh UMMU replicate
+        shell: bash -el {0}
+        env:
+          UCX_TLS: self,tcp
+          INACTIVE: ${{ matrix.protocol.inactive }}
+          SEED: ${{ matrix.seed }}
+          PROTOCOL: ${{ matrix.protocol.name }}
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/recheck-results/$PROTOCOL"
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space /tmp/c5g7-layout-design-space.json \
+            --output "$GITHUB_WORKSPACE/recheck-results/$PROTOCOL/seed_$SEED" \
+            --mode run --batches 7000 --inactive "$INACTIVE" \
+            --particles 10000 --threads 1 --seed-base "$SEED" \
+            --candidate-ids c5g7-2x2-UMMU
+      - name: Audit mesh, random seed, and recorded run completion
+        shell: bash -el {0}
+        env:
+          PROTOCOL: ${{ matrix.protocol.name }}
+          SEED: ${{ matrix.seed }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          out = Path(os.environ["GITHUB_WORKSPACE"]) / "recheck-results" / os.environ["PROTOCOL"] / f"seed_{os.environ['SEED']}"
+          summary = json.loads((out / "STUDY_SUMMARY.json").read_text())
+          assert summary["status"] == "all_runs_completed_needs_independent_validation", summary["status"]
+          case = out / "c5g7-2x2-UMMU"
+          result = json.loads((case / "CASE_RESULT.json").read_text())
+          assert result["status"] == "completed", result["status"]
+          statepoint = case / "model" / "2d" / "statepoint.7000.h5"
+          assert statepoint.is_file() and statepoint.stat().st_size > 0, statepoint
+          settings = ET.parse(case / "model" / "2d" / "settings.xml").getroot()
+          seed = int(settings.findtext("seed"))
+          assert seed == int(os.environ["SEED"]), (seed, os.environ["SEED"])
+          mesh = settings.find("mesh")
+          dimension = [int(x) for x in mesh.findtext("dimension").split()]
+          lower = [float(x) for x in mesh.findtext("lower_left").split()]
+          upper = [float(x) for x in mesh.findtext("upper_right").split()]
+          assert dimension == [51, 51], dimension
+          assert lower[0] <= -32.13 and lower[1] <= -32.13, lower
+          assert upper[0] >= 32.13 and upper[1] >= 32.13, upper
+          log = (case / "openmc.log").read_text(errors="replace")
+          warnings = log.count("Fission source site(s) outside of entropy box")
+          audit = {
+              "protocol": os.environ["PROTOCOL"],
+              "seed": seed,
+              "status": result["status"],
+              "keff_mean": result["physical_results"]["keff_mean"],
+              "keff_std_dev": result["physical_results"]["keff_std_dev"],
+              "mesh_dimension": dimension,
+              "mesh_lower_left": lower,
+              "mesh_upper_right": upper,
+              "entropy_mesh_warning_count": warnings,
+              "warning_free": warnings == 0,
+              "convergence_certified": False,
+              "statepoint_bytes": statepoint.stat().st_size,
+          }
+          (case / "entropy_mesh_audit.json").write_text(json.dumps(audit, indent=2) + "\n")
+          print(json.dumps(audit, indent=2))
+          if warnings:
+              raise SystemExit(f"Entropy mesh warning count remains {warnings}; do not certify run.")
+          PY
+      - name: Preserve replicate, statepoint, log, and audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-seed-dispersion-${{ matrix.protocol.name }}-seed-${{ matrix.seed }}
+          path: recheck-results/
+          if-no-files-found: warn
+          retention-days: 30
