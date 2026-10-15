@@ -68,11 +68,12 @@ class PhysicalAssessment:
 class RankedCandidate:
     method: str
     candidate: Candidate
-    input_index: int
     qubo_indicator: int
     qubo_energy: float
     physical: PhysicalAssessment | None
     ranking_key: tuple[float | int, ...]
+    rank: int
+    tie_group: int
 
 def _assessment_for_metric(metric: MetricLimit, supplied: tuple[float, float] | None, width_override: float | None) -> MetricAssessment:
     if supplied is None:
@@ -105,13 +106,14 @@ def assess_physical(metrics: Sequence[MetricLimit], estimate: PhysicalEstimate |
     return PhysicalAssessment(tuple(assessments), indicator, aggregate)
 
 def _rank(method: str, model: QuboModel, candidates: Sequence[Candidate], estimates: Mapping[str, PhysicalEstimate], metrics: Sequence[MetricLimit], *, mode: str, uniform_margins: Mapping[str, float] | None = None) -> list[RankedCandidate]:
-    ranked = []
-    for index, candidate in enumerate(candidates):
+    """Rank candidates without turning equal substantive scores into preferences."""
+    scored: list[tuple[tuple[float | int, ...], Candidate, int, float, PhysicalAssessment | None]] = []
+    for candidate in candidates:
         qubo_indicator = int(not model.is_feasible(candidate.vector))
         energy = model.energy(candidate.vector)
         if mode == "qubo":
             physical = None
-            key = (qubo_indicator, energy, index)
+            key: tuple[float | int, ...] = (qubo_indicator, energy)
         else:
             if mode == "point":
                 margins = {metric.name: 0.0 for metric in metrics}
@@ -122,9 +124,36 @@ def _rank(method: str, model: QuboModel, candidates: Sequence[Candidate], estima
             else:
                 raise ValueError(f"unknown ranking mode: {mode}")
             physical = assess_physical(metrics, estimates.get(candidate.candidate_id), uniform_margins=margins)
-            key = (qubo_indicator, physical.indicator, physical.aggregate_violation, energy, index)
-        ranked.append(RankedCandidate(method, candidate, index, qubo_indicator, energy, physical, key))
-    return sorted(ranked, key=lambda item: item.ranking_key)
+            # Feasibility-first (Deb-style) ordering: feasibility, then lower
+            # violation. Energy only breaks ties between feasible candidates;
+            # it never chooses one infeasible candidate over another.
+            objective_component = energy if physical.indicator == 0 else 0.0
+            key = (qubo_indicator, physical.indicator, physical.aggregate_violation, objective_component)
+        scored.append((key, candidate, qubo_indicator, energy, physical))
+
+    # The identifier orders records for reproducible display only. Ranking and
+    # tie groups are computed from the substantive score and are permutation-invariant.
+    scored.sort(key=lambda row: (row[0], row[1].candidate_id))
+    ranked: list[RankedCandidate] = []
+    previous_key: tuple[float | int, ...] | None = None
+    current_rank = 0
+    current_tie_group = 0
+    for position, (key, candidate, qubo_indicator, energy, physical) in enumerate(scored, start=1):
+        if previous_key is None or key != previous_key:
+            current_rank = position
+            current_tie_group += 1
+            previous_key = key
+        ranked.append(RankedCandidate(
+            method=method,
+            candidate=candidate,
+            qubo_indicator=qubo_indicator,
+            qubo_energy=energy,
+            physical=physical,
+            ranking_key=key,
+            rank=current_rank,
+            tie_group=current_tie_group,
+        ))
+    return ranked
 
 def rank_all_methods(model: QuboModel, candidates: Sequence[Candidate], estimates: Mapping[str, PhysicalEstimate], metrics: Sequence[MetricLimit], uniform_margins: Mapping[str, float]) -> dict[str, list[RankedCandidate]]:
     if not candidates:
