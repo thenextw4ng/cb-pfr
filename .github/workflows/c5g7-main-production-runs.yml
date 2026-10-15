@@ -166,10 +166,10 @@ jobs:
           environment-name: c5g7-night-aggregate
           create-args: python=3.12 openmc=0.16.0
           cache-environment: true
-      - name: Download all available production-run artifacts
+      - name: Download production-run artifacts and the frozen seed ledger
         uses: actions/download-artifact@v4
         with:
-          pattern: c5g7-night-production-*
+          pattern: c5g7-night-*
           path: /tmp/c5g7-night-production
           merge-multiple: false
       - name: Aggregate run-level evidence against the frozen seed ledger
