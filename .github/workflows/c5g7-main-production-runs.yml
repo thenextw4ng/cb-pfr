@@ -1,0 +1,201 @@
+name: C5G7 night campaign production runs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-plan:
+    runs-on: ubuntu-latest
+    outputs:
+      production_matrix: ${{ steps.plan.outputs.production_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build deterministic SeedSequence campaign matrix
+        id: plan
+        run: |
+          python -m pip install numpy
+          python scripts/build_c5g7_campaign_plan.py --out /tmp/campaign_plan.json --github-output "$GITHUB_OUTPUT"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("/tmp/campaign_plan.json").read_text())
+          assert p["run_count_main"]==1275, p["run_count_by_stage"]
+          assert len(p["production_matrix"])==75, len(p["production_matrix"])
+          print(json.dumps({"expected_all_runs":p["run_count_main"],"production_matrix_jobs":len(p["production_matrix"]),"stages":p["run_count_by_stage"]},indent=2))
+          PY
+      - name: Preserve generated run and seed ledger
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-campaign-seed-ledger
+          path: /tmp/campaign_plan.json
+          retention-days: 30
+
+  production-run:
+    needs: seed-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        include: ${{ fromJSON(needs.seed-plan.outputs.production_matrix) }}
+    env:
+      UCX_TLS: self,tcp
+      STAGE: ${{ matrix.stage }}
+      RUN_ID: ${{ matrix.run_id }}
+      CANDIDATE_ID: ${{ matrix.candidate_id }}
+      SIGNATURE: ${{ matrix.signature }}
+      SEED: ${{ matrix.seed }}
+      BATCHES: ${{ matrix.batches }}
+      INACTIVE: ${{ matrix.inactive }}
+      PARTICLES: ${{ matrix.particles }}
+      THREADS: ${{ matrix.threads }}
+      SOURCE: ${{ matrix.source }}
+      REPLICATE: ${{ matrix.replicate }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-night-production
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare the pinned upstream C5G7 source
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run this preregistered OpenMC transport case
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/night-results/$RUN_ID"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_layout.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches "$BATCHES" --inactive "$INACTIVE" \
+            --particles "$PARTICLES" --threads "$THREADS" --seed "$SEED" \
+            --candidate-ids "$CANDIDATE_ID" --source "$SOURCE"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=Path(os.environ["GITHUB_WORKSPACE"])/"night-results"/os.environ["RUN_ID"]
+          d={"stage":os.environ["STAGE"],"run_id":os.environ["RUN_ID"],"candidate_id":os.environ["CANDIDATE_ID"],
+             "signature":os.environ["SIGNATURE"],"seed":int(os.environ["SEED"]),"replicate":int(os.environ["REPLICATE"]),
+             "batches":int(os.environ["BATCHES"]),"inactive":int(os.environ["INACTIVE"]),
+             "particles":int(os.environ["PARTICLES"]),"threads":int(os.environ["THREADS"]),"source":os.environ["SOURCE"]}
+          (r/"NIGHT_RUN_METADATA.json").write_text(json.dumps(d,indent=2,sort_keys=True)+"\n")
+          PY
+      - name: Audit raw statepoint and preserve source traces
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/night-results/$RUN_ID"
+          CASE="$ROUND/$CANDIDATE_ID"
+          mkdir -p "$ROUND/analysis"
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary "$ROUND/STUDY_SUMMARY.json" \
+            --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
+          STATEPOINT_REL="$(python -c 'import json,sys;print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$CASE/CASE_RESULT.json")"
+          STATEPOINT="$CASE/$STATEPOINT_REL"
+          python scripts/audit_c5g7_source_convergence.py \
+            --statepoint "$STATEPOINT" \
+            --out-json "$ROUND/analysis/source_convergence.json" \
+            --out-csv "$ROUND/analysis/source_convergence.csv"
+          python scripts/analyze_c5g7_assembly_fission.py \
+            --statepoint "$STATEPOINT" --candidate-id "$CANDIDATE_ID" \
+            --layout-signature "$SIGNATURE" --out "$ROUND/analysis/assembly_fission.json"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["GITHUB_WORKSPACE"])/"night-results"/os.environ["RUN_ID"]
+          cid=os.environ["CANDIDATE_ID"];case=root/cid
+          study=json.loads((root/"STUDY_SUMMARY.json").read_text())
+          run=study["cases"][0];phys=run["physical_results"]
+          manifest=json.loads((case/"RUN_MANIFEST.json").read_text())
+          mesh=json.loads((case/"model/2d/entropy_mesh_audit.json").read_text())
+          raw=json.loads((root/"analysis/raw_hdf5_audit.json").read_text())
+          assert study["status"]=="all_runs_completed_needs_independent_validation",study["status"]
+          assert study["upstream_commit"]=="ba41bee54320ada0b4ac39a0dd2ca3c1d090a450",study["upstream_commit"]
+          assert run["seed"]==int(os.environ["SEED"]) and manifest["seed"]==int(os.environ["SEED"])
+          assert manifest["threads"]==int(os.environ["THREADS"])
+          assert manifest["openmc_version"]=="0.16.0",manifest["openmc_version"]
+          assert mesh["derived_from_geometry_bounding_box"] and mesh["entropy_dimension"]==[24,24,1]
+          assert raw["status"]=="PASS",raw
+          assert manifest["required_balance_scores_present"],manifest
+          log=(case/"openmc.log").read_text(errors="replace")
+          warnings=log.count("Fission source site(s) outside of entropy box")
+          assert warnings==0,warnings
+          audit={"run_id":os.environ["RUN_ID"],"stage":os.environ["STAGE"],"candidate_id":cid,
+            "signature":os.environ["SIGNATURE"],"seed":run["seed"],"settings":study["settings"],
+            "openmc_version":manifest["openmc_version"],"git_commit":manifest["git_commit"],
+            "mgxs_sha256":manifest["mgxs_sha256"],"statepoint_sha256":manifest["statepoint_sha256"],
+            "trace_sha256":manifest["trace_sha256"],"entropy_mesh_audit":mesh,
+            "keff_mean":phys["keff_mean"],"keff_std_dev":phys["keff_std_dev"],
+            "global_tallies":manifest["global_tallies"],"tallies":manifest["tallies"],
+            "zero_source_outside_mesh_warnings":warnings,"convergence_certified":False,
+            "official_benchmark_acceptance":False}
+          (root/"analysis"/"night_run_audit.json").write_text(json.dumps(audit,indent=2,sort_keys=True)+"\n")
+          print(json.dumps({"run_id":audit["run_id"],"keff":audit["keff_mean"],"wallclock_s":manifest.get("run_wallclock_seconds"),"audit":"PASS"},indent=2))
+          PY
+      - name: Upload statepoint, trace, tally maps and all audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-production-${{ matrix.run_id }}
+          path: night-results/${{ matrix.run_id }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  production-aggregate:
+    if: always()
+    needs: [seed-plan, production-run]
+    outputs:
+      complete: ${{ steps.decide.outputs.complete }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-night-aggregate
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Download all available production-run artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-night-production-*
+          path: /tmp/c5g7-night-production
+          merge-multiple: false
+      - name: Aggregate run-level evidence
+        id: analyze
+        continue-on-error: true
+        shell: bash -el {0}
+        run: |
+          python scripts/analyze_c5g7_night_campaign.py --artifacts-root /tmp/c5g7-night-production --outdir /tmp/c5g7-night-production-summary --expected-main-runs 75
+      - name: Export completion decision
+        id: decide
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          p=Path("/tmp/c5g7-night-production-summary/night_campaign_summary.json")
+          d=json.loads(p.read_text()) if p.is_file() else {}
+          passed=bool(d.get("integrity_pass") and d.get("observed_run_count")==75)
+          with open(os.environ["GITHUB_OUTPUT"],"a") as f:f.write("complete="+str(passed).lower()+"\n")
+          print(json.dumps({"status":d.get("status"),"observed_run_count":d.get("observed_run_count"),"integrity_pass":passed},indent=2))
+          PY
+      - name: Preserve production aggregate and evidence manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-production-summary
+          path: /tmp/c5g7-night-production-summary/
+          if-no-files-found: warn
+          retention-days: 30
