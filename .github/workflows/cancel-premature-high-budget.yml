@@ -1,0 +1,25 @@
+name: Cancel premature high-budget layout screen
+
+on:
+  push:
+    branches:
+      - research/c5g7-high-budget-layout-validation-20261015
+    paths:
+      - .github/workflows/cancel-premature-high-budget.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel-run-ahead-of-preregistration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel the 18-run layout matrix because sequence requires B2 before B3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }
+        run: |
+          gh api --method POST \
+            repos/thenextw4ng/cb-pfr/actions/runs/38729573477/cancel \
+            -H "Accept: application/vnd.github+json"
+          echo "Requested cancellation of run 38729573477 to enforce B0 -> B1 -> B2/B4 -> B3 -> B5 -> B6 -> B7."
