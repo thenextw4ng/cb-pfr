@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0",
+  "protocol_id": "CBPFR-C5G7-HIGH-BUDGET-SIX-LAYOUT-2026-10-15",
+  "frozen_at_utc": "2026-10-15",
+  "purpose": "High-compute corrected-group C5G7 transport study: confirm the canonical UMMU numerical reference screen and compare all six explicitly reformulated 2x2 UO2/MOX placement layouts under a common budget.",
+  "design": {
+    "candidate_ids": [
+      "c5g7-2x2-MMUU",
+      "c5g7-2x2-MUMU",
+      "c5g7-2x2-MUUM",
+      "c5g7-2x2-UMMU",
+      "c5g7-2x2-UMUM",
+      "c5g7-2x2-UUMM"
+    ],
+    "replicates_per_candidate": 3,
+    "seed_bases": [
+      20261015,
+      20262015,
+      20263015
+    ],
+    "seed_policy": "actual_seed = seed_base + stable design-space candidate-order offset; offsets are preserved in STUDY_SUMMARY.json",
+    "total_transport_runs": 18,
+    "common_settings": {
+      "batches": 20000,
+      "inactive_batches": 500,
+      "particles_per_batch": 10000,
+      "threads": 1,
+      "energy_mode": "multi-group",
+      "openmc_version": "0.16.0",
+      "mesh_dimensions": [
+        51,
+        51,
+        1
+      ],
+      "entropy_mesh_bounds": [
+        -32.14,
+        -32.14,
+        -1,
+        32.14,
+        32.14,
+        1
+      ],
+      "energy_group_boundaries_eV": [
+        0.00001,
+        0.0635,
+        10,
+        100,
+        1000,
+        500000,
+        1000000,
+        20000000
+      ]
+    }
+  },
+  "predefined_screens": {
+    "canonical_layout_only": {
+      "candidate_id": "c5g7-2x2-UMMU",
+      "reference_keff": 1.18655,
+      "reference_standard_uncertainty": 0.000095,
+      "max_absolute_delta_pcm": 100,
+      "max_combined_uncertainty_z": 2,
+      "max_single_run_reported_sd_pcm": 10,
+      "minimum_independent_seeds": 3,
+      "uncertainty_combination": "combined_se = sqrt(reference_sd^2 + (between_run_sample_sd/sqrt(n))^2)",
+      "status_boundary": "PROVISIONAL_PROJECT_NUMERICAL_SCREEN_ONLY_NOT_OFFICIAL_BENCHMARK_ACCEPTANCE"
+    },
+    "per_run_integrity": [
+      "one completed statepoint per run; raw HDF5 audit passes",
+      "actual seed in settings equals run manifest and is unique across the 18 runs",
+      "unique statepoint SHA-256 per run",
+      "shared MGXS SHA-256 and exact official C5G7 seven-group structure across all runs",
+      "zero source-outside-entropy-mesh warnings",
+      "settings exactly match the common profile",
+      "source entropy and k-generation traces preserved and reported, but not auto-certified solely by a scalar threshold",
+      "51x51 fission mesh present and assembly-integrated fission-rate proxy recomputed from statepoint"
+    ],
+    "six_layout_comparison": {
+      "purpose": "descriptive high-budget comparison of the six reformulated layouts",
+      "objective_status": "not independently approved for final physical ranking",
+      "rule": "report all candidates, between-seed variation, within-run Monte Carlo uncertainty, and assembly fission-rate peaking proxy separately; do not label a winner physically optimal or safe"
+    }
+  },
+  "nonclaims": [
+    "A passing numerical screen is not official OECD/NEA benchmark acceptance.",
+    "All six 2x2 layouts are not official independent C5G7 benchmark reference cases; only the canonical UMMU arrangement is used for the supplied scalar reference comparison.",
+    "This study is not reactor-safety certification.",
+    "The 2x2 UO2/MOX placement formulation is not a validated mapping of the legacy fresh/once-burned/twice-burned QUBO.",
+    "The assembly-integrated fission-rate peaking factor is a dimensionless proxy, not absolute power.",
+    "No physical superiority claim for CB-PFR is made before a predeclared, physically justified objective and independently reviewed reference tally comparison."
+  ],
+  "resources": {
+    "expected_runs": 18,
+    "histories_per_run": 200000000,
+    "total_particle_histories": 3600000000,
+    "note": "Compute allocation estimate from configured batches times particles per batch; actual runtime and completion depend on hosted-runner throughput."
+  },
+  "sources": [
+    "https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation",
+    "https://doi.org/10.1016/j.pnueene.2004.09.003",
+    "https://github.com/mit-crpg/benchmarks"
+  ]
+}
