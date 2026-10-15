@@ -193,7 +193,7 @@ The measured \(F\) means separate the four classes descriptively, while mirror m
 \node[font=\tiny,anchor=west] at (2.0,2.12) {Dashed: illustrative \(F_{\max}=1.817\)};
 \end{tikzpicture}
 \end{minipage}
-\caption{(Left) Four variable fuel positions and five fixed reflector positions in the declared abstraction; diagonal reflection exchanges \(p_{01}\) and \(p_{10}\). (Right) Mean \(F\) by symmetry class. Class dispersion \(s_F\) is tabulated in Table~\ref{tab:classes}; it is not plotted because the class SDs are much smaller than the full vertical range.}
+\caption{(Left) Four variable fuel positions and five fixed reflector positions; diagonal reflection exchanges \(p_{01}\) and \(p_{10}\). (Right, upper) Class-level operational upper bounds \(B_F^+\) for \(z=0,1,2\) with the study's retrospective \(F_{\max}=1.35\). (Right, lower) A deliberately zoomed illustration of the S4 bound crossing a separate illustrative \(F_{\max}=1.817\) as \(z\) increases. The zoom threshold is shown only to explain the uncertainty-bound mechanism; it is not an acceptance limit used in the results.}
 \label{fig:map_f}
 \end{figure*}
 
@@ -272,6 +272,8 @@ The two protocol summaries must not be merged: between-run SD is about 1.63 time
 
 \section{Discussion}
 The results illustrate three distinct issues for a decision-support workflow. First, the composition-only QUBO enforces the material count but ties all feasible layouts by construction. Second, explicit uncertainty bounds, fail-closed data handling, and stable tie groups make the reasons for a screening decision inspectable; they do not calibrate the bounds or validate the acceptance thresholds. Third, the mirror-pair intervals are too wide to establish numerical equivalence from the available three replicates per label. The \(F\) means separate the four class means descriptively, but this small enumerated case does not demonstrate comparative benefit over a baseline or the value of running an optimizer before simulation.
+
+The proxy \(F=\max(R_i)/\overline{R}\) is itself a statistic built from noisy tally estimates; taking a maximum can introduce upward selection bias, particularly for shorter runs. The reported \(s_F\) values are between-run sample standard deviations of the layout-level proxy, not within-run standard errors of the maximum or calibrated uncertainty bounds. Correlations between regional tallies are not modeled separately here. The paper therefore does not interpret \(s_F\) as validated uncertainty coverage.
 
 The paper does not claim that the selected proxy is an engineering acceptance criterion. A stronger confirmatory study would require physical limits justified independently of this campaign, a prospectively specified analysis, independent model/tally review, and an adequate comparison against simple methods. A larger candidate space and a meaningful physics-sensitive pre-physics objective would be required to evaluate claims about optimizer utility. Constraint-handling methods and simulation ranking-and-selection have established literature \cite{deb2000,kimnelson2006}. For uncertainty terminology, the paper distinguishes within-run Monte Carlo standard uncertainties from observed between-run dispersion, consistent with measurement-uncertainty guidance \cite{taylor1994}. Other C5G7 deterministic transport studies provide methodological context but are not treated as direct performance baselines for CB-PFR \cite{song2020}. The contribution is the explicit software workflow and its evidence-bounded audit, not priority for feasibility-first ranking.
 
