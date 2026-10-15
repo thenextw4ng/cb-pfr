@@ -77,3 +77,13 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 - Protocol A's $k$-generation trace shifts still require a prospective convergence criterion and re-evaluation.
 - The replication experiment (R0/R1/R2/R3 methods over declared distances to threshold, Wilson intervals, coverage and rank/tie metrics) remains separate confirmatory work; it cannot be substituted by synthetic-only unit tests.
 - No optimization-benefit claim is permitted without running a real pre-physics optimizer on an informative objective. This ICIMCIS revision retains the explicit nonclaim.
+
+
+## Additional execution pass (2026-10-15)
+
+- Added `EXPERIMENT_PREREGISTRATION_REPLICATION.md` before any follow-up simulation. It freezes the reference interpretation, source-readiness gate, replicate design, comparison rules R0-R3, boundary-distance scenarios, outcomes, and stop conditions. It explicitly states that no new runs have been executed.
+- Added the minimal QUBO and ranking source modules to the anonymous supplement so the included formal-property test can be executed from the package without importing unrelated project subsystems.
+- Reproduced the mirror-label Welch interval CSV from the archived 18-run table; the generated output matched the packaged CSV exactly. The output still does not establish equivalence because no margin was prespecified.
+- Reproduced the exploratory symmetry screen: three label strings across two symmetry classes pass at the retrospective settings; all k bounds are inactive and F drives the split.
+- The current artifact-builder environment does not have OpenMC installed, and corrected model inputs/raw statepoints are not present in the anonymous supplement. Therefore the entropy-mesh correction, reruns, and scored replication experiment were not executed here. They remain blocked on an OpenMC-capable environment with the original model/statepoint artifacts.
+- The four formal-property tests were initially not runnable from the assembled supplement because the imported `cbpfr` package source was absent. The QUBO and ranking modules have now been bundled under `supplementary/cbpfr/`; re-run the test suite with `PYTHONPATH=supplementary python -m unittest discover -s supplementary/tests -v` in the assembled package and record its actual result before claiming the tests passed.
