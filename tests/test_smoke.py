@@ -122,12 +122,19 @@ class CBPFRTests(unittest.TestCase):
         result=assess_physical(metrics, estimate)
         self.assertAlmostEqual(result.aggregate_violation, 2.0*0.5 + 0.5)
 
-    def test_ranking_tie_break_is_deterministic(self):
+    def test_ranking_preserves_ties_and_is_permutation_invariant(self):
         candidates=self.candidates[:3]
         estimates={c.candidate_id: PhysicalEstimate(c.candidate_id, {"response": (0.5,0.01)}) for c in candidates}
-        result=rank_all_methods(self.model,candidates,estimates,[self.metric()],{"response":0.0})
-        self.assertEqual(result["cb_pfr"][0].input_index,0)
-        self.assertEqual(result["point_estimate"][0].input_index,0)
+        metrics=[self.metric()]
+        margins={"response":0.0}
+        result=rank_all_methods(self.model,candidates,estimates,metrics,margins)
+        reversed_result=rank_all_methods(self.model,list(reversed(candidates)),estimates,metrics,margins)
+        for method in result:
+            signature=lambda rows: [(x.candidate.candidate_id,x.rank,x.tie_group,x.ranking_key) for x in rows]
+            self.assertEqual(signature(result[method]),signature(reversed_result[method]))
+        for method in ("cb_pfr","point_estimate"):
+            self.assertEqual({item.rank for item in result[method]}, {1})
+            self.assertEqual({item.tie_group for item in result[method]}, {1})
 
     def test_missing_candidate_estimate_is_ranked_as_failed(self):
         candidates=self.candidates[:2]
