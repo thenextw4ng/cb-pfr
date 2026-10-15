@@ -173,15 +173,16 @@ def patch_builder(builder: Path, layout: dict, batches: int, inactive: int, part
     if source.count(entropy_anchor) != 1:
         raise ValueError("upstream entropy-mesh construction differs from audited template; refusing to patch")
     entropy_replacement = (
+        "import math\n"
         "# Derive entropy coverage from the complete model geometry, not a hard-coded source box.\n"
         "entropy_bbox = geometry.bounding_box\n"
         "entropy_lower = [float(v) for v in entropy_bbox.lower_left]\n"
         "entropy_upper = [float(v) for v in entropy_bbox.upper_right]\n"
-        "if not all(np.isfinite(v) for v in entropy_lower[:2] + entropy_upper[:2]):\n"
+        "if not all(math.isfinite(v) for v in entropy_lower[:2] + entropy_upper[:2]):\n"
         "    raise ValueError('geometry.bounding_box has non-finite x/y bounds; refusing an incomplete entropy mesh')\n"
         "# The benchmark is two-dimensional; replace unbounded z geometry with a unit-thick diagnostic slab.\n"
-        "if not np.isfinite(entropy_lower[2]): entropy_lower[2] = -0.5\n"
-        "if not np.isfinite(entropy_upper[2]): entropy_upper[2] = 0.5\n"
+        "if not math.isfinite(entropy_lower[2]): entropy_lower[2] = -0.5\n"
+        "if not math.isfinite(entropy_upper[2]): entropy_upper[2] = 0.5\n"
         "if entropy_upper[2] <= entropy_lower[2]:\n"
         "    entropy_lower[2], entropy_upper[2] = -0.5, 0.5\n"
         "entropy_mesh = openmc.RegularMesh()\n"
