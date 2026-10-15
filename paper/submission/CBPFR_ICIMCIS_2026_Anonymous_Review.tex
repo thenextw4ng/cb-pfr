@@ -5,16 +5,16 @@
 \usepackage{booktabs,array,tabularx,multirow}
 \usepackage{tikz}
 \usepackage{url}
-\usepackage[hidelinks,pdfauthor={},pdftitle={Auditing QUBO-Feasible Fuel Layouts with OpenMC: An Exploratory CB-PFR Screening Study}]{hyperref}
+\usepackage[hidelinks,pdfauthor={},pdftitle={Confidence-Bounded Physical Feasibility Ranking for Neutronic Screening of QUBO-Feasible Fuel Layouts Using OpenMC}]{hyperref}
 \usetikzlibrary{arrows.meta,positioning,calc}
-\title{Auditing QUBO-Feasible Fuel Layouts with OpenMC: An Exploratory CB-PFR Screening Study}
+\title{Confidence-Bounded Physical Feasibility Ranking for Neutronic Screening of QUBO-Feasible Fuel Layouts Using OpenMC}
 \author{\IEEEauthorblockN{Anonymous Authors}\\
 \IEEEauthorblockA{Affiliations withheld for double-blind review}}
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Composition feasibility under a binary-quadratic objective does not establish physical acceptability, and a post-physics rule cannot identify a unique candidate when the declared evidence leaves candidates tied. This paper reports an evidence-audited, exploratory software study of Confidence-Bounded Physical Feasibility Ranking (CB-PFR) on a two-dimensional multigroup C5G7-derived fuel-placement case. Four fuel positions receive exactly two mixed-oxide (MOX) and two uranium-dioxide assemblies, while five reflector positions remain fixed, producing six enumerated labels and four diagonal-reflection symmetry classes. A composition-only quadratic unconstrained binary optimization (QUBO) penalty gives every feasible label zero energy and therefore cannot rank physical responses; no pre-physics optimizer or annealer was run. An archived OpenMC campaign contains 18 runs (three seeds per label). A retrospective screen with illustrative limits \(k_{\mathrm{eff}}\in[1.14,1.21]\), \(F_{\max}=1.35\), and width factor \(z=1\) passes two symmetry classes (three labels) and fails two classes. Since the limits were chosen after the campaign was inspected, this is an implementation demonstration, not a confirmatory test. A separate three-run high-compute UMMU screen gives mean \(k_{\mathrm{eff}}=1.18647358\), an absolute difference of \(-7.64\) pcm from the saved scalar reference, and a maximum single-run standard deviation of 9.48 pcm. The results support a traceable exploratory workflow but do not establish a physical optimum, calibrated uncertainty coverage, full benchmark validation, or comparative superiority.
+Composition feasibility under a binary-quadratic objective does not establish physical acceptability, and a post-simulation rule cannot justify a unique choice when the evidence leaves candidates tied. This paper reports an evidence-audited, exploratory implementation of Confidence-Bounded Physical Feasibility Ranking (CB-PFR) on a two-dimensional multigroup C5G7-derived fuel-placement case. Four fuel positions receive exactly two mixed-oxide (MOX) and two uranium-dioxide assemblies, while five reflector positions remain fixed, producing six enumerated labels and four diagonal-reflection symmetry classes. A composition-only quadratic unconstrained binary optimization (QUBO) penalty gives every feasible label zero energy; no pre-physics optimizer or annealer was run. In the 18-run OpenMC layout campaign, a retrospective illustrative screen passes two symmetry classes and fails two, but the thresholds were selected after the runs and are not engineering limits. An additional three-seed UMMU repeatability assessment produced different results under 500 and 100 inactive-batch protocols: mean $k_{\mathrm{eff}}=1.18649321$ ($-5.68$ pcm) and between-run SD 15.57 pcm for the former, versus 1.18647358 ($-7.64$ pcm) and 0.77 pcm for the latter. The dispersion discrepancy and source-convergence diagnostics remain unresolved. The results demonstrate traceable screening and tie handling, not benchmark validation, physical optimality, calibrated confidence coverage, comparative superiority, or quantum advantage.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -22,7 +22,7 @@ CB-PFR, C5G7 benchmark, OpenMC, QUBO, reproducible research software
 \end{IEEEkeywords}
 
 \section{Introduction}
-Discrete optimization can satisfy an encoded constraint without establishing that a candidate is physically acceptable. A binary-quadratic objective distinguishes candidates only through terms it represents \cite{kochenberger2014,usmanov2024}. In a fuel-layout study, a composition penalty can enforce material counts while leaving the physical responses of all feasible permutations unranked. This distinction is central to the present four-position case.
+Discrete optimization can satisfy an encoded constraint without establishing that a candidate is physically acceptable. A binary-quadratic objective distinguishes candidates only through terms it represents \cite{kochenberger2014,usmanov2024}. Reactor loading-pattern studies have used genetic algorithms, simulated annealing, hybrid schemes, and problem-specific encodings, although their objectives and reactor models differ by application \cite{chapot1999,wu2001,erdogan2003,zameer2014,sobolev2017}. More recent work combines adjoint-based physical information with evolutionary search \cite{abuzlf2025}. These studies motivate separation between the search objective and physical assessment; they are not direct performance baselines for this small enumerated case.
 
 This paper studies CB-PFR (Confidence-Bounded Physical Feasibility Ranking) as a transparent post-simulation screening component in a research-software workflow. Its contribution is bounded: the implementation makes declared limits, uncertainty semantics, violations, and ties visible; the accompanying C5G7/OpenMC case study shows how those rules behave on recorded data. It is not a claim that CB-PFR is superior to established constraint-handling or stochastic ranking methods, nor that a scalable optimizer has been demonstrated. In particular, all six feasible layouts were enumerated; no pre-physics optimizer or annealer was run.
 
@@ -66,9 +66,9 @@ including only terms for limits that are declared. The normalized violation is \
 When feasible candidates have identical substantive scores, CB-PFR reports a tie. An input-order fallback, if used for reproducible display, is not a physical preference. A separate downstream selector may apply an explicitly declared secondary score, but it does not make the composition-only pre-physics QUBO informative and is not an optimizer advantage result.
 
 \subsection{Archived Campaigns and Exploratory Limits}
-The principal layout campaign contains 18 corrected-group runs: six labels across seed rounds 820000, 830000, and 840000. Each used 7,000 total batches, 500 inactive batches, 10,000 particles per batch, and two threads. The run-level table records unique seeds and statepoint hashes and a common MGXS hash. Archive consistency checks passed; independent signed model/tally fidelity review remains unavailable.
+The six-layout campaign contains 18 recorded multigroup OpenMC runs: six labels across seed rounds 820000, 830000, and 840000. Each used the documented seven-group C5G7 energy structure, 7,000 total batches, 500 inactive batches, 10,000 particles per batch, and two threads. The records contain unique seeds and statepoint hashes and a common multigroup cross-section (MGXS) hash. These archive checks support traceability, but the model geometry/material mapping and spatial-tally correspondence have not been independently reviewed against the primary specification.
 
-A separate canonical UMMU high-compute screen used three independent runs (seeds 720000, 730000, and 740000), 7,000 batches, 100 inactive batches, and 10,000 particles per batch. Its saved report records the standard C5G7 energy-group structure and raw HDF5 audit checks as passing, but labels the result \texttt{NUMERICAL\_SCREEN\_PASS\_FULL\_BENCHMARK\_STILL\_BLOCKED}.
+A separate three-seed UMMU repeatability assessment used the same total batch count (7,000) and particles per batch (10,000) under two protocols: 500 inactive batches in one archived run set and 100 inactive batches in a later run set. The 500-inactive simulations completed and their raw HDF5 audits passed, but the initial aggregation job stopped because the source-convergence report for seed 720000 was absent. The archived statepoints were subsequently inspected directly for active-batch entropy and $k$-generation traces. The later 100-inactive run set produced these reports but logged repeated warnings that fission-source sites fell outside the entropy mesh. The two protocols are therefore reported separately rather than pooled or presented as interchangeable replications.
 
 No design-specific acceptance rule was independently approved before the six-layout campaign. Therefore, \(k_{\mathrm{eff}}\in[1.14,1.21]\), \(F_{\max}=1.35\), \(z=1\), scales \(d_k=0.01\), \(d_F=0.1\), and unit weights are explicitly retrospective illustrative settings. They exercise the software pathway only. A sweep over \(F_{\max}\in\{1.30,1.32,1.35,1.80,1.82,1.87,1.90\}\) and \(z\in\{0,1,2\}\) is sensitivity analysis, not confirmation.
 
@@ -77,7 +77,7 @@ No design-specific acceptance rule was independently approved before the six-lay
 Table~\ref{tab:classes} summarizes class-level run results. \(s_{k,\mathrm{run}}\) is the sample standard deviation of run-level \(k_{\mathrm{eff}}\) means within each class; \(\bar{s}_{k,\mathrm{within}}\) is the mean reported within-run standard deviation. For the illustrative CB-PFR screen, \(s_k^*=\max(s_{k,\mathrm{run}},\bar{s}_{k,\mathrm{within}})\). The \(s_F\) column is the sample standard deviation of run-level \(F\) observations pooled within the class. Values are descriptive, not estimates of calibrated confidence coverage.
 
 \begin{table*}[t]
-\caption{Corrected-group six-layout campaign aggregated by diagonal-reflection class.}
+\caption{Six-layout multigroup OpenMC campaign aggregated by diagonal-reflection class.}
 \label{tab:classes}
 \centering
 \small
@@ -156,7 +156,7 @@ S4 & 1.204568 & 1.204762 & 1.817079 & 4.6708 & Fail\\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:sweep} reports counts as \emph{label strings / symmetry classes}; for example, S1 contributes two label strings but one physical class. The \(z=0\) and \(z=1\) counts coincide across this tested grid; \(z=2\) changes the count only at \(F_{\max}=1.87\). This is a useful warning about threshold sensitivity, not evidence that the threshold is physically justified.
+Table~\ref{tab:sweep} reports counts as \emph{label strings / symmetry classes}; for example, S1 contributes two label strings but one physical class. The \(z=0\) and \(z=1\) counts coincide across this tested grid; \(z=2\) changes the count only at \(F_{\max}=1.87\). The passing count is therefore dependent on the retrospective cutoff, which is not independently justified as a physical limit.
 
 \begin{table}[t]
 \caption{Retrospective sensitivity sweep: passing label strings / symmetry classes.}
@@ -179,25 +179,45 @@ Table~\ref{tab:sweep} reports counts as \emph{label strings / symmetry classes};
 \end{tabular}
 \end{table}
 
-\subsection{Separate Canonical High-Compute Numerical Screen}
-The independent canonical UMMU campaign used seeds 720000, 730000, and 740000 with 7,000 batches, 100 inactive batches, and 10,000 particles per batch. Its report gives mean \(k_{\mathrm{eff}}=1.1864735755\), between-run sample SD \(7.70\times10^{-6}\), pooled within-run reported SD \(9.45\times10^{-5}\), and maximum individual-run SD \(9.48\) pcm. Against the saved scalar reference \(k_{\mathrm{ref}}=1.18655\), the absolute difference is
-\[
-(k_{\mathrm{mean}}-k_{\mathrm{ref}})\times10^5=-7.64\ \mathrm{pcm},
-\]
-while the relative convention \((k_{\mathrm{mean}}-k_{\mathrm{ref}})/k_{\mathrm{ref}}\times10^5\) gives approximately \(-6.44\) pcm. The conventions are distinct.
+\subsection{UMMU Repeatability and Protocol Audit}
+Table~\ref{tab:ummu} compares two archived three-seed UMMU run sets. Both used 7,000 total batches, 10,000 particles per batch, the same multigroup cross-section hash, unique random seeds, and passing raw HDF5/group-structure audits; the inactive-batch setting differs. The mean shifts from $k_{\mathrm{ref}}=1.18655$ are expressed in absolute pcm as $(\bar{k}-k_{\mathrm{ref}})\times10^5$. The project reference uncertainty is $u_{\mathrm{ref}}=9.5\times10^{-5}$ in absolute $k_{\mathrm{eff}}$ units (9.5 pcm); it is not a relative uncertainty or an official benchmark tolerance.
 
-The saved project screen reports a combined-uncertainty score \(z=-0.804\) using its configured reference standard uncertainty \(9.5\times10^{-5}\) in absolute \(k_{\mathrm{eff}}\) units. This score is conditional on that stored uncertainty convention, not a published benchmark acceptance criterion. The workflow itself labels the outcome \texttt{NUMERICAL\_SCREEN\_PASS\_FULL\_BENCHMARK\_STILL\_BLOCKED}; independent primary-specification/model review and a benchmark-compatible spatial tally comparison remain unresolved. This scalar comparison is limited to the canonical UMMU case and does not validate the five other layout labels.
+For a descriptive combined-uncertainty score only, we use
+\[
+u_{\mathrm{run}}=\frac{\max(s_{\mathrm{between}},s_{\mathrm{within}})}{\sqrt{n}},\qquad
+z_{\mathrm{comb}}=\frac{\bar{k}-k_{\mathrm{ref}}}
+{\sqrt{u_{\mathrm{ref}}^2+u_{\mathrm{run}}^2}},
+\]
+where $s_{\mathrm{between}}$ is the sample SD of run means and $s_{\mathrm{within}}$ is the pooled within-run reported SD. This conservative operational convention yields $z_{\mathrm{comb}}=-0.434$ for the 500-inactive set and $-0.698$ for the 100-inactive set. It is a descriptive project calculation, not an acceptance criterion or evidence of benchmark validation.
+
+\begin{table*}[t]
+\caption{Separate UMMU run protocols and repeatability summaries.}
+\label{tab:ummu}
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{l r r r r r}
+\toprule
+Protocol & Inactive batches & Mean $k_{\mathrm{eff}}$ & $\Delta k$ (pcm) & Between-run SD (pcm) & Pooled within-run SD (pcm)\\
+\midrule
+A & 500 & 1.18649321 & $-5.68$ & 15.57 & 9.58\\
+B & 100 & 1.18647358 & $-7.64$ & 0.77 & 9.45\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+The two protocol summaries must not be merged: between-run SD is about 1.63 times the pooled within-run SD for Protocol A but only 0.081 times that SD for Protocol B. The latter is a pronounced under-dispersion relative to the run-level uncertainty estimates and requires investigation rather than interpretation as unusually strong repeatability. Active-trace first-to-last-quartile $k$-generation shifts are $+24.0$ to $+65.1$ pcm for Protocol A and $-16.1$ to $+23.5$ pcm for Protocol B. The corresponding entropy shifts are $-0.00195$ to $-0.00007$ and $-1.456$ to $-0.475$, respectively; the 100-inactive logs also recorded repeated source sites outside the entropy mesh. These traces do not certify source convergence. Neither protocol is treated as a validated canonical estimate; model/tally review and convergence investigation remain necessary.
 
 \section{Discussion}
 The results illustrate three distinct issues. First, the composition-only QUBO enforces the material count but ties all feasible layouts by construction. Second, CB-PFR can make operational screening decisions auditable, but a threshold selected after observing the study data supports retrospective sensitivity analysis only. Third, candidate ties must be preserved at the symmetry-class level when the model and data do not distinguish mirror orientations. The secondary proxy \(F\) separates the four class means descriptively, but this small enumerated case does not demonstrate comparative benefit over a baseline or the value of running an optimizer before simulation.
 
-The paper does not claim that the selected proxy is an engineering acceptance criterion. A stronger confirmatory study would require physical limits justified independently of this campaign, a prospectively specified analysis, independent model/tally review, and an adequate comparison against simple methods. A larger candidate space and a meaningful physics-sensitive pre-physics objective would be required to evaluate claims about optimizer utility. Constraint handling and ranking-and-selection are established research areas \cite{deb2000,kimnelson2006,taylor1994}; the contribution here is the explicit software workflow and its evidence-bounded audit, not a claim of priority for feasibility-first ranking. Other C5G7 deterministic transport studies provide methodological context but are not treated as a direct baseline for CB-PFR \cite{song2020}.
+The paper does not claim that the selected proxy is an engineering acceptance criterion. A stronger confirmatory study would require physical limits justified independently of this campaign, a prospectively specified analysis, independent model/tally review, and an adequate comparison against simple methods. A larger candidate space and a meaningful physics-sensitive pre-physics objective would be required to evaluate claims about optimizer utility. Constraint-handling methods and simulation ranking-and-selection have established literature \cite{deb2000,kimnelson2006}. For uncertainty terminology, the paper distinguishes within-run Monte Carlo standard uncertainties from observed between-run dispersion, consistent with measurement-uncertainty guidance \cite{taylor1994}. Other C5G7 deterministic transport studies provide methodological context but are not treated as direct performance baselines for CB-PFR \cite{song2020}. The contribution is the explicit software workflow and its evidence-bounded audit, not priority for feasibility-first ranking.
 
 \section{Conclusion}
-This paper reports an exploratory, evidence-audited CB-PFR workflow on six enumerated C5G7-derived fuel layouts. The composition QUBO assigns zero energy to each feasible layout; diagonal-reflection symmetry reduces six labels to four classes. Under a retrospective illustrative screen, two classes pass and two fail, while the sensitivity table makes threshold dependence explicit. A separate high-compute canonical UMMU screen yields \(k_{\mathrm{eff}}=1.18647358\) and an absolute reference difference of \(-7.64\) pcm, but does not establish benchmark acceptance. The evidence supports workflow traceability and transparent handling of ties, not physical optimality, calibrated confidence coverage, full validation, or method superiority.
+This paper reports an exploratory, evidence-audited CB-PFR workflow on six enumerated C5G7-derived fuel layouts. The composition QUBO assigns zero energy to each feasible layout; diagonal-reflection symmetry reduces six labels to four classes. Under a retrospective illustrative screen, two classes pass and two fail, while the sensitivity table makes threshold dependence explicit. The separate UMMU run sets give absolute reference differences of \(-5.68\) pcm and \(-7.64\) pcm under 500- and 100-inactive-batch protocols, respectively. Their repeatability diagnostics differ materially, and neither establishes benchmark acceptance. The evidence supports workflow traceability and transparent handling of ties, not physical optimality, calibrated confidence coverage, full validation, or method superiority.
 
 \section*{Software and Data Availability}
-The accompanying anonymized review supplement contains the 18-run layout table, the canonical high-compute summary, and the scripts needed to reproduce the tabulated post-processing from those records. The project identity and permanent public release are withheld from this double-blind manuscript; no DOI or public release is claimed in this review version.
+The accompanying anonymous-review supplement contains the 18-run six-layout table, six UMMU run-level records with statepoint hashes, a two-protocol summary and source-trace diagnostics, and the scripts needed to reproduce the reported aggregation rules. The project identity and permanent public release are withheld from this double-blind manuscript; no DOI or public release is claimed in this review version.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
