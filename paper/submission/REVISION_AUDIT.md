@@ -73,7 +73,7 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 
 ## Open B-level items (not silently marked complete)
 
-- Protocol B still has 7,000 entropy-mesh warnings per run and an implausibly low between-run/within-run SD ratio. Re-running after correcting and auditing mesh bounds is a distinct OpenMC job, not covered by the TeX or unit-test build.
+- The original archived Protocol B run set has 7,000 source-outside-mesh warnings per run. The corrected-mesh recheck now completed six seed/protocol reruns with zero such warnings. This resolves the warning-condition subgate for those executions, but Protocol B's between-run/within-run SD ratio remains 0.0815 and is still an open reliability issue.
 - Protocol A's $k$-generation trace shifts still require a prospective convergence criterion and re-evaluation.
 - The replication experiment (R0/R1/R2/R3 methods over declared distances to threshold, Wilson intervals, coverage and rank/tie metrics) remains separate confirmatory work; it cannot be substituted by synthetic-only unit tests.
 - No optimization-benefit claim is permitted without running a real pre-physics optimizer on an informative objective. This ICIMCIS revision retains the explicit nonclaim.
@@ -85,7 +85,7 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 - Added the minimal QUBO and ranking source modules to the anonymous supplement so the included formal-property test can be executed from the package without importing unrelated project subsystems.
 - Reproduced the mirror-label Welch interval CSV from the archived 18-run table; the generated output matched the packaged CSV exactly. The output still does not establish equivalence because no margin was prespecified.
 - Reproduced the exploratory symmetry screen: three label strings across two symmetry classes pass at the retrospective settings; all k bounds are inactive and F drives the split.
-- The artifact-builder environment itself does not require OpenMC, so the physical reruns are delegated to a separate GitHub Actions workflow that installs pinned OpenMC and prepares the pinned upstream C5G7 model. Its six corrected-mesh replicates remain a separate physics-evidence gate; until that workflow finishes and its warning/convergence audits are reviewed, no mesh or source-convergence pass is claimed.
+- The corrected-mesh workflow [38714545029](https://github.com/thenextw4ng/cb-pfr/actions/runs/38714545029) completed successfully. All six OpenMC jobs and mesh-audit steps passed; all logs had zero source-outside-mesh warnings, the statepoints and settings seeds matched, and corrected-mesh source-entropy Q4−Q1 shifts for Protocol B were within about ±0.0007. Convergence remains uncertified because Protocol B's between-run dispersion remains implausibly low and Protocol A retains +24 to +65 pcm k-generation quartile shifts.
 - The anonymous supplement now bundles the minimal QUBO and ranking modules under `supplementary/cbpfr/` and the formal-property tests under `supplementary/tests/`. The source-level supplement-test step passed in GitHub Actions run [38715855752](https://github.com/thenextw4ng/cb-pfr/actions/runs/38715855752). The build workflow also now extracts the exact generated review ZIP and reruns the tests from that extracted package before committing the PDF or uploading the ZIP; the archive-level result must be taken from the final run's step status.
 - These formal-property tests establish implementation behavior only. They do not validate OpenMC physics, certify convergence, demonstrate calibrated coverage, or establish an engineering acceptance criterion.
 
@@ -95,4 +95,15 @@ This gives Protocol A z = -0.4342 and Protocol B z = -0.6977. The scores are des
 - Build run [38716047654](https://github.com/thenextw4ng/cb-pfr/actions/runs/38716047654) completed successfully on the 2026-10-15 revision: the PDF compiled, text/anonymity checks passed, and both the source-level and extracted-ZIP test suites passed (5 tests each; 10 combined).
 - PDF metadata check reported five letter-sized pages and a blank Author field. A visual page render then identified one repeated paragraph describing source-entropy and k-generation quartile shifts; that duplicate has been removed from the TeX source in the following rebuild.
 - The first successful package inspection also found generated Python `__pycache__` files in the ZIP. The next build removes bytecode caches before packaging and fails closed if any cache/`.pyc`/`.pyo` files appear in the archive.
-- These editorial/package fixes do not change the archived numerical results or strengthen any physics claim. The corrected-entropy-mesh OpenMC workflow is still a separate, ongoing run; no new entropy-warning or convergence pass is claimed here.
+- The corrected-mesh rerun removes the warning condition for the six audited executions but does not establish source convergence or explain Protocol B's low dispersion. A separate 14-run extension has been queued to add seven seed values to each protocol, bringing each to ten seeds if all jobs pass; its outputs must be audited before changing the convergence status.
+
+
+## Corrected-mesh execution audit update (2026-10-15)
+
+- Six corrected-mesh UMMU reruns completed on OpenMC 0.16.0: 3 runs at 500 inactive batches, 3 at 100 inactive batches; all used 7,000 total batches, 10,000 particles per batch, and distinct recorded seed values per protocol.
+- The mesh is 51×51 over [-32.14, 32.14] in both x and y. The model's declared core extent is [-32.13, 32.13]; the mesh margin is 0.01 length unit at each side.
+- All six logs contain zero source-outside-mesh warnings; each run has a non-empty statepoint, its statepoint seed agrees with settings.xml, and geometry/MGXS hashes match across the six runs. Materials XML hashes differ because each file embeds its run-directory path to the same MGXS file; normalized material content is unchanged.
+- Protocol A: mean k-effective 1.18649321180, between-run SD 15.568 pcm, pooled within-run SD 9.579 pcm, ratio 1.625; active-quartile k-generation shifts +42.06, +65.05, +23.99 pcm.
+- Protocol B: mean k-effective 1.18647357549, between-run SD 0.770 pcm, pooled within-run SD 9.446 pcm, ratio 0.0815; corrected active-quartile entropy shifts -0.000659, +0.000443, +0.000431.
+- Statepoint entropy traces show lag-1 autocorrelation around 0.69–0.72. This makes independence assumptions for consecutive entropy batches inappropriate; these exploratory ACF/IAT summaries were not predeclared acceptance criteria.
+- Decision: **mesh-warning subgate PASS for the six reruns; convergence and run-to-run reliability gate remains OPEN.** A follow-up matrix with seven additional seed values per protocol was queued to bring each protocol to ten seeds. No physical validation or benchmark-acceptance claim is made.
