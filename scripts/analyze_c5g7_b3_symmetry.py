@@ -129,7 +129,7 @@ def main():
   ci="NA" if x["ci90_low_pcm"] is None else f"[{x['ci90_low_pcm']:.2f}, {x['ci90_high_pcm']:.2f}]"
   m="NA" if x["mean_difference_pcm"] is None else f"{x['mean_difference_pcm']:.2f}"
   lines.append(f"| {x['pair']} | {m} | {ci} | ±{x['equivalence_margin_pcm']:.1f} | {x['tost_equivalent']} |")
- lines.extend(["","| Integrity check | Pass |","|---|---|"]+[f"| {k} | {v} |" for k,v in checks.items()])
+ lines.extend(["","| Integrity check | Pass |","|---|---|"]+[f"| {k} | {v} |" for k,v in report["global_checks"].items()])
  (a.outdir/"b3_report.md").write_text("\n".join(lines)+"\n")
  print(json.dumps({"status":report["status"],"b3_gate_pass":report["b3_gate_pass"],"run_count":report["run_count"],"tost":report["tost_equivalence_tests"]},indent=2))
  return 2 if errors or not report["integrity_pass"] else 0
