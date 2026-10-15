@@ -166,8 +166,16 @@ def audit_candidate(root: Path, case: dict[str, Any], expected_settings: dict[st
     add("expected_mesh_present", any(m["dimension"] == [51, 51, 1] for m in meshes),
         meshes, [51, 51, 1])
     expected_scores = {"flux", "fission", "nu-fission"}
-    add("expected_scores_present", any(set(t["scores"]) == expected_scores for t in tallies),
+    add("expected_scores_present", any(expected_scores.issubset(set(t["scores"])) for t in tallies),
         tallies, sorted(expected_scores))
+    add("absorption_score_present", any("absorption" in set(t["scores"]) for t in tallies),
+        tallies, "absorption")
+    global_scores = set()
+    for tally in tallies:
+        global_scores.update(tally.get("scores", []))
+    add("required_balance_scores_present",
+        {"nu-fission", "absorption"}.issubset(global_scores),
+        sorted(global_scores), ["nu-fission", "absorption"])
     add("no_preexisting_files_mutated", not physical.get("mutated_preexisting_files"),
         physical.get("mutated_preexisting_files"), {})
 
