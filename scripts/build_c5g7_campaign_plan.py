@@ -82,6 +82,16 @@ def make_plan():
     p5=[entry("P5",LAYOUTS["UMMU"],"UMMU",s,4000,1000,40000,rep=i+1) for i,s in enumerate(p5s)]
     p6s=seeds(16,5)
     p6=[entry("P6",LAYOUTS["UMMU"],"UMMU",s,10000,1000,10000,source="bad",rep=i+1) for i,s in enumerate(p6s)]
+    # Conditional replay only if R0a reports different raw generation traces.
+    replay_seeds=seeds(17,3)
+    protocol_replay=[
+        entry("AB_replay_A",LAYOUTS["UMMU"],"UMMU",s,7000,500,10000,rep=i+1)
+        for i,s in enumerate(replay_seeds)
+    ] + [
+        entry("AB_replay_B",LAYOUTS["UMMU"],"UMMU",s,7000,100,10000,rep=i+1)
+        for i,s in enumerate(replay_seeds)
+    ]
+    production=p1+v1a+p2+p3+p4+p5+p6
     plan={
         "schema_version":"1.0", "protocol_id":"CBPFR-C5G7-NIGHT-CAMPAIGN-2026-10-15",
         "root_seed_sequence_entropy":ROOT_ENTROPY,
@@ -89,7 +99,9 @@ def make_plan():
         "run_count_main":sum(len(v) for v in (p1,v1a,p2,p3,p4,v2,p5,p6)),
         "run_count_by_stage":{"R0a":2,"R0b":2,"R0c":1,"R0d":0,"P1":len(p1),"V1a":len(v1a),"P2":len(p2),"P3":len(p3),"P4":len(p4),"V2a":len(v2),"P5":len(p5),"P6":len(p6)},
         "layout_mapping":LAYOUTS,
-        "stages":{"R0":r0,"P1":p1,"V1a":v1a,"P2":p2,"P3":p3,"P4":p4,"P5":p5,"P6":p6},
+        "stages":{"R0":r0,"P1":p1,"V1a":v1a,"P2":p2,"P3":p3,"P4":p4,"P5":p5,"P6":p6,
+                  "AB_replay_conditional":protocol_replay},
+        "production_matrix":production,
         "V2a_shards":v2_shards,
         "important":{"P3_seed_pairing":"MMUU and UMUM share the ten seed values for paired symmetry analysis.",
                      "P4_seed_pairing":"MUMU and UUMM share the ten seed values for paired mirror analysis.",
@@ -114,6 +126,8 @@ def main():
     if a.github_output:
         pairs={
             "r0_matrix":plan["stages"]["R0"],
+            "production_matrix":plan["production_matrix"],
+            "protocol_replay_matrix":plan["stages"]["AB_replay_conditional"],
             "p1_matrix":plan["stages"]["P1"],
             "v1a_matrix":plan["stages"]["V1a"],
             "p2_matrix":plan["stages"]["P2"],
