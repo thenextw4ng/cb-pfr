@@ -152,7 +152,7 @@ jobs:
           find paper/submission/supplementary -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
           mkdir -p /tmp/cbpfr-review-package/supplementary/scripts /tmp/cbpfr-review-package/supplementary/data /tmp/cbpfr-review-package/supplementary/tests /tmp/cbpfr-review-package/supplementary/cbpfr
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.pdf /tmp/cbpfr-review-package/
-          cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex paper/submission/references.bib paper/submission/REVISION_AUDIT.md /tmp/cbpfr-review-package/
+          cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex paper/submission/references.bib /tmp/cbpfr-review-package/
           cp paper/submission/canonical_high_budget_summary.csv /tmp/cbpfr-review-package/supplementary/data/ummu_run_level_protocol_audit.csv
           cp results/cbpfr_physical_feasibility_bridge_2026-10-12.csv /tmp/cbpfr-review-package/supplementary/data/six_layout_run_level_results.csv
           cp -R paper/submission/supplementary/cbpfr/. /tmp/cbpfr-review-package/supplementary/cbpfr/
@@ -162,11 +162,36 @@ jobs:
           cp paper/submission/mirror_pair_comparison.csv /tmp/cbpfr-review-package/supplementary/data/
           cp tests/test_cbpfr_formal_properties.py /tmp/cbpfr-review-package/supplementary/tests/
           cp scripts/run_c5g7_cbpfr_physical_selection.py scripts/analyze_c5g7_canonical_convergence.py scripts/audit_c5g7_source_convergence.py /tmp/cbpfr-review-package/supplementary/scripts/
+          cat > /tmp/cbpfr-review-package/REPRODUCIBILITY_NOTES.md <<'EOF'
+          # Reproducibility notes
+
+          This anonymous supplement accompanies an exploratory computational case study of an auditable decision-support workflow for screening QUBO-feasible fuel-layout labels with OpenMC-derived evidence.
+
+          ## Contents
+          - `supplementary/data/six_layout_run_level_results.csv`: archived 18-run, six-layout data table.
+          - `supplementary/data/ummu_run_level_protocol_audit.csv`: six archived UMMU run records for two separate inactive-batch protocols.
+          - `supplementary/data/mirror_pair_comparison.csv`: descriptive Welch intervals for the two mirror-label pairs.
+          - `supplementary/cbpfr/`: portable QUBO and CB-PFR ranking implementation used by the formal-property tests.
+          - `supplementary/tests/`: software-property regression tests.
+          - `supplementary/scripts/`: analysis and diagnostic scripts.
+
+          ## Re-run software-property tests
+          From the extracted package root, run:
+          `PYTHONPATH=supplementary python -m unittest discover -s supplementary/tests -v`
+
+          These tests cover uncertainty-violation monotonicity, permutation-invariant substantive ranks and tie groups, fail-closed handling of missing or invalid evidence, and the zero-multiplier point-estimate limit. They test software behavior only.
+
+          ## Evidence limits
+          The archived thresholds are retrospective illustrative settings, not engineering or safety limits. All six layouts were enumerated; this case study did not run a pre-physics optimizer or annealer and establishes no optimizer superiority or quantum advantage. The two UMMU run sets remain separate because their run-to-run dispersion differs and the 100-inactive protocol historically emitted entropy-mesh warnings. The archived data do not establish source-convergence certification, calibrated interval coverage, physical optimum, or full benchmark validation. The corrected-mesh follow-up must be evaluated separately from this archived review package.
+
+          The package deliberately omits internal audit logs and internal project links to preserve double-blind review.
+          EOF
           cat > /tmp/cbpfr-review-package/README_SUBMISSION.md <<'EOF'
           Anonymous ICIMCIS 2026 review package
           - PDF: anonymous review manuscript, maximum six pages.
           - TeX/BibTeX: editable source and references.
           - Supplement: 18-run six-layout OpenMC table, six individual UMMU runs from two inactive-batch protocols, CB-PFR ranking/screen code, diagnostic scripts, and four mirror-label Welch intervals with their reproducing script.
+          - Reproducibility notes: methods, test command, data inventory, and evidence limitations. This reader-facing note excludes internal repository links, branch names, workflow URLs, and author identities.
           - Formal-property unit tests cover uncertainty monotonicity, permutation-invariant ranks/ties, fail-closed evidence handling, and the zero-multiplier point-estimate rule.
           - The portable bundled `supplementary/cbpfr` package includes the QUBO and ranking implementation and is tested before packaging. Re-run it from the extracted ZIP with: `PYTHONPATH=supplementary python -m unittest discover -s supplementary/tests -v`.
           - Mirror intervals are descriptive only; no equivalence margin was specified before data acquisition, so no statistical-equivalence claim is made.
