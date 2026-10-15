@@ -131,6 +131,6 @@ def main():
  lines.extend(["","B2 uses only the ten newly registered seed values. If a gate fails, report the failure and do not start B3. B4 still requires reviewed official pin-power reference data, and a scalar k-effective match is not benchmark acceptance."])
  (a.outdir/"b2_confirmatory_report.md").write_text("\n".join(lines)+"\n")
  print(json.dumps({"status":report["status"],"b2_gate_pass":report["b2_gate_pass"],"run_count":report["run_count"],"metrics":m},indent=2))
- return 2 if errors or not integrity else 0
+ return 2 if errors or not report["integrity_pass"] else 0
 
 if __name__=="__main__":raise SystemExit(main())
