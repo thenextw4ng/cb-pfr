@@ -116,7 +116,7 @@ jobs:
       - name: Test the portable anonymous supplement
         shell: bash
         run: |
-          PYTHONPATH=paper/submission/supplementary python3 -m unittest discover \
+          PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=paper/submission/supplementary python3 -m unittest discover \
             -s paper/submission/supplementary/tests -v
 
       - name: Compile IEEE conference PDF
@@ -148,6 +148,8 @@ jobs:
         shell: bash
         run: |
           rm -rf /tmp/cbpfr-review-package
+          find paper/submission/supplementary -type d -name __pycache__ -prune -exec rm -rf {} +
+          find paper/submission/supplementary -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
           mkdir -p /tmp/cbpfr-review-package/supplementary/scripts /tmp/cbpfr-review-package/supplementary/data /tmp/cbpfr-review-package/supplementary/tests /tmp/cbpfr-review-package/supplementary/cbpfr
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.pdf /tmp/cbpfr-review-package/
           cp paper/submission/CBPFR_ICIMCIS_2026_Anonymous_Review.tex paper/submission/references.bib paper/submission/REVISION_AUDIT.md /tmp/cbpfr-review-package/
@@ -181,6 +183,10 @@ jobs:
           rm -rf "$CHECK_DIR"
           mkdir -p "$CHECK_DIR"
           unzip -q "$GITHUB_WORKSPACE/CBPFR_ICIMCIS_2026_Review_Submission_Package.zip" -d "$CHECK_DIR"
+          if unzip -Z1 "$GITHUB_WORKSPACE/CBPFR_ICIMCIS_2026_Review_Submission_Package.zip" | grep -Eq "(^|/)__pycache__/|\.py[co]$"; then
+            echo "Unexpected Python bytecode/cache files found in submission ZIP."
+            exit 1
+          fi
           cd "$CHECK_DIR"
           PYTHONPATH=supplementary python3 -m unittest discover -s supplementary/tests -v
 
