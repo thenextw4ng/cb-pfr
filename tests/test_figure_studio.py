@@ -60,6 +60,7 @@ class FigureStudioTests(unittest.TestCase):
         self.assertIn("min-width:0", self.css)
         self.assertIn("max-width:100%", self.css)
         self.assertIn("overflow-x:auto", self.css)
+        self.assertIn("html,body,.shell{max-width:100%;overflow-x:clip}", self.css)
         self.assertIn("@media(max-width:680px)", self.css)
 
     def test_synthetic_and_recorded_openmc_evidence_stay_separate(self):
