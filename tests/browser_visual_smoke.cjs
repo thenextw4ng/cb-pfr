@@ -26,8 +26,48 @@ async function main() {
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
     await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
+    await page.locator("#coreView2d").click();
     await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
     await page.waitForSelector("#candidateChart svg", { timeout: 30000 });
+    // Stage 0/1 regression gate: preserve the interactive source registry alongside the 3D views.
+    await page.waitForFunction(() =>
+      /INDEX LOADED/.test(document.querySelector("#ecrStatus")?.textContent || ""),
+      { timeout: 30000 }
+    );
+    const ecrState = await page.evaluate(() => ({
+      cardCount: document.querySelectorAll("#ecrSourceGrid [data-ecr-source]").length,
+      status: document.querySelector("#ecrStatus")?.textContent || "",
+      detailTitle: document.querySelector("#ecrDetailTitle")?.textContent || "",
+      core3dHost: Boolean(document.querySelector("#core3dCanvas")),
+      axialVolumeHost: Boolean(document.querySelector("#axial3dPlot")),
+      registryHasResearch: Boolean(document.querySelector("#research-evidence")),
+      sourceStatusText: document.querySelector("#ecrSourceGrid")?.innerText || ""
+    }));
+    assert.ok(ecrState.cardCount >= 6, "control room should catalogue the separate geometry, transport, campaign and paper sources: " + JSON.stringify(ecrState));
+    assert.ok(ecrState.detailTitle.trim().length > 0, "a source should be selected for provenance inspection");
+    assert.ok(ecrState.core3dHost && ecrState.axialVolumeHost, "original geometry and axial visualizer mounts must remain present");
+    assert.ok(ecrState.registryHasResearch, "the revised experiment/paper section must remain in the page");
+    assert.match(ecrState.sourceStatusText, /source|openmc|campaign|synthetic|proxy/i, "evidence classes should be distinguishable");
+
+    // Search/filter interactions should only change the index view, not the source data.
+    await page.selectOption("#ecrFilter", "synthetic");
+    await page.waitForFunction(() => {
+      const cards = [...document.querySelectorAll("#ecrSourceGrid [data-ecr-source]")];
+      return cards.length > 0 && cards.every(card => /synthetic/i.test(card.innerText));
+    }, { timeout: 10000 });
+    await page.selectOption("#ecrFilter", "all");
+    await page.fill("#ecrSearch", "axial-volume");
+    await page.waitForFunction(() => {
+      const cards = [...document.querySelectorAll("#ecrSourceGrid [data-ecr-source]")];
+      return cards.length === 1 && cards[0].dataset.ecrSource === "axial-volume";
+    }, { timeout: 10000 });
+    await page.locator('#ecrSourceGrid [data-ecr-source="axial-volume"]').click();
+    await page.waitForFunction(() => /axial/i.test(document.querySelector("#ecrDetailTitle")?.textContent || ""));
+    const axialDetailText = await page.locator("#ecrDetailBody").innerText();
+    assert.match(axialDetailText, /dimension xyz|dimension|seed/i, "axial source inspector must include recorded dimensions or run metadata");
+    await page.fill("#ecrSearch", "");
+    await page.selectOption("#ecrFilter", "all");
+
     // A green browser smoke run requires the actual four spatial Plotly canvases, not just empty panels.
     for (const selector of [
       "#meshHeatmap.js-plotly-plot",
@@ -79,6 +119,12 @@ async function main() {
       document.querySelector("#selectedCandidateId")?.textContent.trim() === expected,
       candidateOptions[0].value
     );
+    // Exercise the original Three.js mode explicitly. WebGL is recorded as either
+    // ready or a declared fallback; a hidden 2D SVG is not mistaken for a 3D render.
+    await page.locator("#coreView3d").click();
+    await page.waitForFunction(() => /WEBGL READY|WEBGL UNAVAILABLE|CDN UNAVAILABLE|2D SOURCE FALLBACK/.test(
+      document.querySelector("#core3dStatus")?.textContent || ""
+    ), { timeout: 30000 });
 
     const desktopOverflow = await page.evaluate(() => ({
       viewport: window.innerWidth,
@@ -90,6 +136,8 @@ async function main() {
 
     await page.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-full.png"), fullPage: true, animations: "disabled" });
     await page.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-candidate-inspector.png"), animations: "disabled" });
+    await page.locator("#evidence-control-room").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-evidence-control-room.png"), animations: "disabled" });
+    await page.locator("#core3dViewport").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-core-3d-viewer.png"), animations: "disabled" });
     await page.locator("#spatial").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-spatial-field-lab.png"), animations: "disabled" });
     const geometrySection = page.locator("#geometryPreview").locator("xpath=ancestor::section[1]");
     await geometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-desktop-model-geometry.png"), animations: "disabled" });
@@ -109,6 +157,7 @@ async function main() {
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
     await mobilePage.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
+    await mobilePage.locator("#coreView2d").click();
     await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
     for (const selector of [
       "#meshHeatmap.js-plotly-plot",
@@ -147,6 +196,7 @@ async function main() {
     await mobilePage.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-top.png"), fullPage: false, animations: "disabled" });
     await mobilePage.addStyleTag({ content: "@media(max-width:680px){.sidebar{position:static!important;top:auto!important}}" });
     await mobilePage.locator("#candidates").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-candidate-inspector.png"), animations: "disabled" });
+    await mobilePage.locator("#evidence-control-room").screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-evidence-control-room.png"), animations: "disabled" });
     const mobileGeometrySection = mobilePage.locator("#geometryPreview").locator("xpath=ancestor::section[1]");
     await mobileGeometrySection.screenshot({ path: path.join(OUTPUT_DIR, "cb-pfr-mobile-model-geometry.png"), animations: "disabled" });
     await mobilePage.close();

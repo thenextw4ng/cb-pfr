@@ -28,3 +28,9 @@ Open http://127.0.0.1:8765. Keep the terminal running; press Ctrl+C to stop. Do 
 ## Scientific boundaries
 
 The 3D core view is a geometry/material-derived schematic extrusion, not an axial transport solution. The axial tally volume is real recorded multi-layer data but is from one UMMU high-budget run and does not establish physical optimality, candidate-specific axial validation for all six layouts, or reactor safety. The planar tally, axial volume, V2a run summaries, and synthetic paper regimes are separate evidence sources.
+
+## Evidence Control Room · Stage 0/1
+
+The Evidence Control Room uses `GET /api/evidence-index` to catalogue the existing corrected-group candidate study, XML-derived core geometry manifest, planar OpenMC statepoint, separate axial OpenMC volume, exploratory assembly proxy, latest V2a policy replay, and synthetic method-paper results. Cards display exact source paths, hash information where available, run metadata, source status, and a link to the relevant workspace section. The registry is metadata-first: it does not pull the full axial array merely to show provenance, merge separate evidence classes, or convert source/hash checks into physical validation.
+
+Stage 0 regression tests protect the 3D core viewer, SVG source map, planar heatmap/contour/profile/surface, axial-volume controls, local evidence APIs, and snapshot separation. The browser visual-smoke job emits desktop/mobile screenshots as build artifacts for review; screenshots are evidence for manual visual comparison, not an automatic pixel-perfect equivalence claim.
