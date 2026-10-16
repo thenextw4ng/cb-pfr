@@ -56,7 +56,7 @@
       normal="Y";normalCoord=a.y[index];x=a.x;y=a.z;xName=axisTitle("X");yName=axisTitle("Z");
       raw=Array.from({length:nz},(_,k)=>Array.from({length:nx},(_,i)=>displayed(mean[k][index][i],rse[k][index][i])));
       custom=Array.from({length:nz},(_,k)=>Array.from({length:nx},(_,i)=>customVoxel(i,index,k)));
-    }else{
+    }else if(plane==="YZ"){
       normal="X";normalCoord=a.x[index];x=a.y;y=a.z;xName=axisTitle("Y");yName=axisTitle("Z");
       raw=Array.from({length:nz},(_,k)=>Array.from({length:ny},(_,j)=>displayed(mean[k][j][index],rse[k][j][index])));
       custom=Array.from({length:nz},(_,k)=>Array.from({length:ny},(_,j)=>customVoxel(index,j,k)));
