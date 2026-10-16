@@ -181,6 +181,18 @@
         t.rows.map(r=>'<tr><td><b>'+esc(r.regime)+'</b></td>'+columns.map(c=>'<td class="numeric">'+number(r[c[1]],1)+' / '+number(r[c[2]],1)+'</td>').join("")+'</tr>').join("")+
         '</tbody></table><p class="caption">P = feasible and near-optimal primary endpoint; F = truly feasible selected-candidate rate. The small-pool row uses K=12; other regimes use K=40.</p>';
     }
+    const matched=t.pairedMatched95;
+    plot("t7MatchedChart",[{
+      type:"bar",x:matched.map(r=>r.regime),y:matched.map(r=>r.delta),
+      marker:{color:matched.map(r=>r.delta<0?COLORS[5]:(r.delta===0?"#688093":COLORS[3]))},
+      error_y:{type:"data",array:matched.map(r=>r.high-r.delta),arrayminus:matched.map(r=>r.delta-r.low),visible:true,color:"#a8bdcc",thickness:1.2,width:4},
+      text:matched.map(r=>pp(r.delta)),textposition:"outside",cliponaxis:false,
+      hovertemplate:"%{x}<br>CB-PFR − uniform margin: %{y:+.1f} pp<extra></extra>"
+    }],{yaxis:{title:"Difference in primary endpoint (pp)",zeroline:true,zerolinecolor:"#9aafbd"},xaxis:{tickangle:-18,tickfont:{size:8}},showlegend:false,margin:{l:62,r:12,t:18,b:90}});
+    const matchedTable=$("#t7MatchedTable");
+    if(matchedTable) matchedTable.innerHTML='<table><thead><tr><th>Regime</th><th>Δ vs uniform</th><th>Reported 95% interval</th></tr></thead><tbody>'+
+      matched.map(r=>'<tr><td>'+esc(r.regime)+'</td><td class="numeric">'+pp(r.delta)+'</td><td class="numeric">['+number(r.low,1)+', '+number(r.high,1)+']</td></tr>').join("")+
+      '</tbody></table><p class="caption">T7b is explicitly post hoc in the paper. Read as an operating-envelope exploration, not a prospectively confirmatory superiority test.</p>';
     const h=$("#t7TableNote");
     if(h) h.textContent=t.primary_endpoint+"; each cell in the table shows primary / truly feasible (%) per regime. Every row represents 20,000 synthetic test pools.";
     const sourceLinks=$("#campaignSourceLinks");
