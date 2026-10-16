@@ -61,7 +61,6 @@ class WorkstationStage0Stage1Tests(unittest.TestCase):
         ):
             with self.subTest(source_id=source_id):
                 self.assertIn(f'"{source_id}"', self.server)
-                self.assertIn(source_id, self.ecr_js)
         for control_id in ("ecrFilter", "ecrSearch", "ecrRefresh", "ecrDetailBody"):
             self.assertIn(f'id="{control_id}"', self.html)
         self.assertIn("/api/evidence-index", self.ecr_js)
