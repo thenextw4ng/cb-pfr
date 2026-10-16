@@ -14,6 +14,7 @@ class FigureStudioTests(unittest.TestCase):
     def setUpClass(cls):
         cls.html = (WEB / "index.html").read_text(encoding="utf-8")
         cls.js = (WEB / "figure_studio.js").read_text(encoding="utf-8")
+        cls.css = (WEB / "styles.css").read_text(encoding="utf-8")
         cls.server = (ROOT / "web_server.py").read_text(encoding="utf-8")
         cls.snapshot = json.loads((WEB / "research_snapshot.json").read_text(encoding="utf-8"))
 
@@ -53,6 +54,13 @@ class FigureStudioTests(unittest.TestCase):
         ):
             with self.subTest(figure_id=figure_id):
                 self.assertIn(f'["{figure_id}"', self.js)
+
+    def test_wide_paper_tables_are_contained_on_mobile(self):
+        self.assertIn(".table-scroller,", self.css)
+        self.assertIn("min-width:0", self.css)
+        self.assertIn("max-width:100%", self.css)
+        self.assertIn("overflow-x:auto", self.css)
+        self.assertIn("@media(max-width:680px)", self.css)
 
     def test_synthetic_and_recorded_openmc_evidence_stay_separate(self):
         synthetic_pos = self.js.index('if(id.startsWith("cmpT7"))')
