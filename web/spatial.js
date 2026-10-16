@@ -7,7 +7,6 @@ const config={displaylogo:false,responsive:true,modeBarButtonsToRemove:["lasso2d
 let meshData=null;
 let controlsBound=false;
 let meshReloadBound=false;
-let geometryReloadBound=false;
 function chart(id,traces,layout={}){
  const el=$(id);if(!el)return;
  if(!window.Plotly){el.innerHTML='<div class="empty-state"><b>Plotting engine unavailable</b><p>Plotly.js did not load. Check network access, then reload this page.</p></div>';return;}
@@ -118,10 +117,6 @@ async function bootSpatial(){
  if($("reloadEvidence")&&!meshReloadBound){
   $("reloadEvidence").addEventListener("click",async()=>{$("reloadEvidence").disabled=true;const old=$("reloadEvidence").textContent;$("reloadEvidence").textContent="↻ Reloading…";await initMesh();$("reloadEvidence").disabled=false;$("reloadEvidence").textContent=old||"↻ Reload spatial tally";});
   meshReloadBound=true;
- }
- if($("reloadGeometry")&&!geometryReloadBound){
-  $("reloadGeometry").addEventListener("click",async()=>{$("reloadGeometry").disabled=true;const old=$("reloadGeometry").textContent;$("reloadGeometry").textContent="↻ Scanning…";await loadGeometryArtifacts();$("reloadGeometry").disabled=false;$("reloadGeometry").textContent=old||"↻ Refresh artifacts";});
-  geometryReloadBound=true;
  }
  ["meshScore","meshView","meshScale","meshPalette"].forEach(id=>{if($(id))$(id).disabled=false;});
  await Promise.all([loadGeometryArtifacts(),initMesh()]);
