@@ -128,6 +128,8 @@ async function main() {
       assert.ok(csvHeader.includes(field), "CSV must retain provenance/data column " + field);
     }
     assert.ok(csvText.split(/\r?\n/).length > 5, "CSV export should contain chart point data, not only a header");
+    assert.ok(csvText.includes("cmpV2aFChart"), "CSV data rows must include the figure ID, not just a column header");
+    assert.ok(csvText.includes("Layout variability"), "CSV rows must retain the figure title metadata");
 
     const [pngDownload] = await Promise.all([
       page.waitForEvent("download", { timeout:90000 }),
