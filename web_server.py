@@ -779,6 +779,247 @@ def read_axial_3d_evidence(score="flux"):
         "relative_error_percent": finite_json(relative_errors[:, :, :, index]),
     }
 
+
+
+def _evidence_hash(path: Path):
+    """Return byte-level provenance without parsing or transforming the artifact."""
+    if not path.is_file():
+        return None, None
+    raw = path.read_bytes()
+    return hashlib.sha256(raw).hexdigest(), len(raw)
+
+
+def read_evidence_index():
+    """Build a lightweight, source-linked catalogue for the Evidence Control Room.
+
+    It summarizes file and run metadata only; the endpoint deliberately does not load
+    large mesh arrays or imply convergence/physical validation.
+    """
+    sources = []
+
+    def item(source_id, title, evidence_class, status, summary, source_path=None,
+             sha256=None, byte_count=None, record_count=None, destination=None,
+             metadata=None, error=None):
+        sources.append({
+            "id": source_id,
+            "title": title,
+            "evidence_class": evidence_class,
+            "status": status,
+            "summary": summary,
+            "source_path": source_path,
+            "sha256": sha256,
+            "bytes": byte_count,
+            "record_count": record_count,
+            "destination": destination,
+            "metadata": metadata or {},
+            "error": error,
+        })
+
+    # Corrected-group candidate study (18 run-level records; six layouts).
+    try:
+        payload = read_candidate_evidence()
+        meta = payload.get("metadata", {})
+        records = payload.get("records", [])
+        digest, size = _evidence_hash(ROOT / meta.get("source", ""))
+        item(
+            "candidate-study", "Corrected-group candidate study", "openmc-candidates",
+            "REVIEW REQUIRED",
+            "Recorded 18-run, six-layout corrected-group evidence. Data integrity can pass while physical selection remains blocked.",
+            meta.get("source"), digest, size, len(records), "#candidates",
+            {
+                "run_level_source": meta.get("run_level_source"),
+                "campaign_metadata_source": meta.get("campaign_metadata_source"),
+                "run_count": meta.get("run_count"),
+                "layout_count": meta.get("layout_count"),
+                "runs_per_layout": meta.get("runs_per_layout"),
+                "source_run_id": meta.get("source_run_id"),
+                "analysis_run_id": meta.get("analysis_run_id"),
+                "corrected_mgxs_sha256": meta.get("corrected_mgxs_sha256"),
+                "acceptance_status": meta.get("acceptance_status"),
+                "objective": meta.get("objective"),
+                "no_winner_claim": meta.get("no_winner_claim"),
+            },
+        )
+    except Exception as exc:
+        item("candidate-study", "Corrected-group candidate study", "openmc-candidates",
+             "UNAVAILABLE", "Candidate run evidence could not be validated.", str(CANDIDATE_CSV),
+             destination="#candidates", error=str(exc))
+
+    # Geometry manifest is source-derived, checked for candidate/signature consistency.
+    try:
+        geometry = read_model_geometry()
+        digest, size = _evidence_hash(MODEL_GEOMETRY_MANIFEST)
+        core = geometry.get("core_lattice", {})
+        source = geometry.get("source", {})
+        item(
+            "core-geometry", "C5G7 source geometry manifest", "geometry",
+            "SOURCE MATCHED",
+            "XML-derived 3 × 3 lattice, six candidate geometry records, and 17 × 17 pin-universe maps.",
+            str(MODEL_GEOMETRY_MANIFEST.relative_to(ROOT)), digest, size,
+            len(geometry.get("candidates", [])), "#assembly",
+            {
+                "model_id": geometry.get("model_id"),
+                "manifest_schema": geometry.get("schema_version"),
+                "core_lattice_id": core.get("id"),
+                "core_dimensions": core.get("dimensions"),
+                "assembly_pitch_cm": core.get("pitch_cm"),
+                "pin_dimensions": geometry.get("pin_geometry", {}).get("dimensions"),
+                "source_workflow_run_id": source.get("workflow_run_id"),
+                "source_artifact_id": source.get("artifact_id"),
+                "source_archive_sha256": source.get("archive_sha256"),
+                "identity_matches": all(c.get("source_matches_candidate_signature") is True for c in geometry.get("candidates", [])),
+            },
+        )
+    except Exception as exc:
+        item("core-geometry", "C5G7 source geometry manifest", "geometry",
+             "UNAVAILABLE", "The source-derived geometry manifest failed validation.",
+             str(MODEL_GEOMETRY_MANIFEST.relative_to(ROOT)), destination="#assembly", error=str(exc))
+
+    # Planar OpenMC tally: hash the exact member from the archive, not a re-exported copy.
+    try:
+        archive_path = locate_statepoint_archive()
+        with zipfile.ZipFile(archive_path) as archive:
+            matches = [name for name in archive.namelist() if name == STATEPOINT_MEMBER]
+            if len(matches) != 1:
+                raise ValueError(f"Expected exactly one {STATEPOINT_MEMBER} entry, found {len(matches)}.")
+            raw = archive.read(matches[0])
+        digest = hashlib.sha256(raw).hexdigest()
+        expected = None
+        if STATEPOINT_BASELINE.is_file():
+            expected = json.loads(STATEPOINT_BASELINE.read_text(encoding="utf-8")).get("statepoint_file_sha256")
+        status = "HASH MATCH" if expected and digest == expected else ("HASH MISMATCH" if expected else "NO BASELINE HASH")
+        item(
+            "planar-mesh", "Planar OpenMC statepoint mesh", "openmc-planar-tally", status,
+            "Recorded 2D statepoint member; bins are read from the original HDF5 tally by the Spatial Field Lab.",
+            str(archive_path.relative_to(ROOT)) + " · " + STATEPOINT_MEMBER,
+            digest, len(raw), None, "#spatial",
+            {
+                "archive_sha256": _evidence_hash(archive_path)[0],
+                "statepoint_member": STATEPOINT_MEMBER,
+                "expected_statepoint_sha256": expected,
+                "hash_matches": bool(expected and digest == expected),
+                "baseline_summary": str(STATEPOINT_BASELINE.relative_to(ROOT)) if STATEPOINT_BASELINE.is_relative_to(ROOT) else str(STATEPOINT_BASELINE),
+            },
+        )
+    except Exception as exc:
+        item("planar-mesh", "Planar OpenMC statepoint mesh", "openmc-planar-tally",
+             "UNAVAILABLE", "The archived planar statepoint could not be located or fingerprinted.",
+             str(STATEPOINT_ARCHIVE), destination="#spatial", error=str(exc))
+
+    # The axial tally is a separate multi-layer source, never inferred from the planar mesh.
+    try:
+        digest, size = _evidence_hash(AXIAL_TALLY_NPZ)
+        summary_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_STATEPOINT_SUMMARY.json")
+        summary = json.loads(summary_path.read_text(encoding="utf-8")) if summary_path.is_file() else {}
+        expected = summary.get("npz", {}).get("sha256")
+        dims = summary.get("mesh", {}).get("dimension_xyz")
+        statepoint = summary.get("statepoint", {})
+        status = "HASH MATCH" if digest and expected and digest == expected else ("HASH MISMATCH" if digest and expected else "UNAVAILABLE")
+        item(
+            "axial-volume", "Recorded axial OpenMC tally volume", "openmc-axial-volume", status,
+            "Independent 51 × 51 × 30 multi-layer tally. Its source run is not a six-layout validation set.",
+            str(AXIAL_TALLY_NPZ.relative_to(ROOT)) if AXIAL_TALLY_NPZ.is_relative_to(ROOT) else str(AXIAL_TALLY_NPZ),
+            digest, size, int(math.prod(dims)) if isinstance(dims, list) and len(dims) == 3 else None,
+            "#axial3dPanel",
+            {
+                "expected_sha256": expected,
+                "dimension_xyz": dims,
+                "array_layout": summary.get("mesh", {}).get("array_layout"),
+                "statepoint_sha256": statepoint.get("sha256"),
+                "workflow_run_id": json.loads(summary_path.read_text(encoding="utf-8")).get("source", {}).get("workflow_run_id") if False else None,
+                "seed": statepoint.get("seed"),
+                "batches": statepoint.get("n_batches"),
+                "inactive_batches": statepoint.get("n_inactive"),
+                "particles_per_batch": statepoint.get("n_particles"),
+                "realizations": statepoint.get("n_realizations"),
+                "nonclaims": summary.get("nonclaims", []),
+            },
+        )
+    except Exception as exc:
+        item("axial-volume", "Recorded axial OpenMC tally volume", "openmc-axial-volume",
+             "UNAVAILABLE", "The verified multi-layer axial tally was not available.", str(AXIAL_TALLY_NPZ),
+             destination="#axial3dPanel", error=str(exc))
+
+    # Assembly fission proxy is a distinct exploratory campaign, not the candidate-study run set.
+    try:
+        assembly = read_assembly_evidence()
+        rows = assembly.get("records", [])
+        digest, size = _evidence_hash(ASSEMBLY_CSV)
+        item(
+            "assembly-proxy", "Assembly-integrated fission-rate proxy", "exploratory-proxy",
+            "EXPLORATORY PROXY",
+            "Four recorded assembly-position values; unit is not documented and this is not absolute reactor power.",
+            str(ASSEMBLY_CSV.relative_to(ROOT)), digest, size, len(rows), "#assembly-field",
+            {"status_scope": assembly.get("status_scope"), "positions": ["P00", "P01", "P10", "P11"], "paired_with_candidate_runs": False},
+        )
+    except Exception as exc:
+        item("assembly-proxy", "Assembly-integrated fission-rate proxy", "exploratory-proxy",
+             "UNAVAILABLE", "The independent exploratory proxy table could not be read.",
+             str(ASSEMBLY_CSV.relative_to(ROOT)), destination="#assembly-field", error=str(exc))
+
+    # Latest replay snapshot: data-integrity status and convergence status are separate fields.
+    snapshot_path = WEB_ROOT / "research_snapshot.json"
+    try:
+        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        digest, size = _evidence_hash(snapshot_path)
+        campaign = snapshot.get("latestC5G7", {})
+        v2a = campaign.get("v2a", {})
+        high = campaign.get("highBudget", {})
+        replay = campaign.get("policyReplay", {})
+        item(
+            "latest-replay", "Latest C5G7 equal-budget policy replay", "campaign-replay",
+            "DATA INTEGRITY PASS · CONVERGENCE NOT CERTIFIED",
+            "Offline replay of recorded OpenMC observations; zero new transport runs were launched by the replay.",
+            "web/research_snapshot.json", digest, size, int(v2a.get("observedRuns", 0)), "#research-evidence",
+            {
+                "snapshot_date": snapshot.get("snapshot_date"),
+                "study_id": campaign.get("studyId"),
+                "workflow_run_id": campaign.get("workflowRun"),
+                "workflow_url": campaign.get("workflowUrl"),
+                "workflow_conclusion": campaign.get("workflowConclusion"),
+                "new_openmc_run_count": campaign.get("newOpenMCrunCount"),
+                "v2a_observations": v2a.get("observedRuns"),
+                "distinct_seed_pools": v2a.get("distinctSeedPools"),
+                "layouts": v2a.get("layouts"),
+                "high_budget_runs": high.get("runs"),
+                "high_budget_runs_per_layout": high.get("runsPerLayout"),
+                "decision_blocks": replay.get("decisionBlocks"),
+                "budget_per_decision": replay.get("budgetPerDecision"),
+                "source_convergence_certified": False,
+            },
+        )
+        paper = snapshot.get("paper", {})
+        item(
+            "paper-synthetic", "Revised CB-PFR methods paper", "synthetic-method",
+            "SYNTHETIC METHOD EVIDENCE",
+            "T2/T3/T7 compare selection methods on author-generated synthetic regimes; these results are not OpenMC physical outcomes.",
+            "User-supplied revised PDF · source SHA-256 recorded in research snapshot",
+            paper.get("source_sha256"), None, int(paper.get("t7", {}).get("regimes", 0)), "#research-evidence",
+            {
+                "title": paper.get("title"),
+                "source_file": paper.get("source_file"),
+                "pages": paper.get("pages"),
+                "source_sha256": paper.get("source_sha256"),
+                "t7_regimes": paper.get("t7", {}).get("regimes"),
+                "test_pools_per_regime": paper.get("t7", {}).get("test_pools_per_regime"),
+                "t2_pools": snapshot.get("syntheticBenchmarks", {}).get("t2", {}).get("pools"),
+                "t3_pools": snapshot.get("syntheticBenchmarks", {}).get("t3", {}).get("pools"),
+            },
+        )
+    except Exception as exc:
+        item("latest-replay", "Latest C5G7 equal-budget policy replay", "campaign-replay",
+             "UNAVAILABLE", "Research snapshot could not be loaded.", "web/research_snapshot.json",
+             destination="#research-evidence", error=str(exc))
+
+    return {
+        "schema_version": 1,
+        "mode": "recorded-evidence-only",
+        "catalogue_policy": "Summaries link to original sources; no missing field is synthesized and distinct evidence classes are not merged.",
+        "source_count": len(sources),
+        "sources": sources,
+    }
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "CBPFRLocal/0.2"
 
@@ -796,6 +1037,12 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/health":
             return self._send(200, json.dumps({"status": "ok", "mode": "recorded-evidence-only"}), "application/json; charset=utf-8")
+        if path == "/api/evidence-index":
+            try:
+                payload = read_evidence_index()
+                return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, csv.Error, zipfile.BadZipFile) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/candidates":
             try:
                 payload = read_candidate_evidence()
