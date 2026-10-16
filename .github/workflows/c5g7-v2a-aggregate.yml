@@ -131,14 +131,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f /tmp/v2a-summary/v2a/v2a_run_level.csv ] && [ -f /tmp/v2a-summary/v2a/v2a_high_budget_reference.csv ] && [ -f /tmp/v2a-summary/v2a/v2a_selection_summary.json ]; then
+          READY="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          s=Path("/tmp/v2a-summary/v2a/v2a_selection_summary.json")
+          try:
+              d=json.loads(s.read_text())
+              ready=(d.get("integrity_pass") is True and d.get("observed_v2a_runs")==1200 and d.get("observed_high_budget_runs")==60)
+          except Exception:
+              ready=False
+          print("true" if ready else "false")
+          PY
+          )"
+          if [ "$READY" = "true" ] && [ -f /tmp/v2a-summary/v2a/v2a_run_level.csv ] && [ -f /tmp/v2a-summary/v2a/v2a_high_budget_reference.csv ]; then
             python scripts/run_equal_budget_c5g7_selection.py \
               --v2a-csv /tmp/v2a-summary/v2a/v2a_run_level.csv \
               --high-budget-csv /tmp/v2a-summary/v2a/v2a_high_budget_reference.csv \
               --outdir /tmp/v2a-summary/selection-policy
           else
             mkdir -p /tmp/v2a-summary/selection-policy
-            printf '%s\n' '{"status":"PENDING_INTEGRITY_GATES","new_openmc_runs":0,"reason":"The 1,200 V2a observations and/or 60 high-budget references are not yet available or failed integrity analysis."}' > /tmp/v2a-summary/selection-policy/equal_budget_policy_report.json
+            printf '%s\n' '{"status":"PENDING_INTEGRITY_GATES","new_openmc_runs":0,"reason":"The 1,200 V2a observations and 60 high-budget references have not both passed the data-integrity gate."}' > /tmp/v2a-summary/selection-policy/equal_budget_policy_report.json
           fi
       - name: Write a combined closeout decision without implying convergence or benchmark acceptance
         if: steps.discover.outputs.all_ready == 'true' && always()
