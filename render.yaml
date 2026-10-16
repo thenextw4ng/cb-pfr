@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: cb-pfr-workstation
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements-web.txt
+    startCommand: python web_server.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PYTHON_VERSION
+        value: 3.12.7
