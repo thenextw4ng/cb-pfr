@@ -48,3 +48,15 @@ The comparison panels read `web/research_snapshot.json`:
 - A separate T7 synthetic-method chart comparing point-estimate, CB-PFR z=1, and adaptive R&S + CB-PFR z*, plus the reported T7b matched-feasibility intervals.
 
 Match-rate confidence intervals are not present in the recorded snapshot, so none are drawn. Error bars on run summaries are between-run SD, not confidence intervals. The high-budget reference is empirical and source convergence remains uncertified. T7/T7b remain synthetic method evidence and are not mixed with OpenMC transport results.
+
+
+## Stage 4 · Reproducibility & Scientific Figure Studio
+
+The HTML workstation now includes a dedicated Figure Studio:
+- **High-resolution PNG** at 2400 × 1600 px for rendered Plotly figures, with title, source/dataset ID, run/workflow ID, seed availability, evidence status, source hashes, exported-data hash, visual-config hash and an editable caption. The selected OpenMC-derived source geometry SVG and the live Three.js canvas have geometry-aware PNG export paths; vector source geometry can also be downloaded as SVG.
+- **CSV export** flattens the exact displayed Plotly trace data into point rows. It retains x/y/z or displayed value, trace identity/type, error-bar values, customdata, and—when the source voxel payload provides them—raw tally mean, Monte Carlo standard error, relative error, bin indices and X/Y/Z cell-centre coordinates. Provenance/evidence/hash fields are repeated as CSV columns. For geometry views, the CSV represents the source core-lattice cell assignments.
+- **JSON reproducibility bundle** carries source metadata, data/trace arrays, layout and selected visualization parameters, editable caption, limitations and SHA-256 fingerprints for the serialized export payload and visualization configuration. The fingerprints supplement rather than replace upstream statepoint/paper/source hashes.
+- **Caption generation** is source-aware for OpenMC planar/axial tallies, C5G7 policy replay, exploratory candidate/assembly proxy and T7/T7b synthetic paper figures. The caption remains editable and copyable.
+- **Side-by-side comparison** renders two chosen source views in identical-size frames and shows provenance/evidence status for each. Axes stay independent; a shared scale is not implied when metrics or units differ.
+
+Unknown seed IDs, run IDs, units or hashes remain explicitly “not recorded”; the exporter does not make up missing provenance. The source convergence warning remains visible, and synthetic T7/T7b method results remain separated from OpenMC transport evidence.
