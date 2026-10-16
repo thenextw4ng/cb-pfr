@@ -69,12 +69,19 @@ async function main() {
 
     const inspectedVoxel = await page.locator("#axialSectionPlot").evaluate(el => {
       const record = el.data?.[0]?.customdata?.[0]?.[0];
-      return Array.isArray(record) && record.length >= 9 &&
+      const inspected = Array.isArray(record) && record.length >= 9 &&
         typeof window.CBPFRShowAxialVoxel === "function" &&
         window.CBPFRShowAxialVoxel(record);
+      return {
+        inspected,
+        text: document.querySelector("#axialVoxelReadout")?.textContent || "",
+        recordedTuple: record
+      };
     });
-    assert.ok(inspectedVoxel, "voxel inspector must consume an actual source-bin tuple");
-    await page.waitForFunction(() => /Monte Carlo standard error/.test(document.querySelector("#axialVoxelReadout")?.innerText || ""), { timeout:10000 });
+    assert.ok(inspectedVoxel.inspected, "voxel inspector must consume an actual source-bin tuple");
+    assert.match(inspectedVoxel.text, /Monte Carlo standard error/, "voxel inspector should expose the recorded uncertainty label");
+    assert.ok(Array.isArray(inspectedVoxel.recordedTuple) && inspectedVoxel.recordedTuple.length >= 9,
+      "voxel readout must be driven by the source array's bin tuple");
 
     await page.locator("#axialSectionPlot").screenshot({ path:path.join(OUTPUT_DIR,"cb-pfr-desktop-axial-cross-section.png"), animations:"disabled" });
     await page.locator("#axialLineProfilePlot").screenshot({ path:path.join(OUTPUT_DIR,"cb-pfr-desktop-axial-line-profile.png"), animations:"disabled" });
