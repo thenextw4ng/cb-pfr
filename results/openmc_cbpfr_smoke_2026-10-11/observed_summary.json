@@ -1,0 +1,31 @@
+{
+  "study_id": "cbpfr_openmc_low_cost_smoke_v1",
+  "github_actions_run_id": 38122348349,
+  "workflow_run_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38122348349",
+  "commit_sha": "edc569e791abaf6fc33de931ecff5e37a37056ba",
+  "execution_date": "2026-10-11",
+  "status": "completed",
+  "openmc_version": "0.15.3",
+  "model": "OpenMC Python API random_ray_lattice C5G7-derived multigroup 2x2 lattice example, run in eigenvalue mode",
+  "run_settings": {
+    "batches": 20,
+    "inactive": 5,
+    "particles_per_batch": 500,
+    "threads": 2
+  },
+  "keff_mean": 1.3132733303431252,
+  "keff_sd_reported_by_openmc": 0.00981881235405875,
+  "cbpfr_z": 1.96,
+  "feasibility_threshold": 1,
+  "selected_by_cbpfr_style_rule": "replicate_A",
+  "candidate_designs": "not distinct physical designs; three artificial perturbations of the same OpenMC keff estimate",
+  "interpretation": "OpenMC integration smoke test and ranking-mechanics check only",
+  "physical_validation": "NOT_ESTABLISHED",
+  "benchmark_validation": "NOT_ESTABLISHED",
+  "caveats": [
+    "20 batches and 500 particles/batch are smoke-test settings, not a convergence-quality run.",
+    "The model is not a full canonical C5G7 benchmark validation; keff must not be compared as if it were.",
+    "Artificial candidate perturbations do not represent distinct physical configurations or an independent R&S experiment.",
+    "No claim of CB-PFR physical effectiveness, reactor safety, or design feasibility is supported."
+  ]
+}
