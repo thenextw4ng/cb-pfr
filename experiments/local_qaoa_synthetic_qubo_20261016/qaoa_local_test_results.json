@@ -1,0 +1,66 @@
+{
+  "title": "Local QAOA validation using stored n=10 QUBO baseline coefficients",
+  "baseline_file": "qubo_baseline_results.json",
+  "hardware_submission": false,
+  "penalty": {
+    "A": 279,
+    "cardinality_k": 5,
+    "objective_absolute_coefficient_bound": 139
+  },
+  "ising_mapping_validation": {
+    "bitstrings_checked": 1024,
+    "maximum_absolute_energy_error": 0,
+    "tolerance": 1e-9,
+    "verification": "PASS"
+  },
+  "local_qaoa": {
+    "simulator": "local NumPy statevector simulator",
+    "qaoa_depth_p": 2,
+    "seed": 20261016,
+    "shots": 4096,
+    "optimizer": {
+      "name": "scipy.optimize.differential_evolution",
+      "success": false,
+      "message": "Maximum number of iterations has been exceeded.",
+      "function_evaluations": 2495,
+      "rescaled_gamma": [
+        3.141592653589793,
+        -3.141592653589793
+      ],
+      "physical_gamma": [
+        0.0004504075489017625,
+        -0.0004504075489017625
+      ],
+      "beta": [
+        -0.5613952551958604,
+        0.21589333248856596
+      ]
+    },
+    "expected_penalized_energy": 119.20424382909022,
+    "sampled_best": {
+      "bits": [
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "count": 10,
+      "penalized_energy": -23,
+      "objective_energy": -23,
+      "feasible": true,
+      "ones": 5,
+      "objective_gap_to_exact_if_feasible": 0
+    },
+    "sampled_feasible_shots": 2507,
+    "sampled_feasibility_rate": 0.612060546875,
+    "exact_constrained_optimum": -23,
+    "exact_optimum_reached_by_sampled_best": true
+  },
+  "note": "Local simulator result only. It is neither a quantum-advantage claim nor physical validation of CB-PFR."
+}

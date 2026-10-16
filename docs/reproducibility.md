@@ -2,9 +2,11 @@
 
 ## Status
 
-The released source and configuration include a 1,000-trial synthetic benchmark runner. The archived trial-level output is also checked into the repository as `results/per_seed_results.csv`.
+As of 15 October 2026, package metadata reports version `0.3.0`, but no published GitHub release/tag or archival DOI exists. Use the immutable commit SHA from `reports/ICIMCIS_2026_STAGES8_10_AUDIT_2026-10-15.md` to identify the software snapshot; version metadata alone is not a release.
 
-The archive contains 4,000 method/trial rows (1,000 trials × 4 methods). The benchmark has already been **independently re-executed** from the released source and frozen configuration. All substantive trial-level fields in the regenerated output matched the archival CSV, and the four aggregate selected-feasibility rates matched exactly. This is an independent computational rerun, not an external third-party replication.
+The repository source at an explicitly identified commit includes a 1,000-trial synthetic benchmark runner. The archived trial-level output is also checked into the repository as `results/per_seed_results.csv`.
+
+The archive contains 4,000 method/trial rows (1,000 trials × 4 methods). The benchmark has already been **independently re-executed** from the source tree and frozen configuration present at the audited commit. All substantive trial-level fields in the regenerated output matched the archival CSV, and the four aggregate selected-feasibility rates matched exactly. This is an independent computational rerun, not an external third-party replication.
 
 ## Protocol
 
@@ -41,7 +43,7 @@ The archived file `results/per_seed_results.csv` records the original trial-leve
 
 `f7fb629fa182778645c41dcbc20f063599b41e09d428ea8204d4af10855e2133`
 
-The released audit script recomputes the aggregate rates and paired comparisons from the recorded trial-level data. The independent computational rerun additionally regenerates the benchmark from source/configuration and checks substantive row-level equality against the archive.
+The repository audit script recomputes the aggregate rates and paired comparisons from the recorded trial-level data. The independent computational rerun additionally regenerates the benchmark from source/configuration and checks substantive row-level equality against the archive.
 
 ## What this does not prove
 

@@ -1,75 +1,59 @@
-# Release Audit
+# Release Audit — Development Snapshot 0.3.0
 
-## Release status
+**Audit date:** 15 October 2026  
+**Repository:** `thenextw4ng/cb-pfr`  
+**Status:** research-software development snapshot; not a formal tagged release; physical CB-PFR validation not established.
 
-CB-PFR is prepared as a transparent research/software prototype and methodological working paper. The public repository contains the source code, benchmark configuration, aggregate results, archival trial-level CSV, reproducibility/audit documentation, and software metadata. The methodological working paper is maintained as a separate publication artifact. Physical CB-PFR validation remains **not established**.
+## Release identity
 
-This audit describes the repository evidence boundary; it is not a claim of peer review, physical validation, or production readiness.
+The package version declared in `pyproject.toml` is `0.3.0`. At audit time, the GitHub API reports no published release and no tag refs. No archival DOI has been assigned. The files `CITATION.cff` and `.zenodo.json` are aligned to a development snapshot; `.zenodo.json` is deposit metadata, not evidence of an existing Zenodo record. Until a release/tag and DOI are actually published, cite the immutable commit SHA.
 
-## Repository contents checked
+## Code, paper, and dependency licenses
 
-- Core CB-PFR ranking implementation and abstract QUBO construction.
-- Exact enumeration for the seven-position toy model.
-- Automated tests and GitHub Actions workflow.
-- Reduced 1,000-trial synthetic benchmark runner and configuration.
-- Aggregate result table and statistical audit metadata.
-- Archived `results/per_seed_results.csv` with 4,000 method/trial rows.
-- Reproducibility, limitations, and physical-mapping documentation.
-- Six low-budget C5G7 assembly-placement smoke runs with candidate IDs, explicit seeds, statepoint/input hashes, and summary CSV/JSON under `results/c5g7_layout_smoke_2026-10-10/`.
-- An 18-run, three-round C5G7 repeatability smoke study with raw-HDF5 audit results, per-run statepoint hashes, between-run variability, and descriptive ranking stability under `results/c5g7_repeatability_smoke_2026-10-11/`.
-- A corrected 18-run normalized-MGXS repeatability study under `results/c5g7_repeatability_normalized_2026-10-11/`; all runs use the production-identical MGXS SHA-256 and all 336 raw-HDF5 checks pass.
-- Production-versus-regenerated canonical input comparison showing geometry/tally/plot XML identity, material-definition identity after normalizing the local cross-section path, and byte-identical MGXS. See `reports/c5g7_input_provenance_comparison_2026-10-11.md`.
-- Six-layout assembly-integrated fission-rate proxy smoke outputs under `results/c5g7_assembly_fission_proxy_smoke_2026-10-11.csv`; these are normalized fission-rate metrics, not absolute power.
-- Machine-readable fail-closed validation gates and canonical convergence workflow under `scripts/analyze_c5g7_canonical_convergence.py` and `config/benchmarks/c5g7_validation_protocol.json`.
-- PR #19 merged; CI passed on Python 3.10, 3.11, and 3.12 at the merge commit.
-- Software citation metadata in `CITATION.cff` and `.zenodo.json`.
+- Code license: `LICENSE-CODE.txt`, MIT.
+- Paper/documentation license: `LICENSE-PAPER.txt`, CC BY 4.0.
+- Python support declaration: `>=3.10` in `pyproject.toml`.
+- CI version matrix: Python 3.10, 3.11, and 3.12.
+- Dashboard requirements: `requirements-dashboard.txt` declares Streamlit, pandas, Plotly, h5py, and editable local package install.
+- OpenMC 0.16.0, the C5G7 model input, and nuclear data are separately configured physical-simulation dependencies. They are not installed by the dashboard requirements.
+- No fully resolved dependency lockfile, `environment.yml`, or container build is included. Exact dependency resolution is therefore not promised.
+- Installation, test and reproduction instructions are documented in `docs/INSTALLATION_AND_REPRODUCIBILITY.md`.
 
-## Evidence taxonomy
+## Actual visualization scope
 
-- **Synthetic software/protocol evidence:** reported 1,000-trial study under a known synthetic normal observation model.
-- **Archived data:** `results/per_seed_results.csv`, retained for inspection and row-level comparison.
-- **Independent computational rerun:** the released source and frozen configuration were executed to regenerate the benchmark; substantive trial-level fields and aggregate rates matched the archival output. This is not an external third-party replication.
-- **Recorded transport execution evidence:** the audited production C5G7 statepoint plus six low-budget assembly-placement smoke runs. The smoke runs are exploratory and not benchmark-grade; neither establishes CB-PFR physical validation.
-- **Physical CB-PFR validation:** not established.
+- `app.py`: CB-PFR Simulator dashboard with a clearly labelled synthetic demo and an OpenMC preflight path. Opening the dashboard does not execute a fresh OpenMC transport run.
+- `pages/01_C5G7_Layout_Explorer.py`: recorded candidate/layout table, layout schematic and comparative charts.
+- `pages/02_Physics_Field_Explorer.py`: HDF5 extraction and visualization of actual archived 51 x 51 mesh-tally bins, with uncertainty displays and uploaded-statepoint inspection. The bin axes are not mapped to assembly materials; the maps do not represent absolute watts or a validated assembly-power distribution.
+- `pages/06_High_Budget_Evidence.py`: separate 18-run record under `results/c5g7_high_budget_2026-10-12/run_level_evidence.json` using 5,000 batches and 5,000 particles per batch. It is distinct from the paper's primary 7,000-batch / 10,000-particle data archive.
+- The visualizations are intended for research inspection and evidence provenance, not safety decisions.
 
-## Recorded synthetic rates
+## Experiment provenance and paper claims
 
-| Method | Selected true-feasibility rate |
-|---|---:|
-| QUBO-only | 0.857 |
-| Point estimate | 0.933 |
-| CB-PFR | 0.976 |
-| Uniform margin | 0.966 |
+### Primary six-layout archive
 
-These rates are conditional on the synthetic data-generating process. They do not establish physical performance, universal superiority, or safety.
+`CBPFR_ReactorQ__Archive_2026-10-11.zip` at the repository root contains the corrected-group six-layout campaign used for the paper's descriptive layout table: 6 layouts x 3 rounds = 18 records; rounds 820000/830000/840000; 7,000 total batches; 500 inactive; 10,000 particles per batch; two threads; unique statepoint hashes and common MGXS hash. The fission-peaking statistic is a relative assembly-integrated fission-rate proxy, not absolute power or a safety endpoint.
 
-## Physical boundary
+### Canonical scalar/reference screen
 
-The seven-position QUBO uses abstract `fresh`, `once_burned`, and `twice_burned` labels. They are not mapped to C5G7 UO2/MOX material states. The mapping audit status remains:
+The separate UMMU confirmation uses seeds 720000, 730000 and 740000 at 7,000 batches / 500 inactive / 10,000 particles, with one thread per run. Mean (k_{\mathrm{eff}}) is 1.1864932; the difference from the saved reference 1.18655 is −5.679 pcm, with reported combined-uncertainty (z=-0.434). The normalized assembly-distribution comparison for that case has a maximum absolute relative difference of 0.179%. This is a numerical consistency check for one reviewed case, not a formal equivalence test or broad validation claim. The raw archive is supplied as a supplemental file in the Stage 8–10 delivery package but is not currently committed as a raw archive to GitHub. Summary audit JSON files are under `results/c5g7_canonical_high_budget_2026-10-12/`.
 
-`NO_DEFENSIBLE_MAPPING_FOUND`
+### Other evidence and explicit nonclaims
 
-The production statepoint audit, normalized repeated-seed smoke study, input-provenance comparison, and fission-rate proxy outputs are execution/data-extraction evidence. A canonical high-budget numerical screen and a six-layout intermediate-budget screen are running in GitHub Actions; their results must be added after completion. None of these artifacts establishes a validated QUBO-to-physics mapping, official benchmark acceptance, benchmark-grade spatial power comparison, a validated CB-PFR transport workflow, or reactor-safety evidence.
+- The frozen synthetic benchmark contains 1,000 trials and rates of 0.857 (QUBO-only), 0.933 (point estimate), 0.976 (CB-PFR), and 0.966 (uniform margin). These are conditional on a synthetic generator, not reactor measurements.
+- A separate synthetic confirmatory gain of +0.4875 percentage points did not meet its prespecified minimum of 2 percentage points.
+- The retrospective equal-allocation ranking-and-selection baseline and CB-PFR selected the same layout (MUMU) on exploratory data; an incremental selection gain was not demonstrated.
+- The path-integral annealing result is classical simulation, not QPU execution.
+- The previous BEAVRS spatial-map comparison remains mismatched and is not validation evidence.
+- Physical CB-PFR validation, a physically optimal layout, calibrated uncertainty coverage, a certified safety method, quantum advantage, and CB-PFR superiority are not established.
 
-## Artifact identity
+## CI and audit scope
 
-- `results/per_seed_results.csv` SHA-256: `f7fb629fa182778645c41dcbc20f063599b41e09d428ea8204d4af10855e2133`
-- Final methodological working-paper PDF SHA-256 (publication artifact): `f9f5fa0aa34120e5708f29b578cf75d0a63b75660b271410a8cc2a6b9e5c3965`
-- Final LaTeX source SHA-256 (publication workspace): `7f1481e343d2220f4ce9a47deb2a3dab034ebca006b9e1d420be057f1cc14940`
+The test workflow compiles Python sources, runs unit tests and examples, audits committed evidence and reproduces the frozen synthetic benchmark across the declared Python matrix. Passing CI supports the tested software behavior. It is not a reactor-physics validation certificate. The branding update initially exposed a stale dashboard test assertion. The assertion and test-class name were updated. For the software snapshot at commit `442de59e40e440aad37da495b50a487992c8f096`, GitHub Actions runs [38674523991](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674523991) and [38674518908](https://github.com/thenextw4ng/cb-pfr/actions/runs/38674518908) completed successfully across Python 3.10, 3.11, and 3.12. This confirms automated tests on that snapshot, not physical validation.
 
-The paper checksum identifies the exact publication artifact prepared for the separate Zenodo preprint record.
+## Remaining release steps
 
-## Remaining research gates
-
-1. Publish the GitHub `v0.1.0` release and archive it through Zenodo.
-2. Add the resulting software DOI to the publication record and paper citation section.
-3. Conduct uncertainty calibration, sensitivity analysis, and pre-specified ablations.
-4. Define and justify a defensible physical benchmark and category-to-material mapping.
-5. Evaluate against relevant optimization/selection baselines using equal physical-evaluation budgets.
-6. Obtain independent external runs and users.
-
-## Release language
-
-Appropriate description: **open research prototype with synthetic benchmark evidence and an explicit unresolved physical-validation boundary**.
-
-Do not describe CB-PFR as physically validated, reactor-safe, peer-reviewed, or universally superior unless new evidence supports those claims.
+1. Wait for the CI workflow associated with the final closeout commit and record its final result.
+2. Once the software snapshot is frozen, publish a reviewed Git tag/release (bump the version first if further source changes occur).
+3. Archive that exact tag in Zenodo and add the DOI only after it is assigned.
+4. Add a resolved dependency lock or container recipe only if strict environment reproduction is required.
+5. Keep validation claims bounded until independent model-fidelity/source-convergence review and prospective physical acceptance criteria are available.

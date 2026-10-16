@@ -1,9 +1,19 @@
-# CB-PFR — Confidence-Bounded Physical Feasibility Ranking
+# CB-PFR Simulator
 
-> An uncertainty-aware post-optimization selection layer for candidate configurations.
+> Research software connecting QUBO-based candidate generation, OpenMC neutron-transport evaluation, and CB-PFR uncertainty-aware post-optimization screening.
+
+**Project/software name:** CB-PFR Simulator  
+**Method name:** CB-PFR — Confidence-Bounded Physical Feasibility Ranking  
+**Research status:** reproducible research prototype with exploratory C5G7/OpenMC evidence; not a physically validated reactor-design tool.
+
+## Start here: focused research summary
+
+The repository has accumulated many historical experiments and supporting artifacts. For the current research story, methods, relevant results, campaign distinctions, supported claims, and limitations, start with the [CB-PFR Simulator Research Dossier](docs/CB-PFR_SIMULATOR_RESEARCH_DOSSIER.md) and the [installation/reproducibility notes](docs/INSTALLATION_AND_REPRODUCIBILITY.md). The [methodological manuscript draft](paper/CBPFR_Methodological_Manuscript_Draft_v0.1.md) is the corresponding publication artifact.
+
+**Core contribution:** make the transition from discrete optimization to physics-based evaluation and uncertainty-aware candidate screening explicit and auditable. The current composition-only QUBO enforces the two-MOX/two-UO₂ constraint but ties all six feasible layouts; it does not itself optimize neutron-physics performance. Current evidence supports software integration and exploratory analysis, not a physically optimal layout, complete benchmark validation, CB-PFR superiority, or quantum advantage.
 
 **Author:** Fahry Bagus Adiputra  
-**Version:** 0.1.0  
+**Development version:** 0.3.0 (untagged development snapshot; no archival DOI assigned)  
 **Status:** research prototype / methodological working paper
 
 ## Research question
@@ -105,7 +115,7 @@ Archive integrity is checked in CI with `scripts/audit_evidence_archive.py`. The
 
 Reports: [production statepoint/tally audit](reports/openmc_statepoint_audit_2026-10-11.md), [Stage 3–4 provenance warning](reports/stage34_statepoint_provenance_audit_2026-10-11.md), [remaining-work audit](reports/REMAINING_WORK_AUDIT_2026-10-11.md), [scientific publication-readiness gates](reports/SCIENTIFIC_PUBLICATION_READINESS_GATE_2026-10-11.md), [direct evidence-artifact review](reports/C5G7_EVIDENCE_ARTIFACT_REVIEW_2026-10-11.md), and [independent spatial-mapping audit](reports/C5G7_SPATIAL_MAPPING_AUDIT_2026-10-11.md). The [OpenMC evidence workflow](https://github.com/thenextw4ng/cb-pfr/actions/runs/38084209709) preserves the machine-derived JSON, CSV, settings audit, and six plots as a downloadable artifact.
 
-## ReactorQ Studio and C5G7 layout-study tools
+## CB-PFR Simulator dashboard and C5G7 layout-study tools
 
 The optional Streamlit dashboard is available with:
 
@@ -185,7 +195,7 @@ See [docs/reproducibility.md](docs/reproducibility.md), [docs/limitations.md](do
 
 ## Citation
 
-Use [CITATION.cff](CITATION.cff) for repository metadata and cite the working paper for methodological discussion. The repository release DOI will be added here after the `v0.1.0` GitHub release is archived by Zenodo.
+Use [CITATION.cff](CITATION.cff) for citation metadata. The repository package version currently reads `0.3.0`, but no GitHub release/tag or archival DOI has been published. Until a tagged release is created and archived, identify the software by an immutable commit SHA; do not infer a DOI from `.zenodo.json`.
 
 ## License
 
