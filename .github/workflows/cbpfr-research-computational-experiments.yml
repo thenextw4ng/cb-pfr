@@ -1,0 +1,38 @@
+name: CB-PFR research computational experiment
+on:
+  push:
+    branches:
+      - research/c5g7-b0-prereg-b1-pilot-20261015
+    paths:
+      - "scripts/analyze_c5g7_convergence_study.py"
+      - "scripts/run_equal_budget_c5g7_selection.py"
+      - "scripts/run_classical_vs_qubo_benchmark.py"
+      - "tests/test_research_experiments.py"
+      - "config/benchmarks/c5g7_convergence_screen_v1.json"
+      - "docs/experiments/CBPFR_C5G7_CONVERGENCE_SELECTION_QUBO_PROTOCOL_2026-10-16.md"
+      - ".github/workflows/cbpfr-research-computational-experiments.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-and-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile research scripts
+        run: python -m py_compile scripts/analyze_c5g7_convergence_study.py scripts/run_equal_budget_c5g7_selection.py scripts/run_classical_vs_qubo_benchmark.py tests/test_research_experiments.py
+      - name: Run research unit tests
+        run: python -m unittest discover -s tests -p "test_research_experiments.py" -v
+      - name: Execute frozen classical-versus-QUBO benchmark
+        run: python scripts/run_classical_vs_qubo_benchmark.py --outdir /tmp/cbpfr-solver-benchmark --sizes 10 14 18 --instances-per-size 30 --budget 5000 --seed 20261016
+      - name: Preserve solver result tables and JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-classical-vs-qubo-equal-budget-2026-10-16
+          path: /tmp/cbpfr-solver-benchmark/
+          if-no-files-found: error
+          retention-days: 90

@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "study_id": "CBPFR-C5G7-convergence-screen-2026-10-16",
+  "status": "OPERATIONAL_SCREEN_NOT_CERTIFICATION",
+  "thresholds": {
+    "max_abs_k_half_shift_pcm": 25.0,
+    "max_abs_k_slope_pcm_per_1000_active_batches": 25.0,
+    "max_abs_entropy_quartile_relative_drift_pct": 0.1,
+    "max_abs_entropy_slope_relative_pct_per_1000_active_batches": 0.1,
+    "minimum_active_batches": 100
+  },
+  "run_matrix": { "production": 75, "v2a": 1200 },
+  "interpretation": "Project-selected triage screens only; not official C5G7 limits and not convergence certification. Complete trace review, model identity, uncertainty, and independent scientific review remain required.",
+  "followup_rule": "For flagged runs inspect the trace and entropy trajectory first. Decide whether to extend active histories, increase inactive batches, or repair the mesh/source issue from the diagnostic evidence. Do not blindly rerun every case."
+}
