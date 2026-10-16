@@ -1107,7 +1107,8 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     import traceback
 
-    host, port = "127.0.0.1", 8765
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8765"))
     print(f"CB-PFR HTML workstation: http://{host}:{port}", flush=True)
     print("Evidence mode: archived OpenMC statepoint + checked-in candidate summary; no OpenMC execution.", flush=True)
     print(f"Repository root: {ROOT}", flush=True)

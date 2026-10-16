@@ -150,6 +150,21 @@ For a precise but separate optimization encoding, `src/cbpfr/c5g7_design_qubo.py
 
 The methodological working paper is maintained as a separate publication artifact so that the software release remains a clean code/data archive.
 
+## Public web workstation (Render)
+
+The interactive HTML workstation is a Python-backed web application: it serves the interface in `web/` and its recorded-data API routes from `web_server.py`. A static-only GitHub Pages deployment does not provide those API routes.
+
+A Render Blueprint is provided in `render.yaml`. To publish the workstation:
+
+1. Sign in to Render and choose **New → Blueprint**.
+2. Connect GitHub and select `thenextw4ng/cb-pfr`.
+3. Review the detected `render.yaml` service and create it.
+4. Wait for the first deployment to succeed, then share the assigned `onrender.com` URL with reviewers.
+
+The service installs only the minimum Python runtime packages from `requirements-web.txt` and starts `web_server.py` using the platform-provided port. It serves recorded evidence; it does **not** launch new OpenMC transport simulations or certify physical validity. The free web-service plan may spin down after inactivity, so open the public URL before a live judging session and check the evidence panels in advance.
+
+The source repository remains the canonical open-source record: code license `LICENSE-CODE.txt` (MIT), manuscript/documentation license `LICENSE-PAPER.txt` (CC BY 4.0), research reports, data manifests, and CI run links.
+
 ## Quick start
 
 The core package uses the Python standard library.
