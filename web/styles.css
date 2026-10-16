@@ -710,3 +710,36 @@ html,body,.shell{max-width:100%;overflow-x:clip}
   .sidebar{max-width:100%;min-width:0}
   .main{width:100%;min-width:0;max-width:100%}
 }
+
+
+/* Institutional branding: persistent project wordmark + visible affiliation strip */
+.brand{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:0 7px 25px}
+.brand-wordmark{display:block;width:min(100%,190px);height:auto;max-height:60px;object-fit:contain;object-position:left center;border-radius:4px}
+.brand-caption{display:block;color:var(--muted);font:9px "DM Mono",monospace;letter-spacing:1.15px}
+.institution-strip{display:flex;align-items:center;gap:24px;min-height:116px;padding:16px 20px;margin:-4px 0 20px;border:1px solid #284354;border-radius:10px;background:linear-gradient(100deg,#0c1d2b,#0a1925 55%,#112332);box-shadow:inset 3px 0 #55d4df}
+.institution-item{display:flex;align-items:center;gap:17px;flex:1;min-width:0}
+.institution-item img{width:82px;height:82px;flex:0 0 82px;object-fit:contain;border-radius:7px;background:#081724}
+.institution-item>div{min-width:0}
+.institution-kicker{display:block;color:var(--cyan);font:9px "DM Mono",monospace;letter-spacing:.65px;margin-bottom:6px}
+.institution-item strong{display:block;color:var(--text);font-size:16px;letter-spacing:-.25px}
+.institution-item small{display:block;color:var(--muted);font-size:10px;line-height:1.5;margin-top:4px}
+.institution-divider{height:62px;width:1px;background:#2a4658;flex:0 0 1px}
+@media(max-width:760px){
+ .brand{display:flex;flex-direction:row;align-items:center;gap:10px;padding:0 0 12px}
+ .brand-wordmark{width:138px;max-height:44px}
+ .brand-caption{font-size:8px;letter-spacing:.75px}
+ .institution-strip{gap:12px;padding:12px;margin:0 0 17px;min-height:0}
+ .institution-item{gap:10px}
+ .institution-item img{width:60px;height:60px;flex-basis:60px}
+ .institution-kicker{font-size:7px;letter-spacing:.2px}
+ .institution-item strong{font-size:12px}
+ .institution-item small{font-size:9px}
+ .institution-divider{height:48px}
+}
+@media(max-width:480px){
+ .institution-strip{align-items:stretch;flex-direction:column;gap:10px}
+ .institution-item img{width:66px;height:66px;flex-basis:66px}
+ .institution-divider{height:1px;width:100%;flex-basis:1px}
+ .institution-kicker{font-size:8px}
+ .institution-item strong{font-size:13px}
+}
