@@ -118,21 +118,29 @@
       uirevision:"cbpfr-axial-profile-"+axis
     },{responsive:true,displaylogo:false,modeBarButtonsToRemove:["lasso2d","select2d"]}).then(()=>bindVoxelReadout(host)).catch(err=>{host.innerHTML=empty("Profile render failed",err.message||err);});
   }
+  function showVoxelReadout(v){
+    if(!Array.isArray(v)||v.length<9)return false;
+    state.selected=v;
+    const node=$("axialVoxelReadout");
+    if(!node)return false;
+    node.innerHTML='<span class="voxel-readout-tag">RECORDED VOXEL</span><div class="voxel-readout-grid">'+[
+      ["Bin index","i="+v[3]+", j="+v[4]+", k="+v[5]],
+      ["Physical position","X "+fmt(v[6],4)+" · Y "+fmt(v[7],4)+" · Z "+fmt(v[8],4)+" cm"],
+      ["Tally mean",fmt(v[0],8)],
+      ["Monte Carlo standard error",fmt(v[1],7)],
+      ["Relative MC standard error",fmt(v[2],5)+"%"],
+      ["Score / view",(state.data?.score||"unknown")+" / "+currentView()]
+    ].map(pair=>'<div><span>'+safe(pair[0])+'</span><strong>'+safe(pair[1])+'</strong></div>').join("")+'</div>';
+    return true;
+  }
+  // Shared inspector function: chart hover/click and automated QA both use the same renderer.
+  window.CBPFRShowAxialVoxel=showVoxelReadout;
   function bindVoxelReadout(host){
     if(!host||typeof host.on!=="function"||host.dataset.voxelReadoutBound)return;
-    const show=event=>{
-      const p=(event?.points||[])[0],v=p?.customdata;if(!Array.isArray(v)||v.length<9)return;
-      state.selected=v;const node=$("axialVoxelReadout");if(!node)return;
-      node.innerHTML='<span class="voxel-readout-tag">RECORDED VOXEL</span><div class="voxel-readout-grid">'+[
-        ["Bin index","i="+v[3]+", j="+v[4]+", k="+v[5]],
-        ["Physical position","X "+fmt(v[6],4)+" · Y "+fmt(v[7],4)+" · Z "+fmt(v[8],4)+" cm"],
-        ["Tally mean",fmt(v[0],8)],
-        ["Monte Carlo standard error",fmt(v[1],7)],
-        ["Relative MC standard error",fmt(v[2],5)+"%"],
-        ["Score / view",(state.data?.score||"unknown")+" / "+currentView()]
-      ].map(pair=>'<div><span>'+safe(pair[0])+'</span><strong>'+safe(pair[1])+'</strong></div>').join("")+'</div>';
-    };
-    host.on("plotly_hover",show);host.on("plotly_click",show);host.dataset.voxelReadoutBound="true";
+    const show=event=>{const p=(event?.points||[])[0];showVoxelReadout(p?.customdata);};
+    host.on("plotly_hover",show);
+    host.on("plotly_click",show);
+    host.dataset.voxelReadoutBound="true";
   }
   function handleNewData(){
     const d=window.CBPFRAxial3DData;if(!d||d.available!==true||!Array.isArray(d.mean))return;
