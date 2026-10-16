@@ -1116,6 +1116,8 @@ async function loadAxial3D(forceRetry=false){
    throw new Error("3D tally arrays do not match the declared mesh dimensions.");
   }
   axial3dData=payload;
+  window.CBPFRAxial3DData=payload;
+  window.dispatchEvent(new CustomEvent("cbpfr-axial3d-updated"));
   const scoreQuality=payload.provenance?.score_summary||{};
   const medianRse=Number(scoreQuality.relative_error_percent_median_positive_bins);
   const p95Rse=Number(scoreQuality.relative_error_percent_p95_positive_bins);
@@ -1156,6 +1158,8 @@ async function loadAxial3D(forceRetry=false){
   drawAxial3D();
  }catch(error){
   axial3dData=null;
+  window.CBPFRAxial3DData=null;
+  window.dispatchEvent(new CustomEvent("cbpfr-axial3d-updated"));
   $("axial3dStatus").textContent="3D DATA UNAVAILABLE";
   $("axial3dStatus").classList.add("warning");
   $("axial3dProvenance").textContent=error.message||String(error);
