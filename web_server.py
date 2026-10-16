@@ -891,7 +891,7 @@ def read_evidence_index():
         item(
             "planar-mesh", "Planar OpenMC statepoint mesh", "openmc-planar-tally", status,
             "Recorded 2D statepoint member; bins are read from the original HDF5 tally by the Spatial Field Lab.",
-            str(archive_path.relative_to(ROOT)) + " · " + STATEPOINT_MEMBER,
+            (str(archive_path.relative_to(ROOT)) if archive_path.is_relative_to(ROOT) else str(archive_path)) + " · " + STATEPOINT_MEMBER,
             digest, len(raw), None, "#spatial",
             {
                 "archive_sha256": _evidence_hash(archive_path)[0],
