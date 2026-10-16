@@ -1,0 +1,73 @@
+name: HTML workstation visual regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "web_server.py"
+      - "evidence/**"
+      - "results/**"
+      - "tests/browser_visual_smoke.cjs"
+      - "tests/test_workstation_stage0_stage1.py"
+      - ".github/workflows/workstation-visual-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install local evidence API requirements
+        run: python -m pip install h5py numpy
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright@1.52.0
+          npx playwright install --with-deps chromium
+      - name: Start the API-backed workstation
+        run: |
+          nohup python web_server.py >/tmp/cbpfr-workstation.log 2>&1 &
+          python - <<'PY'
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+          base = "http://127.0.0.1:8765"
+          deadline = time.time() + 60
+          last_error = None
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen(base + "/api/health", timeout=2) as response:
+                      health = json.load(response)
+                  with urllib.request.urlopen(base + "/api/evidence-index", timeout=15) as response:
+                      index = json.load(response)
+                  assert health["mode"] == "recorded-evidence-only", health
+                  assert index["source_count"] >= 6, index
+                  print(json.dumps({"health": health, "source_count": index["source_count"]}, indent=2))
+                  break
+              except Exception as exc:
+                  last_error = exc
+                  time.sleep(2)
+          else:
+              raise SystemExit("Workstation API did not become ready: " + str(last_error))
+          PY
+      - name: Run desktop/mobile visual regression smoke
+        run: node tests/browser_visual_smoke.cjs
+      - name: Upload visual QA screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cb-pfr-workstation-visual-qa
+          path: artifacts/visual-qa/
+          if-no-files-found: warn
+          retention-days: 30
