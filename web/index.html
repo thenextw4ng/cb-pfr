@@ -93,6 +93,10 @@
           <div class="panel-head table-head"><div><h3>T7 operating envelope</h3><p id="t7TableNote">Primary endpoint = truly feasible and within 0.10 of the best truly feasible energy. Table cells show primary / truly feasible (%) per regime.</p></div><div class="control compact"><label for="t7MetricSelect">CHART ENDPOINT</label><select id="t7MetricSelect"><option value="primary">Feasible + near-optimal (%)</option><option value="feasible">Truly feasible (%)</option></select></div></div>
           <div id="t7PrimaryChart" class="chart evidence-chart t7-chart"></div>
           <div id="t7ResultsTable" class="table-scroller wide-table"></div>
+          <div class="grid two t7-analysis-grid">
+            <article class="panel"><div class="panel-head"><div><h3>T7b · Matched 95% feasibility</h3><p>CB-PFR minus uniform-margin feasible-and-near-optimal endpoint; intervals as reported in Table IV.</p></div><span class="tag warning">POST HOC</span></div><div id="t7MatchedChart" class="chart evidence-chart compact-chart"></div><div id="t7MatchedTable" class="table-scroller"></div></article>
+            <article class="panel"><div class="panel-head"><div><h3>Pre-declared hypotheses H1–H4</h3><p>Verdicts transcribed from Table V in the supplied revised paper.</p></div><span class="tag">CLAIM LEDGER</span></div><div id="t7HypothesisTable" class="table-scroller"></div></article>
+          </div>
           <div class="note-row"><span class="note-icon">i</span><p><b>Paper result, not physical validation.</b> At fixed z=1, CB-PFR raises the truly feasible selection rate but lowers the primary feasible-and-near-optimal endpoint in six of eight regimes. Tuning narrows its difference from a uniform margin to about one percentage point, while adaptive allocation improves the primary endpoint by about 8–19 points in seven of eight regimes. T7 was self-registered in the working session, not externally timestamped, and has not been independently replicated.</p></div>
         </article>
         <div class="grid two">
