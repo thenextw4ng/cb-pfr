@@ -144,7 +144,7 @@ def main() -> None:
     for value in required:
         if value not in html:
             raise ValueError(f"Published index.html is missing required relative reference: {value}")
-    js_files = [SITE / name for name in static_files if name.endswith(".js") and (SITE / name).is_file()]
+    js_files = sorted(SITE.glob("*.js"))
     js = "\\n".join(file.read_text(encoding="utf-8") for file in js_files)
     if '"./research_snapshot.json"' not in js and "'./research_snapshot.json'" not in js:
         raise ValueError("Published JavaScript is missing the relative research snapshot reference.")
