@@ -54,13 +54,16 @@ class InteractivePhysicsUncertaintyTests(unittest.TestCase):
         self.assertIn('"/uncertainty_analysis.js": WEB_ROOT / "uncertainty_analysis.js"', self.server)
         for token in (
             "v2aLayoutSummary", "meanF", "sdF", "meanK", "sdK",
-            "ciRegretDifferenceVsPoint", "pairedMatched95", "pointPrimary",
-            "cbZ1Primary", "adaptiveCBPrimary",
+            "ciRegretDifferenceVsPoint", "pairedMatched95",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, self.comparison)
         self.assertIn("synthetic method evidence", self.comparison.lower())
         self.assertIn("Match-rate CIs are absent", self.comparison)
+        t7_row = self.snapshot["paper"]["t7"]["rows"][0]
+        for key in ("pointPrimary", "cbZ1Primary", "adaptiveCBPrimary", "pointFeasible", "cbZ1Feasible", "adaptiveCBFeasible"):
+            with self.subTest(t7_field=key):
+                self.assertIn(key, t7_row)
 
     def test_stage3_respects_sample_sizes_and_convergence_boundary(self):
         latest = self.snapshot["latestC5G7"]
