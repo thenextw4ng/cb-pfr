@@ -254,7 +254,7 @@
     }));
     return rows;
   }
-  function flattenTraceData(traces){
+  function flattenTraceData(traces,figureId){
     const rows=[];
     const asArray=v=>v==null?[]:ArrayBuffer.isView(v)?Array.from(v):Array.isArray(v)?v:[v];
     traces.forEach((trace,traceIndex)=>{
@@ -265,7 +265,7 @@
       if(matrix){
         trace.z.forEach((r,j)=>asArray(r).forEach((value,i)=>{
           const customValue=customsFor(i,j);
-          const extras=Array.isArray(customValue)&&customValue.length>=9?{raw_tally_mean:customValue[0],monte_carlo_standard_error:customValue[1],relative_error_percent:customValue[2],bin_i:customValue[3],bin_j:customValue[4],bin_k:customValue[5],x_center_cm:customValue[6],y_center_cm:customValue[7],z_center_cm:customValue[8]}:{};
+          const extras=Array.isArray(customValue)&&customValue.length>=9?{raw_tally_mean:customValue[0],monte_carlo_standard_error:customValue[1],relative_error_percent:customValue[2],bin_i:customValue[3],bin_j:customValue[4],bin_k:customValue[5],x_center_cm:customValue[6],y_center_cm:customValue[7],z_center_cm:customValue[8]}:String(figureId||"").startsWith("mesh")&&Array.isArray(customValue)&&customValue.length>=3?{raw_tally_mean:customValue[0],monte_carlo_standard_error:customValue[1],relative_error_percent:customValue[2]}:{};
           rows.push({trace_index:traceIndex,trace_name:trace.name||"trace_"+traceIndex,trace_type:trace.type||"unknown",point_index:j*asArray(r).length+i,
             x:x.length?x[i]:i,y:y.length?y[j]:j,z:null,value,
             error_y_plus:null,error_y_minus:null,customdata:customValue,...extras});
@@ -325,7 +325,7 @@
     let dataPayload,rows,layout;
     if(source.kind==="plotly"){
       if(!source.data||!source.data.length)throw new Error("The selected plot has no source trace data. Render it in the dashboard first.");
-      dataPayload=source.data;layout=source.layout||{};rows=flattenTraceData(dataPayload);
+      dataPayload=source.data;layout=source.layout||{};rows=flattenTraceData(dataPayload,id);
     }else{
       dataPayload=selectedGeometryData();layout={render_kind:source.kind,vector_or_canvas_export:true};
       rows=source.kind==="svg"||source.kind==="canvas"?geometryCsvRows(dataPayload):[];
@@ -334,7 +334,7 @@
     const meta=await sourceMetadata(id,params);
     const caption=String(overrideCaption??$("figureStudioCaption")?.value??"").trim()||currentCaption(meta,params,id);
     const dataText=JSON.stringify(plain(dataPayload));
-    const configText=JSON.stringify(plain({figure_id:id,parameters:params,layout}));
+    const configText=JSON.stringify(plain({figure_id:id,parameters:params,source_plot_layout:layout,caption,png_export:{width:OUT_W,height:OUT_H,background:"#ffffff",title:fig.title,caption_embedded:true,provenance_embedded:true}}));
     const dataHash=await sha256(dataText),configHash=await sha256(configText);
     const payload={
       schema_version:"cbpfr-figure-reproducibility-v1",
@@ -604,7 +604,6 @@
       if(response.ok)SNAPSHOT=await response.json();
     }catch(_){}
     bind();updateCaptionPreview();
-    if($("figureStudioRenderComparison"))renderComparison();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
