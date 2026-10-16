@@ -656,16 +656,26 @@ async function init(){
     $("metricSelect").innerHTML='<option value="keff_mean">Mean k-effective</option><option value="fission_peaking_mean">Mean fission-peaking factor</option>';
     $("metricSelect").addEventListener("change",drawCandidateChart);
   }
-  // Render the recorded candidate's scalar details immediately. Geometry manifest
-  // parsing/network access is slower and should not block the core evidence card.
+  // Render the recorded candidate's scalar details immediately. Geometry, assembly,
+  // and tally modules are secondary views: their failures must never erase a valid
+  // candidate record or blank its inspector on a narrow/mobile viewport.
   showCandidate();drawOtherCharts();
-  await initModelGeometry();
-  // Re-bind the detailed model view now that XML-derived geometry is available.
-  showCandidate();drawOtherCharts();
-  await initAssembly();
-  await initGeometry();
-  await initMesh();
-  await initAxial3D();
+  const runOptionalEvidenceView=async(name,initializer)=>{
+   try{await initializer();}
+   catch(viewError){
+    console.error("[CB-PFR] Optional evidence view failed:",name,viewError);
+    showError("Candidate evidence remains loaded; "+name+" could not initialize: "+String(viewError.message||viewError)+". Check this view's source status below.");
+   }
+  };
+  await runOptionalEvidenceView("OpenMC model geometry",async()=>{
+   await initModelGeometry();
+   // Re-bind the detailed model view only after source geometry has been requested.
+   showCandidate();drawOtherCharts();
+  });
+  await runOptionalEvidenceView("Assembly-integrated proxy view",initAssembly);
+  await runOptionalEvidenceView("Geometry artifact inventory",initGeometry);
+  await runOptionalEvidenceView("Planar OpenMC spatial tally",initMesh);
+  await runOptionalEvidenceView("Axial OpenMC volume tally",initAxial3D);
  }catch(error){
   showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
   clearCandidateSelection("Candidate evidence unavailable: "+error.message);
