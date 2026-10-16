@@ -117,7 +117,7 @@ class WorkstationVisualContractTests(unittest.TestCase):
             {"candidate-smoke", "v2a-policy-replay", "source-geometry", "planar-mesh", "axial-volume", "synthetic-paper"},
         )
         self.assertIn("RAW RUN TABLE EXTERNAL", records["v2a-policy-replay"]["status"])
-        self.assertIn("NOT CERTIFIED", records["v2a-policy-replay"]["limitations"][1])
+        self.assertIn("requires convergence/diagnostic review", records["v2a-policy-replay"]["limitations"][1])
         self.assertIn("HASH MATCH", records["axial-volume"]["status"])
         self.assertIn("SYNTHETIC EVIDENCE", records["synthetic-paper"]["status"])
         self.assertTrue(registry["summary"]["record_count"] == 6)
