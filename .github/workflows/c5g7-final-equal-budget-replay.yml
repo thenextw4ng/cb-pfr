@@ -1,0 +1,115 @@
+name: C5G7 final equal-budget selection replay
+
+on:
+  push:
+    branches:
+      - research/c5g7-b0-prereg-b1-pilot-20261015
+    paths:
+      - .github/workflows/c5g7-final-equal-budget-replay.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  final-equal-budget-replay:
+    name: Audit campaign artifacts and run final offline policy comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout the research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/c5g7-b0-prereg-b1-pilot-20261015
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download production run artifacts and seed ledger
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 38769477847
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cbpfr-final/production
+
+      - name: Download V2a shard 0 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 38769481470
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-0
+
+      - name: Download V2a shard 1 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 38769485693
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-1
+
+      - name: Download V2a shard 2 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 38769489040
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-2
+
+      - name: Download V2a shard 3 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 38769492881
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-3
+
+      - name: Download V2a shard 4 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 38769496757
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-4
+
+      - name: Audit 1,200 V2a observations and 60 high-budget references
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${RUNNER_TEMP}/cbpfr-final"
+          SEED_LEDGER="$(find "${ROOT}/production" -type f -name campaign_plan.json -print -quit)"
+          if [ -z "${SEED_LEDGER}" ]; then
+            echo "::error::Required campaign_plan.json seed ledger was not found in production artifacts."
+            exit 1
+          fi
+          python scripts/analyze_c5g7_v2a_selection.py \
+            --v2a-root "${ROOT}/v2a" \
+            --production-root "${ROOT}/production" \
+            --seed-ledger "${SEED_LEDGER}" \
+            --outdir "${ROOT}/v2a-audit"
+
+      - name: Run equal-budget point, uniform-margin, CB-PFR, and adaptive R&S comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${RUNNER_TEMP}/cbpfr-final"
+          python scripts/run_equal_budget_c5g7_selection.py \
+            --v2a-csv "${ROOT}/v2a-audit/v2a_run_level.csv" \
+            --high-budget-csv "${ROOT}/v2a-audit/v2a_high_budget_reference.csv" \
+            --outdir "${ROOT}/equal-budget-results" \
+            --calibration-pools 60
+
+      - name: Preserve audit and final analysis outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-final-equal-budget-policy-replay-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/cbpfr-final/v2a-audit/
+            ${{ runner.temp }}/cbpfr-final/equal-budget-results/
+          if-no-files-found: warn
+          retention-days: 30
