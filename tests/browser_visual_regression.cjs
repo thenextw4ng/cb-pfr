@@ -24,19 +24,37 @@ async function waitForCandidate(page) {
     return select && select.options.length === 6 && select.value;
   }, { timeout: 30000 });
   try {
-    await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 20000 });
+    await page.waitForFunction(() => {
+      const root=document.querySelector("#selectedCandidateMetrics");
+      if(!root)return false;
+      const cards=Array.from(root.querySelectorAll(".candidate-stat"));
+      return cards.length===4 && cards.every(card=>{
+        const style=getComputedStyle(card),rect=card.getBoundingClientRect();
+        return style.display!=="none" && style.visibility!=="hidden" && rect.width>0 && rect.height>0;
+      });
+    }, { timeout: 20000 });
   } catch (error) {
-    const diagnostic = await page.evaluate(() => ({
-      candidateOptions: document.querySelector("#candidateSelect")?.options.length || 0,
-      selectedValue: document.querySelector("#candidateSelect")?.value || "",
-      selectedId: document.querySelector("#selectedCandidateId")?.textContent || "",
-      metricText: document.querySelector("#selectedCandidateMetrics")?.innerText || "",
-      apiError: document.querySelector("#apiError")?.innerText || "",
-      sourcePath: document.querySelector("#sourcePath")?.textContent || "",
-      geometryStatus: document.querySelector("#geometryStatus")?.textContent || "",
-      meshStatus: document.querySelector("#meshStatus")?.textContent || ""
-    }));
-    throw new Error("Candidate metrics failed to remain rendered: " + JSON.stringify(diagnostic) + " · " + error.message);
+    const diagnostic = await page.evaluate(() => {
+      const root=document.querySelector("#selectedCandidateMetrics");
+      const rect=(node)=>{if(!node)return null;const r=node.getBoundingClientRect();const s=getComputedStyle(node);return {tag:node.tagName,className:node.className,display:s.display,visibility:s.visibility,opacity:s.opacity,width:Math.round(r.width),height:Math.round(r.height)};};
+      const cards=root?Array.from(root.children).map(rect):[];
+      const ancestors=[];let node=root;
+      for(let i=0;node&&i<6;i++,node=node.parentElement)ancestors.push(rect(node));
+      return {
+        candidateOptions: document.querySelector("#candidateSelect")?.options.length || 0,
+        selectedValue: document.querySelector("#candidateSelect")?.value || "",
+        selectedId: document.querySelector("#selectedCandidateId")?.textContent || "",
+        metricText: root?.innerText || "",
+        metricChildCount: root?.children.length || 0,
+        metricCards: cards,
+        metricAncestors: ancestors,
+        apiError: document.querySelector("#apiError")?.innerText || "",
+        sourcePath: document.querySelector("#sourcePath")?.textContent || "",
+        geometryStatus: document.querySelector("#geometryStatus")?.textContent || "",
+        meshStatus: document.querySelector("#meshStatus")?.textContent || ""
+      };
+    });
+    throw new Error("Candidate metric cards have no visible layout box: " + JSON.stringify(diagnostic) + " · " + error.message);
   }
 }
 async function waitForSpatial(page) {
