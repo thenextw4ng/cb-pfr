@@ -351,7 +351,7 @@
     payload.source=meta;
     const enrichedRows=rows;
     const result={id,source,figure:fig,caption,meta,payload,rows:enrichedRows,
-      csv:makeCsv({figure:{exported_at_utc:payload.figure.created_at_utc},source:meta,caption,integrity:payload.integrity},enrichedRows),
+      csv:makeCsv({figure_id:id,figure_title:fig.title,figure:{exported_at_utc:payload.figure.created_at_utc},source:meta,caption,integrity:payload.integrity},enrichedRows),
       dataText,configText};
     activeBundle=result;
     return result;
