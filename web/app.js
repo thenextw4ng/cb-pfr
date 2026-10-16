@@ -128,21 +128,21 @@
       hovertemplate:"%{x}<br>Mean empirical regret ×10⁻³: %{y:.4f}<extra></extra>"
     }],{yaxis:{title:"Mean empirical regret (×10⁻³)",rangemode:"tozero"},xaxis:{tickangle:-14,tickfont:{size:8}},showlegend:false,margin:{l:64,r:12,t:22,b:95}});
     plot("v2aLayoutChart",[{
-      type:"scatter",mode:"markers+lines",x:v.layoutSummary.map(x=>x.layout),y:v.layoutSummary.map(x=>x.meanF),
-      error_y:{type:"data",array:v.layoutSummary.map(x=>x.sdF),visible:true,color:"#89a2b5",thickness:1.2,width:4},
+      type:"scatter",mode:"markers+lines",x:c.v2aLayoutSummary.map(x=>x.layout),y:c.v2aLayoutSummary.map(x=>x.meanF),
+      error_y:{type:"data",array:c.v2aLayoutSummary.map(x=>x.sdF),visible:true,color:"#89a2b5",thickness:1.2,width:4},
       marker:{size:10,color:COLORS[0],line:{color:"#e5fbff",width:1}},line:{color:"#56dbe4",width:1.5},
-      customdata:v.layoutSummary.map(x=>[x.n,x.meanK,x.sdK]),hovertemplate:"%{x}<br>Mean F_fission %{y:.6f}<br>Between-run SD ±%{error_y.array:.5f}<br>n=%{customdata[0]}<br>Mean k-effective %{customdata[1]:.6f}<extra></extra>"
+      customdata:c.v2aLayoutSummary.map(x=>[x.n,x.meanK,x.sdK]),hovertemplate:"%{x}<br>Mean F_fission %{y:.6f}<br>Between-run SD ±%{error_y.array:.5f}<br>n=%{customdata[0]}<br>Mean k-effective %{customdata[1]:.6f}<extra></extra>"
     }],{yaxis:{title:"Mean F_fission proxy",range:[1.2,1.95]},xaxis:{title:"Layout"},showlegend:false});
     const tbl=$("#v2aLayoutTable");
     if(tbl) tbl.innerHTML='<table><thead><tr><th>Layout</th><th>n</th><th>Mean F ± SD</th><th>Mean k-effective</th><th>Status</th></tr></thead><tbody>'+
-      v.layoutSummary.map(x=>'<tr><td><b>'+esc(x.layout)+'</b></td><td class="numeric">'+x.n+'</td><td class="numeric">'+number(x.meanF,6)+' ± '+number(x.sdF,5)+'</td><td class="numeric">'+number(x.meanK,6)+'</td><td class="warn">REVIEW REQUIRED</td></tr>').join("")+
+      c.v2aLayoutSummary.map(x=>'<tr><td><b>'+esc(x.layout)+'</b></td><td class="numeric">'+x.n+'</td><td class="numeric">'+number(x.meanF,6)+' ± '+number(x.sdF,5)+'</td><td class="numeric">'+number(x.meanK,6)+'</td><td class="warn">REVIEW REQUIRED</td></tr>').join("")+
       '</tbody></table><p class="caption">SD is across the 200 low-budget run-level observations; it is not the uncertainty of a converged physical truth.</p>';
   }
   function renderPaper() {
     const paper=DATA.paper, t=paper.t7;
     setText("#paperTitle",paper.title);
     const prov=$("#paperProvenance");
-    if(prov) prov.innerHTML='<span class="provenance-chip">'+esc(paper.source_file)+'</span><span class="provenance-chip">6 pages</span><span class="provenance-chip">SHA-256 '+esc(paper.source_sha256.slice(0,16))+'…</span><span class="provenance-chip">Supplied PDF · 16 Oct 2026</span>';
+    if(prov) prov.innerHTML='<span class="provenance-chip">'+esc(paper.source_file)+'</span><span class="provenance-chip">6 pages</span><span class="provenance-chip">SHA-256 '+esc(paper.source_sha256.slice(0,16))+'…</span><span class="provenance-chip">Supplied PDF · 16 Oct 2026</span><a class="text-link" href="./RESEARCH_DATA_CROSSWALK_2026-10-16.md">Open data crosswalk ↗</a><a class="text-link" href="./research_snapshot.json" download>Download machine-readable snapshot ↗</a>';
     setText("#t7Design",t.regimes+" regimes · "+t.test_pools_per_regime.toLocaleString("en-US")+" test pools / regime");
     setText("#t7H1","NOT SUPPORTED · −3.8 / −1.8 pp");
     setText("#t7H2","PARTLY SUPPORTED · 88.0 → 97.3%");
