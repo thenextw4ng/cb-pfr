@@ -151,7 +151,7 @@ The repository includes a reduced synthetic benchmark with 1,000 trials per meth
 
 A separate confirmatory synthetic benchmark failed its prespecified practical-effect threshold: pooled gain was +0.4875 percentage points against a required threshold of at least 2 percentage points. That negative result must be disclosed whenever the confirmatory synthetic evaluation is discussed. It prevents a broad confirmatory superiority claim.
 
-### 7.6 BEAVRS comparison attempt
+A supplementary local QAOA software experiment on a separate synthetic 10-variable cardinality-constrained QUBO is archived in the [local QAOA report](../reports/LOCAL_QAOA_SYNTHETIC_QUBO_EVALUATION_2026-10-16.md), with its [result JSON](../experiments/local_qaoa_synthetic_qubo_20261016/qaoa_local_test_results.json) and [extracted n=10 instance](../experiments/local_qaoa_synthetic_qubo_20261016/n10_problem_instance.json). The Ising mapping passed an exhaustive 1,024-bitstring check and one sampled state reached the synthetic exact optimum, but the parameter optimizer did not terminate successfully. This was a local simulator run, not a QPU job; it does not establish quantum advantage and is not mapped to C5G7/OpenMC fuel layouts. Keep it separate from physical-study results.\n\n### 7.6 BEAVRS comparison attempt
 
 The repository includes a BEAVRS Cycle 1 day-0 detector-map comparison workflow. The executed spatial-map comparison had poor agreement (reported RMSE 0.33426 and correlation −0.0780) and known model/measurement alignment and detector-response uncertainty issues. It is evidence that the comparison workflow executed and revealed a mismatch; it is **not physical-validation evidence** and must not be described as successful validation.
 
