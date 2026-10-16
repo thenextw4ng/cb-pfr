@@ -87,7 +87,7 @@ The originally supplied local artifacts were reviewed without rerunning the QAOA
 | `qaoa_local_test.py` | `7e5a562011fe9384221375ca7d1c6f616f7d261a5ad64bfb1bc850a6ed99e` |
 | `qubo_baseline_results.json` | `8b677814ea5dcd850aaa1020cb9f99881cf28ebcba7b9870c6e6d2dd351a0abf` |
 
-The archived input and result summaries are stored alongside this report under `experiments/local_qaoa_synthetic_qubo_20261016/`. The (n=10) input JSON is an extracted snapshot of the larger original baseline, not a replacement for that original file.
+The original local runner source is archived as [`qaoa_local_test.py`](../experiments/local_qaoa_synthetic_qubo_20261016/qaoa_local_test.py). The adjacent [`qubo_baseline_results.json`](../experiments/local_qaoa_synthetic_qubo_20261016/qubo_baseline_results.json) is a one-instance subset to satisfy that runner's input schema; it is not the full three-instance baseline. The separately readable [`n10_problem_instance.json`](../experiments/local_qaoa_synthetic_qubo_20261016/n10_problem_instance.json) and recorded [`qaoa_local_test_results.json`](../experiments/local_qaoa_synthetic_qubo_20261016/qaoa_local_test_results.json) are stored alongside this report. The full original baseline file remains represented by its recorded SHA-256 above and is not replaced by the archived subset.
 
 ## Recommended claim wording
 
