@@ -1,0 +1,74 @@
+name: CB-PFR workstation visual regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "web_server.py"
+      - "evidence/c5g7_openmc_geometry_manifest_2026-10-13.json"
+      - "evidence/cbpfr_axial_3d/**"
+      - "OpenMC_HDF5_Evidence_2026-10-11.zip"
+      - "results/c5g7_corrected_group_repeatability_smoke_2026-10-11/**"
+      - "tests/browser_visual_regression.cjs"
+      - "tests/test_workstation_visual_contract.py"
+      - ".github/workflows/workstation-visual-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install local evidence API dependencies
+        run: python -m pip install h5py numpy
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright
+        run: npm install --no-save --package-lock=false playwright
+
+      - name: Install headless Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start API-backed workstation
+        shell: bash
+        run: |
+          python3 web_server.py > /tmp/cbpfr-workstation.log 2>&1 &
+          echo $! > /tmp/cbpfr-workstation.pid
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8765/api/health > /tmp/cbpfr-health.json; then
+              cat /tmp/cbpfr-health.json
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/cbpfr-workstation.log
+          exit 1
+
+      - name: Run visual regression and screenshot acceptance
+        run: node tests/browser_visual_regression.cjs
+
+      - name: Upload desktop/mobile visual QA snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cb-pfr-workstation-visual-qa
+          path: artifacts/visual-qa/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Print workstation server log on failure
+        if: failure()
+        run: cat /tmp/cbpfr-workstation.log
