@@ -90,7 +90,7 @@ if(typeof window.addEventListener==="function"){
   core3dLoadFailed=true;
   const status=$("core3dStatus");
   if(status)status.textContent="THREE.JS CDN UNAVAILABLE · 2D FALLBACK";
-  if(currentGeometryRow&&!geometryArtifactActive)selectCoreView("2d");
+  if(currentGeometryRow&&!geometryArtifactActive)setCoreGeometryMode("2d");
  });
 }
 
