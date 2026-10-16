@@ -67,13 +67,13 @@ async function main() {
     await page.selectOption("#axialProfileAxis", "Z");
     await page.waitForFunction(() => /Z PROFILE/.test(document.querySelector("#axialProfileStatus")?.textContent || ""));
 
-    const emittedVoxel = await page.locator("#axialSectionPlot").evaluate(el => {
+    const inspectedVoxel = await page.locator("#axialSectionPlot").evaluate(el => {
       const record = el.data?.[0]?.customdata?.[0]?.[0];
-      if (!Array.isArray(record) || record.length < 9 || typeof el.emit !== "function") return false;
-      el.emit("plotly_hover", { points:[{ customdata:record }] });
-      return true;
+      return Array.isArray(record) && record.length >= 9 &&
+        typeof window.CBPFRShowAxialVoxel === "function" &&
+        window.CBPFRShowAxialVoxel(record);
     });
-    assert.ok(emittedVoxel, "slice heatmap hover should carry a recorded voxel tuple");
+    assert.ok(inspectedVoxel, "voxel inspector must consume an actual source-bin tuple");
     await page.waitForFunction(() => /Monte Carlo standard error/.test(document.querySelector("#axialVoxelReadout")?.innerText || ""), { timeout:10000 });
 
     await page.locator("#axialSectionPlot").screenshot({ path:path.join(OUTPUT_DIR,"cb-pfr-desktop-axial-cross-section.png"), animations:"disabled" });
