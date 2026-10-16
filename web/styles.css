@@ -660,3 +660,44 @@
  .figure-studio-actions .action-button{width:100%;text-align:left;min-height:40px}
  .figure-compare-preview{height:330px}
 }
+
+
+/* Narrow-screen table containment: wide paper tables scroll inside their own panel, never the page. */
+.table-scroller,
+#research-evidence .table-scroller{
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+}
+.table-scroller table,
+#research-evidence .table-scroller table{
+  width:max-content;
+  min-width:100%;
+  max-width:none;
+}
+#research-evidence .panel,
+#research-evidence .grid,
+#research-evidence .t7-analysis-grid,
+#research-evidence .campaign-grid{
+  min-width:0;
+}
+@media(max-width:680px){
+  .table-scroller,
+  #research-evidence .table-scroller{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    padding-left:10px;
+    padding-right:10px;
+  }
+  .sidebar .nav-item{
+    max-width:100%;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}
