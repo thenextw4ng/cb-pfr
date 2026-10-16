@@ -140,14 +140,17 @@ def main() -> None:
     # Fail the build if the published HTML still contains API/root-asset requests
     # that would silently target the host root instead of the project Pages path.
     html = (SITE / "index.html").read_text(encoding="utf-8")
-    required = ["./styles.css", "./app.js", "./research_snapshot.json"]
+    required = ["./styles.css", "./app.js"]
     for value in required:
         if value not in html:
             raise ValueError(f"Published index.html is missing required relative reference: {value}")
-    js = (SITE / "app.js").read_text(encoding="utf-8")
+    js_files = [SITE / name for name in static_files if name.endswith(".js") and (SITE / name).is_file()]
+    js = "\\n".join(file.read_text(encoding="utf-8") for file in js_files)
+    if '"./research_snapshot.json"' not in js and "'./research_snapshot.json'" not in js:
+        raise ValueError("Published JavaScript is missing the relative research snapshot reference.")
     for unresolved in ['fetch("/api/', 'fetch("/research_snapshot.json"', 'import("/core_geometry_3d.js")']:
         if unresolved in js:
-            raise ValueError(f"Published app.js still contains unsupported server-root request: {unresolved}")
+            raise ValueError(f"Published JavaScript still contains unsupported server-root request: {unresolved}")
     print(f"Built static CB-PFR Pages site at {SITE} with {len(list(API_DIR.glob('*.json')))} recorded API snapshots.")
 
 
