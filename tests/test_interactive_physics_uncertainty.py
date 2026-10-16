@@ -60,7 +60,7 @@ class InteractivePhysicsUncertaintyTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, self.comparison)
         self.assertIn("synthetic method evidence", self.comparison.lower())
-        self.assertIn("match-rate CIs are absent", self.comparison)
+        self.assertIn("Match-rate CIs are absent", self.comparison)
 
     def test_stage3_respects_sample_sizes_and_convergence_boundary(self):
         latest = self.snapshot["latestC5G7"]
