@@ -43,6 +43,8 @@
   </script>
   <script defer src="/app.js"></script>
   <script defer src="/research_snapshot_ui.js"></script>
+  <script defer src="/evidence_control_room.js"></script>
+  <script defer src="/research_snapshot_ui.js"></script>
 </head>
 <body>
   <div class="shell">
@@ -50,6 +52,7 @@
       <a class="brand" href="/"><span class="brand-mark">C</span><span>CB<span class="accent">·</span>PFR<small>SCIENTIFIC WORKSTATION</small></span></a>
       <button class="mobile-nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="workspaceNav">☰ <span>WORKSPACE</span></button><div class="nav-label" id="workspaceNav">WORKSPACE</div>
       <a class="nav-item active" href="#overview" data-target="overview"><span>◫</span> Overview</a>
+      <a class="nav-item" href="#evidence-control-room" data-target="evidence-control-room"><span>◉</span> Evidence control room</a>
       <a class="nav-item" href="#candidates" data-target="candidates"><span>⌘</span> Candidate observatory</a>
       <a class="nav-item" href="#physics" data-target="physics"><span>▦</span> Physics evidence</a>
       <a class="nav-item" href="#assembly-field" data-target="assembly-field"><span>⬡</span> Assembly field map</a>
@@ -70,6 +73,32 @@
         <div class="renderer-stack-item renderer-stack-optional"><span class="renderer-stack-label">VOLUME ENGINE</span><strong id="vtkStackStatus">VTK.js · NOT LOADED</strong><small>Intentionally omitted; Plotly volume uses recorded OpenMC bins</small></div>
       </div>
       <section class="metrics" id="metrics"><article class="metric"><label>Candidate records</label><strong>—</strong><small>Loading repository data</small></article><article class="metric"><label>Unique layouts</label><strong>—</strong><small>Distinct signatures</small></article><article class="metric"><label>k-effective span</label><strong>—</strong><small>Recorded mean values</small></article><article class="metric"><label>Recorded seeds</label><strong>—</strong><small>Distinct seed values</small></article></section>
+      <section class="section ecr-section" id="evidence-control-room">
+        <div class="section-head">
+          <div><div class="eyebrow">01 / EVIDENCE CONTROL ROOM</div><h2>Research evidence registry</h2><p>Inspect which evidence sources are present, how they are identified, and what each source is—and is not—allowed to support.</p></div>
+          <div class="section-actions"><span id="ecrStatus" class="tag">CHECKING SOURCE INDEX…</span><button id="ecrRefresh" class="action-button" type="button">↻ Refresh registry</button></div>
+        </div>
+        <div class="notice mesh-notice"><b>EVIDENCE POLICY</b><span>Every card refers to a source file or recorded run. Hash consistency, data integrity, convergence, and physical acceptance are separate questions; this panel never collapses them into one “validated” badge.</span></div>
+        <div class="metrics ecr-metrics" id="ecrMetrics">
+          <article class="metric"><label>Evidence sources</label><strong id="ecrSourceCount">—</strong><small>Independent source entries</small></article>
+          <article class="metric"><label>Hash-matched sources</label><strong id="ecrHashCount">—</strong><small>Byte-level match where baseline exists</small></article>
+          <article class="metric"><label>Review / availability flags</label><strong id="ecrReviewCount">—</strong><small>Open issues are not hidden</small></article>
+          <article class="metric"><label>Evidence classes</label><strong id="ecrClassCount">—</strong><small>OpenMC, geometry, replay, synthetic</small></article>
+        </div>
+        <div class="ecr-toolbar panel">
+          <div class="control"><label for="ecrFilter">EVIDENCE CLASS</label><select id="ecrFilter"><option value="all">All evidence classes</option><option value="openmc">OpenMC transport evidence</option><option value="geometry">Model geometry</option><option value="campaign">Campaign / ranking</option><option value="synthetic">Synthetic method benchmarks</option><option value="exploratory">Exploratory proxy data</option></select></div>
+          <div class="control ecr-search-control"><label for="ecrSearch">FIND SOURCE / RUN / HASH</label><input id="ecrSearch" type="search" placeholder="Search source ID, run ID, SHA-256…" autocomplete="off"></div>
+          <div id="ecrFilterCount" class="ecr-filter-count" aria-live="polite">Waiting for source index…</div>
+        </div>
+        <div class="ecr-layout">
+          <div id="ecrSourceGrid" class="ecr-source-grid" aria-live="polite"><div class="panel loading">Loading evidence source registry…</div></div>
+          <aside class="panel ecr-detail-panel" aria-label="Selected evidence details">
+            <div class="panel-head"><div><div class="eyebrow">SOURCE INSPECTOR</div><h3 id="ecrDetailTitle">Select an evidence source</h3><p id="ecrDetailSubtitle">Source path, fingerprint, run metadata and interpretation boundary.</p></div><span id="ecrDetailStatus" class="tag">NO SELECTION</span></div>
+            <div id="ecrDetailBody" class="ecr-detail-body"><div class="empty-state"><b>No source selected</b><p>Choose a source card to inspect its recorded provenance and follow it to the corresponding workspace panel.</p></div></div>
+          </aside>
+        </div>
+        <div class="note-row"><span class="note-icon">i</span><p><b>Interpretation boundary.</b> A matching hash proves byte identity against that recorded reference; it does not establish Monte Carlo convergence. Synthetic benchmark outcomes are shown as method evidence, not as OpenMC results. The latest candidate replay and high-budget empirical reference remain uncertified for physical selection.</p></div>
+      </section>
       <section class="section" id="research-alignment"><div class="section-head"><div><div class="eyebrow">RESEARCH CONTRACT / CLAIM BOUNDARY</div><h2>Research alignment</h2><p>Dashboard metrics and claims are bound to the frozen CB-PFR evidence dossier; the visual interface is not a physical validation certificate.</p></div><span class="tag">EVIDENCE-BOUNDED</span></div>
         <article class="panel research-alignment-panel">
           <div class="research-alignment-statement"><b id="researchEvidenceStatus">Checking corrected-group evidence and research limits…</b></div>
