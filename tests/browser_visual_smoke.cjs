@@ -26,6 +26,7 @@ async function main() {
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
     await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
+    await page.locator("#coreView2d").click();
     await page.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
     await page.waitForSelector("#candidateChart svg", { timeout: 30000 });
     // Stage 0/1 regression gate: preserve the interactive source registry alongside the 3D views.
@@ -118,6 +119,12 @@ async function main() {
       document.querySelector("#selectedCandidateId")?.textContent.trim() === expected,
       candidateOptions[0].value
     );
+    // Exercise the original Three.js mode explicitly. WebGL is recorded as either
+    // ready or a declared fallback; a hidden 2D SVG is not mistaken for a 3D render.
+    await page.locator("#coreView3d").click();
+    await page.waitForFunction(() => /WEBGL READY|WEBGL UNAVAILABLE|CDN UNAVAILABLE|2D SOURCE FALLBACK/.test(
+      document.querySelector("#core3dStatus")?.textContent || ""
+    ), { timeout: 30000 });
 
     const desktopOverflow = await page.evaluate(() => ({
       viewport: window.innerWidth,
@@ -150,6 +157,7 @@ async function main() {
       return select && select.options.length === 6 && select.value;
     }, { timeout: 30000 });
     await mobilePage.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 30000 });
+    await mobilePage.locator("#coreView2d").click();
     await mobilePage.waitForSelector("#geometryPreview svg.model-geometry-svg", { timeout: 30000 });
     for (const selector of [
       "#meshHeatmap.js-plotly-plot",
