@@ -71,7 +71,7 @@ class FigureStudioTests(unittest.TestCase):
         self.assertIn("raw_tally_mean", self.js)
         self.assertIn("x_center_cm", self.js)
         self.assertIn("individual seed IDs are not embedded in this plot payload", self.js)
-        self.assertIn("screenshot", self.js.lower())
+        self.assertIn("toDataURL", self.js)
 
 
 if __name__ == "__main__":
