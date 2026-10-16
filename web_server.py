@@ -4,19 +4,33 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
 import mimetypes
+import os
+import statistics
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
-CANDIDATE_CSV = ROOT / "results" / "c5g7_layout_smoke_2026-10-10" / "candidate_summary.csv"
-STATEPOINT_ARCHIVE = ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip"
-# The archive may already exist on the user Desktop without being committed to GitHub.
-STATEPOINT_ARCHIVE_FALLBACK = Path.home() / "Desktop" / "OpenMC_HDF5_Evidence_2026-10-11.zip"
-STATEPOINT_MEMBER = "c5g7-run/2d/statepoint.20000.h5"
+CANDIDATE_DIR = ROOT / "results" / "c5g7_corrected_group_repeatability_smoke_2026-10-11"
+CANDIDATE_CSV = CANDIDATE_DIR / "fission_objective_repeatability_summary.csv"
+CANDIDATE_RUN_LEVEL_CSV = CANDIDATE_DIR / "run_level_fission_objective.csv"
+CANDIDATE_CAMPAIGN_JSON = CANDIDATE_DIR / "fission_objective_repeatability.json"
+# Explicit environment overrides let CI audit a known smoke artifact and let users point to
+# their production ZIP without renaming or copying it into the repository.
+STATEPOINT_ARCHIVE = Path(os.environ.get(
+    "CBPFR_STATEPOINT_ARCHIVE", str(ROOT / "OpenMC_HDF5_Evidence_2026-10-11.zip")
+)).expanduser()
+STATEPOINT_ARCHIVE_FALLBACK = Path(os.environ.get(
+    "CBPFR_STATEPOINT_ARCHIVE_FALLBACK",
+    str(Path.home() / "Desktop" / "OpenMC_HDF5_Evidence_2026-10-11.zip")
+)).expanduser()
+STATEPOINT_MEMBER = os.environ.get(
+    "CBPFR_STATEPOINT_MEMBER", "c5g7-run/2d/statepoint.20000.h5"
+)
 
 
 def locate_statepoint_archive():
@@ -26,8 +40,16 @@ def locate_statepoint_archive():
     raise FileNotFoundError(
         f"Statepoint archive not found at {STATEPOINT_ARCHIVE} or {STATEPOINT_ARCHIVE_FALLBACK}."
     )
-STATEPOINT_BASELINE = ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json"
+STATEPOINT_BASELINE = Path(os.environ.get(
+    "CBPFR_STATEPOINT_BASELINE",
+    str(ROOT / "evidence" / "openmc_local_baseline_2026-10-11" / "statepoint_summary.json")
+)).expanduser()
 ASSEMBLY_CSV = ROOT / "results" / "c5g7_assembly_fission_proxy_smoke_2026-10-11.csv"
+MODEL_GEOMETRY_MANIFEST = ROOT / "evidence" / "c5g7_openmc_geometry_manifest_2026-10-13.json"
+AXIAL_TALLY_NPZ = Path(os.environ.get(
+    "CBPFR_AXIAL_TALLY_NPZ",
+    str(ROOT / "evidence" / "cbpfr_axial_3d" / "axial_tally_3d.npz")
+)).expanduser()
 
 GEOMETRY_SEARCH_ROOTS = tuple(ROOT / name for name in ("plots", "plot", "geometry", "model", "c5g7-run", "evidence", "results", "artifacts"))
 GEOMETRY_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".vti", ".vtk", ".vtp", ".vtu", ".vtm", ".xdmf"}
@@ -76,26 +98,302 @@ def read_geometry_artifact(relative_path):
     raise PermissionError("Artifact path is outside approved geometry-output directories.")
 
 
-def read_candidates():
-    if not CANDIDATE_CSV.is_file():
-        raise FileNotFoundError(f"Candidate summary not found: {CANDIDATE_CSV.relative_to(ROOT)}")
-    with CANDIDATE_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+def read_model_geometry():
+    """Load and validate the committed manifest extracted from archived OpenMC XML."""
+    if not MODEL_GEOMETRY_MANIFEST.is_file():
+        raise FileNotFoundError(f"OpenMC-derived geometry manifest not found: {MODEL_GEOMETRY_MANIFEST.relative_to(ROOT)}")
+    with MODEL_GEOMETRY_MANIFEST.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("OpenMC geometry manifest has an unsupported schema.")
+
+    def valid_sha256(value):
+        return isinstance(value, str) and len(value) == 64 and all(
+            char in "0123456789abcdef" for char in value.lower()
+        )
+
+    source = payload.get("source", {})
+    if not valid_sha256(source.get("archive_sha256", "")):
+        raise ValueError("Geometry manifest source archive SHA-256 is missing or malformed.")
+
+    core = payload.get("core_lattice", {})
+    if core.get("id") != 201 or core.get("dimensions") != [3, 3]:
+        raise ValueError("Geometry manifest core lattice must be the archived 3 x 3 lattice 201.")
+    if core.get("lower_left_cm") != [-32.13, -32.13] or core.get("pitch_cm") != [21.42, 21.42]:
+        raise ValueError("Geometry manifest core dimensions differ from the archived C5G7 inputs.")
+
+    pin_geometry = payload.get("pin_geometry", {})
+    if pin_geometry.get("dimensions") != [17, 17] or pin_geometry.get("pitch_cm") != [1.26, 1.26] or pin_geometry.get("pin_radius_cm") != 0.54:
+        raise ValueError("Geometry manifest pin dimensions differ from the archived XML.")
+    pin_universes = payload.get("materials", {}).get("pin_universes", {})
+    if set(pin_universes) != {"1", "2", "3", "4", "5", "6"}:
+        raise ValueError("Geometry manifest has an incomplete pin-universe material map.")
+    material_names = payload.get("materials", {}).get("by_id", {})
+    for uid, material in pin_universes.items():
+        material_id = str(material.get("material_id", ""))
+        if material_names.get(material_id) != material.get("material_name"):
+            raise ValueError(f"Pin universe {uid} material label differs from the archived materials definition.")
+
+    expected_lattices = {"101": "UO2 Unrodded Assembly", "103": "MOX Unrodded Assembly"}
+    pin_lattices = payload.get("pin_lattices", {})
+    if set(pin_lattices) != set(expected_lattices):
+        raise ValueError("Geometry manifest must include pin lattices 101 and 103.")
+    known_pin_universes = set(pin_universes)
+    for lattice_id, expected_name in expected_lattices.items():
+        lattice = pin_lattices[lattice_id]
+        grid = lattice.get("universe_grid", [])
+        if lattice.get("name") != expected_name or lattice.get("dimensions") != [17, 17] or len(grid) != 17 or any(
+            not isinstance(row, list) or len(row) != 17 for row in grid
+        ):
+            raise ValueError(f"{expected_name} must be a 17 x 17 XML universe grid.")
+        if any(str(value) not in known_pin_universes for row in grid for value in row):
+            raise ValueError(f"{expected_name} contains an unknown pin universe.")
+
+    assemblies = payload.get("assemblies", {})
+    if {key: value.get("code") for key, value in assemblies.items()} != {"9": "U", "11": "M", "13": "R"}:
+        raise ValueError("Assembly-universe mapping differs from the archived geometry XML.")
+    if assemblies["9"].get("lattice_id") != 101 or assemblies["11"].get("lattice_id") != 103 or assemblies["13"].get("lattice_id") != 105:
+        raise ValueError("Assembly universes are not mapped to the archived lattice IDs.")
+    boundary_map = {item.get("name"): item for item in payload.get("boundary_conditions", [])}
+    expected_boundaries = {
+        "Core x-min": ("reflective", -32.13),
+        "Core x-max": ("vacuum", 32.13),
+        "Core y-min": ("vacuum", -32.13),
+        "Core y-max": ("reflective", 32.13),
+    }
+    for name, (condition, coordinate) in expected_boundaries.items():
+        record = boundary_map.get(name, {})
+        if record.get("condition") != condition or record.get("coordinate_cm") != coordinate:
+            raise ValueError(f"Boundary condition {name} differs from archived geometry XML.")
+
+    candidates = payload.get("candidates")
+    expected_layouts = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
+    if not isinstance(candidates, list) or len(candidates) != 6:
+        raise ValueError("Geometry manifest must contain exactly six candidate layouts.")
+    seen = set()
+    for candidate in candidates:
+        candidate_id = str(candidate.get("candidate_id", ""))
+        signature = str(candidate.get("layout_signature", ""))
+        if not candidate_id or candidate_id in seen:
+            raise ValueError("Geometry manifest contains an empty or duplicate candidate ID.")
+        seen.add(candidate_id)
+        if candidate_id != "c5g7-2x2-" + signature or signature not in expected_layouts:
+            raise ValueError(f"Candidate ID and layout signature disagree: {candidate_id} / {signature}.")
+        grid = candidate.get("core_universe_grid", [])
+        category_grid = candidate.get("assembly_grid", [])
+        if len(grid) != 3 or any(not isinstance(row, list) or len(row) != 3 for row in grid):
+            raise ValueError(f"Candidate {candidate_id} core universe grid must be 3 x 3.")
+        mapped = [[assemblies.get(str(value), {}).get("code", "?") for value in row] for row in grid]
+        if mapped != category_grid:
+            raise ValueError(f"Candidate {candidate_id} category grid differs from its XML universe grid.")
+        if any(code not in {"U", "M", "R"} for row in mapped for code in row):
+            raise ValueError(f"Candidate {candidate_id} contains an unmapped universe.")
+        derived = "".join(mapped[r][c] for r, c in ((0, 0), (0, 1), (1, 0), (1, 1)))
+        if derived != signature or candidate.get("signature_derived_from_xml") != signature or candidate.get("source_matches_candidate_signature") is not True:
+            raise ValueError(f"Candidate {candidate_id} failed the XML-to-signature identity check.")
+        if mapped[0][2] != "R" or mapped[1][2] != "R" or mapped[2] != ["R", "R", "R"]:
+            raise ValueError(f"Candidate {candidate_id} does not have the expected reflector footprint.")
+        if sum(code == "U" for row in mapped for code in row) != 2 or sum(code == "M" for row in mapped for code in row) != 2 or sum(code == "R" for row in mapped for code in row) != 5:
+            raise ValueError(f"Candidate {candidate_id} does not contain two UO2, two MOX, and five reflector sites.")
+        if not valid_sha256(candidate.get("geometry_xml_sha256", "")):
+            raise ValueError(f"Candidate {candidate_id} has a malformed geometry XML SHA-256.")
+        if not valid_sha256(candidate.get("materials_xml_sha256", "")):
+            raise ValueError(f"Candidate {candidate_id} has a malformed materials XML SHA-256.")
+    if {candidate.get("layout_signature") for candidate in candidates} != expected_layouts:
+        raise ValueError("Geometry manifest does not contain all six expected layouts.")
+    return payload
+
+
+def _read_csv_rows(path: Path):
+    if not path.is_file():
+        raise FileNotFoundError(f"Required research data not found: {path.relative_to(ROOT)}")
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
-            raise ValueError("Candidate summary CSV has no header row.")
-        rows = []
-        for raw in reader:
-            row = {}
-            for key, value in raw.items():
-                if value is None or value.strip() == "":
-                    row[key] = None
-                    continue
-                try:
-                    row[key] = float(value) if any(ch in value.lower() for ch in (".", "e")) else int(value)
-                except (ValueError, AttributeError):
-                    row[key] = value
-            rows.append(row)
-    return rows
+            raise ValueError(f"CSV has no header row: {path.relative_to(ROOT)}")
+        return list(reader)
+
+
+def _require_close(actual, expected, label, *, rel_tol=1e-8, abs_tol=1e-10):
+    if not math.isfinite(float(actual)) or not math.isclose(
+        float(actual), float(expected), rel_tol=rel_tol, abs_tol=abs_tol
+    ):
+        raise ValueError(f"Research evidence consistency check failed for {label}: {actual} != {expected}.")
+
+
+def read_candidate_evidence():
+    """
+    Build dashboard candidates from the dossier's corrected-group 18-run campaign.
+
+    Fail closed if the run-level evidence, group audits, campaign metadata, or
+    derived means/standard deviations no longer agree with the checked-in summary.
+    The legacy one-run smoke CSV is deliberately not used for this dashboard.
+    """
+    try:
+        campaign = json.loads(CANDIDATE_CAMPAIGN_JSON.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise FileNotFoundError(
+            f"Research campaign metadata not found: {CANDIDATE_CAMPAIGN_JSON.relative_to(ROOT)}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError("Research campaign metadata is not valid JSON.") from exc
+
+    required_contract = {
+        "status": "EXPLORATORY_DESCRIPTIVE_ONLY",
+        "run_count": 18,
+        "round_count": 3,
+        "candidate_count": 6,
+        "all_group_structure_audits_passed": True,
+        "all_statepoint_hashes_unique": True,
+        "all_mgxs_hashes_identical": True,
+        "acceptance_status": "BLOCKED_NO_DESIGN_SPECIFIC_KEFF_BAND_OR_BENCHMARK_GRADE_CONVERGENCE",
+        "no_winner_claim": True,
+    }
+    for key, expected in required_contract.items():
+        if campaign.get(key) != expected:
+            raise ValueError(f"Research campaign contract mismatch for {key}: expected {expected!r}.")
+    settings = campaign.get("settings", {})
+    for key, expected in {"batches": 100, "inactive_batches": 10, "particles_per_batch": 1000}.items():
+        if settings.get(key) != expected:
+            raise ValueError(f"Corrected-group smoke settings mismatch for {key}: expected {expected}.")
+
+    summaries = _read_csv_rows(CANDIDATE_CSV)
+    runs = _read_csv_rows(CANDIDATE_RUN_LEVEL_CSV)
+    expected_layouts = {"MMUU", "MUMU", "MUUM", "UMMU", "UMUM", "UUMM"}
+    if len(summaries) != 6 or len(runs) != 18:
+        raise ValueError(f"Expected six candidate summaries and 18 run-level records; got {len(summaries)} and {len(runs)}.")
+
+    def fnum(row, key, context):
+        try:
+            value = float(row[key])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"Missing/non-numeric {key} in {context}.") from exc
+        if not math.isfinite(value):
+            raise ValueError(f"Non-finite {key} in {context}.")
+        return value
+
+    def valid_sha(value):
+        value = str(value or "").lower()
+        return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value)
+
+    grouped = {layout: [] for layout in expected_layouts}
+    seen_seed, seen_statepoint = set(), set()
+    corrected_mgxs = campaign.get("corrected_mgxs_sha256")
+    if not valid_sha(corrected_mgxs):
+        raise ValueError("Corrected MGXS SHA-256 is missing or malformed.")
+    for index, run in enumerate(runs, start=1):
+        layout = str(run.get("layout_signature", "")).upper()
+        candidate_id = str(run.get("candidate_id", ""))
+        if layout not in expected_layouts or candidate_id != "c5g7-2x2-" + layout:
+            raise ValueError(f"Run-level candidate ID/layout mismatch on row {index}.")
+        if run.get("group_structure_audit") != "PASS":
+            raise ValueError(f"Corrected-group audit did not pass for run row {index}.")
+        seed = str(run.get("seed", "")).strip()
+        statepoint_sha = str(run.get("statepoint_sha256", "")).lower()
+        mgxs_sha = str(run.get("mgxs_sha256", "")).lower()
+        if not seed or seed in seen_seed:
+            raise ValueError(f"Run-level seed is empty or reused: {seed!r}.")
+        if not valid_sha(statepoint_sha) or statepoint_sha in seen_statepoint:
+            raise ValueError(f"Run-level statepoint SHA-256 is malformed or reused on row {index}.")
+        if mgxs_sha != corrected_mgxs:
+            raise ValueError(f"Run-level MGXS hash differs from the campaign's corrected MGXS on row {index}.")
+        seen_seed.add(seed)
+        seen_statepoint.add(statepoint_sha)
+        # Parse both recorded metrics now; invalid rows may never silently reach the UI.
+        fnum(run, "keff_mean", f"run row {index}")
+        fnum(run, "keff_std_dev", f"run row {index}")
+        fnum(run, "fission_rate_peaking_factor", f"run row {index}")
+        for field in ("R_p00", "R_p01", "R_p10", "R_p11"):
+            fnum(run, field, f"run row {index}")
+        grouped[layout].append(run)
+
+    if len(seen_seed) != 18 or len(seen_statepoint) != 18:
+        raise ValueError("Run-level evidence must contain 18 unique seeds and 18 unique statepoint hashes.")
+
+    normalized = []
+    seen_layouts = set()
+    for row in summaries:
+        layout = str(row.get("layout_signature", "")).upper()
+        candidate_id = str(row.get("candidate_id", ""))
+        if layout not in expected_layouts or candidate_id != "c5g7-2x2-" + layout or layout in seen_layouts:
+            raise ValueError(f"Candidate summary contains an invalid or duplicate layout: {candidate_id} / {layout}.")
+        seen_layouts.add(layout)
+        material_count = layout.count("M") == 2 and layout.count("U") == 2 and len(layout) == 4
+        if not material_count:
+            raise ValueError(f"Candidate {layout} violates the exact two-MOX/two-UO2 composition.")
+        case_runs = grouped[layout]
+        if len(case_runs) != 3:
+            raise ValueError(f"Expected three independently recorded runs for {layout}; found {len(case_runs)}.")
+        run_means = [fnum(item, "keff_mean", layout) for item in case_runs]
+        run_peaks = [fnum(item, "fission_rate_peaking_factor", layout) for item in case_runs]
+        if str(row.get("n_runs", "")) != "3":
+            raise ValueError(f"Summary record {layout} does not report exactly three runs.")
+        _require_close(fnum(row, "mean_keff", layout), statistics.fmean(run_means), layout + " mean k-effective")
+        _require_close(fnum(row, "between_seed_sd_keff", layout), statistics.stdev(run_means), layout + " between-seed k-effective SD")
+        _require_close(fnum(row, "mean_fission_rate_peaking_factor", layout), statistics.fmean(run_peaks), layout + " mean peaking proxy")
+        _require_close(fnum(row, "between_seed_sd_fission_peaking_factor", layout), statistics.stdev(run_peaks), layout + " between-seed peaking-proxy SD")
+        _require_close(fnum(row, "fission_peaking_cv_percent", layout), 100.0 * statistics.stdev(run_peaks) / statistics.fmean(run_peaks), layout + " peaking-proxy CV")
+        computed_rank = sorted(expected_layouts, key=lambda sig: statistics.fmean([fnum(item, "fission_rate_peaking_factor", sig) for item in grouped[sig]])).index(layout) + 1
+        if int(row.get("descriptive_rank_by_fission_peaking", "0")) != computed_rank:
+            raise ValueError(f"Descriptive peaking-proxy rank does not match run-level data for {layout}.")
+        normalized.append({
+            "candidate_id": candidate_id,
+            "layout_signature": layout,
+            "canonical_reference": False,
+            "keff_mean": fnum(row, "mean_keff", layout),
+            # This uncertainty column is explicitly a between-seed sample SD of
+            # the derived metric, not a single-run Monte Carlo standard error.
+            "keff_std_dev": fnum(row, "between_seed_sd_keff", layout),
+            "keff_relative_sd_percent": 100.0 * fnum(row, "between_seed_sd_keff", layout) / fnum(row, "mean_keff", layout),
+            "fission_peaking_mean": fnum(row, "mean_fission_rate_peaking_factor", layout),
+            "fission_peaking_sd": fnum(row, "between_seed_sd_fission_peaking_factor", layout),
+            "fission_peaking_cv_percent": fnum(row, "fission_peaking_cv_percent", layout),
+            "descriptive_fission_peaking_rank": computed_rank,
+            "n_runs": 3,
+            "seed": " / ".join(str(item["seed"]) for item in case_runs),
+            "batches": settings["batches"],
+            "inactive": settings["inactive_batches"],
+            "particles_per_batch": settings["particles_per_batch"],
+            "group_structure_audit_count": sum(item.get("group_structure_audit") == "PASS" for item in case_runs),
+            "statepoint_hash_count": len({str(item["statepoint_sha256"]) for item in case_runs}),
+            "mgxs_sha256": corrected_mgxs,
+            "status": campaign["status"],
+        })
+    if seen_layouts != expected_layouts:
+        raise ValueError("Corrected-group candidate summary does not contain all six expected layouts.")
+    normalized.sort(key=lambda item: item["descriptive_fission_peaking_rank"])
+
+    metadata = {
+        "source": str(CANDIDATE_CSV.relative_to(ROOT)),
+        "run_level_source": str(CANDIDATE_RUN_LEVEL_CSV.relative_to(ROOT)),
+        "campaign_metadata_source": str(CANDIDATE_CAMPAIGN_JSON.relative_to(ROOT)),
+        "mode": "recorded corrected-group OpenMC research evidence; no transport is launched by the dashboard",
+        "campaign_status": campaign["status"],
+        "source_run_id": campaign["source_run_id"],
+        "analysis_run_id": campaign["analysis_run_id"],
+        "upstream_source_commit": campaign["upstream_source_commit"],
+        "corrected_mgxs_sha256": corrected_mgxs,
+        "standard_c5g7_group_boundaries_eV": campaign["standard_c5g7_group_boundaries_eV"],
+        "settings": settings,
+        "objective": campaign["objective"],
+        "objective_interpretation": campaign["objective_interpretation"],
+        "uncertainty_method": campaign["uncertainty_method"],
+        "acceptance_status": campaign["acceptance_status"],
+        "no_winner_claim": campaign["no_winner_claim"],
+        "run_count": campaign["run_count"],
+        "layout_count": campaign["candidate_count"],
+        "runs_per_layout": 3,
+        "records_validated_against_run_level_data": True,
+        "research_dossier_url": "https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/docs/CB-PFR_SIMULATOR_RESEARCH_DOSSIER.md",
+        "claims_url": "https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_EVIDENCE_BOUNDED_SCIENTIFIC_CLAIMS_2026-10-12.md",
+        "closeout_url": "https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_A-G_FINAL_EVIDENCE_CLOSEOUT_2026-10-12.md",
+    }
+    return {"metadata": metadata, "records": normalized}
+
+
+def read_candidates():
+    """Compatibility wrapper for tests/consumers that need candidate rows only."""
+    return read_candidate_evidence()["records"]
 
 
 def read_assembly_evidence():
@@ -117,73 +415,218 @@ def read_assembly_evidence():
 
 
 def read_mesh_evidence():
-    """Read only the known production member from the committed statepoint archive."""
+    """Extract mesh-tally means and standard errors from an archived OpenMC statepoint."""
     archive_path = locate_statepoint_archive()
     try:
         import h5py
         import numpy as np
     except ImportError as exc:
-        raise RuntimeError("Spatial field visualization needs h5py and numpy. Install project requirements with: python -m pip install -r requirements.txt") from exc
+        raise RuntimeError(
+            "Spatial field visualization needs h5py and numpy. "
+            "Install project requirements with: python -m pip install -r requirements.txt"
+        ) from exc
 
     with zipfile.ZipFile(archive_path) as archive:
         matches = [name for name in archive.namelist() if name == STATEPOINT_MEMBER]
         if len(matches) != 1:
             raise ValueError(f"Expected exactly one {STATEPOINT_MEMBER} entry, found {len(matches)}.")
         raw_bytes = archive.read(matches[0])
+
     actual_hash = hashlib.sha256(raw_bytes).hexdigest()
     expected_hash = None
     if STATEPOINT_BASELINE.is_file():
         baseline = json.loads(STATEPOINT_BASELINE.read_text(encoding="utf-8"))
         expected_hash = baseline.get("statepoint_file_sha256")
+
     records = []
     with h5py.File(__import__("io").BytesIO(raw_bytes), "r") as handle:
         tallies = handle.get("tallies")
         if tallies is None:
             raise ValueError("Statepoint HDF5 does not contain a tallies group.")
+
+        def numeric_vector(group, key):
+            if key not in group:
+                return None
+            try:
+                vector = np.asarray(group[key][()], dtype=float).reshape(-1)
+            except (TypeError, ValueError, KeyError):
+                return None
+            if vector.size < 2 or not np.all(np.isfinite(vector)):
+                return None
+            return [float(v) for v in vector]
+
         meshes = []
-        if "meshes" in tallies:
-            for name, mesh in tallies["meshes"].items():
+        mesh_group = tallies.get("meshes")
+        if mesh_group is not None:
+            for name, mesh in mesh_group.items():
                 if "dimension" not in mesh:
                     continue
                 dims = [int(v) for v in np.asarray(mesh["dimension"][()]).reshape(-1)]
-                if len(dims) == 3 and dims[2] == 1:
-                    meshes.append((name, dims))
+                if len(dims) == 3 and dims[2] == 1 and all(v > 0 for v in dims):
+                    raw_mesh_type = mesh["type"][()] if "type" in mesh else b"unknown"
+                    raw_type_array = np.asarray(raw_mesh_type)
+                    if raw_type_array.dtype.kind == "S":
+                        mesh_type = b"".join(raw_type_array.reshape(-1).tolist()).decode("utf-8", errors="replace")
+                    elif raw_type_array.dtype.kind == "U":
+                        mesh_type = "".join(raw_type_array.reshape(-1).tolist())
+                    else:
+                        mesh_type = str(raw_mesh_type)
+                    mesh_type = mesh_type.rstrip("\x00").strip().lower()
+                    lower = numeric_vector(mesh, "lower_left")
+                    upper = numeric_vector(mesh, "upper_right")
+                    spatial_geometry = {
+                        "coordinates_available": False,
+                        "mesh_type": mesh_type,
+                        "coordinate_units": None,
+                        "lower_left_cm": None,
+                        "upper_right_cm": None,
+                        "cell_width_cm": None,
+                    }
+                    # Only a regular mesh supports deriving evenly spaced cell centres
+                    # from bounds and dimensions without inventing a coordinate mapping.
+                    if mesh_type == "regular" and lower and upper:
+                        lx, ly = lower[0], lower[1]
+                        ux, uy = upper[0], upper[1]
+                        if ux > lx and uy > ly:
+                            spatial_geometry = {
+                                "coordinates_available": True,
+                                "mesh_type": mesh_type,
+                                "coordinate_units": "cm",
+                                "lower_left_cm": [lx, ly],
+                                "upper_right_cm": [ux, uy],
+                                "cell_width_cm": [(ux - lx) / dims[0], (uy - ly) / dims[1]],
+                            }
+                    meshes.append((name, int(mesh.attrs.get("id", name.split()[-1])), dims, spatial_geometry))
+
+        filters = {}
+        filter_group = tallies.get("filters")
+        if filter_group is not None:
+            for name, filt in filter_group.items():
+                if "type" not in filt:
+                    continue
+                raw_type = filt["type"][()]
+                if isinstance(raw_type, bytes):
+                    raw_type = raw_type.decode("utf-8", errors="replace")
+                filter_id = int(filt.attrs.get("id", name.split()[-1]))
+                filter_type = str(raw_type).strip().lower()
+                mesh_id = None
+                # In OpenMC 0.16, a MeshFilter stores the referenced mesh ID in
+                # its "bins" dataset (typically [1]), not a "mesh"/"mesh_id" dataset.
+                # Retain alternate keys for statepoint variants and older wrappers.
+                mesh_reference_keys = ("mesh", "mesh_id", "bins") if filter_type == "mesh" else ("mesh", "mesh_id")
+                for key in mesh_reference_keys:
+                    if key in filt:
+                        try:
+                            mesh_id = int(np.asarray(filt[key][()]).reshape(-1)[0])
+                            break
+                        except (TypeError, ValueError, IndexError):
+                            continue
+                filters[filter_id] = (filter_type, mesh_id)
+
         for tally_name, tally in tallies.items():
             if not tally_name.startswith("tally ") or not hasattr(tally, "keys"):
                 continue
             if "results" not in tally or "score_bins" not in tally:
                 continue
-            scores = []
+
+            score_bins = []
             for value in np.asarray(tally["score_bins"][()]).reshape(-1):
                 if isinstance(value, bytes):
-                    scores.append(value.decode("utf-8", errors="replace").rstrip("\x00"))
+                    score_bins.append(value.decode("utf-8", errors="replace").rstrip("\x00"))
                 elif hasattr(value, "item"):
                     item = value.item()
-                    scores.append(item.decode("utf-8", errors="replace").rstrip("\x00") if isinstance(item, bytes) else str(item))
+                    score_bins.append(item.decode("utf-8", errors="replace").rstrip("\x00") if isinstance(item, bytes) else str(item))
                 else:
-                    scores.append(str(value))
-            values = np.asarray(tally["results"][()])
+                    score_bins.append(str(value))
+
+            values = np.asarray(tally["results"][()], dtype=float)
             if values.ndim == 4 and values.shape[1] == 1:
                 values = values[:, 0, :, :]
-            if values.ndim != 3 or values.shape[-1] != 2 or values.shape[-2] != len(scores):
+            if values.ndim != 3 or values.shape[-1] != 2 or values.shape[-2] != len(score_bins):
                 continue
-            bins = values.shape[0]
-            matching = next((m for m in meshes if int(np.prod(m[1])) == bins), None)
+
+            tally_filter_ids = []
+            if "filters" in tally:
+                tally_filter_ids = [int(v) for v in np.asarray(tally["filters"][()]).reshape(-1)]
+            mesh_filter_ids = [
+                fid for fid in tally_filter_ids
+                if fid in filters and filters[fid][0].lower() in ("mesh", "meshsurface")
+            ]
+            matching_meshes = []
+            for mesh_name, mesh_id, dims, spatial_geometry in meshes:
+                if mesh_filter_ids:
+                    if any(filters[fid][1] == mesh_id for fid in mesh_filter_ids):
+                        matching_meshes.append((mesh_name, mesh_id, dims, spatial_geometry))
+                elif int(np.prod(dims)) == values.shape[0]:
+                    # Compatibility fallback for statepoint variants that omit explicit filter links.
+                    matching_meshes.append((mesh_name, mesh_id, dims, spatial_geometry))
+            matching = next((m for m in matching_meshes if int(np.prod(m[2])) == values.shape[0]), None)
             if matching is None:
                 continue
-            mesh_name, dims = matching
-            if dims[0] * dims[1] != bins:
+
+            mesh_name, mesh_id, dims, spatial_geometry = matching
+            if dims[0] * dims[1] != values.shape[0]:
                 continue
+
+            # OpenMC stores the realization count at the statepoint root in supported
+            # versions; tolerate alternate wrappers without silently inventing a value.
+            n_realizations = tally.attrs.get("n_realizations")
+            if n_realizations is None and "n_realizations" in tally:
+                n_realizations = tally["n_realizations"][()]
+            if n_realizations is None and "n_realizations" in tallies.attrs:
+                n_realizations = tallies.attrs["n_realizations"]
+            if n_realizations is None and "n_realizations" in handle:
+                n_realizations = handle["n_realizations"][()]
+            if n_realizations is None:
+                raise ValueError(f"Statepoint has no n_realizations field for {tally_name}; cannot calculate tally means.")
+            n_realizations = int(np.asarray(n_realizations).reshape(-1)[0])
+            if n_realizations <= 0:
+                raise ValueError(f"{tally_name} has invalid n_realizations={n_realizations}.")
+
+            # OpenMC statepoint results store accumulated sum and sum-of-squares,
+            # not ready-to-plot means and standard deviations.
+            sums = values[:, :, 0]
+            sums_sq = values[:, :, 1]
+            means = sums / n_realizations
+            if n_realizations > 1:
+                sample_variance = np.maximum(
+                    (sums_sq - (sums * sums / n_realizations)) / (n_realizations - 1),
+                    0.0,
+                )
+                std_err = np.sqrt(sample_variance / n_realizations)
+            else:
+                std_err = np.full_like(means, np.nan)
+
             mean_grid = {}
             sd_grid = {}
-            mean_values = np.asarray(values[:, :, 0], dtype=float)
-            std_values = np.asarray(values[:, :, 1], dtype=float)
-            for idx, score in enumerate(scores):
-                mean_grid[score] = mean_values[:, idx].reshape((dims[1], dims[0])).tolist()
-                sd_grid[score] = std_values[:, idx].reshape((dims[1], dims[0])).tolist()
-            records.append({"tally_name": tally_name, "mesh_name": mesh_name, "dimensions": dims, "scores": {score: {"mean": mean_grid[score], "std_dev": sd_grid[score]} for score in scores}})
+            for idx, score in enumerate(score_bins):
+                mean_grid[score] = means[:, idx].reshape((dims[1], dims[0])).tolist()
+                sd_grid[score] = std_err[:, idx].reshape((dims[1], dims[0])).tolist()
+
+            records.append({
+                "tally_name": tally_name,
+                "mesh_name": mesh_name,
+                "mesh_id": mesh_id,
+                "dimensions": dims,
+                "spatial_geometry": spatial_geometry,
+                "n_realizations": n_realizations,
+                "uncertainty_statistic": "standard_error",
+                "scores": {
+                    score: {
+                        "mean": mean_grid[score],
+                        "standard_error": sd_grid[score],
+                        # Backwards-compatible alias: std_dev historically held standard error here.
+                        "std_dev": sd_grid[score],
+                    }
+                    for score in score_bins
+                },
+            })
+
     if not records:
-        raise ValueError("No compatible 2-D OpenMC mesh tally found in archived statepoint.")
+        raise ValueError(
+            "No compatible 2-D OpenMC mesh tally was found in the archived statepoint. "
+            "Verify the tally's mesh filter, mesh dimensions, and score bins."
+        )
     return {
         "mesh_tallies": records,
         "provenance": {
@@ -191,10 +634,150 @@ def read_mesh_evidence():
             "sha256": actual_hash,
             "expected_sha256": expected_hash,
             "hash_matches": actual_hash == expected_hash if expected_hash else None,
-            "evidence_status": "recorded statepoint; no geometry-to-material mapping inferred",
+            "statepoint_member": STATEPOINT_MEMBER,
+            "evidence_status": "recorded statepoint; means and standard errors derived from accumulated tally sums and sum-of-squares",
         },
     }
 
+
+_AXIAL_AUTO_INSTALL_ATTEMPTED = False
+
+
+def read_axial_3d_evidence(score="flux"):
+    """Read a selected score from a recorded OpenMC 3-D tally, installing evidence once if absent."""
+    global _AXIAL_AUTO_INSTALL_ATTEMPTED
+    if not AXIAL_TALLY_NPZ.is_file() and not _AXIAL_AUTO_INSTALL_ATTEMPTED:
+        _AXIAL_AUTO_INSTALL_ATTEMPTED = True
+        try:
+            # Optional, lazy network operation: only try when the user opens the 3-D evidence panel
+            # and the recorded tally is not already installed. The installer accepts only a
+            # successful high-budget UMMU artifact with a verified NPZ hash and 51 x 51 x 30 mesh.
+            from tools.install_axial_3d_artifact import install_latest_production_axial_tally
+            install_latest_production_axial_tally(AXIAL_TALLY_NPZ)
+        except Exception as install_error:
+            raise FileNotFoundError(
+                "Recorded axial 3-D tally is not installed, and automatic retrieval from GitHub "
+                "Actions did not complete: " + str(install_error) + ". "
+                "Retry by restarting the server after network access returns, or run "
+                "python tools/install_axial_3d_artifact.py --target "
+                + str(AXIAL_TALLY_NPZ) + "."
+            ) from install_error
+    if not AXIAL_TALLY_NPZ.is_file():
+        raise FileNotFoundError(
+            "Recorded axial 3-D tally is still unavailable at " + str(AXIAL_TALLY_NPZ)
+            + ". No 2-D fallback is used."
+        )
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise RuntimeError("3-D axial volume needs numpy; install project requirements.") from exc
+
+    summary_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_STATEPOINT_SUMMARY.json")
+    audit_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_INPUT_AUDIT.json")
+    manifest_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_INPUT_MANIFEST.json")
+    summary = {}
+    input_audit = {}
+    input_manifest = {}
+    if summary_path.is_file():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if audit_path.is_file():
+        input_audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    if manifest_path.is_file():
+        input_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    # Bind the binary data currently served to the metadata recorded alongside it.
+    # Sidecar metadata may be absent in older diagnostic fixtures; when present, its
+    # byte count and SHA-256 must match exactly before any values are returned.
+    npz_bytes = AXIAL_TALLY_NPZ.read_bytes()
+    npz_sha256 = hashlib.sha256(npz_bytes).hexdigest()
+    npz_meta = summary.get("npz", {})
+    expected_sha256 = npz_meta.get("sha256")
+    expected_bytes = npz_meta.get("bytes")
+    if expected_sha256 and expected_sha256 != npz_sha256:
+        raise ValueError("Axial NPZ SHA-256 does not match AXIAL_3D_STATEPOINT_SUMMARY.json.")
+    if expected_bytes is not None and int(expected_bytes) != len(npz_bytes):
+        raise ValueError("Axial NPZ byte count does not match AXIAL_3D_STATEPOINT_SUMMARY.json.")
+
+    with np.load(AXIAL_TALLY_NPZ, allow_pickle=False) as payload:
+        required = {
+            "mean", "standard_error", "relative_error_percent",
+            "score_names", "x_centers_cm", "y_centers_cm", "z_centers_cm"
+        }
+        missing = sorted(required.difference(payload.files))
+        if missing:
+            raise ValueError("3-D NPZ is missing required arrays: " + ", ".join(missing))
+        means = np.asarray(payload["mean"], dtype=float)
+        standard_errors = np.asarray(payload["standard_error"], dtype=float)
+        relative_errors = np.asarray(payload["relative_error_percent"], dtype=float)
+        scores = [
+            item.decode("utf-8") if isinstance(item, bytes) else str(item)
+            for item in payload["score_names"].tolist()
+        ]
+        xs = np.asarray(payload["x_centers_cm"], dtype=float)
+        ys = np.asarray(payload["y_centers_cm"], dtype=float)
+        zs = np.asarray(payload["z_centers_cm"], dtype=float)
+
+    if means.ndim != 4 or means.shape != standard_errors.shape or means.shape != relative_errors.shape:
+        raise ValueError("3-D arrays must share [z, y, x, score] dimensions.")
+    if means.shape[3] != len(scores) or means.shape[0] != len(zs) or means.shape[1] != len(ys) or means.shape[2] != len(xs):
+        raise ValueError("3-D data dimensions disagree with their score names or coordinate vectors.")
+    if means.shape[0] <= 1 or len(xs) <= 0 or len(ys) <= 0:
+        raise ValueError("A true multi-layer 3-D tally is required.")
+    if score not in scores:
+        raise ValueError("Requested score not present. Available: " + ", ".join(scores))
+    index = scores.index(score)
+
+    def finite_json(array):
+        arr = np.asarray(array, dtype=float)
+        if arr.ndim != 3:
+            raise ValueError("Expected [z, y, x] selected-score array.")
+        return [
+            [
+                [float(v) if np.isfinite(v) else None for v in row]
+                for row in layer
+            ]
+            for layer in arr
+        ]
+
+    mesh_meta = summary.get("mesh", {})
+    if mesh_meta.get("dimension_xyz") != [len(xs), len(ys), len(zs)]:
+        # The NPZ dimensions remain primary; summary metadata is not allowed to
+        # override or fabricate coordinate mapping.
+        mesh_meta = {}
+    return {
+        "available": True,
+        "provenance": {
+            "source": str(AXIAL_TALLY_NPZ),
+            "sha256": npz_sha256,
+            "summary_path": str(summary_path) if summary_path.is_file() else None,
+            "statepoint": summary.get("statepoint", {}),
+            "status": summary.get("status", "NPZ found; sidecar statepoint summary missing"),
+            "uncertainty_method": summary.get("uncertainty_method"),
+            "score_summary": summary.get("score_summary", {}).get(score, {}),
+            "input_audit": input_audit,
+            "input_manifest": input_manifest,
+            "input_audit_path": str(audit_path) if audit_path.is_file() else None,
+            "input_manifest_path": str(manifest_path) if manifest_path.is_file() else None,
+            "nonclaims": summary.get("nonclaims", [
+                "Tally values are not absolute-power normalized.",
+                "Presence of a statepoint is not benchmark acceptance or convergence."
+            ]),
+        },
+        "mesh": {
+            "dimension_xyz": [int(len(xs)), int(len(ys)), int(len(zs))],
+            "array_layout": "[z, y, x]",
+            "lower_left_cm_xyz": mesh_meta.get("lower_left_cm_xyz"),
+            "upper_right_cm_xyz": mesh_meta.get("upper_right_cm_xyz"),
+            "x_centers_cm": [float(v) for v in xs],
+            "y_centers_cm": [float(v) for v in ys],
+            "z_centers_cm": [float(v) for v in zs],
+        },
+        "score": score,
+        "scores_available": scores,
+        "mean": finite_json(means[:, :, :, index]),
+        "standard_error": finite_json(standard_errors[:, :, :, index]),
+        "relative_error_percent": finite_json(relative_errors[:, :, :, index]),
+    }
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "CBPFRLocal/0.2"
@@ -215,9 +798,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, json.dumps({"status": "ok", "mode": "recorded-evidence-only"}), "application/json; charset=utf-8")
         if path == "/api/candidates":
             try:
-                payload = {"metadata": {"source": str(CANDIDATE_CSV.relative_to(ROOT)), "mode": "recorded repository evidence; no OpenMC execution"}, "records": read_candidates()}
+                payload = read_candidate_evidence()
                 return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, csv.Error) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
+        if path == "/api/model-geometry":
+            try:
+                return self._send(200, json.dumps(read_model_geometry(), allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifacts":
             try:
@@ -226,7 +814,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/geometry-artifact":
             try:
-                from urllib.parse import parse_qs
                 relative_path = parse_qs(urlparse(self.path).query).get("path", [""])[0]
                 artifact = read_geometry_artifact(relative_path)
                 return self._send(200, artifact.read_bytes(), mimetypes.guess_type(artifact.name)[0] or "application/octet-stream")
@@ -237,12 +824,23 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(read_assembly_evidence(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, csv.Error) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
+        if path == "/api/axial-3d":
+            try:
+                params = parse_qs(urlparse(self.path).query)
+                if params.get("retry", ["0"])[0] == "1":
+                    global _AXIAL_AUTO_INSTALL_ATTEMPTED
+                    _AXIAL_AUTO_INSTALL_ATTEMPTED = False
+                score = params.get("score", ["flux"])[0]
+                payload = read_axial_3d_evidence(score)
+                return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, RuntimeError, KeyError, json.JSONDecodeError) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/mesh":
             try:
                 return self._send(200, json.dumps(read_mesh_evidence(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, KeyError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
-        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/spatial.js": WEB_ROOT / "spatial.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json"}
+        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/core_geometry_3d.js": WEB_ROOT / "core_geometry_3d.js", "/research_snapshot_ui.js": WEB_ROOT / "research_snapshot_ui.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json", "/RESEARCH_DATA_CROSSWALK_2026-10-16.md": WEB_ROOT / "RESEARCH_DATA_CROSSWALK_2026-10-16.md"}
         file_path = routes.get(path)
         if file_path is None:
             return self._send(404, "Not found", "text/plain; charset=utf-8")
