@@ -119,7 +119,7 @@ async function bootSpatial(){
   meshReloadBound=true;
  }
  ["meshScore","meshView","meshScale","meshPalette"].forEach(id=>{if($(id))$(id).disabled=false;});
- await Promise.all([loadGeometryArtifacts(),initMesh()]);
+ await Promise.all([initGeometry(),initMesh()]);
 }
 document.addEventListener("DOMContentLoaded",bootSpatial);
 window.addEventListener("resize",()=>{if(window.Plotly)document.querySelectorAll(".js-spatial-plot").forEach(node=>{try{window.Plotly.Plots.resize(node);}catch(_){}});});
