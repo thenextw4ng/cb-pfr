@@ -96,13 +96,13 @@
     let fixedText="";
     if(axis==="X"){
       fixedText="Y bin "+fi+", Z bin "+fj;
-      for(let i=0;i<dn.nx;i++){x.push(a.x[i]);values.push(displayed(mean[fj][fi][i],rse[fj][fi][i]));errors.push(se[fj][fi][i]);custom.push(customVoxel(i,fi,fj));}
+      for(let i=0;i<dn.nx;i++){x.push(a.x[i]);values.push(currentView()==="relative_error"?rse[fj][fi][i]:(mean[fj][fi][i]>0?mean[fj][fi][i]:null));errors.push(se[fj][fi][i]);custom.push(customVoxel(i,fi,fj));}
     }else if(axis==="Y"){
       fixedText="X bin "+fi+", Z bin "+fj;
-      for(let j=0;j<dn.ny;j++){x.push(a.y[j]);values.push(displayed(mean[fj][j][fi],rse[fj][j][fi]));errors.push(se[fj][j][fi]);custom.push(customVoxel(fi,j,fj));}
+      for(let j=0;j<dn.ny;j++){x.push(a.y[j]);values.push(currentView()==="relative_error"?rse[fj][j][fi]:(mean[fj][j][fi]>0?mean[fj][j][fi]:null));errors.push(se[fj][j][fi]);custom.push(customVoxel(fi,j,fj));}
     }else{
       fixedText="X bin "+fi+", Y bin "+fj;
-      for(let k=0;k<dn.nz;k++){x.push(a.z[k]);values.push(displayed(mean[k][fj][fi],rse[k][fj][fi]));errors.push(se[k][fj][fi]);custom.push(customVoxel(fi,fj,k));}
+      for(let k=0;k<dn.nz;k++){x.push(a.z[k]);values.push(currentView()==="relative_error"?rse[k][fj][fi]:(mean[k][fj][fi]>0?mean[k][fj][fi]:null));errors.push(se[k][fj][fi]);custom.push(customVoxel(fi,fj,k));}
     }
     const trace={type:"scatter",mode:"lines+markers",name:currentView()==="relative_error"?"Relative MC standard error":"Recorded tally mean",x,y:values,customdata:custom,connectgaps:false,
       line:{color:"#56dbe4",width:2},marker:{size:5,color:"#f0bc67"},
