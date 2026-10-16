@@ -114,6 +114,32 @@ jobs:
             --production-root /tmp/production-artifacts \
             --seed-ledger "$SEED_LEDGER" \
             --outdir /tmp/v2a-summary/v2a
+      - name: Review per-run eigenvalue and entropy convergence diagnostics
+        if: steps.discover.outputs.all_ready == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/analyze_c5g7_convergence_study.py \
+            --production-root /tmp/production-artifacts \
+            --v2a-root /tmp/v2a-artifacts \
+            --thresholds-json config/benchmarks/c5g7_convergence_screen_v1.json \
+            --outdir /tmp/v2a-summary/convergence
+      - name: Compare equal-budget candidate-selection policies
+        if: steps.discover.outputs.all_ready == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f /tmp/v2a-summary/v2a/v2a_run_level.csv ] && [ -f /tmp/v2a-summary/v2a/v2a_high_budget_reference.csv ] && [ -f /tmp/v2a-summary/v2a/v2a_selection_summary.json ]; then
+            python scripts/run_equal_budget_c5g7_selection.py \
+              --v2a-csv /tmp/v2a-summary/v2a/v2a_run_level.csv \
+              --high-budget-csv /tmp/v2a-summary/v2a/v2a_high_budget_reference.csv \
+              --outdir /tmp/v2a-summary/selection-policy
+          else
+            mkdir -p /tmp/v2a-summary/selection-policy
+            printf '%s\n' '{"status":"PENDING_INTEGRITY_GATES","new_openmc_runs":0,"reason":"The 1,200 V2a observations and/or 60 high-budget references are not yet available or failed integrity analysis."}' > /tmp/v2a-summary/selection-policy/equal_budget_policy_report.json
+          fi
       - name: Write a combined closeout decision without implying convergence or benchmark acceptance
         if: steps.discover.outputs.all_ready == 'true' && always()
         shell: bash
@@ -124,8 +150,12 @@ jobs:
           root=Path("/tmp/v2a-summary")
           prod_p=root/"production/night_campaign_summary.json"
           v2a_p=root/"v2a/v2a_selection_summary.json"
+          conv_p=root/"convergence/convergence_study_summary.json"
+          policy_p=root/"selection-policy/equal_budget_policy_report.json"
           prod=json.loads(prod_p.read_text()) if prod_p.is_file() else {}
           v2a=json.loads(v2a_p.read_text()) if v2a_p.is_file() else {}
+          conv=json.loads(conv_p.read_text()) if conv_p.is_file() else {}
+          policy=json.loads(policy_p.read_text()) if policy_p.is_file() else {}
           p_ok=prod.get("integrity_pass") is True and prod.get("observed_run_count")==75
           v_ok=v2a.get("integrity_pass") is True and v2a.get("observed_v2a_runs")==1200 and v2a.get("high_budget_empirical_reference_by_layout") is not None
           report={
@@ -142,7 +172,14 @@ jobs:
             "official_benchmark_acceptance":False,
             "physical_best_layout_claim":False,
             "production_report":"production/night_campaign_summary.json" if prod_p.is_file() else None,
-            "v2a_report":"v2a/v2a_selection_summary.json" if v2a_p.is_file() else None
+            "v2a_report":"v2a/v2a_selection_summary.json" if v2a_p.is_file() else None,
+            "convergence_screen_status":conv.get("status","NOT_RUN"),
+            "convergence_screen_pass_count":conv.get("screen_pass"),
+            "convergence_screen_fail_count":conv.get("screen_fail"),
+            "convergence_review_required_count":conv.get("review_required"),
+            "convergence_report":"convergence/convergence_study_summary.json" if conv_p.is_file() else None,
+            "equal_budget_selection_status":policy.get("status","NOT_RUN"),
+            "equal_budget_selection_report":"selection-policy/equal_budget_policy_report.json" if policy_p.is_file() else None
           }
           root.mkdir(parents=True,exist_ok=True)
           (root/"campaign_closeout.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
