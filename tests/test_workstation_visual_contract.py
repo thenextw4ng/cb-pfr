@@ -57,6 +57,13 @@ class WorkstationVisualContractTests(unittest.TestCase):
         self.assertIn('https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js', self.html)
         self.assertIn("export function createCoreViewer", (WEB / "core_geometry_3d.js").read_text(encoding="utf-8"))
 
+    def test_core_geometry_controls_use_the_defined_mode_controller(self):
+        self.assertIn("function setCoreGeometryMode(mode)", self.app_js)
+        self.assertIn('setCoreGeometryMode("2d")', self.app_js)
+        self.assertNotIn("selectCoreView(", self.app_js)
+        self.assertIn('id="coreView3d"', self.html)
+        self.assertIn('id="coreView2d"', self.html)
+
     def test_spatial_evidence_api_contract_is_not_replaced_by_static_server(self):
         for endpoint in (
             "/api/health", "/api/candidates", "/api/model-geometry",
