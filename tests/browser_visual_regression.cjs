@@ -23,7 +23,21 @@ async function waitForCandidate(page) {
     const select = document.querySelector("#candidateSelect");
     return select && select.options.length === 6 && select.value;
   }, { timeout: 30000 });
-  await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 15000 });
+  try {
+    await page.waitForSelector("#selectedCandidateMetrics .candidate-stat", { timeout: 20000 });
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      candidateOptions: document.querySelector("#candidateSelect")?.options.length || 0,
+      selectedValue: document.querySelector("#candidateSelect")?.value || "",
+      selectedId: document.querySelector("#selectedCandidateId")?.textContent || "",
+      metricText: document.querySelector("#selectedCandidateMetrics")?.innerText || "",
+      apiError: document.querySelector("#apiError")?.innerText || "",
+      sourcePath: document.querySelector("#sourcePath")?.textContent || "",
+      geometryStatus: document.querySelector("#geometryStatus")?.textContent || "",
+      meshStatus: document.querySelector("#meshStatus")?.textContent || ""
+    }));
+    throw new Error("Candidate metrics failed to remain rendered: " + JSON.stringify(diagnostic) + " · " + error.message);
+  }
 }
 async function waitForSpatial(page) {
   await page.locator("#spatial").scrollIntoViewIfNeeded();
@@ -63,7 +77,7 @@ async function main() {
   const results={baseUrl:BASE_URL,checks:[],screenshots:[]};
   try {
     const page=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
-    page.on("pageerror",error=>uncaught.push(error.message));
+    page.on("pageerror",error=>{uncaught.push(error.message);console.error("DESKTOP PAGE ERROR:",error.message);});
     const response=await page.goto(BASE_URL,{waitUntil:"domcontentloaded",timeout:30000});
     assert.ok(response && response.ok(),"HTML must load over local API server");
     await waitForCandidate(page);
@@ -131,7 +145,7 @@ async function main() {
     results.screenshots.push("desktop-workstation-overview.png");
 
     const mobile=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
-    mobile.on("pageerror",error=>uncaught.push("mobile: "+error.message));
+    mobile.on("pageerror",error=>{uncaught.push("mobile: "+error.message);console.error("MOBILE PAGE ERROR:",error.message);});
     const mobileResponse=await mobile.goto(BASE_URL,{waitUntil:"domcontentloaded",timeout:30000});
     assert.ok(mobileResponse && mobileResponse.ok(),"mobile HTML must load");
     await waitForCandidate(mobile);
