@@ -779,6 +779,315 @@ def read_axial_3d_evidence(score="flux"):
         "relative_error_percent": finite_json(relative_errors[:, :, :, index]),
     }
 
+
+def _registry_file_info(relative_path, label=None):
+    """Return small audit metadata for one tracked artifact; never return its contents."""
+    safe_relative = Path(relative_path)
+    if safe_relative.is_absolute() or ".." in safe_relative.parts:
+        raise ValueError("Evidence registry paths must remain inside the repository.")
+    file_path = ROOT / safe_relative
+    exists = file_path.is_file()
+    result = {
+        "label": label or safe_relative.name,
+        "path": safe_relative.as_posix(),
+        "available": exists,
+        "size_bytes": file_path.stat().st_size if exists else None,
+        "sha256": None,
+        "url": "https://github.com/thenextw4ng/cb-pfr/blob/main/" + safe_relative.as_posix(),
+    }
+    if exists:
+        digest = hashlib.sha256()
+        with file_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        result["sha256"] = digest.hexdigest()
+    return result
+
+
+def read_evidence_registry():
+    """Create the Evidence Control Room inventory from recorded files and declared metadata."""
+    snapshot_path = WEB_ROOT / "research_snapshot.json"
+    manifest_path = MODEL_GEOMETRY_MANIFEST
+    axial_provenance_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_PROVENANCE.json")
+    axial_summary_path = AXIAL_TALLY_NPZ.with_name("AXIAL_3D_STATEPOINT_SUMMARY.json")
+
+    snapshot = {}
+    if snapshot_path.is_file():
+        with snapshot_path.open("r", encoding="utf-8") as handle:
+            snapshot = json.load(handle)
+    latest = snapshot.get("latestC5G7", {})
+    v2a = latest.get("v2a", {})
+    high_budget = latest.get("highBudget", {})
+    policy = latest.get("policyReplay", {})
+    paper = snapshot.get("paper", {})
+    synthetic = snapshot.get("syntheticBenchmarks", {})
+
+    summary_rows = []
+    if CANDIDATE_CSV.is_file():
+        with CANDIDATE_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+            summary_rows = list(csv.DictReader(handle))
+    run_level_rows = []
+    if CANDIDATE_RUN_LEVEL_CSV.is_file():
+        with CANDIDATE_RUN_LEVEL_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+            run_level_rows = list(csv.DictReader(handle))
+
+    candidate_artifacts = [
+        _registry_file_info(CANDIDATE_CSV.relative_to(ROOT).as_posix(), "Layout summary CSV"),
+        _registry_file_info(CANDIDATE_RUN_LEVEL_CSV.relative_to(ROOT).as_posix(), "18-run record CSV"),
+        _registry_file_info(CANDIDATE_CAMPAIGN_JSON.relative_to(ROOT).as_posix(), "Campaign audit JSON"),
+    ]
+    candidate_ready = all(item["available"] for item in candidate_artifacts)
+    candidate_valid = len(run_level_rows) == 18 and len(summary_rows) == 6
+    candidate = {
+        "id": "candidate-smoke",
+        "domain": "C5G7 · candidate evidence",
+        "classification": "candidate",
+        "title": "Corrected-group six-layout smoke campaign",
+        "status": "18 RUNS · FILES PRESENT" if candidate_ready and candidate_valid else "SOURCE INCOMPLETE",
+        "status_kind": "success" if candidate_ready and candidate_valid else "warning",
+        "summary": "The earlier corrected-group campaign has six layout summaries and 18 run-level records. It is a separate dataset from the latest V2a replay.",
+        "coverage": "18 runs · 6 layouts · 3 seeds/layout",
+        "metrics": [
+            {"label": "Run-level records", "value": str(len(run_level_rows))},
+            {"label": "Layout summaries", "value": str(len(summary_rows))},
+            {"label": "Group/MGXS audit", "value": "Recorded in run CSV"},
+        ],
+        "sources": candidate_artifacts,
+        "links": [
+            {"label": "Candidate observatory", "url": "#candidates"},
+            {"label": "Evidence integrity", "url": "#integrity"},
+        ],
+        "limitations": [
+            "The run campaign is exploratory and is not the 1,200-observation V2a campaign.",
+            "The application records no certified convergence or design-specific physical acceptance from this dataset.",
+        ],
+    }
+
+    snapshot_info = _registry_file_info("web/research_snapshot.json", "Versioned research snapshot")
+    v2a_ready = snapshot_info["available"] and int(v2a.get("observedRuns", 0)) == 1200 and int(high_budget.get("runs", 0)) == 60
+    v2a_record = {
+        "id": "v2a-policy-replay",
+        "domain": "C5G7 · latest campaign",
+        "classification": "campaign",
+        "title": "V2a equal-budget policy replay",
+        "status": "SNAPSHOT VERIFIED · RAW RUN TABLE EXTERNAL" if v2a_ready else "SNAPSHOT INCOMPLETE",
+        "status_kind": "warning" if v2a_ready else "error",
+        "summary": "The versioned 16 October snapshot carries aggregate results from the completed offline replay. The full run/pool artifact inventory is linked to the originating Actions run, rather than falsely described as a raw CSV shipped inside the browser snapshot.",
+        "coverage": "1,200 low-budget runs · 60 references · 28 decision blocks",
+        "metrics": [
+            {"label": "V2a rows observed", "value": str(v2a.get("observedRuns", 0))},
+            {"label": "High-budget references", "value": str(high_budget.get("runs", 0))},
+            {"label": "Equal-budget blocks", "value": str(policy.get("decisionBlocks", 0))},
+            {"label": "Certified convergence", "value": str(v2a.get("perRunConvergenceCertified", 0)) + " / " + str(v2a.get("observedRuns", 0))},
+        ],
+        "sources": [snapshot_info],
+        "links": [
+            {"label": "Replay workflow", "url": latest.get("workflowUrl", "https://github.com/thenextw4ng/cb-pfr/actions/runs/38853860378")},
+            {"label": "Experiments & paper", "url": "#research-evidence"},
+            {"label": "C5G7 research protocol", "url": next((x.get("url") for x in latest.get("links", []) if "protocol" in x.get("label", "").lower()), "https://github.com/thenextw4ng/cb-pfr")},
+        ],
+        "limitations": [
+            "This was an offline replay and launched zero new OpenMC runs.",
+            "All 1,200 low-budget runs require convergence/diagnostic review; 60 high-budget references are noisy model estimates, not physical truth.",
+            "The dashboard snapshot contains aggregates and paper tables, not the full 1,260-row raw campaign CSV.",
+        ],
+    }
+
+    geometry_info = _registry_file_info(manifest_path.relative_to(ROOT).as_posix(), "XML-derived C5G7 geometry manifest")
+    geometry = {}
+    if manifest_path.is_file():
+        with manifest_path.open("r", encoding="utf-8") as handle:
+            geometry = json.load(handle)
+    geometry_candidates = geometry.get("candidates", [])
+    layout_count = len(geometry_candidates) if isinstance(geometry_candidates, list) else 0
+    geometry_ready = geometry_info["available"] and layout_count == 6
+    geometry_record = {
+        "id": "source-geometry",
+        "domain": "OpenMC · model source",
+        "classification": "geometry",
+        "title": "XML-derived core geometry and pin universes",
+        "status": "SOURCE MANIFEST · 6 LAYOUTS" if geometry_ready else "GEOMETRY SOURCE INCOMPLETE",
+        "status_kind": "success" if geometry_ready else "error",
+        "summary": "The archived geometry manifest supplies the 3 × 3 C5G7 lattice, boundary-condition labels, candidate-specific material placement, and 17 × 17 pin-universe maps used by the interactive geometry explorer.",
+        "coverage": "6 candidate geometry records · 3 × 3 core · 17 × 17 pin lattices",
+        "metrics": [
+            {"label": "Candidate XML records", "value": str(layout_count)},
+            {"label": "Core lattice", "value": "3 × 3"},
+            {"label": "Pin lattice", "value": "17 × 17"},
+            {"label": "Model evidence", "value": "XML-derived manifest"},
+        ],
+        "sources": [geometry_info],
+        "links": [
+            {"label": "Core geometry explorer", "url": "#assembly"},
+            {"label": "Assembly field map", "url": "#assembly-field"},
+        ],
+        "limitations": [
+            "The manifest describes source geometry, not a transport result.",
+            "The 3D core viewer is a schematic material extrusion; it is not an axial model.",
+        ],
+    }
+
+    mesh_member_found = False
+    archive_info = None
+    archive_location = None
+    try:
+        archive_path = locate_statepoint_archive()
+        archive_location = "repository root" if archive_path.resolve().parent == ROOT.resolve() else "configured fallback"
+        digest = hashlib.sha256()
+        with archive_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        with zipfile.ZipFile(archive_path) as archive:
+            member_info = archive.getinfo(STATEPOINT_MEMBER)
+            mesh_member_found = member_info.file_size > 0
+        archive_info = {
+            "label": "OpenMC statepoint archive",
+            "path": archive_path.name if archive_location == "repository root" else "Configured local fallback archive",
+            "available": True,
+            "size_bytes": archive_path.stat().st_size,
+            "sha256": digest.hexdigest(),
+            "url": "https://github.com/thenextw4ng/cb-pfr/blob/main/OpenMC_HDF5_Evidence_2026-10-11.zip" if archive_location == "repository root" else None,
+            "member": STATEPOINT_MEMBER,
+            "member_size_bytes": member_info.file_size,
+            "location": archive_location,
+        }
+    except (OSError, KeyError, zipfile.BadZipFile):
+        archive_info = {
+            "label": "OpenMC statepoint archive",
+            "path": "OpenMC_HDF5_Evidence_2026-10-11.zip",
+            "available": False,
+            "size_bytes": None,
+            "sha256": None,
+            "url": "https://github.com/thenextw4ng/cb-pfr/blob/main/OpenMC_HDF5_Evidence_2026-10-11.zip",
+        }
+
+    mesh_record = {
+        "id": "planar-mesh",
+        "domain": "OpenMC · planar tally",
+        "classification": "openmc",
+        "title": "Recorded planar statepoint mesh",
+        "status": "ARCHIVE + STATEPOINT MEMBER FOUND" if mesh_member_found else "STATEPOINT ARCHIVE UNAVAILABLE",
+        "status_kind": "success" if mesh_member_found else "error",
+        "summary": "The planar visualization reads a recorded HDF5 statepoint from the archived evidence ZIP and exposes the actual tally bins through the local mesh API.",
+        "coverage": "Recorded 2D mesh · flux / fission / nu-fission",
+        "metrics": [
+            {"label": "Statepoint member", "value": "Present" if mesh_member_found else "Unavailable"},
+            {"label": "Archive location", "value": archive_location or "Not found"},
+            {"label": "API", "value": "/api/mesh"},
+        ],
+        "sources": [archive_info],
+        "links": [
+            {"label": "Spatial field lab", "url": "#spatial"},
+            {"label": "Download/report crosswalk", "url": "/RESEARCH_DATA_CROSSWALK_2026-10-16.md"},
+        ],
+        "limitations": [
+            "Mesh axes are bin indices unless recorded physical bounds are available.",
+            "Planar mesh coordinates are not silently mapped to individual fuel pin identities.",
+        ],
+    }
+
+    axial_info = _registry_file_info(AXIAL_TALLY_NPZ.relative_to(ROOT).as_posix() if ROOT.resolve() in AXIAL_TALLY_NPZ.resolve().parents else "evidence/cbpfr_axial_3d/axial_tally_3d.npz", "Recorded axial tally NPZ")
+    axial_provenance = {}
+    if axial_provenance_path.is_file():
+        with axial_provenance_path.open("r", encoding="utf-8") as handle:
+            axial_provenance = json.load(handle)
+    axial_expected_sha = axial_provenance.get("axial_tally_npz_sha256")
+    axial_hash_ok = bool(axial_info["available"] and axial_expected_sha and axial_info["sha256"] == axial_expected_sha)
+    axial_shape = axial_provenance.get("mesh_dimension_xyz", [51, 51, 30])
+    axial_statepoint = axial_provenance.get("statepoint", {})
+    axial_record = {
+        "id": "axial-volume",
+        "domain": "OpenMC · 3D tally",
+        "classification": "openmc",
+        "title": "Recorded axial 3D tally volume",
+        "status": "NPZ HASH MATCH · 51 × 51 × 30" if axial_hash_ok else ("AXIAL TALLY MISSING" if not axial_info["available"] else "AXIAL TALLY HASH MISMATCH"),
+        "status_kind": "success" if axial_hash_ok else "error",
+        "summary": "The true multi-layer volume is read from the archived tally export. The flux volume is not synthesized by extruding the 2D mesh surface.",
+        "coverage": str(axial_shape[0]) + " × " + str(axial_shape[1]) + " × " + str(axial_shape[2]) + " bins · 3 recorded scores",
+        "metrics": [
+            {"label": "Voxel bins", "value": f"{int(axial_shape[0]) * int(axial_shape[1]) * int(axial_shape[2]):,}"},
+            {"label": "Statepoint seed", "value": str(axial_statepoint.get("seed", "Not recorded"))},
+            {"label": "Realizations", "value": str(axial_statepoint.get("n_realizations", "Not recorded"))},
+            {"label": "Artifact integrity", "value": "SHA-256 match" if axial_hash_ok else "Not verified"},
+        ],
+        "sources": [
+            axial_info,
+            _registry_file_info("evidence/cbpfr_axial_3d/AXIAL_3D_PROVENANCE.json", "Axial tally provenance"),
+            _registry_file_info("evidence/cbpfr_axial_3d/AXIAL_3D_STATEPOINT_SUMMARY.json", "Statepoint summary"),
+        ],
+        "links": [
+            {"label": "Spatial field lab", "url": "#spatial"},
+            {"label": "Source production run", "url": axial_provenance.get("workflow_run_url", "https://github.com/thenextw4ng/cb-pfr/actions")},
+        ],
+        "limitations": [
+            "This archived axial tally is from the UMMU high-budget run, seed 640000; it is not six-layout validation.",
+            "Tallies are source-normalized Monte Carlo values, not absolute reactor power or a safety conclusion.",
+            "The axial geometry/layer assumptions remain subject to review.",
+        ],
+    }
+
+    snapshot_paper_info = _registry_file_info("web/research_snapshot.json", "Snapshot containing method-study results")
+    t2 = synthetic.get("t2", {})
+    t3 = synthetic.get("t3", {})
+    t7 = paper.get("t7", {})
+    paper_record = {
+        "id": "synthetic-paper",
+        "domain": "CB-PFR · synthetic method study",
+        "classification": "synthetic",
+        "title": "Revised CB-PFR paper · T2 / T3 / T7",
+        "status": "TRANSCRIBED RESULTS · SYNTHETIC EVIDENCE",
+        "status_kind": "warning",
+        "summary": "The workspace stores transcribed paper tables in a versioned snapshot and links to the source reports. These results characterize a method operating envelope; they are not neutron-transport evidence.",
+        "coverage": f"T2 {int(t2.get('pools', 0)):,} pools · T3 {int(t3.get('pools', 0)):,} pools · T7 {int(t7.get('regimes', 0))} regimes",
+        "metrics": [
+            {"label": "T2 pools", "value": f"{int(t2.get('pools', 0)):,}"},
+            {"label": "T3 pools", "value": f"{int(t3.get('pools', 0)):,}"},
+            {"label": "T7 regimes", "value": str(t7.get("regimes", 0))},
+            {"label": "Source document", "value": str(paper.get("pages", 0)) + " pages · SHA-256"},
+        ],
+        "sources": [
+            snapshot_paper_info,
+            _registry_file_info("web/RESEARCH_DATA_CROSSWALK_2026-10-16.md", "Research data crosswalk"),
+        ],
+        "source_document": {
+            "filename": paper.get("source_file"),
+            "pages": paper.get("pages"),
+            "sha256": paper.get("source_sha256"),
+            "committed_as_binary": False,
+        },
+        "links": [
+            {"label": "Experiments & paper", "url": "#research-evidence"},
+            {"label": "T2 report", "url": t2.get("sourceUrl")},
+            {"label": "T3 report", "url": t3.get("sourceUrl")},
+        ],
+        "limitations": [
+            "T2/T3/T7 are synthetic method-level results, separate from OpenMC run evidence.",
+            "T7 was self-registered in the working session rather than externally timestamped, and has not been independently replicated.",
+            "The supplied PDF binary is not committed under web/; the snapshot contains transcribed tables and the source SHA-256.",
+        ],
+    }
+
+    records = [candidate, v2a_record, geometry_record, mesh_record, axial_record, paper_record]
+    all_sources = [source for record in records for source in record.get("sources", [])]
+    available_source_count = sum(1 for source in all_sources if source.get("available"))
+    return {
+        "schema_version": 1,
+        "mode": "recorded-evidence-only",
+        "snapshot_date": snapshot.get("snapshot_date"),
+        "summary": {
+            "record_count": len(records),
+            "source_entry_count": len(all_sources),
+            "available_file_count": available_source_count,
+            "campaign_observed_runs": int(v2a.get("observedRuns", 0)),
+            "high_budget_reference_runs": int(high_budget.get("runs", 0)),
+            "layout_count": int(v2a.get("layouts", layout_count if "layout_count" in locals() else 6)),
+            "convergence_certified_runs": int(v2a.get("perRunConvergenceCertified", 0)),
+            "convergence_status": "NOT CERTIFIED" if int(v2a.get("perRunConvergenceCertified", 0)) < int(v2a.get("observedRuns", 0)) else "CERTIFIED IN SNAPSHOT",
+        },
+        "records": records,
+    }
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "CBPFRLocal/0.2"
 
@@ -794,6 +1103,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/api/evidence-registry":
+            try:
+                payload = read_evidence_registry()
+                return self._send(200, json.dumps(payload, allow_nan=False), "application/json; charset=utf-8")
+            except (OSError, ValueError, csv.Error, zipfile.BadZipFile, json.JSONDecodeError) as exc:
+                return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
         if path == "/api/health":
             return self._send(200, json.dumps({"status": "ok", "mode": "recorded-evidence-only"}), "application/json; charset=utf-8")
         if path == "/api/candidates":
@@ -840,7 +1155,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(read_mesh_evidence(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, KeyError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
-        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/core_geometry_3d.js": WEB_ROOT / "core_geometry_3d.js", "/research_snapshot_ui.js": WEB_ROOT / "research_snapshot_ui.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json", "/RESEARCH_DATA_CROSSWALK_2026-10-16.md": WEB_ROOT / "RESEARCH_DATA_CROSSWALK_2026-10-16.md"}
+        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/core_geometry_3d.js": WEB_ROOT / "core_geometry_3d.js", "/research_snapshot_ui.js": WEB_ROOT / "research_snapshot_ui.js", "/evidence_control_room.js": WEB_ROOT / "evidence_control_room.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json", "/RESEARCH_DATA_CROSSWALK_2026-10-16.md": WEB_ROOT / "RESEARCH_DATA_CROSSWALK_2026-10-16.md"}
         file_path = routes.get(path)
         if file_path is None:
             return self._send(404, "Not found", "text/plain; charset=utf-8")

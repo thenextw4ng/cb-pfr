@@ -43,6 +43,7 @@
   </script>
   <script defer src="/app.js"></script>
   <script defer src="/research_snapshot_ui.js"></script>
+  <script defer src="/evidence_control_room.js"></script>
 </head>
 <body>
   <div class="shell">
@@ -57,6 +58,7 @@
       <a class="nav-item" href="#spatial" data-target="spatial"><span>▧</span> Spatial field lab</a>
       <a class="nav-item" href="#research-alignment" data-target="research-alignment"><span>≋</span> Research alignment</a>
       <a class="nav-item" href="#research-evidence" data-target="research-evidence"><span>◉</span> Experiments &amp; paper</a>
+      <a class="nav-item" href="#evidence-control-room" data-target="evidence-control-room"><span>▤</span> Evidence control room</a>
       <a class="nav-item" href="#integrity" data-target="integrity"><span>◎</span> Evidence integrity</a>
       <div class="sidebar-bottom"><div class="live-dot"></div><div><b>Evidence-aware mode</b><small>Recorded repository data only</small></div></div>
     </aside>
@@ -243,6 +245,56 @@
           <article class="panel"><div class="panel-head"><div><h3>T3 · synthetic effectiveness benchmark</h3><p>6,000 pools · six regimes</p></div><span class="tag warning">GATE NOT MET</span></div><div id="t3Summary"></div><div id="t3DeltaChart" class="chart evidence-chart compact-chart"></div><div id="t3RegimeTable" class="table-scroller"></div><a class="text-link" id="t3Source" target="_blank" rel="noopener">Open T3 report ↗</a></article>
         </div>
         <article class="panel"><div class="panel-head"><div><h3>What the evidence does—and does not—support</h3><p>The interface keeps method-level synthetic evidence apart from neutron-transport calculations.</p></div><span class="tag">CLAIM LEDGER</span></div><div class="grid two"><div><div class="subhead supported-heading">Supported within stated scope</div><ul id="supportedClaims" class="claim-list"></ul></div><div><div class="subhead caution-heading">Not established</div><ul id="unestablishedClaims" class="claim-list"></ul></div></div></article>
+      </section>
+
+      <section class="section" id="evidence-control-room" aria-labelledby="evidenceControlTitle">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">06 / SOURCE TRACEABILITY</div>
+            <h2 id="evidenceControlTitle">Evidence Control Room</h2>
+            <p>Search the registered datasets, verify local artifact hashes, inspect coverage, and follow a source back to its run or research report.</p>
+          </div>
+          <span id="ecrStatus" class="tag">CHECKING REGISTRY…</span>
+        </div>
+        <div class="notice ecr-boundary">
+          <b>EVIDENCE CONTRACT</b>
+          <span>The registry distinguishes geometry inputs, OpenMC tally outputs, candidate-level run records, V2a replay aggregates, and synthetic method-study results. A file being present or hash-matched does not certify convergence or physical feasibility.</span>
+        </div>
+        <div class="metrics ecr-kpis" id="ecrKpis" aria-live="polite">
+          <article class="metric"><label>Registered evidence groups</label><strong>—</strong><small>Loading source registry</small></article>
+          <article class="metric"><label>V2a observations</label><strong>—</strong><small>Versioned campaign snapshot</small></article>
+          <article class="metric"><label>Source layouts</label><strong>—</strong><small>XML-derived geometry manifest</small></article>
+          <article class="metric"><label>Campaign convergence</label><strong>—</strong><small>Independent diagnostics required</small></article>
+        </div>
+        <div class="panel ecr-registry-panel">
+          <div class="ecr-toolbar">
+            <div class="control ecr-search-control">
+              <label for="ecrSearch">SEARCH EVIDENCE</label>
+              <input id="ecrSearch" type="search" placeholder="Search run, artifact, metric, limitation…" autocomplete="off">
+            </div>
+            <div class="control ecr-filter-control">
+              <label for="ecrFilter">EVIDENCE CLASS</label>
+              <select id="ecrFilter">
+                <option value="all">All evidence classes</option>
+                <option value="candidate">Candidate run records</option>
+                <option value="campaign">Campaign &amp; policy replay</option>
+                <option value="geometry">Source geometry</option>
+                <option value="openmc">OpenMC tally outputs</option>
+                <option value="synthetic">Synthetic method evidence</option>
+              </select>
+            </div>
+            <button id="ecrRefresh" class="action-button" type="button">↻ Refresh registry</button>
+          </div>
+          <div class="ecr-layout">
+            <div class="ecr-record-list" id="ecrRecordList" role="listbox" aria-label="Registered scientific datasets">
+              <div class="loading">Loading evidence records…</div>
+            </div>
+            <article class="ecr-detail" id="ecrDetail" aria-live="polite">
+              <div class="ecr-detail-empty"><b>Select an evidence record</b><p>Coverage, source files, integrity hashes, linked views and scientific limits will appear here.</p></div>
+            </article>
+          </div>
+          <div id="ecrMessage" class="ecr-message" role="status" aria-live="polite"></div>
+        </div>
       </section>
       <section class="section" id="integrity"><div class="section-head"><div><div class="eyebrow">06 / EVIDENCE INTEGRITY</div><h2>Data provenance</h2><p>Current source and limitations reported by the backend.</p></div></div><article class="panel integrity-panel"><div class="integrity-row"><span class="check">✓</span><div><b>Candidate summary loaded from repository</b><p id="sourcePath">Waiting for API…</p></div><span class="tag">SOURCE FILE</span></div><div class="integrity-row"><span class="warn">!</span><div><b>Physical validation not established</b><p>No claim of physical feasibility certification is made by this UI.</p></div><span class="tag warning">NOT CERTIFIED</span></div><div class="integrity-row"><span class="warn">!</span><div><b>QUBO → physical objective mapping</b><p>The composition-only objective maps to the two-MOX constraint but gives all six feasible layouts equal zero energy; the legacy burnup-state encoding has no defensible mapping to this C5G7 UO₂/MOX case.</p></div><span class="tag warning">PHYSICS NOT ENCODED</span></div><div id="apiError" class="error" hidden></div></article>
         <article class="panel paper-export-panel">

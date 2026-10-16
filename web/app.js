@@ -90,7 +90,7 @@ if(typeof window.addEventListener==="function"){
   core3dLoadFailed=true;
   const status=$("core3dStatus");
   if(status)status.textContent="THREE.JS CDN UNAVAILABLE · 2D FALLBACK";
-  if(currentGeometryRow&&!geometryArtifactActive)selectCoreView("2d");
+  if(currentGeometryRow&&!geometryArtifactActive)setCoreGeometryMode("2d");
  });
 }
 
@@ -558,6 +558,13 @@ function bindPaperFigureExports(){
  });
 }
 bindPaperFigureExports();
+function runCandidateVisual(name,renderer){
+ try{renderer();}
+ catch(error){
+  console.error("[CB-PFR] Candidate data loaded; optional view failed:",name,error);
+  showError("Candidate records remain loaded; "+name+" did not render: "+String(error.message||error)+". Inspect this panel's status/provenance.");
+ }
+}
 function showCandidate(){
  const selector=$("candidateSelect");
  const id=String(selector?.value??"");
@@ -566,12 +573,13 @@ function showCandidate(){
  $("selectedRecordTag").classList.remove("warning");
  $("layoutView").innerHTML=layoutCells(row.layout_signature);
  $("layoutCaption").textContent=label(row)+" · 3 independent seeds "+displayValue(row.seed,"not recorded")+" · exploratory only, not a winner claim · signature "+displayValue(row.layout_signature,"not recorded");
+ // Commit scalar candidate evidence before invoking optional chart renderers.
  drawSelectedCandidate(row);
  geometryArtifactActive=false;
- drawModelGeometry(row);
- drawCandidateChart();
- drawOtherCharts();
- drawAssemblyField();
+ runCandidateVisual("source geometry view",()=>drawModelGeometry(row));
+ runCandidateVisual("candidate comparison chart",drawCandidateChart);
+ runCandidateVisual("transport indicator charts",drawOtherCharts);
+ runCandidateVisual("assembly-integrated proxy map",drawAssemblyField);
 }
 function drawCandidateChart(){
  const key=$("metricSelect").value;
@@ -635,6 +643,13 @@ async function init(){
  setupNavigation();
  const reloadButton=$("reloadEvidence");
  if(reloadButton)reloadButton.addEventListener("click",async()=>{reloadButton.disabled=true;reloadButton.textContent="↻ Reloading…";meshData=null;await initMesh();await initAxial3D();reloadButton.disabled=false;reloadButton.textContent="↻ Reload spatial tally";});
+ const runOptionalEvidenceView=async(name,initializer)=>{
+  try{await initializer();}
+  catch(viewError){
+   console.error("[CB-PFR] Optional evidence view failed:",name,viewError);
+   showError("Candidate evidence remains loaded; "+name+" could not initialize: "+String(viewError.message||viewError)+". Check this view's source status below.");
+  }
+ };
  try{
   const response=await fetch("/api/candidates",{headers:{Accept:"application/json"}});
   if(!response.ok)throw new Error("API returned HTTP "+response.status);
@@ -656,23 +671,39 @@ async function init(){
     $("metricSelect").innerHTML='<option value="keff_mean">Mean k-effective</option><option value="fission_peaking_mean">Mean fission-peaking factor</option>';
     $("metricSelect").addEventListener("change",drawCandidateChart);
   }
-  // Render the recorded candidate's scalar details immediately. Geometry manifest
-  // parsing/network access is slower and should not block the core evidence card.
-  showCandidate();drawOtherCharts();
-  await initModelGeometry();
-  // Re-bind the detailed model view now that XML-derived geometry is available.
-  showCandidate();drawOtherCharts();
-  await initAssembly();
-  await initGeometry();
-  await initMesh();
-  await initAxial3D();
+  // Render the recorded candidate's scalar details immediately. Geometry, assembly,
+  // and tally modules are secondary views: their failures must never erase a valid
+  // candidate record or blank its inspector on a narrow/mobile viewport.
+  showCandidate();runCandidateVisual("transport indicator charts",drawOtherCharts);
+  await runOptionalEvidenceView("OpenMC model geometry",async()=>{
+   await initModelGeometry();
+   // Re-bind the detailed model view only after source geometry has been requested.
+   showCandidate();runCandidateVisual("transport indicator charts",drawOtherCharts);
+  });
+  await runOptionalEvidenceView("Assembly-integrated proxy view",initAssembly);
+  await runOptionalEvidenceView("Geometry artifact inventory",initGeometry);
+  await runOptionalEvidenceView("Planar OpenMC spatial tally",initMesh);
+  await runOptionalEvidenceView("Axial OpenMC volume tally",initAxial3D);
  }catch(error){
-  showError("Could not load recorded evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
-  clearCandidateSelection("Candidate evidence unavailable: "+error.message);
-  $("sourcePath").textContent="API unavailable";
-  await initGeometry();
-  await initMesh();
-  await initAxial3D();
+  if(records.length && $("candidateSelect")?.options.length){
+   // An ancillary view failure must not erase candidate rows already read from the API.
+   showError("Candidate records were loaded, but a workstation view failed during initialization: "+String(error.message||error)+". Candidate metrics are retained; inspect individual view status/provenance.");
+   const selector=$("candidateSelect");
+   const selected=records.find(item=>String(item.candidate_id)===String(selector.value))||records[0];
+   if(selected){
+    selector.value=String(selected.candidate_id);
+    $("layoutView").innerHTML=layoutCells(selected.layout_signature);
+    $("layoutCaption").textContent=label(selected)+" · candidate values retained after a view initialization error.";
+    drawSelectedCandidate(selected);
+   }
+  }else{
+   showError("Could not load recorded candidate evidence: "+error.message+". Start the local Python server from the repository root and check the source CSV path.");
+   clearCandidateSelection("Candidate evidence unavailable: "+error.message);
+   $("sourcePath").textContent="Candidate API unavailable";
+  }
+  await runOptionalEvidenceView("Geometry artifact inventory",initGeometry);
+  await runOptionalEvidenceView("Planar OpenMC spatial tally",initMesh);
+  await runOptionalEvidenceView("Axial OpenMC volume tally",initAxial3D);
  }
 }
 document.addEventListener("DOMContentLoaded",init);
