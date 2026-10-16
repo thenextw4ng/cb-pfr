@@ -45,8 +45,8 @@ class WorkstationStage0Stage1Tests(unittest.TestCase):
     def test_stage0_regression_rules_do_not_allow_fake_spatial_fallbacks(self):
         self.assertIn("No substitute geometry is drawn", self.app_js)
         self.assertIn("No 2-D fallback is used", self.server)
-        self.assertIn("no synthetic volume or 2D extrusion", self.app_js)
-        self.assertIn("SYNTHETIC METHOD EVIDENCE", self.ecr_js)
+        self.assertIn("No synthetic volume or 2D extrusion", self.app_js)
+        self.assertIn("Synthetic method evidence", self.ecr_js)
         self.assertIn("recorded-evidence-only", self.server)
 
     def test_stage1_evidence_control_room_is_separate_and_reachable(self):
