@@ -433,16 +433,12 @@
     const font={...(base.font||{}),family:"Arial, Helvetica, sans-serif",size:17,color:C.ink};
     const annotations=Array.isArray(base.annotations)?base.annotations.map(a=>({...a,font:{...(a.font||{}),color:C.ink}})):[];
     const source= bundle.meta;
-    const provenanceLine=[
-      "Dataset: "+source.dataset_id,
-      "Run ID: "+source.run_id,
-      "Workflow run ID: "+source.workflow_run_id,
-      "Seed: "+source.seed,
-      "Evidence: "+source.evidence_status,
-      "Source hash: "+JSON.stringify(source.source_hashes)
-    ].join(" · ");
-    annotations.push({xref:"paper",yref:"paper",x:0.01,y:1.075,xanchor:"left",yanchor:"bottom",showarrow:false,align:"left",
-      text:safe(provenanceLine),font:{family:"Arial, Helvetica, sans-serif",size:12,color:C.muted}});
+    const provenanceLine1=["Dataset: "+source.dataset_id,"Run ID: "+source.run_id,"Workflow: "+source.workflow_run_id,"Seed: "+source.seed,"Evidence: "+source.evidence_status].join(" · ");
+    const provenanceLine2=["Source hash: "+JSON.stringify(source.source_hashes),"Data SHA-256: "+bundle.payload.integrity.data_sha256,"Config SHA-256: "+bundle.payload.integrity.config_sha256].join(" · ");
+    annotations.push({xref:"paper",yref:"paper",x:0.01,y:1.12,xanchor:"left",yanchor:"bottom",showarrow:false,align:"left",
+      text:safe(provenanceLine1),font:{family:"Arial, Helvetica, sans-serif",size:12,color:C.muted}});
+    annotations.push({xref:"paper",yref:"paper",x:0.01,y:1.07,xanchor:"left",yanchor:"bottom",showarrow:false,align:"left",
+      text:safe(provenanceLine2),font:{family:"Arial, Helvetica, sans-serif",size:12,color:C.muted}});
     annotations.push({xref:"paper",yref:"paper",x:0.01,y:-0.24,xanchor:"left",yanchor:"top",showarrow:false,align:"left",
       text:safe(bundle.caption),font:{family:"Arial, Helvetica, sans-serif",size:12,color:C.ink}});
     const out={...base,autosize:false,width:OUT_W,height:OUT_H,paper_bgcolor:"#ffffff",plot_bgcolor:"#ffffff",font,
