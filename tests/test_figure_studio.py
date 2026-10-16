@@ -81,6 +81,8 @@ class FigureStudioTests(unittest.TestCase):
         self.assertIn("x_center_cm", self.js)
         self.assertIn("individual seed IDs are not embedded in this plot payload", self.js)
         self.assertIn("toDataURL", self.js)
+        self.assertIn("csv:makeCsv({figure_id:id,figure_title:fig.title", self.js)
+        self.assertIn("preserveDrawingBuffer: true", (WEB / "core_geometry_3d.js").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
