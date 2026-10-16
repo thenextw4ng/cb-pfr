@@ -1,0 +1,4 @@
+# Minimal dependencies for the read-only HTML workstation backend.
+# The frontend loads Plotly.js and Three.js from their pinned CDNs.
+numpy>=1.26,<3
+h5py>=3.10,<4
