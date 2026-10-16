@@ -926,7 +926,7 @@ def read_evidence_index():
                 "dimension_xyz": dims,
                 "array_layout": summary.get("mesh", {}).get("array_layout"),
                 "statepoint_sha256": statepoint.get("sha256"),
-                "workflow_run_id": json.loads(summary_path.read_text(encoding="utf-8")).get("source", {}).get("workflow_run_id") if False else None,
+                "workflow_run_id": summary.get("workflow_run_id"),
                 "seed": statepoint.get("seed"),
                 "batches": statepoint.get("n_batches"),
                 "inactive_batches": statepoint.get("n_inactive"),
@@ -1087,7 +1087,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(read_mesh_evidence(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, KeyError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
-        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/core_geometry_3d.js": WEB_ROOT / "core_geometry_3d.js", "/research_snapshot_ui.js": WEB_ROOT / "research_snapshot_ui.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json", "/RESEARCH_DATA_CROSSWALK_2026-10-16.md": WEB_ROOT / "RESEARCH_DATA_CROSSWALK_2026-10-16.md"}
+        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/core_geometry_3d.js": WEB_ROOT / "core_geometry_3d.js", "/research_snapshot_ui.js": WEB_ROOT / "research_snapshot_ui.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json", "/RESEARCH_DATA_CROSSWALK_2026-10-16.md": WEB_ROOT / "RESEARCH_DATA_CROSSWALK_2026-10-16.md", "/evidence_control_room.js": WEB_ROOT / "evidence_control_room.js"}
         file_path = routes.get(path)
         if file_path is None:
             return self._send(404, "Not found", "text/plain; charset=utf-8")
