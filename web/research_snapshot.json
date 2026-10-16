@@ -1,0 +1,594 @@
+{
+  "schema_version": "1.0",
+  "snapshot_date": "2026-10-16",
+  "repository": "https://github.com/thenextw4ng/cb-pfr",
+  "paper": {
+    "title": "CB-PFR: An Auditable Selection Layer for Noisy Optimization Candidates, with a Calibration Protocol and an Explicit Operating Envelope",
+    "source_file": "CBPFR_ICIMCIS_revised(2).pdf",
+    "source_sha256": "55645d738af26bfe9d4ad9eae4ca8f7ab2c83f02da36e6f4ca825e7d9c34ac9b",
+    "pages": 6,
+    "scope": "Methodological paper; all method-comparison regimes are synthetic. It separately reports the current C5G7/OpenMC track as non-discriminating, non-certifying substrate evidence.",
+    "t7": {
+      "test_pools_per_regime": 20000,
+      "development_pools_for_tuning": 5000,
+      "regimes": 8,
+      "candidates_default": 40,
+      "small_pool_candidates": 12,
+      "observations_per_candidate": 4,
+      "metrics": 2,
+      "primary_endpoint": "Selected candidate is truly feasible and within 0.10 of the best truly feasible energy in the pool.",
+      "columns": [
+        "Point estimate",
+        "CB-PFR z=1",
+        "CB-PFR tuned z*",
+        "Uniform margin tuned m*",
+        "Replicate-SE bound tuned",
+        "Adaptive R&S + point",
+        "Adaptive R&S + CB-PFR z*"
+      ],
+      "rows": [
+        {
+          "regime": "Coupled",
+          "pointPrimary": 65,
+          "pointFeasible": 72.4,
+          "cbZ1Primary": 61.2,
+          "cbZ1Feasible": 93.3,
+          "cbZstarPrimary": 67.2,
+          "cbZstarFeasible": 79.1,
+          "uniformPrimary": 67.2,
+          "uniformFeasible": 79.5,
+          "sampleSEPrimary": 66.7,
+          "sampleSEFeasible": 83.8,
+          "adaptivePointPrimary": 83.4,
+          "adaptivePointFeasible": 87.2,
+          "adaptiveCBPrimary": 83.9,
+          "adaptiveCBFeasible": 89.8
+        },
+        {
+          "regime": "Decoupled",
+          "pointPrimary": 75,
+          "pointFeasible": 81.2,
+          "cbZ1Primary": 73.2,
+          "cbZ1Feasible": 95.5,
+          "cbZstarPrimary": 77.1,
+          "cbZstarFeasible": 90,
+          "uniformPrimary": 76.5,
+          "uniformFeasible": 88.2,
+          "sampleSEPrimary": 76.8,
+          "sampleSEFeasible": 89,
+          "adaptivePointPrimary": 90.5,
+          "adaptivePointFeasible": 93.1,
+          "adaptiveCBPrimary": 90.4,
+          "adaptiveCBFeasible": 95.8
+        },
+        {
+          "regime": "Homogeneous",
+          "pointPrimary": 74.9,
+          "pointFeasible": 81.2,
+          "cbZ1Primary": 72.3,
+          "cbZ1Feasible": 95.6,
+          "cbZstarPrimary": 77.1,
+          "cbZstarFeasible": 90,
+          "uniformPrimary": 77.1,
+          "uniformFeasible": 88.6,
+          "sampleSEPrimary": 76.6,
+          "sampleSEFeasible": 85.7,
+          "adaptivePointPrimary": 90.1,
+          "adaptivePointFeasible": 92.8,
+          "adaptiveCBPrimary": 90.3,
+          "adaptiveCBFeasible": 94.3
+        },
+        {
+          "regime": "Under-reported",
+          "pointPrimary": 75.3,
+          "pointFeasible": 81.4,
+          "cbZ1Primary": 76.6,
+          "cbZ1Feasible": 91.1,
+          "cbZstarPrimary": 77.2,
+          "cbZstarFeasible": 89.1,
+          "uniformPrimary": 76.4,
+          "uniformFeasible": 87.9,
+          "sampleSEPrimary": 77,
+          "sampleSEFeasible": 89.1,
+          "adaptivePointPrimary": 90.9,
+          "adaptivePointFeasible": 95.8,
+          "adaptiveCBPrimary": 91.1,
+          "adaptiveCBFeasible": 96.8
+        },
+        {
+          "regime": "Heavy tail",
+          "pointPrimary": 77.7,
+          "pointFeasible": 83.3,
+          "cbZ1Primary": 73.7,
+          "cbZ1Feasible": 96.4,
+          "cbZstarPrimary": 79.6,
+          "cbZstarFeasible": 88.1,
+          "uniformPrimary": 78.8,
+          "uniformFeasible": 90,
+          "sampleSEPrimary": 80.2,
+          "sampleSEFeasible": 90.5,
+          "adaptivePointPrimary": 90.5,
+          "adaptivePointFeasible": 93.2,
+          "adaptiveCBPrimary": 91.1,
+          "adaptiveCBFeasible": 95
+        },
+        {
+          "regime": "High noise",
+          "pointPrimary": 57.9,
+          "pointFeasible": 65.5,
+          "cbZ1Primary": 54.4,
+          "cbZ1Feasible": 90.9,
+          "cbZstarPrimary": 60.9,
+          "cbZstarFeasible": 80.5,
+          "uniformPrimary": 59.9,
+          "uniformFeasible": 77.2,
+          "sampleSEPrimary": 60.6,
+          "sampleSEFeasible": 79.3,
+          "adaptivePointPrimary": 77.4,
+          "adaptivePointFeasible": 82,
+          "adaptiveCBPrimary": 77.6,
+          "adaptiveCBFeasible": 85.3
+        },
+        {
+          "regime": "Flat objective",
+          "pointPrimary": 95.6,
+          "pointFeasible": 95.6,
+          "cbZ1Primary": 99.1,
+          "cbZ1Feasible": 99.1,
+          "cbZstarPrimary": 100,
+          "cbZstarFeasible": 100,
+          "uniformPrimary": 100,
+          "uniformFeasible": 100,
+          "sampleSEPrimary": 99.8,
+          "sampleSEFeasible": 99.8,
+          "adaptivePointPrimary": 94.4,
+          "adaptivePointFeasible": 94.4,
+          "adaptiveCBPrimary": 100,
+          "adaptiveCBFeasible": 100
+        },
+        {
+          "regime": "Small pool (K=12)",
+          "pointPrimary": 81.2,
+          "pointFeasible": 88.2,
+          "cbZ1Primary": 76,
+          "cbZ1Feasible": 97.4,
+          "cbZstarPrimary": 81.5,
+          "cbZstarFeasible": 91.4,
+          "uniformPrimary": 81.2,
+          "uniformFeasible": 88.2,
+          "sampleSEPrimary": 81.5,
+          "sampleSEFeasible": 91.2,
+          "adaptivePointPrimary": 89.4,
+          "adaptivePointFeasible": 93.5,
+          "adaptiveCBPrimary": 89.4,
+          "adaptiveCBFeasible": 93.5
+        }
+      ],
+      "pairedMatched95": [
+        {
+          "regime": "Coupled",
+          "delta": -1.1,
+          "low": -1.3,
+          "high": -0.9
+        },
+        {
+          "regime": "Decoupled",
+          "delta": 5.5,
+          "low": 5,
+          "high": 6
+        },
+        {
+          "regime": "Homogeneous",
+          "delta": 0,
+          "low": 0,
+          "high": 0
+        },
+        {
+          "regime": "Under-reported",
+          "delta": 5.7,
+          "low": 5.3,
+          "high": 6.2
+        },
+        {
+          "regime": "Heavy tail",
+          "delta": 7.2,
+          "low": 6.8,
+          "high": 7.7
+        },
+        {
+          "regime": "High noise",
+          "delta": 15.6,
+          "low": 14.9,
+          "high": 16.2
+        },
+        {
+          "regime": "Flat objective",
+          "delta": 0,
+          "low": 0,
+          "high": 0
+        },
+        {
+          "regime": "Small pool (K=12)",
+          "delta": 2.1,
+          "low": 1.7,
+          "high": 2.5
+        }
+      ],
+      "hypotheses": [
+        {
+          "id": "H1",
+          "hypothesis": "z=1 beats point estimate on the primary endpoint in coupled and decoupled regimes",
+          "outcome": "−3.8 pp and −1.8 pp",
+          "verdict": "NOT SUPPORTED"
+        },
+        {
+          "id": "H2",
+          "hypothesis": "Replicate-based self-calibration restores bound coverage",
+          "outcome": "Coverage 88.0% → 97.3%; primary −2.9 pp; feasible +4.5 pp",
+          "verdict": "PARTLY SUPPORTED"
+        },
+        {
+          "id": "H3",
+          "hypothesis": "When uncertainty is homogeneous, CB-PFR and matched uniform margin select identically",
+          "outcome": "20,000 / 20,000 identical selections",
+          "verdict": "SUPPORTED"
+        },
+        {
+          "id": "H4",
+          "hypothesis": "Comparison with tuned margin and adaptive allocation",
+          "outcome": "Tuned-margin primary gain ≤1.0 pp; adaptive allocation improves primary endpoint by about 8–19 pp in 7/8 regimes",
+          "verdict": "MIXED; ALLOCATION IS STRONGER"
+        }
+      ],
+      "headlineFindings": [
+        "At z=1, truly feasible selections increase by about 3.5–25.3 percentage points versus point-estimate ranking across the eight synthetic regimes.",
+        "The primary feasible-and-near-optimal endpoint is lower for CB-PFR z=1 in six of eight regimes.",
+        "When both ranking rules are tuned for the primary endpoint, CB-PFR is within about 1 percentage point of a tuned uniform margin.",
+        "At a matched 95% feasibility target, CB-PFR gains 2.1–15.6 percentage points over uniform margin when uncertainty varies independently of objective desirability; it ties under homogeneous uncertainty and loses about 0.5–1.3 points in the coupled regime.",
+        "Self-calibration brings arbitrary-candidate bound coverage from 88.0% to 97.3% against a 97.5% nominal target, but selected-candidate coverage remains below nominal.",
+        "All T7 regimes are author-generated synthetic data; T7 was self-registered in the working session, was not externally timestamped, and has not been independently replicated."
+      ],
+      "sourceNotes": [
+        "T7 values are transcribed from the supplied six-page revised PDF, SHA-256 recorded above.",
+        "These results are method-level synthetic evidence, not OpenMC observations or reactor-safety evidence.",
+        "The paper itself says that T7b matched-feasibility analysis is post hoc."
+      ]
+    }
+  },
+  "latestC5G7": {
+    "studyId": "CBPFR-C5G7-equal-budget-policy-replay-2026-10-16",
+    "workflowRun": 38853860378,
+    "workflowUrl": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38853860378",
+    "researchBranch": "research/c5g7-b0-prereg-b1-pilot-20261015",
+    "status": "COMPLETED_OFFLINE_REPLAY",
+    "workflowConclusion": "success",
+    "newOpenMCrunCount": 0,
+    "v2a": {
+      "expectedRuns": 1200,
+      "observedRuns": 1200,
+      "completeSixLayoutPools": 200,
+      "distinctSeedPools": 200,
+      "layouts": 6,
+      "settings": {
+        "batches": 800,
+        "inactive": 500,
+        "particlesPerBatch": 2000,
+        "threads": 1
+      },
+      "integrityPass": true,
+      "statepointHashesUnique": true,
+      "sharedMGXSHash": true,
+      "perRunConvergenceCertified": 0,
+      "status": "DATA INTEGRITY PASS; CONVERGENCE NOT CERTIFIED"
+    },
+    "highBudget": {
+      "runs": 60,
+      "runsPerLayout": 10,
+      "settings": {
+        "batches": 10000,
+        "inactive": 1000,
+        "particlesPerBatch": 10000,
+        "threads": 1
+      },
+      "objective": "F_fission = max(assembly-integrated fission rates) / mean(assembly-integrated fission rates)",
+      "note": "These are empirical reference means, not exact physical truth; convergence is not certified.",
+      "layoutReference": [
+        {
+          "layout": "MMUU",
+          "meanF": 1.2959470456032463,
+          "sdF": 0.0010894179051571186,
+          "n": 10
+        },
+        {
+          "layout": "MUMU",
+          "meanF": 1.2962157750046472,
+          "sdF": 0.0010575415479327018,
+          "n": 10
+        },
+        {
+          "layout": "MUUM",
+          "meanF": 1.3167249790054043,
+          "sdF": 0.0007264256740520237,
+          "n": 10
+        },
+        {
+          "layout": "UMMU",
+          "meanF": 1.8669460521613712,
+          "sdF": 0.0012607717981306008,
+          "n": 10
+        },
+        {
+          "layout": "UMUM",
+          "meanF": 1.8155574178344613,
+          "sdF": 0.001010412724556401,
+          "n": 10
+        },
+        {
+          "layout": "UUMM",
+          "meanF": 1.8157640340855354,
+          "sdF": 0.0006312901489392357,
+          "n": 10
+        }
+      ]
+    },
+    "v2aLayoutSummary": [
+      {
+        "layout": "MMUU",
+        "n": 200,
+        "meanF": 1.295876218603917,
+        "sdF": 0.012035862676115673,
+        "meanK": 1.1435888621917953,
+        "sdK": 0.001145818356745872,
+        "convergenceReviewRequired": 200
+      },
+      {
+        "layout": "MUMU",
+        "n": 200,
+        "meanF": 1.296181651376815,
+        "sdF": 0.011395019691620618,
+        "meanK": 1.14377916398696,
+        "sdK": 0.0010348863167024332,
+        "convergenceReviewRequired": 200
+      },
+      {
+        "layout": "MUUM",
+        "n": 200,
+        "meanF": 1.3162833318148246,
+        "sdF": 0.010496548250231916,
+        "meanK": 1.156211233956833,
+        "sdK": 0.0011551622995511917,
+        "convergenceReviewRequired": 200
+      },
+      {
+        "layout": "UMMU",
+        "n": 200,
+        "meanF": 1.8645710258649049,
+        "sdF": 0.01331892344545688,
+        "meanK": 1.1862686481139648,
+        "sdK": 0.0012084621409106583,
+        "convergenceReviewRequired": 200
+      },
+      {
+        "layout": "UMUM",
+        "n": 200,
+        "meanF": 1.8154794484544645,
+        "sdF": 0.012607740403699864,
+        "meanK": 1.2045930126562026,
+        "sdK": 0.0013188093737516809,
+        "convergenceReviewRequired": 200
+      },
+      {
+        "layout": "UUMM",
+        "n": 200,
+        "meanF": 1.8126130114959977,
+        "sdF": 0.011160531472267464,
+        "meanK": 1.2044163972302593,
+        "sdK": 0.001324112919802714,
+        "convergenceReviewRequired": 200
+      }
+    ],
+    "policyReplay": {
+      "status": "COMPLETED_OFFLINE_REPLAY",
+      "decisionBlocks": 28,
+      "calibrationPools": 60,
+      "heldOutPools": 140,
+      "highBudgetRows": 60,
+      "lowBudgetRows": 1200,
+      "budgetPerDecision": 18,
+      "empiricalReference": "Mean of high-budget replicates 6–10 per layout; noisy empirical reference, not exact physical truth.",
+      "policies": [
+        {
+          "policy": "Adaptive R&S (equal budget)",
+          "matchRate": 0.5,
+          "meanRegret": 0.0005467443502457092,
+          "medianRegret": 0.0005467443502457092,
+          "ciRegretDifferenceVsPoint": [
+            -0.00035147851087224166,
+            -0.00003905316787469352
+          ],
+          "meanEvaluations": 18,
+          "screenPassRate": 1
+        },
+        {
+          "policy": "CB-PFR relative screen",
+          "matchRate": 0.32142857142857145,
+          "meanRegret": 0.0007420101896191768,
+          "medianRegret": 0.0010934887004914184,
+          "ciRegretDifferenceVsPoint": [
+            0,
+            0
+          ],
+          "meanEvaluations": 18,
+          "screenPassRate": 1
+        },
+        {
+          "policy": "Point estimate (equal allocation)",
+          "matchRate": 0.32142857142857145,
+          "meanRegret": 0.0007420101896191768,
+          "medianRegret": 0.0010934887004914184,
+          "ciRegretDifferenceVsPoint": [
+            0,
+            0
+          ],
+          "meanEvaluations": 18,
+          "screenPassRate": 1
+        },
+        {
+          "policy": "Uniform margin (equal allocation)",
+          "matchRate": 0.32142857142857145,
+          "meanRegret": 0.0007420101896191768,
+          "medianRegret": 0.0010934887004914184,
+          "ciRegretDifferenceVsPoint": [
+            0,
+            0
+          ],
+          "meanEvaluations": 18,
+          "screenPassRate": 1
+        }
+      ],
+      "interpretation": [
+        "This is an offline replay of archived OpenMC observations; the replay launched zero new OpenMC runs.",
+        "All methods received the same 18-evaluation budget per decision block.",
+        "CB-PFR, point-estimate, and uniform-margin policies produced identical aggregate match and regret metrics in this replay.",
+        "Adaptive R&S had a higher empirical-best match rate and lower mean regret than the three equal-allocation policies in this sample.",
+        "The empirical reference is constructed from high-budget model runs and is not exact physical truth. Source convergence remains uncertified."
+      ]
+    },
+    "links": [
+      {
+        "label": "Final equal-budget replay · GitHub Actions",
+        "url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38853860378"
+      },
+      {
+        "label": "C5G7 research protocol (2026-10-16)",
+        "url": "https://github.com/thenextw4ng/cb-pfr/blob/research/c5g7-b0-prereg-b1-pilot-20261015/docs/experiments/CBPFR_C5G7_CONVERGENCE_SELECTION_QUBO_PROTOCOL_2026-10-16.md"
+      },
+      {
+        "label": "Artifact inventory audit",
+        "url": "https://github.com/thenextw4ng/cb-pfr/blob/research/c5g7-b0-prereg-b1-pilot-20261015/reports/C5G7_V2A_ARTIFACT_INVENTORY_AUDIT_2026-10-16.md"
+      }
+    ]
+  },
+  "syntheticBenchmarks": {
+    "t2": {
+      "label": "T2 · 40,000 pools",
+      "pools": 40000,
+      "scenarios": [
+        {
+          "name": "Calibrated heteroscedastic",
+          "point": 93.84,
+          "cbpfr": 95.47,
+          "uniform": 93.84
+        },
+        {
+          "name": "Calibrated homoscedastic",
+          "point": 95.57,
+          "cbpfr": 95.57,
+          "uniform": 95.57
+        },
+        {
+          "name": "Under-reported uncertainty",
+          "point": 93.56,
+          "cbpfr": 93.88,
+          "uniform": 93.56
+        },
+        {
+          "name": "Shifted / near-threshold",
+          "point": 95.22,
+          "cbpfr": 95.22,
+          "uniform": 95.22
+        }
+      ],
+      "decision": "PRESPECIFIED PRACTICAL-EFFECT THRESHOLD NOT MET",
+      "minEffectPp": 2,
+      "vsPoint": {
+        "deltaPp": 0.4875,
+        "ci": [
+          0.3725,
+          0.6
+        ],
+        "adjustedP": 1.165e-16
+      },
+      "vsUniform": {
+        "deltaPp": 0.4875,
+        "ci": [
+          0.37,
+          0.6025
+        ],
+        "adjustedP": 1.165e-16
+      },
+      "sourceUrl": "https://github.com/thenextw4ng/cb-pfr/blob/research/fixed-budget-ranking-selection-benchmark/reports/CB_PFR_RS_SYNTHETIC_CONFIRMATORY_RESULTS_2026-10-11.md"
+    },
+    "t3": {
+      "label": "T3 · 6,000 pools",
+      "pools": 6000,
+      "regimes": [
+        {
+          "name": "Calibrated low",
+          "point": 93.7,
+          "cbpfr": 97.8,
+          "uniform": 100,
+          "deltaPoint": 4.1,
+          "deltaUniform": -2.2
+        },
+        {
+          "name": "Calibrated moderate",
+          "point": 91.7,
+          "cbpfr": 97.1,
+          "uniform": 98.7,
+          "deltaPoint": 5.4,
+          "deltaUniform": -1.6
+        },
+        {
+          "name": "Calibrated high",
+          "point": 92.3,
+          "cbpfr": 96.9,
+          "uniform": 94.6,
+          "deltaPoint": 4.6,
+          "deltaUniform": 2.3
+        },
+        {
+          "name": "Under-reported",
+          "point": 92.2,
+          "cbpfr": 95.8,
+          "uniform": 98.3,
+          "deltaPoint": 3.6,
+          "deltaUniform": -2.5
+        },
+        {
+          "name": "Heavy tail",
+          "point": 92.1,
+          "cbpfr": 96.3,
+          "uniform": 96.9,
+          "deltaPoint": 4.2,
+          "deltaUniform": -0.6
+        },
+        {
+          "name": "No feasible candidate",
+          "point": 0,
+          "cbpfr": 0,
+          "uniform": 0,
+          "deltaPoint": 0,
+          "deltaUniform": 0
+        }
+      ],
+      "decision": "CB-PFR beats point estimate in calibrated regimes, but does not beat tuned uniform-margin baseline in all primary regimes.",
+      "sourceUrl": "https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-effectiveness-benchmark-20261015/reports/cbpfr_effectiveness_benchmark_2026-10-15.md"
+    }
+  },
+  "claimBoundary": {
+    "supported": [
+      "CB-PFR is implemented as an auditable, deterministic post-optimization ranking/screening rule.",
+      "The synthetic method paper characterizes an operating envelope: benefits depend on uncertainty structure and objective trade-offs.",
+      "The latest C5G7 campaign's data-integrity audit passed for 1,200 low-budget records and 60 high-budget reference records; an equal-budget offline policy replay completed."
+    ],
+    "notEstablished": [
+      "OpenMC source/eigenvalue convergence for the full campaign.",
+      "Official C5G7 benchmark acceptance or experimental validation of a real reactor.",
+      "A physically optimal/safe fuel layout.",
+      "General CB-PFR superiority over equal-allocation baselines on C5G7 data.",
+      "QUBO-to-physical-material mapping for the legacy burnup-state formulation.",
+      "Quantum hardware execution or quantum advantage."
+    ]
+  }
+}
