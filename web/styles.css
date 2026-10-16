@@ -710,3 +710,111 @@ html,body,.shell{max-width:100%;overflow-x:clip}
   .sidebar{max-width:100%;min-width:0}
   .main{width:100%;min-width:0;max-width:100%}
 }
+
+
+/* Product and institutional identity — prominent on first page load */
+.sidebar .brand{
+  display:block;
+  min-width:0;
+  padding:0 7px 30px;
+}
+.brand-lockup{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:8px;
+  max-width:100%;
+}
+.brand-wordmark{
+  display:block;
+  width:100%;
+  max-width:195px;
+  height:auto;
+  object-fit:contain;
+  object-position:left center;
+}
+.brand-lockup small{
+  display:block;
+  margin-top:0;
+  color:var(--muted);
+  font:9px "DM Mono",monospace;
+  letter-spacing:1.15px;
+}
+.institutional-branding{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+  margin:0 0 24px;
+}
+.institutional-brand-card{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  min-width:0;
+  min-height:112px;
+  padding:14px 18px;
+  overflow:hidden;
+  background:linear-gradient(130deg,#102638,#0c1b29);
+  border:1px solid #314b5d;
+  border-radius:10px;
+}
+.institutional-brand-card::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:3px;
+  background:var(--cyan);
+}
+.institutional-brand-card.eureka::before{background:var(--orange)}
+.institutional-logo{
+  display:block;
+  width:82px;
+  height:82px;
+  object-fit:contain;
+  flex:0 0 auto;
+}
+.institutional-brand-copy{min-width:0}
+.institutional-kicker{
+  color:var(--cyan);
+  font:9px "DM Mono",monospace;
+  letter-spacing:.8px;
+  line-height:1.5;
+  margin-bottom:6px;
+}
+.institutional-brand-card.eureka .institutional-kicker{color:var(--orange)}
+.institutional-brand-copy strong{
+  display:block;
+  font-size:clamp(12px,1vw,15px);
+  line-height:1.35;
+  letter-spacing:.1px;
+  overflow-wrap:anywhere;
+}
+.institutional-brand-copy small{
+  display:block;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.4;
+  margin-top:5px;
+}
+@media(max-width:1050px){
+  .institutional-brand-card{gap:11px;padding:12px}
+  .institutional-logo{width:70px;height:70px}
+  .institutional-kicker{font-size:8px}
+  .institutional-brand-copy strong{font-size:12px}
+}
+@media(max-width:680px){
+  .sidebar .brand{padding:0 0 12px}
+  .brand-wordmark{max-width:175px;width:100%}
+  .institutional-branding{gap:9px;margin-bottom:21px}
+  .institutional-brand-card{min-height:94px;gap:8px;padding:9px 10px}
+  .institutional-logo{width:48px;height:48px}
+  .institutional-kicker{font-size:7.4px;letter-spacing:.35px;margin-bottom:4px}
+  .institutional-brand-copy strong{font-size:10px}
+  .institutional-brand-copy small{display:none}
+}
+@media(max-width:390px){
+  .institutional-logo{width:42px;height:42px}
+  .institutional-brand-card{gap:6px;padding:8px}
+  .institutional-brand-copy strong{font-size:9px}
+}

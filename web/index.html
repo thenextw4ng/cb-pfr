@@ -52,7 +52,7 @@
 <body>
   <div class="shell">
     <aside class="sidebar">
-      <a class="brand" href="/"><span class="brand-mark">C</span><span>CB<span class="accent">·</span>PFR<small>SCIENTIFIC WORKSTATION</small></span></a>
+      <a class="brand" href="#overview" aria-label="CB-PFR Scientific Workstation home"><span class="brand-lockup"><img class="brand-wordmark" src="/assets/cb-pfr-wordmark.svg" alt="CB-PFR"><small>SCIENTIFIC WORKSTATION</small></span></a>
       <button class="mobile-nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="workspaceNav">☰ <span>WORKSPACE</span></button><div class="nav-label" id="workspaceNav">WORKSPACE</div>
       <a class="nav-item active" href="#overview" data-target="overview"><span>◫</span> Overview</a>
       <a class="nav-item" href="#evidence-control-room" data-target="evidence-control-room"><span>◉</span> Evidence control room</a>
@@ -69,6 +69,24 @@
       <div class="sidebar-bottom"><div class="live-dot"></div><div><b>Evidence-aware mode</b><small>Recorded repository data only</small></div></div>
     </aside>
     <main class="main" id="overview">
+      <section class="institutional-branding" aria-label="Institutional and competition affiliations">
+        <div class="institutional-brand-card school">
+          <img class="institutional-logo" src="/assets/sman1-karawang.svg" alt="Logo SMAN 1 Karawang" width="128" height="128">
+          <div class="institutional-brand-copy">
+            <div class="institutional-kicker">SCHOOL / RESEARCH AFFILIATION</div>
+            <strong>SMAN 1 KARAWANG</strong>
+            <small>Institutional affiliation</small>
+          </div>
+        </div>
+        <div class="institutional-brand-card eureka">
+          <img class="institutional-logo" src="/assets/eureka-itb-2026.svg" alt="Logo EUREKA!" width="128" height="128">
+          <div class="institutional-brand-copy">
+            <div class="institutional-kicker">RESEARCH COMPETITION</div>
+            <strong>EUREKA! ITB 2026</strong>
+            <small>Research competition</small>
+          </div>
+        </div>
+      </section>
       <header class="topbar"><div><div class="eyebrow">RESEARCH CONTROL ROOM / 01</div><h1>Physical Feasibility <span>Ranking Workbench</span></h1><p class="lede">Inspect candidate configurations, recorded transport indicators, uncertainty, and evidence integrity in one scientific workspace.</p></div><div class="status-pill"><i></i> EXPLORATORY</div></header>
       <div class="notice"><b>SCIENTIFIC BOUNDARY</b><span>This dashboard displays recorded evidence. It does not launch OpenMC, infer missing spatial fields, or certify a physical design.</span></div>
       <div class="renderer-stack-strip" role="group" aria-label="Visualization renderer status">
