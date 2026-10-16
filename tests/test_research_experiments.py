@@ -8,6 +8,7 @@ import random
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,7 +61,7 @@ class ResearchExperimentTests(unittest.TestCase):
                         w.writerow({"stage": stage[sig], "signature": sig, "replicate": rep, "batches": 10000,
                                     "inactive": 1000, "particles": 10000, "F_fission": score})
             argv = ["run_equal_budget_c5g7_selection", "--v2a-csv", str(low_path), "--high-budget-csv", str(high_path), "--outdir", str(out)]
-            with unittest.mock.patch.object(sys, "argv", argv):
+            with mock.patch.object(sys, "argv", argv):
                 with contextlib.redirect_stdout(io.StringIO()):
                     rc = m.main()
             self.assertEqual(rc, 0)
