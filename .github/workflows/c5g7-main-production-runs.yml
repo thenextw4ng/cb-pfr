@@ -36,8 +36,104 @@ jobs:
           path: /tmp/campaign_plan.json
           retention-days: 30
 
-  production-run:
+  entropy-mesh-preflight:
     needs: seed-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUN_ID: entropy-mesh-preflight
+      CANDIDATE_ID: c5g7-2x2-UMMU
+      UCX_TLS: self,tcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-entropy-preflight
+          create-args: python=3.12 openmc=0.16.0
+          cache-environment: true
+      - name: Prepare pinned upstream C5G7 source
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-preflight
+      - name: Run short entropy-mesh preflight before production matrix
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/night-results/$RUN_ID"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_layout.py \
+            --source-root /tmp/mit-crpg-preflight \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches 100 --inactive 10 --particles 1000 --threads 1 \
+            --seed 20261015 --candidate-ids "$CANDIDATE_ID" --source good
+          mkdir -p "$ROUND/analysis"
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary "$ROUND/STUDY_SUMMARY.json" \
+            --out "$ROUND/analysis/raw_hdf5_audit.json" --expected-candidates 1
+          python - <<'PY'
+          import json, math, os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          root = Path(os.environ["GITHUB_WORKSPACE"]) / "night-results" / os.environ["RUN_ID"]
+          cid = os.environ["CANDIDATE_ID"]
+          case = root / cid
+          study = json.loads((root / "STUDY_SUMMARY.json").read_text())
+          run = study["cases"][0]
+          manifest = json.loads((case / "RUN_MANIFEST.json").read_text())
+          mesh_audit = json.loads((case / "model/2d/entropy_mesh_audit.json").read_text())
+          raw = json.loads((root / "analysis/raw_hdf5_audit.json").read_text())
+          settings = ET.parse(case / "model/2d/settings.xml").getroot()
+          entropy_id = settings.findtext("entropy_mesh")
+          mesh = next((m for m in settings.findall("mesh") if m.get("id") == entropy_id), None)
+          assert run["physical_results"]["status"] == "completed", run.get("physical_results", {})
+          assert manifest["openmc_version"] == "0.16.0", manifest.get("openmc_version")
+          assert mesh_audit.get("derived_from_geometry_bounding_box") is True, mesh_audit
+          assert mesh_audit.get("z_axis_unbounded") is True, mesh_audit
+          assert mesh_audit.get("entropy_dimension") == [24, 24], mesh_audit
+          assert len(mesh_audit.get("entropy_lower_left", [])) == 2, mesh_audit
+          assert len(mesh_audit.get("entropy_upper_right", [])) == 2, mesh_audit
+          assert mesh_audit.get("padding_cm") == 0.01, mesh_audit
+          geometry_lower = mesh_audit["geometry_lower_xy"]
+          geometry_upper = mesh_audit["geometry_upper_xy"]
+          entropy_lower = mesh_audit["entropy_lower_left"]
+          entropy_upper = mesh_audit["entropy_upper_right"]
+          assert all(math.isclose(a, b - 0.01, rel_tol=0.0, abs_tol=1e-10) for a, b in zip(entropy_lower, geometry_lower)), mesh_audit
+          assert all(math.isclose(a, b + 0.01, rel_tol=0.0, abs_tol=1e-10) for a, b in zip(entropy_upper, geometry_upper)), mesh_audit
+          assert mesh is not None, "Entropy mesh entry missing from settings.xml"
+          assert [int(x) for x in mesh.findtext("dimension", "").split()] == [24, 24], ET.tostring(mesh, encoding="unicode")
+          assert len(mesh.findtext("lower_left", "").split()) == 2, ET.tostring(mesh, encoding="unicode")
+          assert len(mesh.findtext("upper_right", "").split()) == 2, ET.tostring(mesh, encoding="unicode")
+          log_path = case / "openmc.log"
+          assert log_path.is_file(), "OpenMC log is missing"
+          warnings = log_path.read_text(errors="replace").count("Fission source site(s) outside of entropy box")
+          assert warnings == 0, f"entropy-mesh warnings: {warnings}"
+          assert raw.get("status") == "PASS", raw
+          statepoint = case / run["physical_results"]["statepoint"]
+          assert statepoint.is_file() and statepoint.stat().st_size > 0, str(statepoint)
+          print(json.dumps({
+              "preflight": "PASS",
+              "batches": 100,
+              "particles_per_batch": 1000,
+              "entropy_dimension": mesh_audit["entropy_dimension"],
+              "z_axis_unbounded": mesh_audit["z_axis_unbounded"],
+              "entropy_mesh_warnings": warnings,
+              "raw_hdf5_audit": raw["status"],
+              "statepoint_bytes": statepoint.stat().st_size,
+              "note": "Integrity gate only; not source-convergence or physical-validation certification."
+          }, indent=2))
+          PY
+      - name: Preserve entropy-mesh preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-night-production-entropy-mesh-preflight
+          path: night-results/entropy-mesh-preflight/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  production-run:
+    needs: [seed-plan, entropy-mesh-preflight]
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
@@ -155,7 +251,7 @@ jobs:
 
   production-aggregate:
     if: always()
-    needs: [seed-plan, production-run]
+    needs: [seed-plan, entropy-mesh-preflight, production-run]
     outputs:
       complete: ${{ steps.decide.outputs.complete }}
     runs-on: ubuntu-latest

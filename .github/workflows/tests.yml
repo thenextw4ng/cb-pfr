@@ -4,7 +4,11 @@ on:
   push:
     branches: [research/c5g7-b0-prereg-b1-pilot-20261015]
   pull_request:
-    branches: [main]
+    branches: [main, "research/**"]
+  push:
+    branches:
+      - "fix/c5g7-entropy-preflight-20261015"
+      - "research/c5g7-b0-prereg-b1-pilot-20261015"
   workflow_dispatch:
 
 jobs:

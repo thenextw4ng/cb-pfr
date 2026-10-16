@@ -116,6 +116,15 @@ class C5G7LayoutStudyTests(unittest.TestCase):
         self.assertIn("settings_file.seed = 620000", text)
         self.assertIn("entropy_mesh = openmc.RegularMesh()", text)
         self.assertIn("settings_file.entropy_mesh = entropy_mesh", text)
+        self.assertIn("entropy_mesh.dimension = [24, 24]", text)
+        self.assertIn("entropy_lower = [v - 0.01 for v in geometry_lower_xy]", text)
+        self.assertIn("entropy_upper = [v + 0.01 for v in geometry_upper_xy]", text)
+        self.assertIn("'entropy_dimension': [24, 24]", text)
+        self.assertIn("'z_axis_unbounded': True", text)
+        self.assertNotIn("entropy_mesh.dimension = [24, 24, 1]", text)
+        self.assertNotIn("entropy_lower[2] = -1.1", text)
+        self.assertNotIn("entropy_upper[2] = 1.1", text)
+
         self.assertNotIn("settings_file.entropy_lower_left", text)
         self.assertNotIn(CANONICAL_ASSIGNMENT, text)
 
