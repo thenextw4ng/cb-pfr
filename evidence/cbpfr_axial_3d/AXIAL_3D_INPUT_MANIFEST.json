@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "candidate_id": "c5g7-2x2-UMMU",
+  "layout_signature": "UMMU",
+  "status": "prepared_input_not_yet_transport_validated",
+  "source": {
+    "archive_sha256": "7a5e2a3daf87d0141ddc5e0922b88c4c0e2c3cb91af67ca6a2f50b6535e9862b",
+    "archived_builder_sha256": "b01d0b4656cdaf26ba0f1902686c576b7459998f71b50dcd37f3ebfc83ea0093",
+    "prepared_builder_sha256": "e422e900ba0af8fa5715802cdf722ffd561896fcbe106e11d222899aa07ea61c",
+    "upstream_builder_path": "model/3d/build-xml-3d.py"
+  },
+  "geometry_contract": {
+    "lattice_dimension_xyz": [
+      3,
+      3,
+      10
+    ],
+    "lattice_pitch_cm_xyz": [
+      21.42,
+      21.42,
+      21.42
+    ],
+    "mesh_dimension_xyz": [
+      51,
+      51,
+      30
+    ],
+    "mesh_lower_left_cm_xyz": [
+      -32.13,
+      -32.13,
+      -107.1
+    ],
+    "mesh_upper_right_cm_xyz": [
+      32.13,
+      32.13,
+      107.1
+    ],
+    "mesh_bin_width_cm_xyz": [
+      1.26,
+      1.26,
+      7.14
+    ],
+    "mesh_scores": [
+      "flux",
+      "fission",
+      "nu-fission"
+    ],
+    "z_bins_per_lattice_layer": 3
+  },
+  "inherited_axial_assumptions": {
+    "active_lattice_layers": 9,
+    "top_reflector_lattice_layers": 1,
+    "bottom_z_boundary": "reflective",
+    "top_z_boundary": "vacuum",
+    "note": "These are properties of the archived builder, not an independent benchmark sign-off. Review the axial arrangement and boundary conditions before making benchmark-acceptance claims."
+  },
+  "nonclaims": [
+    "No transport run has been evidenced by preparing these inputs alone.",
+    "The 3-D tally mesh records Monte Carlo estimates; it is not a power-normalized field.",
+    "This model does not include burnup, depletion, thermal hydraulics, or time dependence."
+  ]
+}

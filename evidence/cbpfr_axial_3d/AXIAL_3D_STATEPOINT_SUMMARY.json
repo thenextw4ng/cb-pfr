@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status": "3d_openmc_statepoint_mesh_exported",
+  "statepoint": {
+    "sha256": "cbff5e0c43ebba78c4d029c86bce370f2ca2a60190b9f3903c98272d69416215",
+    "path": "/home/runner/work/_temp/c5g7-axial-work/c5g7-2x2-UMMU/model/3d/statepoint.7000.h5",
+    "n_batches": 7000,
+    "n_inactive": 500,
+    "n_particles": 10000,
+    "n_realizations": 6500,
+    "seed": 640000
+  },
+  "mesh": {
+    "dimension_xyz": [
+      51,
+      51,
+      30
+    ],
+    "lower_left_cm_xyz": [
+      -32.13,
+      -32.13,
+      -107.1
+    ],
+    "upper_right_cm_xyz": [
+      32.13,
+      32.13,
+      107.1
+    ],
+    "array_layout": "[z, y, x, score]",
+    "array_shape": [
+      30,
+      51,
+      51,
+      3
+    ],
+    "bin_count": 78030
+  },
+  "scores": [
+    "flux",
+    "fission",
+    "nu-fission"
+  ],
+  "uncertainty_method": "Standard error reconstructed from OpenMC accumulated sum and sum-of-squares for each tally bin: sqrt((sum_sq/n - mean^2)/(n-1)); negative roundoff is clipped to zero.",
+  "score_summary": {
+    "flux": {
+      "finite_bin_count": 78030,
+      "nonzero_mean_bin_count": 77843,
+      "mean_of_bin_means": 0.0005125022436576513,
+      "max_bin_mean": 0.00410274247927318,
+      "mean_of_bin_standard_errors": 3.4903049832996437e-06,
+      "relative_error_percent_median_positive_bins": 2.079888425459466,
+      "relative_error_percent_p95_positive_bins": 25.622783857993564
+    },
+    "fission": {
+      "finite_bin_count": 78030,
+      "nonzero_mean_bin_count": 29680,
+      "mean_of_bin_means": 5.7874217472422125e-06,
+      "max_bin_mean": 6.048533870433956e-05,
+      "mean_of_bin_standard_errors": 9.383709983059747e-08,
+      "relative_error_percent_median_positive_bins": 2.054730962802324,
+      "relative_error_percent_p95_positive_bins": 6.011781589561833
+    },
+    "nu-fission": {
+      "finite_bin_count": 78030,
+      "nonzero_mean_bin_count": 29680,
+      "mean_of_bin_means": 1.5174798468173554e-05,
+      "max_bin_mean": 0.00014835052019330776,
+      "mean_of_bin_standard_errors": 2.4833298334058376e-07,
+      "relative_error_percent_median_positive_bins": 2.0478714513714653,
+      "relative_error_percent_p95_positive_bins": 5.996630223931063
+    }
+  },
+  "npz": {
+    "path": "/home/runner/work/_temp/c5g7-axial-work/c5g7-2x2-UMMU/model/3d/axial-3d-export/axial_tally_3d.npz",
+    "bytes": 1628820,
+    "sha256": "3657af9ffddceb303827c700fa0e6fce5432d655843864b12dd428b6c4c499e4"
+  },
+  "nonclaims": [
+    "Values are source-normalized Monte Carlo tallies, not absolute reactor power.",
+    "A successful statepoint export does not establish benchmark agreement or physical validation.",
+    "Zero/near-zero bins can have undefined or unstable relative statistical error."
+  ]
+}

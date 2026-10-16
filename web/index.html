@@ -6,10 +6,43 @@
   <title>CB-PFR | Scientific Workstation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js';"></script>
-  <script defer src="./app.js"></script>
-  <script defer src="./spatial.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+  <script>
+    window.CBPFRPlotlyLoadError = false;
+    window.cbpfrPlotlyFallback = function (script) {
+      if (!script.dataset.fallbackTried) {
+        script.dataset.fallbackTried = "true";
+        script.src = "https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js";
+        return;
+      }
+      window.CBPFRPlotlyLoadError = true;
+      window.dispatchEvent(new Event("cbpfr-plotly-failed"));
+    };
+  </script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" onerror="window.cbpfrPlotlyFallback(this)"></script>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+  </script>
+  <script type="module">
+    const cbpfrThreeLoadTimeout = setTimeout(() => {
+      if (!window.CBPFRCore3D && !window.CBPFRCore3DError) {
+        window.CBPFRCore3DError = "Three.js module import timed out after 12 seconds";
+        window.dispatchEvent(new Event("cbpfr-core3d-failed"));
+      }
+    }, 12000);
+    import("/core_geometry_3d.js").then(module => {
+      clearTimeout(cbpfrThreeLoadTimeout);
+      window.CBPFRCore3D = module;
+      window.CBPFRCore3DError = null;
+      window.dispatchEvent(new Event("cbpfr-core3d-ready"));
+    }).catch(error => {
+      clearTimeout(cbpfrThreeLoadTimeout);
+      window.CBPFRCore3DError = String(error && (error.message || error) || "External Three.js module unavailable");
+      window.dispatchEvent(new Event("cbpfr-core3d-failed"));
+    });
+  </script>
+  <script defer src="/app.js"></script>
+  <script defer src="/research_snapshot_ui.js"></script>
 </head>
 <body>
   <div class="shell">
@@ -19,52 +52,157 @@
       <a class="nav-item active" href="#overview" data-target="overview"><span>◫</span> Overview</a>
       <a class="nav-item" href="#candidates" data-target="candidates"><span>⌘</span> Candidate observatory</a>
       <a class="nav-item" href="#physics" data-target="physics"><span>▦</span> Physics evidence</a>
-      <a class="nav-item" href="#assembly-field" data-target="assembly-field"><span>⬡</span> Fission proxy</a><a class="nav-item" href="#spatial" data-target="spatial"><span>▧</span> Spatial field lab</a>
+      <a class="nav-item" href="#assembly-field" data-target="assembly-field"><span>⬡</span> Assembly field map</a>
+      <a class="nav-item" href="#assembly" data-target="assembly"><span>◈</span> Core geometry explorer</a>
+      <a class="nav-item" href="#spatial" data-target="spatial"><span>▧</span> Spatial field lab</a>
+      <a class="nav-item" href="#research-alignment" data-target="research-alignment"><span>≋</span> Research alignment</a>
       <a class="nav-item" href="#research-evidence" data-target="research-evidence"><span>◉</span> Experiments &amp; paper</a>
       <a class="nav-item" href="#integrity" data-target="integrity"><span>◎</span> Evidence integrity</a>
       <div class="sidebar-bottom"><div class="live-dot"></div><div><b>Evidence-aware mode</b><small>Recorded repository data only</small></div></div>
     </aside>
     <main class="main" id="overview">
       <header class="topbar"><div><div class="eyebrow">RESEARCH CONTROL ROOM / 01</div><h1>Physical Feasibility <span>Ranking Workbench</span></h1><p class="lede">Inspect candidate configurations, recorded transport indicators, uncertainty, and evidence integrity in one scientific workspace.</p></div><div class="status-pill"><i></i> EXPLORATORY</div></header>
-      <div class="notice"><b>SCIENTIFIC BOUNDARY</b><span>Research snapshot: 16 Oct 2026. This dashboard separates synthetic method benchmarks from C5G7/OpenMC observations; it does not launch OpenMC or certify convergence, benchmark acceptance, or reactor safety.</span></div>
+      <div class="notice"><b>SCIENTIFIC BOUNDARY</b><span>This dashboard displays recorded evidence. It does not launch OpenMC, infer missing spatial fields, or certify a physical design.</span></div>
+      <div class="renderer-stack-strip" role="group" aria-label="Visualization renderer status">
+        <div class="renderer-stack-item"><span class="renderer-stack-label">NUMERIC PLOTS</span><strong id="plotlyStackStatus">Plotly.js · CHECKING</strong><small>Charts, heatmaps, contours, profiles and terrain surfaces</small></div>
+        <div class="renderer-stack-item"><span class="renderer-stack-label">SOURCE GEOMETRY</span><strong id="svgStackStatus">SVG · CHECKING</strong><small>XML-derived 3 × 3 core and 17 × 17 pin maps</small></div>
+        <div class="renderer-stack-item"><span class="renderer-stack-label">INTERACTIVE CORE</span><strong id="threeStackStatus">OPTIONAL 3D · CHECKING</strong><small>Existing Three.js viewport; SVG remains available as fallback</small></div>
+        <div class="renderer-stack-item renderer-stack-optional"><span class="renderer-stack-label">VOLUME ENGINE</span><strong id="vtkStackStatus">VTK.js · NOT LOADED</strong><small>Intentionally omitted; Plotly volume uses recorded OpenMC bins</small></div>
+      </div>
       <section class="metrics" id="metrics"><article class="metric"><label>Candidate records</label><strong>—</strong><small>Loading repository data</small></article><article class="metric"><label>Unique layouts</label><strong>—</strong><small>Distinct signatures</small></article><article class="metric"><label>k-effective span</label><strong>—</strong><small>Recorded mean values</small></article><article class="metric"><label>Recorded seeds</label><strong>—</strong><small>Distinct seed values</small></article></section>
-      <section class="section" id="candidates"><div class="section-head"><div><div class="eyebrow">01 / CANDIDATE OBSERVATORY</div><h2>Configuration inspector</h2><p>Choose a recorded candidate to inspect its layout and available aggregate metrics.</p></div><div class="control"><label for="candidateSelect">SELECT CANDIDATE</label><select id="candidateSelect" aria-controls="layoutView selectedCandidateMetrics candidateChart" aria-describedby="candidateSelectionHelp"><option>Loading…</option></select><small id="candidateSelectionHelp" class="control-hint">Selection updates the configuration, candidate metrics, and comparison highlight together.</small></div></div>
+      <section class="section" id="research-alignment"><div class="section-head"><div><div class="eyebrow">RESEARCH CONTRACT / CLAIM BOUNDARY</div><h2>Research alignment</h2><p>Dashboard metrics and claims are bound to the frozen CB-PFR evidence dossier; the visual interface is not a physical validation certificate.</p></div><span class="tag">EVIDENCE-BOUNDED</span></div>
+        <article class="panel research-alignment-panel">
+          <div class="research-alignment-statement"><b id="researchEvidenceStatus">Checking corrected-group evidence and research limits…</b></div>
+          <p><b>QUBO scope.</b> The current four-position composition-only objective is <code>E(y) = A(Σyᵢ − 2)²</code>. It enforces two MOX positions but gives all six feasible layouts the same zero energy; it does not optimize physical performance. The legacy fresh / once-burned / twice-burned encoding is a separate model with no defensible mapping to this C5G7 UO₂/MOX case.</p>
+          <p><b>CB-PFR scope.</b> CB-PFR is the uncertainty-aware post-optimization screening/ranking layer. The three-seed standard deviation displayed in candidate panels describes observed between-seed variability; it is not a calibrated confidence interval, safety margin, or proof of feasibility.</p>
+          <p><b>Physical claim boundary.</b> Current evidence is exploratory smoke-budget OpenMC data. No design-specific acceptable k-effective band has been approved, so the application deliberately does not recommend a physical winner or claim full physical validation, CB-PFR superiority on physical data, or quantum advantage.</p>
+          <div class="research-alignment-links"><a href="https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/docs/CB-PFR_SIMULATOR_RESEARCH_DOSSIER.md" target="_blank" rel="noreferrer">Research Dossier ↗</a><a href="https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_EVIDENCE_BOUNDED_SCIENTIFIC_CLAIMS_2026-10-12.md" target="_blank" rel="noreferrer">Evidence-Bounded Claims ↗</a><a href="https://github.com/thenextw4ng/cb-pfr/blob/research/cbpfr-four-gate-closeout-2026-10-12/reports/CBPFR_A-G_FINAL_EVIDENCE_CLOSEOUT_2026-10-12.md" target="_blank" rel="noreferrer">A–G Final Closeout ↗</a></div>
+        </article>
+      </section>
+      <section class="section" id="candidates"><div class="section-head"><div><div class="eyebrow">01 / CANDIDATE OBSERVATORY</div><h2>Configuration inspector</h2><p>Compare the six candidate layouts in the corrected-group, three-seed exploratory campaign. Reported spread is between-seed variability, not a confidence interval.</p></div><div class="control"><label for="candidateSelect">SELECT CANDIDATE</label><select id="candidateSelect" aria-controls="layoutView selectedCandidateMetrics candidateChart" aria-describedby="candidateSelectionHelp"><option>Loading…</option></select><small id="candidateSelectionHelp" class="control-hint">Selection updates the configuration, candidate metrics, and comparison highlight together.</small></div></div>
+        <div class="notice candidate-campaign-note"><b id="candidateCampaignTitle">CORRECTED-GROUP C5G7 · EXPLORATORY SMOKE</b><span id="candidateCampaignDetail">Loading campaign status, run settings, and checked source files…</span></div>
         <div class="candidate-observatory-grid">
-          <article class="panel layout-panel"><div class="panel-head"><div><h3>Assembly placement</h3><p>Candidate-linked 2 × 2 fuel loading</p></div><span class="tag">CONFIGURATION</span></div><div id="layoutView" class="layout-view"><div class="loading">Loading recorded configuration…</div></div><div class="legend"><span><i class="uo2"></i> UO₂</span><span><i class="mox"></i> MOX</span><span class="muted">Assembly-level view · not pin-cell geometry</span></div><div id="layoutCaption" class="caption">—</div></article>
-          <article class="panel selected-candidate-panel"><div class="panel-head"><div><h3>Selected candidate</h3><p>Run-linked metrics and configuration identity</p></div><span id="selectedRecordTag" class="tag">LOADING RECORD</span></div>
+          <article class="panel layout-panel fuel-signature-panel">
+            <div class="panel-head"><div><h3>Fuel loading signature</h3><p>Compact candidate identity · exact 2 MOX + 2 UO₂ composition</p></div><span class="tag">SOURCE RECORD</span></div>
+            <div id="layoutView" class="layout-view"><div class="loading">Loading recorded fuel signature…</div></div>
+            <div class="fuel-signature-footer"><div class="fuel-signature-legend"><span><i class="signature-mark signature-mark-mox"></i>M · MOX</span><span><i class="signature-mark signature-mark-uo2"></i>U · UO₂</span></div><a class="action-button core-open-link" href="#assembly">Inspect 3D core ↗</a></div>
+            <div id="layoutCaption" class="caption">The detailed material-resolved geometry is available in the Core Geometry Explorer.</div>
+          </article>
+          <article class="panel selected-candidate-panel"><div class="panel-head"><div><h3>Selected candidate</h3><p>Three independent corrected-group runs per layout · descriptive evidence</p></div><span id="selectedRecordTag" class="tag">LOADING RECORD</span></div>
             <div class="selected-candidate-hero"><div class="selected-candidate-identity"><div class="eyebrow">CANDIDATE ID</div><h4 id="selectedCandidateId">Loading candidate…</h4><div id="selectedCandidateMetaLine" class="caption">—</div></div><div id="selectedCandidateSignature" class="candidate-signature" aria-label="Selected candidate fuel loading"></div></div>
             <div id="selectedCandidateMetrics" class="selected-candidate-metrics" aria-live="polite" aria-atomic="true"><div class="loading">Loading recorded candidate metrics…</div></div>
             <div id="selectedCandidateRunInfo" class="candidate-run-strip"></div>
             <div id="selectedCandidateChecks" class="candidate-integrity-row"></div>
-            <p class="candidate-interpretation">The recorded k-effective order is descriptive only, not a physical-feasibility ranking or optimizer-certified winner. Aggregate fission scores are source summary scores, not absolute power.</p>
+            <p class="candidate-interpretation">The fission-peaking rank is descriptive only. It is not a physical-feasibility ranking or optimizer-certified winner; the dimensionless max/mean fission-tally proxy is not absolute power or a safety metric.</p>
           </article>
-          <article class="panel chart-panel candidate-chart-panel"><div class="panel-head"><div><h3>Candidate comparison</h3><p>Ordered by the selected metric, not by physical feasibility · k-effective uses reported ± SD</p></div><div class="control compact"><label for="metricSelect">METRIC</label><select id="metricSelect"><option value="keff_mean">k-effective mean</option><option value="aggregate_flux_score">Aggregate flux score</option><option value="aggregate_fission_score">Aggregate fission score</option></select></div></div><div id="candidateChart" class="chart"></div></article>
+          <article class="panel chart-panel candidate-chart-panel"><div class="panel-head"><div><h3>Candidate comparison</h3><p>Mean across three independent runs · horizontal spread is between-seed sample SD, not a confidence interval</p></div><div class="control compact"><label for="metricSelect">METRIC</label><select id="metricSelect"><option value="keff_mean">Mean k-effective</option><option value="fission_peaking_mean">Mean fission-peaking factor</option></select></div></div><div id="candidateChart" class="chart"></div></article>
         </div>
       </section>
-      <section class="section" id="physics"><div class="section-head"><div><div class="eyebrow">02 / PHYSICS EVIDENCE</div><h2>Recorded transport indicators</h2><p>Explore available aggregate values without treating them as spatial fields.</p></div></div>
-        <div class="grid two"><article class="panel"><div class="panel-head"><div><h3>k-effective distribution</h3><p>Candidate-summary records</p></div><span class="tag">RECORDED</span></div><div id="distributionChart" class="chart"></div></article><article class="panel"><div class="panel-head"><div><h3>Aggregate indicators</h3><p>Scores shown in repository units (where defined)</p></div><span class="tag">SUMMARY DATA</span></div><div id="aggregateChart" class="chart"></div></article></div>
-        <div class="note-row"><span class="note-icon">i</span><p><b>Interpretation limit.</b> Aggregate flux/fission scores are not spatial distributions. The repository’s separately archived 51 × 51 OpenMC mesh tally is a distinct evidence source and is not reconstructed by this summary view.</p></div>
+      <section class="section" id="physics"><div class="section-head"><div><div class="eyebrow">02 / PHYSICS EVIDENCE</div><h2>Recorded transport indicators</h2><p>Compare corrected-group transport means and the dimensionless fission-peaking proxy; spatial tallies are separate evidence products.</p></div></div>
+        <div class="grid two"><article class="panel"><div class="panel-head"><div><h3>Corrected-group k-effective</h3><p>Six descriptive means sorted low → high · ± between-seed sample SD over three runs</p></div><span class="tag">18-RUN SOURCE</span></div><div id="distributionChart" class="chart"></div></article><article class="panel"><div class="panel-head"><div><h3>Physics-metric trade-off</h3><p>Mean k-effective vs dimensionless fission-peaking proxy · descriptive only</p></div><span class="tag">EXPLORATORY</span></div><div id="aggregateChart" class="chart"></div></article></div>
+        <div class="note-row"><span class="note-icon">i</span><p><b>Interpretation limit.</b> The candidate table is the corrected-group 18-run smoke campaign. The four-position assembly proxy map below is a separate exploratory campaign with independent seeds, and the archived planar mesh / axial volume are separate tally sources. None should be silently combined as paired measurements or interpreted as absolute power. No approved design-specific k-effective band exists; no layout is declared a winner.</p></div>
       </section>
       <section class="section" id="assembly-field">
-        <div class="section-head"><div><div class="eyebrow">03 / ASSEMBLY-INTEGRATED EVIDENCE</div><h2>Assembly-integrated fission-proxy comparison</h2><p>Derived F_fission summaries from the latest 1,200-run V2a campaign. This section does not invent a spatial heatmap.</p></div><span id="assemblyFieldStatus" class="tag">LOADING SOURCE DATA…</span></div>
-        <div class="notice mesh-notice"><b>DATA PROVENANCE</b><span id="assemblyFieldProvenance">Loading the versioned research snapshot. F_fission is a relative assembly-integrated proxy, not absolute power or a safety metric.</span></div>
-        <div class="grid two field-grid">
-          <article class="panel"><div class="panel-head"><div><h3>Candidate-level proxy</h3><p>One derived F_fission value per run; no position-wise values inferred</p></div><span class="tag">HEATMAP</span></div><div id="assemblyMap" class="field-chart"></div></article>
-          <article class="panel"><div class="panel-head"><div><h3>Layout response comparison</h3><p>Compare low-budget means and between-run spread across six layouts</p></div><span class="tag">GROUPED BARS</span></div><div id="assemblyBar" class="field-chart"></div></article>
+        <div class="section-head"><div><div class="eyebrow">03 / ASSEMBLY-INTEGRATED EVIDENCE</div><h2>Assembly fission-proxy map</h2><p>Four recorded assembly-integrated values at the same row-major P00, P01, P10, P11 positions used by the OpenMC core geometry.</p></div><span id="assemblyFieldStatus" class="tag">LOADING SOURCE DATA…</span></div>
+        <details class="assembly-provenance"><summary>PROVENANCE / SOURCE CSV <span>collapsed by default · run identity, hashes, seed and limitations</span></summary><p id="assemblyFieldProvenance">Loading the recorded assembly CSV through the local API. Values are exploratory assembly-integrated fission-rate proxies, not absolute power.</p></details>
+        <div class="assembly-material-key" aria-label="Material category legend, independent from the quantitative fission proxy scale">
+          <span><i class="material-key-mox"></i><b>M</b> MOX · amber edge</span>
+          <span><i class="material-key-uo2"></i><b>U</b> UO₂ · cyan edge</span>
+          <span class="assembly-key-note">Cividis fill = numeric proxy · amber/cyan edge = material only</span>
         </div>
-        <div class="note-row"><span class="note-icon">i</span><p><b>Scientific boundary.</b> The latest V2a snapshot contains the derived F_fission response and run metadata. It does not include the four position-wise tally vector needed to populate a true 2 × 2 field; no heatmap is synthesized from an aggregate value.</p></div>
+        <div class="grid two field-grid assembly-evidence-grid">
+          <article class="panel assembly-field-panel"><div class="panel-head"><div><h3>Selected candidate · spatial proxy map</h3><p>Row 0 at top; Pij = geometry row i, column j · discrete observations, not a continuous field</p></div><span class="tag">P00–P11</span></div><div id="assemblyMap" class="field-chart" aria-label="Four-position assembly-integrated fission-rate proxy map"></div><div id="assemblyPositionDetail" class="assembly-position-detail" aria-live="polite"><div><span class="eyebrow">SELECTED POSITION</span><strong id="assemblyPositionTitle">P00</strong><span id="assemblyPositionMaterial" class="material-chip">—</span></div><div class="assembly-position-value"><strong id="assemblyPositionValue">—</strong><small>Source CSV unit not documented · not absolute power</small></div><div class="assembly-position-picker" id="assemblyPositionPicker" role="group" aria-label="Select fuel position"></div></div><div class="assembly-map-note">Select a tile or position control to inspect its material and recorded value. White outline = selected position; amber/cyan outline = material category; Cividis fill = quantitative scale. <span id="assemblyScaleRange">Shared global colour range: — to — · CSV unit not documented.</span></div></article>
+          <article class="panel assembly-matrix-panel"><div class="panel-head"><div><h3>Candidate × position comparison</h3><p>Six configurations · rows sorted by corrected-group mean k-effective for display only · gaps stay missing</p></div><span class="tag">6 × 4</span></div><div id="assemblyMatrix" class="field-chart" aria-label="Candidate by four-position quantitative proxy matrix"></div><div class="assembly-map-note">Same numeric min/max as the map; no second colorbar. Missing source positions remain blank; each available cell is a discrete assembly-integrated proxy, never an interpolated/continuous neutron field.</div></article>
+        </div>
+        <div class="note-row"><span class="note-icon">i</span><p><b>Scientific boundary.</b> Only recorded P00, P01, P10 and P11 values are used. The source CSV does not document physical units or absolute-power normalisation; proxy-run seeds are independent of the 18 corrected-group candidate-study seeds, so the campaigns are not paired and do not establish physical feasibility.</p></div>
       </section>
       <section class="section" id="assembly">
-<div class="section-head"><div><div class="eyebrow">03 / OPENMC MODEL GEOMETRY</div><h2>Model geometry viewer</h2><p>Interactive material-map rendering from archived C5G7 OpenMC geometry.xml lattice definitions, linked to the selected candidate.</p></div><div class="section-actions"><span id="geometryStatus" class="tag">SCANNING ARTIFACTS…</span><button id="reloadGeometry" class="action-button" type="button">↻ Refresh artifacts</button></div></div>
-<div class="notice mesh-notice"><b>MODEL PROVENANCE</b><span id="geometryProvenance">The standalone workstation snapshot does not bundle geometry.xml or native plot files. The live campaign and source provenance are linked in the research-evidence section.</span></div>
-<div class="grid two model-geometry-grid"><article class="panel"><div class="panel-head"><div><h3>C5G7 2D core · material-resolved lattice</h3><p>3 × 3 lattice with pin-level 17 × 17 maps for the four fuel assemblies</p></div><span class="tag">XML-DERIVED VIEW</span></div><div id="geometryPreview" class="geometry-preview"><div class="loading">Searching for externally generated geometry…</div></div><div id="geometryCaption" class="caption">No geometry artifact selected.</div></article>
-<article class="panel"><div class="panel-head"><div><h3>External OpenMC artifacts</h3><p>Native slice plots or VTK/VTI outputs, when present</p></div><span class="tag">SOURCE INVENTORY</span></div><div id="geometryArtifactList" class="artifact-list"><div class="loading">Loading artifact inventory…</div></div></article></div>
-<div class="note-row"><span class="note-icon">i</span><p><b>Important.</b> The primary model view is reconstructed from the archived OpenMC geometry.xml lattice and material-universe definitions, rather than a fabricated hexagonal core. The view shows the 2D C5G7 model and material regions; it is not a new neutron-transport result. Native OpenMC plot / VTK artifacts remain listed separately when available.</p></div></section><section class="section" id="spatial"><div class="section-head"><div><div class="eyebrow">03 / OPENMC SPATIAL TALLY</div><h2>Spatial field laboratory</h2><p>Four coordinated views of the same recorded OpenMC mesh tally: 2D field, contour structure, central-row profile, and an interactive 3D surface representation.</p></div><div class="section-actions"><span id="meshStatus" class="tag">CHECKING ARCHIVE…</span><button id="reloadEvidence" class="action-button" type="button">↻ Reload spatial tally</button></div></div>
-        <div class="notice mesh-notice"><b>DATA PROVENANCE</b><span id="meshProvenance">Browser snapshot does not bundle decoded 51 × 51 statepoint arrays. The mesh views remain blank until real per-bin means and uncertainties are exported; no spatial field is invented.</span></div>
-        <div class="field-controls"><div class="control"><label for="meshScore">TALLY SCORE</label><select id="meshScore"><option value="flux">Flux</option><option value="fission">Fission</option><option value="nu-fission">Nu-fission</option></select></div><div class="control"><label for="meshView">FIELD REPRESENTATION</label><select id="meshView"><option value="mean">Mean tally</option><option value="relative_sd">Relative Monte Carlo standard error (%)</option></select></div><div class="control"><label for="meshScale">DISPLAY SCALE</label><select id="meshScale"><option value="log">Log₁₀ (positive means)</option><option value="linear">Linear</option></select></div><div class="control"><label for="meshPalette">COLOR PALETTE</label><select id="meshPalette"><option value="Viridis">Viridis</option><option value="Cividis">Cividis</option><option value="Plasma">Plasma</option><option value="Magma">Magma</option><option value="Turbo">Turbo</option></select></div></div>
+  <div class="section-head">
+    <div>
+      <div class="eyebrow">04 / OPENMC MODEL GEOMETRY</div>
+      <h2>Core Geometry Explorer</h2>
+      <p>Interactive 3D rendering of the archived C5G7 core lattice, source-derived fuel pin universes, and candidate-specific MOX/UO₂ placement.</p>
+    </div>
+    <div class="section-actions">
+      <span id="geometryStatus" class="tag">CHECKING SOURCE…</span>
+      <button id="reloadGeometry" class="action-button" type="button">↻ Refresh source</button>
+    </div>
+  </div>
+  <div class="notice mesh-notice"><b>MODEL PROVENANCE</b><span id="geometryProvenance">Loading the archived geometry manifest. The 3D viewport uses Three.js from jsDelivr and only the geometry/material definitions recorded in the OpenMC XML-derived manifest.</span></div>
+
+  <div class="core-geometry-layout">
+    <article class="panel core-stage-panel">
+      <div class="panel-head core-stage-heading">
+        <div><h3>C5G7 · 3 × 3 core lattice</h3><p id="coreStageSubtitle">2 × 2 candidate fuel region · 5 invariant reflector positions · 17 × 17 pin maps where recorded</p></div>
+        <span id="coreSourceBadge" class="tag">XML-DERIVED</span>
+      </div>
+      <div class="core-view-toolbar">
+        <div class="core-view-switch" role="group" aria-label="Core geometry view">
+          <button id="coreView3d" class="core-view-button active" type="button" aria-pressed="true">3D CORE</button>
+          <button id="coreView2d" class="core-view-button" type="button" aria-pressed="false">2D SOURCE MAP</button>
+        </div>
+        <div class="core-view-actions">
+          <span id="core3dStatus" class="core-engine-status">CONNECTING THREE.JS CDN…</span>
+          <button id="coreResetView" class="action-button" type="button">⟳ Reset camera</button>
+        </div>
+      </div>
+      <div id="core3dViewport" class="core3d-viewport">
+        <div id="core3dCanvas" class="core3d-canvas-host" aria-label="Interactive Three.js C5G7 core"></div>
+        <div class="core3d-overlay core3d-overlay-top"><span>OPENMC SOURCE GEOMETRY</span><span>DRAG · ORBIT &nbsp; / &nbsp; SCROLL · ZOOM &nbsp; / &nbsp; CLICK · INSPECT</span></div>
+        <div class="core3d-overlay core3d-overlay-bottom"><span id="coreModelDimensions">3 × 3 CORE · ASSEMBLY PITCH —</span><span>SCHEMATIC EXTRUSION · NOT AN AXIAL MODEL</span></div>
+      </div>
+      <div id="geometryPreview" class="geometry-preview" hidden><div class="loading">Loading the archived 2D source map…</div></div>
+      <div class="core-material-legend" aria-label="Material legend">
+        <span><i class="core-legend-swatch swatch-mox"></i>MOX fuel</span>
+        <span><i class="core-legend-swatch swatch-uo2"></i>UO₂ fuel</span>
+        <span><i class="core-legend-swatch swatch-reflector"></i>Water reflector</span>
+        <span><i class="core-legend-swatch swatch-guide"></i>Guide tube</span>
+        <span><i class="core-legend-swatch swatch-chamber"></i>Fission chamber</span>
+      </div>
+      <div id="geometryCaption" class="caption">Awaiting candidate-linked OpenMC geometry evidence.</div>
+    </article>
+
+    <aside class="core-inspector-stack">
+      <article class="panel core-inspector-panel">
+        <div class="panel-head"><div><h3>Selected core position</h3><p>Click any tile in the 3D model to inspect its source universe.</p></div><span id="coreAssemblyBadge" class="tag">P00</span></div>
+        <div class="core-selected-title"><strong id="coreSelectionTitle">Waiting for source geometry</strong><span id="coreSelectionSubtitle">Candidate-linked material inspection</span></div>
+        <div id="coreSelectedFacts" class="core-selected-facts"><div class="loading">Loading model dimensions and source IDs…</div></div>
+        <div class="core-pin-heading"><div><h4 id="corePinMapTitle">Fuel pin lattice</h4><p id="corePinMapSubtitle">Source universe grid · not a rendered transport tally</p></div><span id="corePinMapBadge" class="tag">17 × 17</span></div>
+        <div id="coreSelectedPinMap" class="core-pin-map"><div class="loading">Loading pin lattice…</div></div>
+        <div id="corePinLegend" class="core-pin-legend"></div>
+      </article>
+      <details class="panel core-artifact-details">
+        <summary><span><strong>Native OpenMC artifacts</strong><small>Optional PNG / VTK / VTI outputs found in repository folders</small></span><span id="geometryArtifactStatus" class="tag">SCANNING</span></summary>
+        <div id="geometryArtifactList" class="artifact-list"><div class="loading">Loading artifact inventory…</div></div>
+      </details>
+    </aside>
+  </div>
+  <div class="note-row"><span class="note-icon">i</span><p><b>Scientific scope.</b> Core footprint, boundary conditions, assembly placement, material universes, pin pitch, and pin radius come from the archived OpenMC-derived manifest. The 3D pin height is a visual extrusion because axial dimensions were not provided by this 2D manifest; it is not a 3D neutron-transport result. Select “2D source map” for the inspectable SVG fallback if WebGL/CDN access is unavailable.</p></div>
+</section>
+<section class="section" id="spatial"><div class="section-head"><div><div class="eyebrow">05 / OPENMC SPATIAL TALLY</div><h2>Spatial field laboratory</h2><p>Four coordinated views of the same recorded OpenMC mesh tally: 2D field, contour structure, central-row profile, and an interactive 3D surface representation.</p></div><div class="section-actions"><span id="meshStatus" class="tag">CHECKING ARCHIVE…</span><button id="reloadEvidence" class="action-button" type="button">↻ Reload spatial tally</button></div></div>
+        <div class="notice mesh-notice"><b>DATA PROVENANCE</b><span id="meshProvenance">Loading archived OpenMC statepoint metadata. Coordinate axes will use stored physical mesh bounds only when available; otherwise the plots retain explicit mesh-bin indices. The 3D plot represents a 2D tally field, not volumetric transport.</span></div>
+        <div class="field-controls"><div class="control"><label for="meshScore">TALLY SCORE</label><select id="meshScore"><option value="flux">Flux</option><option value="fission">Fission</option><option value="nu-fission">Nu-fission</option></select></div><div class="control"><label for="meshView">FIELD REPRESENTATION</label><select id="meshView"><option value="mean">Mean tally</option><option value="relative_sd">Relative Monte Carlo standard error (%)</option></select></div><div class="control"><label for="meshScale">DISPLAY SCALE</label><select id="meshScale"><option value="log">Log₁₀ (positive means)</option><option value="linear">Linear</option></select></div><div class="control"><label for="meshPalette">COLOR PALETTE</label><select id="meshPalette"><option value="Viridis">Viridis</option><option value="Cividis">Cividis</option><option value="Plasma">Plasma</option><option value="Magma">Magma</option><option value="Turbo">Turbo</option></select></div><div class="control"><label for="meshExaggeration">VERTICAL EXAGGERATION · DISPLAY ONLY</label><select id="meshExaggeration"><option value="1">1× · balanced</option><option value="1.5">1.5× · enhanced</option><option value="2">2× · high</option><option value="3">3× · maximum</option></select></div></div>
         <div class="field-kpis" id="fieldKpis"><article class="metric"><label>Mesh dimensions</label><strong>—</strong><small>Awaiting statepoint</small></article><article class="metric"><label>Finite bins</label><strong>—</strong><small>Selected view</small></article><article class="metric"><label>Positive mean bins</label><strong>—</strong><small>Recorded mean</small></article><article class="metric"><label>Maximum mean</label><strong>—</strong><small>Source units</small></article></div>
         <div id="meshSummaryNote" class="mesh-summary-note">The same selected tally, representation, scale, and palette apply to every plot in this section.</div>
-        <div class="grid field-grid"><article class="panel field-panel"><div class="panel-head"><div><h3>Spatial heatmap</h3><p>Bin-wise tally mean or relative standard error</p></div><span class="tag">2D FIELD</span></div><div id="meshHeatmap" class="field-chart js-spatial-plot" aria-label="Spatial heatmap of selected OpenMC mesh tally"></div><div class="panel-footnote">Hover over a bin to inspect its recorded value. Axes show mesh-bin indices.</div></article><article class="panel field-panel"><div class="panel-head"><div><h3>Contour field</h3><p id="meshContourSubtitle">Labeled iso-contours from the selected tally field</p></div><span class="tag">CONTOUR</span></div><div id="meshContour" class="field-chart js-spatial-plot" aria-label="Contour plot of selected OpenMC mesh tally"></div><div class="panel-footnote">Iso-contour levels are labeled in the displayed scale. Hovering reports the corresponding recorded tally value.</div></article><article class="panel field-panel"><div class="panel-head"><div><h3>Central-row profile</h3><p id="meshProfileSubtitle">Central cut through the selected mesh field</p></div><span class="tag">1D CUT</span></div><div id="meshProfile" class="field-chart js-spatial-plot" aria-label="Central row profile of selected OpenMC mesh tally"></div><div class="panel-footnote">Markers show recorded bin means; bars show ±1 Monte Carlo standard error for mean views. Bin indices are not physical coordinates.</div></article><article class="panel surface-panel field-panel"><div class="panel-head"><div><h3>Interactive 3D surface</h3><p>Rotate, zoom, and inspect values from the selected 2D mesh</p></div><span class="tag">2D TALLY → SURFACE</span></div><div id="meshSurface" class="field-chart surface-chart js-spatial-plot" aria-label="Interactive 3D surface representation of the selected 2D OpenMC mesh tally"></div><div class="panel-footnote">Surface height represents the displayed field. This is a 2D tally surface, not a 3D volumetric reactor solution.</div></article></div>
+        <div class="grid field-grid"><article class="panel field-panel"><div class="panel-head"><div><h3>Spatial heatmap</h3><p>Bin-wise tally mean or relative standard error</p></div><span class="tag">2D FIELD</span></div><div id="meshHeatmap" class="field-chart js-spatial-plot" aria-label="Spatial heatmap of selected OpenMC mesh tally"></div><div class="panel-footnote">Hover over a cell to inspect its recorded tally. Axes use archived physical mesh coordinates (cm) when bounds are available; otherwise they remain explicit mesh-bin indices.</div></article><article class="panel field-panel"><div class="panel-head"><div><h3>Contour field</h3><p id="meshContourSubtitle">Labeled iso-contours from the selected tally field</p></div><span class="tag">CONTOUR</span></div><div id="meshContour" class="field-chart js-spatial-plot" aria-label="Contour plot of selected OpenMC mesh tally"></div><div class="panel-footnote">Iso-contour levels are labeled in the displayed scale. Hovering reports the corresponding recorded tally value.</div></article><article class="panel field-panel"><div class="panel-head"><div><h3>Central-row profile</h3><p id="meshProfileSubtitle">Central cut through the selected mesh field</p></div><span class="tag">1D CUT</span></div><div id="meshProfile" class="field-chart js-spatial-plot" aria-label="Central row profile of selected OpenMC mesh tally"></div><div class="panel-footnote">Markers show recorded bin means; bars show ±1 Monte Carlo standard error for mean views. The X-axis uses archived mesh coordinates when available, and the selected row is identified above the profile.</div></article><article class="panel surface-panel field-panel"><div class="panel-head"><div><h3>Neutron-field terrain · interactive 3D</h3><p>Source mesh topology with labeled contours on the surface and projected onto the reference plane</p></div><div class="section-actions"><span class="tag">2D TALLY → SURFACE</span><button id="meshResetCamera" class="action-button" type="button" title="Restore the standard three-dimensional camera">↻ Reset camera</button></div></div><div id="meshSurface" class="field-chart surface-chart js-spatial-plot" aria-label="Interactive 3D surface representation of the selected 2D OpenMC mesh tally with projected contour lines"></div><div class="panel-footnote">X and Y use archived physical mesh coordinates (cm) when available. Z and color encode the selected tally display field. Vertical exaggeration changes plot aspect ratio only; it does not alter the tally values. This is a surface representation of a 2D tally, not 3D volumetric transport.</div></article></div>
+        <article class="panel surface-panel field-panel axial3d-panel" id="axial3dPanel">
+          <div class="panel-head">
+            <div><h3>Physical axial 3D tally volume</h3><p>Actual multi-layer OpenMC mesh statepoint · volumetric view and selected Z-plane</p></div>
+            <div class="section-actions"><span id="axial3dStatus" class="tag">CHECKING 3D DATA</span><button id="reloadAxial3d" class="action-button" type="button">↻ Reload 3D tally</button></div>
+          </div>
+          <div class="notice mesh-notice"><b>VOLUME DATA PROVENANCE</b><span id="axial3dProvenance">Checking for the hash-verified high-budget OpenMC 3D export. If it is absent locally, the server will try to retrieve the successful UMMU production artifact from GitHub Actions. The 2D terrain is never used as a substitute.</span></div>
+          <div class="field-controls axial3d-controls">
+            <div class="control"><label for="axial3dScore">TALLY SCORE</label><select id="axial3dScore"><option value="flux">Flux</option><option value="fission">Fission</option><option value="nu-fission">Nu-fission</option></select></div>
+            <div class="control"><label for="axial3dView">VOLUME COLOUR</label><select id="axial3dView"><option value="mean">Recorded mean · log₁₀ display</option><option value="relative_error">Relative MC standard error (%)</option></select></div>
+            <div class="control"><label for="axial3dSlice">SELECTED AXIAL SLICE</label><input id="axial3dSlice" type="range" min="0" max="29" step="1" value="14"><small id="axial3dSliceLabel">Z bin 14</small></div>
+            <div class="control"><label for="axial3dOpacity">VOLUME OPACITY</label><select id="axial3dOpacity"><option value="0.08">Low · 0.08</option><option value="0.14" selected>Balanced · 0.14</option><option value="0.22">Dense · 0.22</option></select></div>
+            <div class="control"><label for="axial3dPalette">COLOUR MAP</label><select id="axial3dPalette"><option value="Viridis">Viridis</option><option value="Cividis">Cividis</option><option value="Plasma">Plasma</option><option value="Magma">Magma</option><option value="Turbo">Turbo</option></select></div>
+          </div>
+          <div class="field-kpis axial3d-kpis" id="axial3dKpis"><article class="metric"><label>Mesh dimensions</label><strong>—</strong><small>Awaiting 3D statepoint</small></article><article class="metric"><label>Axial span</label><strong>—</strong><small>Physical Z extent</small></article><article class="metric"><label>Axial bins</label><strong>—</strong><small>Independent recorded tally layers</small></article><article class="metric"><label>Active realisations</label><strong>—</strong><small>Statepoint metadata</small></article></div>
+          <div id="axial3dPlot" class="field-chart surface-chart js-spatial-plot" aria-label="True volumetric 3D OpenMC tally with a selected physical axial slice"></div>
+          <div id="axial3dSummary" class="mesh-summary-note">A true 3D volume is shown only from a hash-verified, multi-layer OpenMC statepoint export. The server attempts one lazy install from GitHub Actions if the local copy is absent; use Reload 3D tally to retry after a network failure. This plot never reuses or extrudes the 2D terrain above.</div>
+          <div class="panel-footnote">The voxel coordinates come from the 3D statepoint mesh. The transparent volume encodes the selected recorded tally or uncertainty; the coloured horizontal sheet is the selected physical Z-bin. Hover values retain the tally mean and Monte Carlo uncertainty. These tallies are source-normalised and not absolute power.</div>
+        </article>
         <div class="note-row"><span class="note-icon">i</span><p><b>Physics interpretation.</b> Relative Monte Carlo standard error is calculated as 100 × standard error / mean for positive mean bins. Log scale is applied only to positive mean values. Spatial bins are not assigned to fuel, reflector, or assembly coordinates in this view, so no physical core orientation is inferred.</p></div>
       </section>
       <section class="section" id="research-evidence">
@@ -106,7 +244,31 @@
         </div>
         <article class="panel"><div class="panel-head"><div><h3>What the evidence does—and does not—support</h3><p>The interface keeps method-level synthetic evidence apart from neutron-transport calculations.</p></div><span class="tag">CLAIM LEDGER</span></div><div class="grid two"><div><div class="subhead supported-heading">Supported within stated scope</div><ul id="supportedClaims" class="claim-list"></ul></div><div><div class="subhead caution-heading">Not established</div><ul id="unestablishedClaims" class="claim-list"></ul></div></div></article>
       </section>
-      <section class="section" id="integrity"><div class="section-head"><div><div class="eyebrow">04 / EVIDENCE INTEGRITY</div><h2>Data provenance</h2><p>Current source and limitations reported by the backend.</p></div></div><article class="panel integrity-panel"><div class="integrity-row"><span class="check">✓</span><div><b>Candidate summary loaded from repository</b><p id="sourcePath">Waiting for API…</p></div><span class="tag">SOURCE FILE</span></div><div class="integrity-row"><span class="warn">!</span><div><b>Physical validation not established</b><p>No claim of physical feasibility certification is made by this UI.</p></div><span class="tag warning">NOT CERTIFIED</span></div><div class="integrity-row"><span class="warn">!</span><div><b>QUBO → C5G7 mapping</b><p>Repository evidence currently records no defensible mapping.</p></div><span class="tag warning">UNRESOLVED</span></div><div id="apiError" class="error" hidden></div></article></section>
+      <section class="section" id="integrity"><div class="section-head"><div><div class="eyebrow">06 / EVIDENCE INTEGRITY</div><h2>Data provenance</h2><p>Current source and limitations reported by the backend.</p></div></div><article class="panel integrity-panel"><div class="integrity-row"><span class="check">✓</span><div><b>Candidate summary loaded from repository</b><p id="sourcePath">Waiting for API…</p></div><span class="tag">SOURCE FILE</span></div><div class="integrity-row"><span class="warn">!</span><div><b>Physical validation not established</b><p>No claim of physical feasibility certification is made by this UI.</p></div><span class="tag warning">NOT CERTIFIED</span></div><div class="integrity-row"><span class="warn">!</span><div><b>QUBO → physical objective mapping</b><p>The composition-only objective maps to the two-MOX constraint but gives all six feasible layouts equal zero energy; the legacy burnup-state encoding has no defensible mapping to this C5G7 UO₂/MOX case.</p></div><span class="tag warning">PHYSICS NOT ENCODED</span></div><div id="apiError" class="error" hidden></div></article>
+        <article class="panel paper-export-panel">
+          <div class="panel-head"><div><h3>Paper figure export</h3><p>Render a white-background, high-resolution PNG from the current source-backed Plotly view. Axis labels, plot values, selected field settings and uncertainty payloads are retained; the export does not increase the evidence quality of a tally.</p></div><span class="tag">PNG · 2200 × 1400 px</span></div>
+          <div class="paper-export-groups">
+            <div class="paper-export-group"><h4>Candidate evidence</h4><div class="paper-export-grid">
+              <button class="action-button paper-export-button" type="button" data-figure-target="candidateChart" data-figure-title="Candidate metric by layout">Export · Candidate metric</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="distributionChart" data-figure-title="Corrected-group k-effective by layout">Export · k-effective</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="aggregateChart" data-figure-title="k-effective versus fission-peaking proxy">Export · Metric trade-off</button>
+            </div></div>
+            <div class="paper-export-group"><h4>Assembly proxy evidence</h4><div class="paper-export-grid">
+              <button class="action-button paper-export-button" type="button" data-figure-target="assemblyMap" data-figure-title="Assembly-integrated fission-rate proxy map">Export · Position map</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="assemblyMatrix" data-figure-title="Candidate by position fission-rate proxy matrix">Export · Candidate matrix</button>
+            </div></div>
+            <div class="paper-export-group"><h4>OpenMC spatial tally evidence</h4><div class="paper-export-grid">
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshHeatmap" data-figure-title="Recorded OpenMC spatial tally heatmap">Export · Heatmap</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshContour" data-figure-title="Recorded OpenMC spatial tally contour field">Export · Contour field</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshProfile" data-figure-title="Recorded OpenMC central-row tally profile">Export · Central-row profile</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="meshSurface" data-figure-title="2D OpenMC tally displayed as a 3D surface">Export · 3D surface</button>
+              <button class="action-button paper-export-button" type="button" data-figure-target="axial3dPlot" data-figure-title="Recorded multi-layer OpenMC axial tally">Export · Axial volume</button>
+            </div></div>
+          </div>
+          <p id="paperExportStatus" class="paper-export-status" role="status" aria-live="polite">Select the intended metric/scale and load a plot before exporting. The axial-volume image must be labeled as diagnostic or production evidence according to its recorded run metadata.</p>
+          <p class="panel-footnote">The browser export is a figure-rendering aid, not an analysis report. <a href="https://github.com/thenextw4ng/cb-pfr/blob/feat/research-dossier-data-sync/docs/CBPFR_PAPER_FIGURE_EXPORT_GUIDE.md" target="_blank" rel="noreferrer">Open the figure export and caption guide ↗</a>. Do not crop away the campaign label, uncertainty, provenance note or diagnostic status when interpreting the result.</p>
+        </article>
+      </section>
       <footer><span>CB-PFR · Confidence-Bounded Physical Feasibility Ranking</span><span>Research prototype / evidence-aware interface</span></footer>
     </main>
   </div>
