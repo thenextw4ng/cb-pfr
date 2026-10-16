@@ -123,7 +123,7 @@ async function main() {
     assert.equal(await page.locator("#ecrRecordList [data-ecr-id]").count(),1,"Evidence class filter should isolate synthetic study");
     await page.locator("#ecrRecordList [data-ecr-id='synthetic-paper']").click();
     await page.waitForFunction(()=>document.querySelector("#ecrDetail")?.innerText.includes("SYNTHETIC METHOD"));
-    assert.ok((await page.locator("#ecrDetail").innerText()).includes("not independently replicated"));
+    assert.ok((await page.locator("#ecrDetail").innerText()).includes("has not been independently replicated"));
     await page.locator("#ecrFilter").selectOption("all");
     results.checks.push("Evidence Control Room search, class filter, source details and limits work");
     results.desktopOverflow=await assertNoOverflow(page,"desktop");
