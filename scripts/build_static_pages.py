@@ -85,6 +85,7 @@ def make_api_snapshot(server) -> None:
 def rewrite_for_pages() -> None:
     """Fix site-root URLs and map backend routes to generated static JSON files."""
     static_files = [
+        "index.html",
         "styles.css",
         "app.js",
         "research_snapshot_ui.js",
