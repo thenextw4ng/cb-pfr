@@ -223,28 +223,9 @@
   }
   function renderAssemblyAndGeometry() {
     tag("#assemblyFieldStatus","RUN-LEVEL F PROXY","success");
-    setText("#assemblyFieldProvenance","V2a has 200 observations per layout, but the browser snapshot stores derived F_fission and k-effective summaries rather than four independent assembly tallies per selected run.");
+    setText("#assemblyFieldProvenance","The research snapshot stores run-level F_fission and k-effective summaries. Position-wise tally values are not inferred from these aggregates; the archived 51 × 51 mesh is loaded separately by the local OpenMC evidence API.");
     const map=$("#assemblyMap");
-    if(map) map.innerHTML='<div class="empty-state"><b>No fabricated spatial field.</b><br>The 2 × 2 position-level fission-tally vector is not included in this snapshot. Use the linked archived run artifacts to inspect raw per-run data before creating a position heatmap.</div>';
-    tag("#geometryStatus","GEOMETRY SOURCE NOT LOADED","warning");
-    setText("#geometryProvenance","This static HTML bundle does not contain geometry.xml or native OpenMC plot outputs. The layout schematic in Candidate Observatory is a material-label view, not a pin-resolved reconstruction.");
-    const prev=$("#geometryPreview");
-    if(prev) prev.innerHTML='<div class="empty-state"><b>Geometry not bundled in this web snapshot.</b><br>Use the repository model/evidence archives; no pin or geometry field is synthesized here.</div>';
-    setText("#geometryCaption","Model viewer requires a committed geometry.xml / native plot artifact.");
-    const list=$("#geometryArtifactList");
-    if(list) list.innerHTML='<div class="artifact-list-row">'+link("https://github.com/thenextw4ng/cb-pfr/tree/research/cbpfr-four-gate-closeout-2026-10-12/evidence/openmc_local_baseline_2026-10-11","Canonical local OpenMC evidence")+'</div><div class="artifact-list-row">'+link("https://github.com/thenextw4ng/cb-pfr/actions/runs/38853860378","Latest C5G7 campaign artifacts")+'</div>';
-    tag("#meshStatus","STATEPOINT TALLY NOT EXPORTED","warning");
-    setText("#meshProvenance","The browser snapshot does not bundle the raw 51 × 51 statepoint array. No contour, profile, heatmap, or 3D surface is drawn from layout-level aggregates.");
-    ["#meshHeatmap","#meshContour","#meshProfile","#meshSurface"].forEach(sel=>plotUnavailable(sel,"True per-bin statepoint data + uncertainty is not bundled in this snapshot. No spatial field is inferred."));
-    const kpis=$("#fieldKpis");
-    if(kpis) kpis.innerHTML='<article class="metric"><label>Mesh dimensions</label><strong>Not loaded</strong><small>Requires statepoint export</small></article><article class="metric"><label>Finite bins</label><strong>—</strong><small>Not inferred</small></article><article class="metric"><label>Positive mean bins</label><strong>—</strong><small>Not inferred</small></article><article class="metric"><label>Maximum mean</label><strong>—</strong><small>Not inferred</small></article>';
-    const controls=$$(".field-controls select");
-    controls.forEach(el=>el.disabled=true);
-    const reloadMesh=$("#reloadEvidence");
-    if(reloadMesh) reloadMesh.addEventListener("click",()=>setText("#meshSummaryNote","No statepoint export is attached to this static snapshot. Reloading cannot manufacture missing per-bin data."));
-    const reloadGeo=$("#reloadGeometry");
-    if(reloadGeo) reloadGeo.addEventListener("click",()=>setText("#geometryCaption","The geometry source is not bundled in this snapshot; see the linked repository evidence archive."));
-    const area=$("#assemblyBar");
+    if(map) map.innerHTML='<div class="empty-state"><b>No fabricated spatial field.</b><br>The snapshot does not include a per-position 2 × 2 tally vector for the latest V2a campaign. The separate archived mesh viewer uses recorded statepoint bins.</div>';
     const rows=DATA.latestC5G7.v2aLayoutSummary;
     plot("assemblyBar",[{
       type:"bar",x:rows.map(r=>r.layout),y:rows.map(r=>r.meanF),
@@ -278,7 +259,7 @@
       const p=rows[0].querySelector("p");if(p)p.textContent="web/research_snapshot.json · T7 paper values + latest C5G7 campaign replay summary";
       const mark=rows[0].querySelector(".check");if(mark)mark.textContent="✓";
     }
-    setText("#meshSummaryNote","Spatial tally arrays are intentionally not approximated from F_fission or k-effective aggregates.");
+    setText("#meshSummaryNote","Spatial field plots are loaded from the archived OpenMC statepoint through the local API; aggregate research summaries are never used to invent spatial bins.");
   }
   function bindControls() {
     const cs=$("#candidateSelect");
