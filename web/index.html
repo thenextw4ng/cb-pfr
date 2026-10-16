@@ -44,6 +44,8 @@
   <script defer src="/app.js"></script>
   <script defer src="/research_snapshot_ui.js"></script>
   <script defer src="/evidence_control_room.js"></script>
+  <script defer src="/axial_investigation.js"></script>
+  <script defer src="/uncertainty_analysis.js"></script>
   <script defer src="/research_snapshot_ui.js"></script>
 </head>
 <body>
@@ -60,6 +62,7 @@
       <a class="nav-item" href="#spatial" data-target="spatial"><span>▧</span> Spatial field lab</a>
       <a class="nav-item" href="#research-alignment" data-target="research-alignment"><span>≋</span> Research alignment</a>
       <a class="nav-item" href="#research-evidence" data-target="research-evidence"><span>◉</span> Experiments &amp; paper</a>
+      <a class="nav-item" href="#uncertainty-lab" data-target="uncertainty-lab"><span>∿</span> Comparative analysis</a>
       <a class="nav-item" href="#integrity" data-target="integrity"><span>◎</span> Evidence integrity</a>
       <div class="sidebar-bottom"><div class="live-dot"></div><div><b>Evidence-aware mode</b><small>Recorded repository data only</small></div></div>
     </aside>
@@ -229,6 +232,29 @@
           </div>
           <div class="field-kpis axial3d-kpis" id="axial3dKpis"><article class="metric"><label>Mesh dimensions</label><strong>—</strong><small>Awaiting 3D statepoint</small></article><article class="metric"><label>Axial span</label><strong>—</strong><small>Physical Z extent</small></article><article class="metric"><label>Axial bins</label><strong>—</strong><small>Independent recorded tally layers</small></article><article class="metric"><label>Active realisations</label><strong>—</strong><small>Statepoint metadata</small></article></div>
           <div id="axial3dPlot" class="field-chart surface-chart js-spatial-plot" aria-label="True volumetric 3D OpenMC tally with a selected physical axial slice"></div>
+          <div class="notice mesh-notice"><b>VOLUME-LINKED ANALYSIS</b><span id="axialInvestigationStatus" class="tag">WAITING FOR 3D ARRAY</span></div>
+          <div class="axial-investigation-grid" id="axialInvestigationLab">
+            <article class="panel axial-investigation-panel">
+              <div class="panel-head"><div><div class="eyebrow">ORTHOGONAL CUTS</div><h3>Interactive cross-section explorer</h3><p>Inspect XY, XZ, or YZ directly from the recorded 3D tally array.</p></div><span id="axialSectionStatus" class="tag">WAITING FOR VOLUME</span></div>
+              <div class="field-controls axial-investigation-controls">
+                <div class="control"><label for="axialPlaneSelect">PLANE</label><select id="axialPlaneSelect"><option value="XY">XY · transverse</option><option value="XZ">XZ · vertical</option><option value="YZ">YZ · vertical</option></select></div>
+                <div class="control"><label for="axialPlaneIndex">SLICE INDEX</label><input id="axialPlaneIndex" type="range" min="0" max="29" step="1" value="14"><small id="axialPlaneIndexLabel">Z bin 14</small></div>
+              </div>
+              <div id="axialSectionPlot" class="field-chart axial-slice-chart" aria-label="Recorded OpenMC tally cross-section"></div>
+              <p class="panel-footnote">Slice coordinates and bins come from the 51 × 51 × 30 source array. Mean mode colours positive values by log₁₀(mean); uncertainty mode colours relative Monte Carlo standard error. Hover or click a voxel to inspect its original mean/error values.</p>
+            </article>
+            <article class="panel axial-investigation-panel">
+              <div class="panel-head"><div><div class="eyebrow">ARBITRARY LINE CUT</div><h3>Selectable voxel profile</h3><p>Choose the varying axis and two fixed bin indices to inspect a line through the recorded volume.</p></div><span id="axialProfileStatus" class="tag">WAITING FOR VOLUME</span></div>
+              <div class="field-controls axial-investigation-controls profile-controls">
+                <div class="control"><label for="axialProfileAxis">VARYING AXIS</label><select id="axialProfileAxis"><option value="X">X · profile along X</option><option value="Y">Y · profile along Y</option><option value="Z">Z · profile along Z</option></select></div>
+                <div class="control"><label id="axialProfileFixedALabel" for="axialProfileFixedA">FIXED Y BIN</label><input id="axialProfileFixedA" type="range" min="0" max="50" step="1" value="25"><small id="axialProfileIndexLabel">Y[25] · Z[14]</small></div>
+                <div class="control"><label id="axialProfileFixedBLabel" for="axialProfileFixedB">FIXED Z BIN</label><input id="axialProfileFixedB" type="range" min="0" max="29" step="1" value="14"><small>Coordinates update from source bins</small></div>
+              </div>
+              <div id="axialLineProfilePlot" class="field-chart axial-slice-chart" aria-label="Selectable line profile through recorded OpenMC voxels"></div>
+              <p class="panel-footnote">Mean view plots the recorded mean on a logarithmic y-axis with ±1 Monte Carlo standard-error bars. Relative-error view plots the stored percentage directly. No values are interpolated between voxels.</p>
+            </article>
+          </div>
+          <div class="panel axial-voxel-readout-panel"><div class="panel-head"><div><div class="eyebrow">VOXEL INSPECTOR</div><h3>Selected / hovered voxel</h3><p>Bin identity, physical cell-centre coordinate and stored uncertainty.</p></div><span class="tag">SOURCE VALUES</span></div><div id="axialVoxelReadout" class="axial-voxel-readout"><div class="empty-state"><b>No voxel selected</b><p>Hover over or click a cell in the cross-section or line profile to populate the inspector.</p></div></div></div>
           <div id="axial3dSummary" class="mesh-summary-note">A true 3D volume is shown only from a hash-verified, multi-layer OpenMC statepoint export. The server attempts one lazy install from GitHub Actions if the local copy is absent; use Reload 3D tally to retry after a network failure. This plot never reuses or extrudes the 2D terrain above.</div>
           <div class="panel-footnote">The voxel coordinates come from the 3D statepoint mesh. The transparent volume encodes the selected recorded tally or uncertainty; the coloured horizontal sheet is the selected physical Z-bin. Hover values retain the tally mean and Monte Carlo uncertainty. These tallies are source-normalised and not absolute power.</div>
         </article>
@@ -272,6 +298,36 @@
           <article class="panel"><div class="panel-head"><div><h3>T3 · synthetic effectiveness benchmark</h3><p>6,000 pools · six regimes</p></div><span class="tag warning">GATE NOT MET</span></div><div id="t3Summary"></div><div id="t3DeltaChart" class="chart evidence-chart compact-chart"></div><div id="t3RegimeTable" class="table-scroller"></div><a class="text-link" id="t3Source" target="_blank" rel="noopener">Open T3 report ↗</a></article>
         </div>
         <article class="panel"><div class="panel-head"><div><h3>What the evidence does—and does not—support</h3><p>The interface keeps method-level synthetic evidence apart from neutron-transport calculations.</p></div><span class="tag">CLAIM LEDGER</span></div><div class="grid two"><div><div class="subhead supported-heading">Supported within stated scope</div><ul id="supportedClaims" class="claim-list"></ul></div><div><div class="subhead caution-heading">Not established</div><ul id="unestablishedClaims" class="claim-list"></ul></div></div></article>
+      </section>
+      <section class="section" id="uncertainty-lab">
+        <div class="section-head">
+          <div><div class="eyebrow">07 / UNCERTAINTY &amp; COMPARATIVE ANALYSIS</div><h2>Uncertainty &amp; comparative analysis lab</h2><p>Separate views for recorded C5G7/OpenMC repeatability and author-generated synthetic method evidence. Error bars use only uncertainty summaries and intervals present in the source snapshot.</p></div>
+          <span id="uncertaintyLabStatus" class="tag">LOADING COMPARISON SNAPSHOT…</span>
+        </div>
+        <div class="notice mesh-notice"><b>COMPARISON POLICY</b><span>Run-to-run standard deviation is not a confidence interval; an empirical reference is not exact physical truth; match-rate confidence intervals are not invented when absent from the recorded snapshot; synthetic regimes remain method evidence, not neutron-transport outcomes.</span></div>
+        <article class="panel comparative-openmc-panel">
+          <div class="panel-head"><div><div class="eyebrow">A / RECORDED OPENMC EVIDENCE</div><h3>Layout variability and empirical reference</h3><p id="cmpV2aFTitle">F_fission by layout · mean ± between-run SD</p></div><div class="control compact"><label for="cmpOpenMCMetric">METRIC</label><select id="cmpOpenMCMetric"><option value="fission">F_fission proxy</option><option value="keff">k-effective</option></select></div></div>
+          <div class="grid two uncertainty-chart-grid">
+            <div><div id="cmpV2aFChart" class="chart evidence-chart"></div><p id="cmpV2aFNote" class="caption">Loading recorded run-level summaries…</p></div>
+            <div><div class="panel-head"><div><h3>k-effective repeatability</h3><p>Low-budget V2a runs · mean ± between-run SD</p></div><span class="tag">n=200 / LAYOUT</span></div><div id="cmpV2aKChart" class="chart evidence-chart"></div></div>
+          </div>
+          <p class="caption" id="cmpOpenMCDataNote">The panel uses versioned V2a and high-budget aggregate summaries; it does not combine them as paired replicates.</p>
+        </article>
+        <div class="grid two uncertainty-chart-grid">
+          <article class="panel"><div class="panel-head"><div><div class="eyebrow">B / FIXED-BUDGET REPLAY</div><h3>Empirical-best match rate</h3><p>Equal 18-evaluation budget · 28 decision blocks</p></div><span class="tag">REPLAY ONLY</span></div><div id="cmpPolicyMatchChart" class="chart evidence-chart"></div><p class="caption">Rates are reported aggregates. The source snapshot does not supply a match-rate confidence interval; no interval is drawn.</p></article>
+          <article class="panel"><div class="panel-head"><div><div class="eyebrow">C / PAIRED REGRET COMPARISON</div><h3>Mean regret difference vs point estimate</h3><p>Negative values mean lower empirical regret relative to the point-estimate baseline.</p></div><span class="tag">REPORTED INTERVALS</span></div><div id="cmpPolicyRegretChart" class="chart evidence-chart"></div><p class="caption" id="cmpPolicyNote">Loading paired bootstrap intervals…</p></article>
+        </div>
+        <article class="panel synthetic-comparison-panel">
+          <div class="panel-head"><div><div class="eyebrow">D / SYNTHETIC METHOD EVIDENCE · NOT OPENMC</div><h3>T7 operating envelope by regime</h3><p>Compare the primary endpoint or the truly-feasible endpoint from the supplied revised paper.</p></div><div class="control compact"><label for="cmpT7Endpoint">ENDPOINT</label><select id="cmpT7Endpoint"><option value="primary">Feasible + near-optimal</option><option value="feasible">Truly feasible</option></select></div></div>
+          <div id="cmpT7Chart" class="chart evidence-chart t7-chart"></div>
+          <p id="cmpT7Note" class="caption">T7 is an author-generated synthetic study with 20,000 test pools per regime; it is not an OpenMC physical result.</p>
+        </article>
+        <article class="panel synthetic-comparison-panel">
+          <div class="panel-head"><div><div class="eyebrow">E / SYNTHETIC MATCHED-FEASIBILITY COMPARISON</div><h3>T7b · CB-PFR minus uniform margin</h3><p>Paired matched-95% differences with interval endpoints transcribed from the paper.</p></div><span class="tag warning">POST HOC</span></div>
+          <div id="cmpT7bChart" class="chart evidence-chart t7b-chart"></div>
+          <p class="caption">Intervals shown are the reported T7b intervals. T7b is post hoc; these method-level synthetic results are not physical feasibility evidence.</p>
+        </article>
+        <div class="note-row"><span class="note-icon">i</span><p><b>Interpretation boundary.</b> Latest C5G7 data integrity passed for 1,200 low-budget observations and 60 high-budget references, but no run in that campaign is convergence-certified. The policy replay launched zero new OpenMC simulations. Adaptive R&amp;S has a stronger empirical-best match rate in this particular replay; that is not a universal CB-PFR or quantum-advantage claim. T2/T3/T7 synthetic benchmarks and OpenMC transport observations remain distinct.</p></div>
       </section>
       <section class="section" id="integrity"><div class="section-head"><div><div class="eyebrow">06 / EVIDENCE INTEGRITY</div><h2>Data provenance</h2><p>Current source and limitations reported by the backend.</p></div></div><article class="panel integrity-panel"><div class="integrity-row"><span class="check">✓</span><div><b>Candidate summary loaded from repository</b><p id="sourcePath">Waiting for API…</p></div><span class="tag">SOURCE FILE</span></div><div class="integrity-row"><span class="warn">!</span><div><b>Physical validation not established</b><p>No claim of physical feasibility certification is made by this UI.</p></div><span class="tag warning">NOT CERTIFIED</span></div><div class="integrity-row"><span class="warn">!</span><div><b>QUBO → physical objective mapping</b><p>The composition-only objective maps to the two-MOX constraint but gives all six feasible layouts equal zero energy; the legacy burnup-state encoding has no defensible mapping to this C5G7 UO₂/MOX case.</p></div><span class="tag warning">PHYSICS NOT ENCODED</span></div><div id="apiError" class="error" hidden></div></article>
         <article class="panel paper-export-panel">
