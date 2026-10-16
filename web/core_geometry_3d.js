@@ -73,7 +73,7 @@ export function createCoreViewer(container, onAssemblySelect) {
 
   const camera = new THREE.PerspectiveCamera(37, 1, 0.1, 500);
   camera.position.set(72, 66.63, 88);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
