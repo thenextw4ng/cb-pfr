@@ -1,0 +1,56 @@
+{
+  "study_id": "cbpfr_fixed_budget_ranking_selection_stress_sensitivity_v1",
+  "status": "exploratory_stress_sensitivity_executed_locally",
+  "seed_base": 20261012,
+  "pools_per_scenario": 1000,
+  "candidates_per_pool": 12,
+  "cbpfr_z": 1.96,
+  "uniform_margin": 0.008,
+  "feasibility_threshold": 0.98,
+  "synthetic_only": true,
+  "physical_validation": "NOT_ESTABLISHED",
+  "scenarios": {
+    "base_heteroscedastic": {
+      "qubo_only": 0.824,
+      "point_estimate": 0.912,
+      "cb_pfr": 0.996,
+      "uniform_margin": 0.964
+    },
+    "homoscedastic": {
+      "qubo_only": 0.834,
+      "point_estimate": 0.915,
+      "cb_pfr": 0.996,
+      "uniform_margin": 0.97
+    },
+    "underreported_uncertainty_50pct": {
+      "qubo_only": 0.849,
+      "point_estimate": 0.925,
+      "cb_pfr": 0.972,
+      "uniform_margin": 0.961
+    },
+    "overreported_uncertainty_2x": {
+      "qubo_only": 0.821,
+      "point_estimate": 0.896,
+      "cb_pfr": 1,
+      "uniform_margin": 0.95
+    },
+    "shifted_observations_plus_0_008": {
+      "qubo_only": 0.863,
+      "point_estimate": 0.956,
+      "cb_pfr": 0.999,
+      "uniform_margin": 0.989
+    },
+    "near_threshold_latent": {
+      "qubo_only": 0.84,
+      "point_estimate": 0.875,
+      "cb_pfr": 0.981,
+      "uniform_margin": 0.918
+    }
+  },
+  "limitations": [
+    "Scenario family is small and hand-specified; these are not independent external validation.",
+    "The shift scenario changes observations but the simple toy setup does not constitute a calibrated physical model.",
+    "Primary metric is selected true feasibility rate; regret, feasible-best selection, false-feasible behavior across calibrated ground-truth distributions, and multiplicity-controlled inference are not fully addressed.",
+    "No reactor/transport physical validation."
+  ]
+}
