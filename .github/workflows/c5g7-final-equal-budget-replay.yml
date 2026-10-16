@@ -28,53 +28,31 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Download production run artifacts and seed ledger
-        uses: actions/download-artifact@v4
-        with:
-          repository: ${{ github.repository }}
-          run-id: 38769477847
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/cbpfr-final/production
-
-      - name: Download V2a shard 0 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          repository: ${{ github.repository }}
-          run-id: 38769481470
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-0
-
-      - name: Download V2a shard 1 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          repository: ${{ github.repository }}
-          run-id: 38769485693
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-1
-
-      - name: Download V2a shard 2 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          repository: ${{ github.repository }}
-          run-id: 38769489040
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-2
-
-      - name: Download V2a shard 3 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          repository: ${{ github.repository }}
-          run-id: 38769492881
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-3
-
-      - name: Download V2a shard 4 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          repository: ${{ github.repository }}
-          run-id: 38769496757
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/cbpfr-final/v2a/shard-4
+      - name: Download every artifact from the completed campaign runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${RUNNER_TEMP}/cbpfr-final"
+          mkdir -p "${ROOT}/production" "${ROOT}/v2a"
+          gh run download 38769477847 --repo "${GITHUB_REPOSITORY}" --dir "${ROOT}/production"
+          while read -r shard run_id; do
+            mkdir -p "${ROOT}/v2a/shard-${shard}"
+            gh run download "${run_id}" --repo "${GITHUB_REPOSITORY}" --dir "${ROOT}/v2a/shard-${shard}"
+          done <<'RUNS'
+          0 38769481470
+          1 38769485693
+          2 38769489040
+          3 38769492881
+          4 38769496757
+          RUNS
+          V2A_COUNT="$(find "${ROOT}/v2a" -type f -name STUDY_SUMMARY.json | wc -l | tr -d ' ')"
+          echo "V2a STUDY_SUMMARY count: ${V2A_COUNT}"
+          if [ "${V2A_COUNT}" -ne 1200 ]; then
+            echo "::error::Expected 1,200 V2a run summaries after paginated download; found ${V2A_COUNT}."
+            exit 1
+          fi
 
       - name: Audit 1,200 V2a observations and 60 high-budget references
         shell: bash
