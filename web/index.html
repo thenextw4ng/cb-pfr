@@ -46,6 +46,7 @@
   <script defer src="/evidence_control_room.js"></script>
   <script defer src="/axial_investigation.js"></script>
   <script defer src="/uncertainty_analysis.js"></script>
+  <script defer src="/figure_studio.js"></script>
   <script defer src="/research_snapshot_ui.js"></script>
 </head>
 <body>
@@ -63,6 +64,7 @@
       <a class="nav-item" href="#research-alignment" data-target="research-alignment"><span>≋</span> Research alignment</a>
       <a class="nav-item" href="#research-evidence" data-target="research-evidence"><span>◉</span> Experiments &amp; paper</a>
       <a class="nav-item" href="#uncertainty-lab" data-target="uncertainty-lab"><span>∿</span> Comparative analysis</a>
+      <a class="nav-item" href="#figure-studio" data-target="figure-studio"><span>▤</span> Scientific Figure Studio</a>
       <a class="nav-item" href="#integrity" data-target="integrity"><span>◎</span> Evidence integrity</a>
       <div class="sidebar-bottom"><div class="live-dot"></div><div><b>Evidence-aware mode</b><small>Recorded repository data only</small></div></div>
     </aside>
@@ -352,6 +354,54 @@
           </div>
           <p id="paperExportStatus" class="paper-export-status" role="status" aria-live="polite">Select the intended metric/scale and load a plot before exporting. The axial-volume image must be labeled as diagnostic or production evidence according to its recorded run metadata.</p>
           <p class="panel-footnote">The browser export is a figure-rendering aid, not an analysis report. <a href="https://github.com/thenextw4ng/cb-pfr/blob/feat/research-dossier-data-sync/docs/CBPFR_PAPER_FIGURE_EXPORT_GUIDE.md" target="_blank" rel="noreferrer">Open the figure export and caption guide ↗</a>. Do not crop away the campaign label, uncertainty, provenance note or diagnostic status when interpreting the result.</p>
+        </article>
+      </section>
+      <section class="section" id="figure-studio">
+        <div class="section-head">
+          <div><div class="eyebrow">08 / REPRODUCIBILITY &amp; FIGURE ENGINEERING</div><h2>Reproducibility &amp; Scientific Figure Studio</h2><p>Export source-backed visuals with editable captions, raw plotted data, plot configuration, provenance identifiers, evidence status, and SHA-256 fingerprints.</p></div>
+          <span id="figureStudioStatus" class="tag">LOADING FIGURE SOURCES…</span>
+        </div>
+        <div class="notice mesh-notice"><b>REPRODUCIBILITY CONTRACT</b><span>Unknown seeds, run IDs, units, or source hashes remain explicitly “not recorded”. Exported-data/config hashes fingerprint the exported payload; they do not replace hashes of source statepoints or input files and do not certify convergence or physical validation.</span></div>
+        <article class="panel figure-studio-export-panel">
+          <div class="panel-head"><div><div class="eyebrow">A / SINGLE-FIGURE EXPORT</div><h3>Publication figure &amp; data bundle</h3><p>Choose any recorded dashboard chart or the selected OpenMC-derived core geometry.</p></div><span class="tag">PNG · CSV · JSON · SVG</span></div>
+          <div class="figure-studio-controls">
+            <div class="control figure-target-control"><label for="figureStudioTarget">FIGURE / SOURCE VIEW</label><select id="figureStudioTarget"></select></div>
+            <div class="control"><label>OUTPUT CONTRACT</label><div class="figure-studio-output-summary">High-resolution PNG · raw-point CSV · JSON bundle with plot traces/config · caption and evidence metadata</div></div>
+          </div>
+          <div class="grid two figure-studio-main-grid">
+            <div class="figure-caption-editor">
+              <label for="figureStudioCaption">FIGURE CAPTION · EDITABLE</label>
+              <textarea id="figureStudioCaption" rows="5" placeholder="A source-aware caption is generated when a plot is selected. Edit it for the intended paper or presentation."></textarea>
+              <div class="figure-studio-actions">
+                <button id="figureStudioExportPng" class="action-button primary-action" type="button">Export high-resolution PNG</button>
+                <button id="figureStudioExportCsv" class="action-button" type="button">Download data CSV</button>
+                <button id="figureStudioExportJson" class="action-button" type="button">Download reproducibility JSON</button>
+                <button id="figureStudioExportSvg" class="action-button" type="button">Export vector SVG</button>
+                <button id="figureStudioCopyCaption" class="action-button" type="button">Copy caption</button>
+              </div>
+            </div>
+            <div class="figure-metadata-panel">
+              <div class="subhead">SOURCE &amp; EXPORT METADATA</div>
+              <div id="figureStudioMetadata" class="figure-studio-metadata"><div class="loading">Loading dataset, run, seed, status and hashes…</div></div>
+              <div class="subhead figure-limits-heading">INTERPRETATION BOUNDARY</div>
+              <p id="figureStudioLimits" class="figure-studio-limits">The limitations of the selected evidence will be shown here.</p>
+            </div>
+          </div>
+          <div class="figure-caption-preview"><div class="subhead">CAPTION PREVIEW</div><p id="figureStudioAutoCaption">Choose a source plot to see its source-aware caption.</p></div>
+          <p class="panel-footnote">The CSV includes trace/point data and repeats the relevant source and integrity identifiers on each row. The JSON records trace arrays and visualization layout/configuration. PNG exports include title, source/run/seed fields, evidence status, and caption; geometry SVG remains vector data when available.</p>
+        </article>
+        <article class="panel figure-studio-compare-panel">
+          <div class="panel-head"><div><div class="eyebrow">B / CONSISTENT SIDE-BY-SIDE</div><h3>Compare two source-backed results</h3><p>Render two selected figures in equal-size frames with separate provenance and evidence boundaries.</p></div><span class="tag">SAME FRAME · SEPARATE SCALES</span></div>
+          <div class="figure-compare-controls">
+            <div class="control"><label for="figureCompareA">LEFT FIGURE / RESULT A</label><select id="figureCompareA"></select><button id="figureStudioCompareExportA" class="action-button mini-action" type="button">Use A for export</button></div>
+            <div class="control"><label for="figureCompareB">RIGHT FIGURE / RESULT B</label><select id="figureCompareB"></select><button id="figureStudioCompareExportB" class="action-button mini-action" type="button">Use B for export</button></div>
+            <button id="figureStudioRenderComparison" class="action-button primary-action" type="button">Render side-by-side comparison</button>
+          </div>
+          <div class="grid two figure-compare-grid">
+            <div class="figure-compare-card"><div class="figure-compare-card-head"><h4 id="figureCompareTitleA">Result A</h4><span class="tag">A</span></div><div id="figureComparePreviewA" class="figure-compare-preview"><div class="empty-state"><b>Ready for comparison</b><p>Select the left figure and render the comparison.</p></div></div><p id="figureCompareMetaA" class="figure-compare-metadata">Source metadata appears here.</p></div>
+            <div class="figure-compare-card"><div class="figure-compare-card-head"><h4 id="figureCompareTitleB">Result B</h4><span class="tag">B</span></div><div id="figureComparePreviewB" class="figure-compare-preview"><div class="empty-state"><b>Ready for comparison</b><p>Select the right figure and render the comparison.</p></div></div><p id="figureCompareMetaB" class="figure-compare-metadata">Source metadata appears here.</p></div>
+          </div>
+          <p id="figureCompareNote" class="panel-footnote">Both views will use equal-sized preview frames. Their axes and units remain independent; only compare values directly when the measured quantities and scales are compatible.</p>
         </article>
       </section>
       <footer><span>CB-PFR · Confidence-Bounded Physical Feasibility Ranking</span><span>Research prototype / evidence-aware interface</span></footer>
