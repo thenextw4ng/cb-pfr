@@ -31,3 +31,11 @@ F_fission = max(assembly-integrated fission rate)/mean(assembly-integrated fissi
 Synthetic random quadratic binary instances: n=10,14,18; 30 instances per size; sum(x)=n/2. Each method receives 5,000 objective/energy evaluations per instance. Compare direct random search over feasible states with QUBO penalty A(sum(x)-n/2)^2 optimized via classical simulated annealing. A = 2×(sum absolute linear coefficients + sum absolute pair coefficients)+1. Exact enumeration supplies the objective-gap oracle but is not counted against the heuristic budget.
 
 Metrics: oracle gap, feasibility, feasible-state fraction during QUBO search, exact-match rate, evaluation count, and wall-clock time. Equal evaluations do not equalize runtime or operations per evaluation. Simulated annealing is classical; no quantum hardware is used. These synthetic instances are not OpenMC physical results. The separate C5G7 four-variable penalty only enforces two MOX: all six feasible layouts have equal energy and cannot be physically ranked without a justified objective.
+
+## D. Execution and reporting contract
+
+The executable CI workflow is `.github/workflows/cbpfr-research-computational-experiments.yml`. It compiles the analysis scripts, runs the research experiment unit tests, and executes the frozen synthetic classical-versus-QUBO benchmark. The run artifact is the authoritative result record; this protocol text alone is not evidence that the experiment completed.
+
+The campaign-wide OpenMC convergence screen and equal-budget policy replay are data-gated: they require the full, integrity-passing set of 75 production records, 1,200 V2a records, and 60 high-budget reference records. The workflow must report pending/incomplete rather than infer results from partial artifacts. Any flagged convergence cases are triaged before deciding whether to extend histories; no blanket rerun is authorized by this protocol.
+
+Interpret solver results strictly as a comparison between two classical heuristics under equal objective/energy-evaluation budgets. No quantum hardware is involved, and no result from synthetic instances can be used as evidence of OpenMC physical superiority.
