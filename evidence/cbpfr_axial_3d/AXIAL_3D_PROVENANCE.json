@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "source": "GitHub Actions successful high-budget OpenMC production run",
+  "workflow_run_id": 38393987067,
+  "workflow_run_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38393987067",
+  "artifact_id": 11814200461,
+  "artifact_name": "cbpfr-axial-3d-c5g7-2x2-UMMU-production-38393987067",
+  "artifact_zip_sha256": "1a3bec271e83778b87b8a813aa79a91333d26709191ed150f8d5fbf6d2350b7b",
+  "axial_tally_npz_sha256": "3657af9ffddceb303827c700fa0e6fce5432d655843864b12dd428b6c4c499e4",
+  "axial_tally_npz_bytes": 1628820,
+  "mesh_dimension_xyz": [
+    51,
+    51,
+    30
+  ],
+  "statepoint": {
+    "sha256": "cbff5e0c43ebba78c4d029c86bce370f2ca2a60190b9f3903c98272d69416215",
+    "path": "/home/runner/work/_temp/c5g7-axial-work/c5g7-2x2-UMMU/model/3d/statepoint.7000.h5",
+    "n_batches": 7000,
+    "n_inactive": 500,
+    "n_particles": 10000,
+    "n_realizations": 6500,
+    "seed": 640000
+  },
+  "installed_at_utc": "2026-10-13T18:31:43.619247+00:00",
+  "nonclaims": [
+    "Recorded source-normalized Monte Carlo tally, not absolute reactor power.",
+    "Successful transport/export is not benchmark acceptance or safety validation.",
+    "Inherited axial layer and boundary-condition assumptions still require review."
+  ]
+}
