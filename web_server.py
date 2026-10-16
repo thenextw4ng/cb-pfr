@@ -1155,7 +1155,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(read_mesh_evidence(), allow_nan=False), "application/json; charset=utf-8")
             except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, KeyError) as exc:
                 return self._send(503, json.dumps({"error": str(exc)}), "application/json; charset=utf-8")
-        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/core_geometry_3d.js": WEB_ROOT / "core_geometry_3d.js", "/research_snapshot_ui.js": WEB_ROOT / "research_snapshot_ui.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json", "/RESEARCH_DATA_CROSSWALK_2026-10-16.md": WEB_ROOT / "RESEARCH_DATA_CROSSWALK_2026-10-16.md"}
+        routes = {"/": WEB_ROOT / "index.html", "/index.html": WEB_ROOT / "index.html", "/styles.css": WEB_ROOT / "styles.css", "/app.js": WEB_ROOT / "app.js", "/core_geometry_3d.js": WEB_ROOT / "core_geometry_3d.js", "/research_snapshot_ui.js": WEB_ROOT / "research_snapshot_ui.js", "/evidence_control_room.js": WEB_ROOT / "evidence_control_room.js", "/research_snapshot.json": WEB_ROOT / "research_snapshot.json", "/RESEARCH_DATA_CROSSWALK_2026-10-16.md": WEB_ROOT / "RESEARCH_DATA_CROSSWALK_2026-10-16.md"}
         file_path = routes.get(path)
         if file_path is None:
             return self._send(404, "Not found", "text/plain; charset=utf-8")
