@@ -119,9 +119,9 @@
     }
     return p;
   }
-  function sourceMetadata(id,parameters){
+  async function sourceMetadata(id,parameters){
     const fig=FIGURES[id]||{id,title:id,group:"Unknown",kind:"unknown"};
-    let sourceId="not recorded",sourceUri="not recorded",datasetId="not recorded",runId="not recorded",seed="not recorded";
+    let sourceId="not recorded",sourceUri="not recorded",datasetId="not recorded",runId="not recorded",workflowRunId="not recorded",seed="not recorded";
     let sourceHashes={},evidenceClass="source classification unavailable",evidenceStatus="not recorded",limitations=[];
     let candidates=[];
     const get=(obj,key)=>obj&&Object.prototype.hasOwnProperty.call(obj,key)?obj[key]:undefined;
@@ -135,7 +135,7 @@
         evidenceClass="synthetic method evidence";
         evidenceStatus=id==="cmpT7bChart"?"POST HOC synthetic comparison; not physical validation":"Author-generated synthetic method study; not OpenMC";
         sourceHashes.paper_sha256=paper.source_sha256||"not recorded";
-        sourceHashes.snapshot_t7_data_sha256=awaitDigestSafe(SNAPSHOT.paper?.t7);
+        sourceHashes.snapshot_t7_data_sha256=await awaitDigestSafe(SNAPSHOT.paper?.t7);
         limitations.push("Synthetic regimes are not neutron-transport outcomes.");
         limitations.push("T7b is post hoc.");
       }else if(id.startsWith("cmp")){
@@ -143,7 +143,7 @@
         sourceId=camp.studyId||"C5G7-policy-replay";
         sourceUri=camp.workflowUrl||camp.workflowBranch||sourceUri;
         datasetId=camp.studyId||"C5G7 replay snapshot";
-        runId=camp.workflowRun?String(camp.workflowRun):"not recorded";
+        runId="aggregate / multiple OpenMC runs";workflowRunId=camp.workflowRun?String(camp.workflowRun):"not recorded";
         seed="Aggregate/common-seed pools; individual seed IDs are not embedded in this plot payload";
         evidenceClass=id.includes("Policy")||id.includes("policy")?"recorded-data policy replay":"recorded C5G7/OpenMC experiment summary";
         evidenceStatus=camp.v2a?.perRunConvergenceCertified===true?"source summary reports convergence certified":"SOURCE CONVERGENCE NOT CERTIFIED";
@@ -222,7 +222,7 @@
     return {
       repository:"https://github.com/thenextw4ng/cb-pfr",
       figure_id:id,figure_title:fig.title,source_id:sourceId,source_uri:sourceUri,dataset_id:datasetId,
-      run_id:runId,seed,evidence_class:evidenceClass,evidence_status:evidenceStatus,
+      run_id:runId,workflow_run_id:workflowRunId,seed,evidence_class:evidenceClass,evidence_status:evidenceStatus,
       source_hashes:sourceHashes,parameters,limitations
     };
   }
@@ -264,18 +264,22 @@
       const eplus=asArray(trace.error_y?.array),eminus=asArray(trace.error_y?.arrayminus);
       if(matrix){
         trace.z.forEach((r,j)=>asArray(r).forEach((value,i)=>{
+          const customValue=customsFor(i,j);
+          const extras=Array.isArray(customValue)&&customValue.length>=9?{raw_tally_mean:customValue[0],monte_carlo_standard_error:customValue[1],relative_error_percent:customValue[2],bin_i:customValue[3],bin_j:customValue[4],bin_k:customValue[5],x_center_cm:customValue[6],y_center_cm:customValue[7],z_center_cm:customValue[8]}:{};
           rows.push({trace_index:traceIndex,trace_name:trace.name||"trace_"+traceIndex,trace_type:trace.type||"unknown",point_index:j*asArray(r).length+i,
             x:x.length?x[i]:i,y:y.length?y[j]:j,z:null,value,
-            error_y_plus:null,error_y_minus:null,customdata:customsFor(i,j)});
+            error_y_plus:null,error_y_minus:null,customdata:customValue,...extras});
         }));
       }else{
         const length=Math.max(x.length,y.length,z.length,asArray(trace.value).length,asArray(trace.intensity).length,custom.length,eplus.length,eminus.length);
         for(let i=0;i<length;i++){
-          const valueAt=trace.value!==undefined?asArray(trace.value)[i]:trace.intensity!==undefined?asArray(trace.intensity)[i]:Array.isArray(trace.z)&&trace.z.length?z[i]:null;
+          const valueAt=trace.value!==undefined?asArray(trace.value)[i]:trace.intensity!==undefined?asArray(trace.intensity)[i]:Array.isArray(trace.z)&&trace.z.length?z[i]:y.length?y[i]:null;
+          const customValue=trace.customdata!==undefined?(Array.isArray(trace.customdata)?trace.customdata[i]:trace.customdata):null;
+          const extras=Array.isArray(customValue)&&customValue.length>=9?{raw_tally_mean:customValue[0],monte_carlo_standard_error:customValue[1],relative_error_percent:customValue[2],bin_i:customValue[3],bin_j:customValue[4],bin_k:customValue[5],x_center_cm:customValue[6],y_center_cm:customValue[7],z_center_cm:customValue[8]}:{};
           rows.push({trace_index:traceIndex,trace_name:trace.name||"trace_"+traceIndex,trace_type:trace.type||"unknown",point_index:i,
             x:x.length?x[i]:null,y:y.length?y[i]:null,z:z.length?z[i]:null,value:valueAt,
             error_y_plus:eplus.length?eplus[i]:null,error_y_minus:eminus.length?eminus[i]:null,
-            customdata:trace.customdata!==undefined?(Array.isArray(trace.customdata)?trace.customdata[i]:trace.customdata):null});
+            customdata:customValue,...extras});
         }
       }
     });
@@ -288,7 +292,7 @@
   }
   function makeCsv(meta,rows){
     const base={figure_id:meta.figure_id,figure_title:meta.figure_title,caption:meta.caption||"",dataset_id:meta.source.dataset_id,
-      source_id:meta.source.source_id,source_uri:meta.source.source_uri,run_id:meta.source.run_id,seed:meta.source.seed,
+      source_id:meta.source.source_id,source_uri:meta.source.source_uri,run_id:meta.source.run_id,workflow_run_id:meta.source.workflow_run_id,seed:meta.source.seed,
       evidence_class:meta.source.evidence_class,evidence_status:meta.source.evidence_status,
       source_hashes_json:JSON.stringify(meta.source.source_hashes),exported_data_sha256:meta.integrity.data_sha256,
       visualization_config_sha256:meta.integrity.config_sha256,exported_at_utc:meta.figure.exported_at_utc};
@@ -334,7 +338,7 @@
     const dataHash=await sha256(dataText),configHash=await sha256(configText);
     const payload={
       schema_version:"cbpfr-figure-reproducibility-v1",
-      figure:{id,title:fig.title,group:fig.group,render_kind:source.kind,caption,created_at_utc:new Date().toISOString()},
+      figure:{id,title:fig.title,group:fig.group,render_kind:source.kind,caption,created_at_utc:new Date().toISOString(),png_export_pixels:[OUT_W,OUT_H]},
       source:meta,
       provenance:{source_hashes:meta.source_hashes,run_id:meta.run_id,seed:meta.seed,evidence_status:meta.evidence_status},
       visualization:{parameters:params,layout:plain(layout),trace_data:source.kind==="plotly"?dataPayload:null},
@@ -371,7 +375,7 @@
     const host=$("figureStudioMetadata");if(!host)return;
     const pairs=[
       ["Dataset ID",meta.dataset_id],["Source / path",meta.source_id],["Run / workflow ID",meta.run_id],
-      ["Seed",meta.seed],["Evidence class",meta.evidence_class],["Evidence status",meta.evidence_status],
+      ["Workflow run ID",meta.workflow_run_id],["Seed",meta.seed],["Evidence class",meta.evidence_class],["Evidence status",meta.evidence_status],
       ["Source hash(es)",JSON.stringify(meta.source_hashes)],["Parameters",JSON.stringify(meta.parameters)],
       ["Exported data SHA-256",integrity?.data_sha256||"computed during export"],["Visualization config SHA-256",integrity?.config_sha256||"computed during export"]
     ];
@@ -432,6 +436,7 @@
     const provenanceLine=[
       "Dataset: "+source.dataset_id,
       "Run ID: "+source.run_id,
+      "Workflow run ID: "+source.workflow_run_id,
       "Seed: "+source.seed,
       "Evidence: "+source.evidence_status,
       "Source hash: "+JSON.stringify(source.source_hashes)
@@ -505,7 +510,6 @@
       const vb=(clone.getAttribute("viewBox")||"0 0 1000 700").split(/\s+/).map(Number);
       const w=vb[2]||1000,h=vb[3]||700;
       clone.setAttribute("xmlns","http://www.w3.org/2000/svg");clone.setAttribute("width",String(w));clone.setAttribute("height",String(h));
-      clone.insertBefore(Object.assign(document.createElementNS("http://www.w3.org/2000/svg","rect"),{setAttribute:(()=>{})}),clone.firstChild);
       const bg=document.createElementNS("http://www.w3.org/2000/svg","rect");bg.setAttribute("x",String(vb[0]||0));bg.setAttribute("y",String(vb[1]||0));bg.setAttribute("width",String(w));bg.setAttribute("height",String(h));bg.setAttribute("fill","#06111a");clone.insertBefore(bg,clone.firstChild);
       const blob=new Blob([new XMLSerializer().serializeToString(clone)],{type:"image/svg+xml;charset=utf-8"});
       const url=URL.createObjectURL(blob);
@@ -519,7 +523,7 @@
       ctx.drawImage(img,(OUT_W-img.width*scale)/2,165,img.width*scale,img.height*scale);
     }
     ctx.fillStyle=C.ink;ctx.font="15px Arial";wrapText(ctx,bundle.caption,80,OUT_H-220,OUT_W-160,22);
-    ctx.fillStyle=C.muted;ctx.font="12px Arial";wrapText(ctx,"Source: "+p.source_id+" · Source hashes: "+JSON.stringify(p.source_hashes)+" · Config SHA-256: "+bundle.payload.integrity.config_sha256,80,OUT_H-115,OUT_W-160,18);
+    ctx.fillStyle=C.muted;ctx.font="12px Arial";wrapText(ctx,"Source: "+p.source_id+" · Source hashes: "+JSON.stringify(p.source_hashes)+" · Data SHA-256: "+bundle.payload.integrity.data_sha256+" · Config SHA-256: "+bundle.payload.integrity.config_sha256,80,OUT_H-115,OUT_W-160,18);
     return await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("Could not encode figure PNG.")),"image/png"));
   }
   function loadImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error("Could not rasterize the source visualization."));img.src=src;});}
