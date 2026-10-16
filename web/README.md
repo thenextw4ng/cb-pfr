@@ -34,3 +34,17 @@ The 3D core view is a geometry/material-derived schematic extrusion, not an axia
 The Evidence Control Room uses `GET /api/evidence-index` to catalogue the existing corrected-group candidate study, XML-derived core geometry manifest, planar OpenMC statepoint, separate axial OpenMC volume, exploratory assembly proxy, latest V2a policy replay, and synthetic method-paper results. Cards display exact source paths, hash information where available, run metadata, source status, and a link to the relevant workspace section. The registry is metadata-first: it does not pull the full axial array merely to show provenance, merge separate evidence classes, or convert source/hash checks into physical validation.
 
 Stage 0 regression tests protect the 3D core viewer, SVG source map, planar heatmap/contour/profile/surface, axial-volume controls, local evidence APIs, and snapshot separation. The browser visual-smoke job emits desktop/mobile screenshots as build artifacts for review; screenshots are evidence for manual visual comparison, not an automatic pixel-perfect equivalence claim.
+
+
+## Stage 2 · Interactive 3D Physics Lab
+
+The recorded axial OpenMC tally is shared with `web/axial_investigation.js` through a reference to the API payload already used by the 3D volume viewer. It supplies XY (normal Z), XZ (normal Y), and YZ (normal X) heatmap slices, plus a selectable X/Y/Z line profile with two fixed source-bin indices. Hover/click inspection displays the source mean, standard error, relative standard error, integer bin indices and physical cell-centre coordinates. Mean slices use log10(mean) for colour; line profiles retain the raw mean on a logarithmic y-axis. Relative-error views use the recorded percentage directly. No interpolation, synthetic volume, or geometry overlay is generated.
+
+## Stage 3 · Uncertainty & Comparative Analysis Lab
+
+The comparison panels read `web/research_snapshot.json`:
+- V2a layout means and between-run SD for `F_fission` and `k-effective`, with the separate 60-run high-budget empirical F_fission references.
+- Equal-budget empirical-best match rates and regret differences vs the point-estimate baseline, using only the interval bounds recorded in the snapshot.
+- A separate T7 synthetic-method chart comparing point-estimate, CB-PFR z=1, and adaptive R&S + CB-PFR z*, plus the reported T7b matched-feasibility intervals.
+
+Match-rate confidence intervals are not present in the recorded snapshot, so none are drawn. Error bars on run summaries are between-run SD, not confidence intervals. The high-budget reference is empirical and source convergence remains uncertified. T7/T7b remain synthetic method evidence and are not mixed with OpenMC transport results.
