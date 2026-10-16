@@ -10,6 +10,6 @@
     "minimum_active_batches": 100
   },
   "run_matrix": { "production": 75, "v2a": 1200 },
-  "interpretation": "Project-selected triage screens only; not official C5G7 limits and not convergence certification. Complete trace review, model identity, uncertainty, and independent scientific review remain required.",
+  "interpretation": "Project-selected triage screens fixed after preliminary artifact spot-checks. They are not official C5G7 limits, a blinded preregistered acceptance test, or convergence certification. Complete trace review, model identity, uncertainty, and independent scientific review remain required.",
   "followup_rule": "For flagged runs inspect the trace and entropy trajectory first. Decide whether to extend active histories, increase inactive batches, or repair the mesh/source issue from the diagnostic evidence. Do not blindly rerun every case."
 }

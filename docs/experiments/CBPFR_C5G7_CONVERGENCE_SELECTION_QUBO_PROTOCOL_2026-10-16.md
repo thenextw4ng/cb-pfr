@@ -4,7 +4,9 @@ Protocol dated 2026-10-16. Scope: six 2×2 fuel layouts with exactly two MOX and
 
 ## A. Trace-level convergence triage
 
-Frozen operational screens:
+The numerical triage cutoffs below were fixed for campaign-wide monitoring after preliminary spot-checks of a small artifact subset. Those preliminary runs are therefore not a blinded confirmatory test of the cutoffs; use them only as trace-review alarms, not as a formal hypothesis test or convergence certificate.
+
+Operational screening cutoffs:
 - At least 100 active trace values.
 - Absolute first-half/second-half active k-generation mean shift ≤25 pcm.
 - Absolute OLS k-generation slope ≤25 pcm per 1,000 active batches.

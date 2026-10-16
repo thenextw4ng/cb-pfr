@@ -106,7 +106,7 @@ def main():
       "run_level_count":len(rows),"screen_pass":sum(bool(r.get("screen_pass")) for r in rows),
       "screen_fail":sum(r["status"]=="SCREEN_FAIL_NEEDS_REVIEW_OR_MORE_HISTORIES" for r in rows),
       "review_required":sum(r["status"]=="REVIEW_REQUIRED" for r in rows),"by_stage":stage_rows,"thresholds":limits,
-      "thresholds_are_operational_screens_not_official_acceptance":True,"convergence_certified":False,"official_benchmark_acceptance":False,
+      "thresholds_are_operational_screens_not_official_acceptance":True,"threshold_origin":"Operational cutoffs fixed after preliminary artifact spot-checks; not a blinded preregistered acceptance test.","convergence_certified":False,"official_benchmark_acceptance":False,
       "interpretation":"SCREEN_PASS means only no declared operational alarm was triggered. It does not certify source/eigenvalue convergence, model validity, or benchmark acceptance. Review failing traces and choose follow-up from the diagnostic evidence."}
     a.outdir.mkdir(parents=True,exist_ok=True);write_csv(a.outdir/"convergence_run_level.csv",rows)
     (a.outdir/"convergence_study_summary.json").write_text(json.dumps(summary,indent=2,sort_keys=True)+"\n")
