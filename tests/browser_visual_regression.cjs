@@ -150,9 +150,13 @@ async function main() {
     assert.ok(mobileResponse && mobileResponse.ok(),"mobile HTML must load");
     await waitForCandidate(mobile);
     await waitForRegistry(mobile);
-    // The core viewer defaults to 3D mode; scroll to it instead of re-clicking an
-    // already-active toggle while responsive layout is still settling.
-    await mobile.locator("#assembly").scrollIntoViewIfNeeded();
+    // The core viewer defaults to 3D mode. Trigger an immediate DOM scroll rather
+    // than Playwright's stable-layout heuristic; Plotly/Three.js continuously adjust
+    // canvas layout while rendering on narrow viewports.
+    await mobile.evaluate(() => {
+      const target=document.querySelector("#assembly");
+      if(target)window.scrollTo({top:target.getBoundingClientRect().top+window.scrollY,behavior:"instant"});
+    });
     await mobile.waitForFunction(() => {
       const canvas = document.querySelector("#core3dCanvas canvas.core3d-canvas");
       const status = document.querySelector("#core3dStatus")?.textContent || "";
@@ -162,10 +166,12 @@ async function main() {
     if(mobileCoreCanvas===0){
       const status = await mobile.locator("#core3dStatus").innerText();
       assert.match(status,/2D SOURCE FALLBACK|UNAVAILABLE|FAILED/i,"Mobile core must render 3D or declare the designed 2D fallback: "+status);
-      await mobile.locator("#coreView2d").click({timeout:15000});
       await mobile.waitForSelector("#geometryPreview svg.model-geometry-svg",{timeout:20000});
     }
-    await mobile.locator("#evidence-control-room").scrollIntoViewIfNeeded();
+    await mobile.evaluate(() => {
+      const target=document.querySelector("#evidence-control-room");
+      if(target)window.scrollTo({top:target.getBoundingClientRect().top+window.scrollY,behavior:"instant"});
+    });
     await waitForRegistry(mobile);
     await mobile.locator("#evidence-control-room").screenshot({path:path.join(OUTPUT_DIR,"mobile-evidence-control-room.png"),animations:"disabled"});
     results.screenshots.push("mobile-evidence-control-room.png");
