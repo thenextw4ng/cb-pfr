@@ -1,0 +1,251 @@
+name: C5G7 P-1 to P-3 discriminative physics pilot
+
+on:
+  push:
+    branches:
+      - "experiment/c5g7-p123-discriminative-physics-20261018"
+    paths:
+      - ".github/workflows/c5g7-p123-discriminative-physics.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  p1-low-budget-six-layouts:
+    name: "P-1 low-budget screen — all six layouts"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-p123
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Stage pinned C5G7 source
+        shell: bash -el {0}
+        run: |
+          python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected = json.loads(Path("config/benchmarks/c5g7_2x2_design_space.json").read_text())
+          actual = json.loads(Path("/tmp/mit-crpg-benchmarks/UPSTREAM_PROVENANCE.json").read_text())
+          assert actual["source_commit"] == expected["source_model"]["expected_upstream_commit"]
+          print("Pinned upstream revision:", actual["source_commit"])
+          PY
+      - name: Run P-1 on all six feasible layouts
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c5g7-p123
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output /tmp/c5g7-p123/P1 --mode run \
+            --batches 100 --inactive 10 --particles 1000 --threads 1 --seed-base 610000 \
+            --candidate-ids c5g7-2x2-MMUU c5g7-2x2-MUMU c5g7-2x2-MUUM c5g7-2x2-UMMU c5g7-2x2-UMUM c5g7-2x2-UUMM
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary /tmp/c5g7-p123/P1/STUDY_SUMMARY.json \
+            --out /tmp/c5g7-p123/P1/analysis/raw_hdf5_audit.json \
+            --expected-candidates 6
+          for CASE_DIR in /tmp/c5g7-p123/P1/c5g7-2x2-*; do
+            CANDIDATE="$(basename "$CASE_DIR")"
+            SIGNATURE="${CANDIDATE#c5g7-2x2-}"
+            mkdir -p "$CASE_DIR/analysis"
+            STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+            python scripts/audit_c5g7_source_convergence.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --out-json "$CASE_DIR/analysis/source_convergence.json" \
+              --out-csv "$CASE_DIR/analysis/source_convergence.csv"
+            python scripts/analyze_c5g7_assembly_fission.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --candidate-id "$CANDIDATE" --layout-signature "$SIGNATURE" \
+              --out "$CASE_DIR/analysis/assembly_fission.json"
+          done
+      - name: Preserve P-1 statepoints, logs, and audits
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-p123-P1-low
+          path: /tmp/c5g7-p123/P1/
+          if-no-files-found: warn
+          retention-days: 30
+
+  p2-intermediate-contrast:
+    name: "P-2 intermediate budget — MUMU and UMMU"
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-p123
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Stage pinned C5G7 source
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run matched-seed intermediate profiles and audits
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c5g7-p123/P2
+          for CANDIDATE in c5g7-2x2-MUMU c5g7-2x2-UMMU; do
+            OUT="/tmp/c5g7-p123/P2/$CANDIDATE"
+            python scripts/run_c5g7_layout_study.py \
+              --source-root /tmp/mit-crpg-benchmarks \
+              --design-space config/benchmarks/c5g7_2x2_design_space.json \
+              --output "$OUT" --mode run \
+              --batches 2000 --inactive 100 --particles 5000 --threads 1 --seed-base 610000 \
+              --candidate-ids "$CANDIDATE"
+            python scripts/audit_c5g7_smoke_statepoints.py \
+              --study-summary "$OUT/STUDY_SUMMARY.json" \
+              --out "$OUT/analysis/raw_hdf5_audit.json" --expected-candidates 1
+            CASE_DIR="$OUT/$CANDIDATE"
+            SIGNATURE="${CANDIDATE#c5g7-2x2-}"
+            STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+            python scripts/audit_c5g7_source_convergence.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --out-json "$CASE_DIR/analysis/source_convergence.json" \
+              --out-csv "$CASE_DIR/analysis/source_convergence.csv"
+            python scripts/analyze_c5g7_assembly_fission.py \
+              --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+              --candidate-id "$CANDIDATE" --layout-signature "$SIGNATURE" \
+              --out "$CASE_DIR/analysis/assembly_fission.json"
+          done
+      - name: Preserve P-2 statepoints, logs, and audits
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-p123-P2-middle
+          path: /tmp/c5g7-p123/P2/
+          if-no-files-found: warn
+          retention-days: 30
+
+  p3-high-budget-anchor:
+    name: "P-3 high-budget anchor — ${{ matrix.candidate }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - candidate: c5g7-2x2-MUMU
+          - candidate: c5g7-2x2-UMMU
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-p123
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+      - name: Stage pinned C5G7 source
+        shell: bash -el {0}
+        run: python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+      - name: Run P-3 high-budget OpenMC transport
+        shell: bash -el {0}
+        env:
+          CANDIDATE: ${{ matrix.candidate }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c5g7-p123/P3
+          OUT="/tmp/c5g7-p123/P3/$CANDIDATE"
+          SIGNATURE="${CANDIDATE#c5g7-2x2-}"
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$OUT" --mode run \
+            --batches 20000 --inactive 500 --particles 10000 --threads 1 --seed-base 610000 \
+            --candidate-ids "$CANDIDATE"
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary "$OUT/STUDY_SUMMARY.json" \
+            --out "$OUT/analysis/raw_hdf5_audit.json" --expected-candidates 1
+          CASE_DIR="$OUT/$CANDIDATE"
+          STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+          python scripts/audit_c5g7_source_convergence.py \
+            --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+            --out-json "$CASE_DIR/analysis/source_convergence.json" \
+            --out-csv "$CASE_DIR/analysis/source_convergence.csv"
+          python scripts/analyze_c5g7_assembly_fission.py \
+            --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+            --candidate-id "$CANDIDATE" --layout-signature "$SIGNATURE" \
+            --out "$CASE_DIR/analysis/assembly_fission.json"
+      - name: Preserve P-3 high-budget evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-p123-P3-${{ matrix.candidate }}
+          path: /tmp/c5g7-p123/P3/${{ matrix.candidate }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  aggregate-and-apply-claim-gate:
+    name: Aggregate evidence and enforce claim boundary
+    if: always()
+    needs:
+      - p1-low-budget-six-layouts
+      - p2-intermediate-contrast
+      - p3-high-budget-anchor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download available physics artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-p123-*
+          path: /tmp/c5g7-p123-artifacts
+          merge-multiple: false
+      - name: Build campaign audit and report
+        id: summarize
+        continue-on-error: true
+        run: |
+          python scripts/summarize_c5g7_p123_campaign.py \
+            --artifacts-root /tmp/c5g7-p123-artifacts \
+            --outdir /tmp/c5g7-p123-summary
+      - name: Preserve campaign summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-p123-campaign-summary
+          path: /tmp/c5g7-p123-summary/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Fail if the 10-run evidence-integrity gate is incomplete
+        if: always()
+        env:
+          P1_RESULT: ${{ needs.p1-low-budget-six-layouts.result }}
+          P2_RESULT: ${{ needs.p2-intermediate-contrast.result }}
+          P3_RESULT: ${{ needs.p3-high-budget-anchor.result }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path("/tmp/c5g7-p123-summary/p123_campaign_audit.json")
+          expected_jobs = {"P1_RESULT": "success", "P2_RESULT": "success", "P3_RESULT": "success"}
+          job_results = {k: os.environ.get(k) for k in expected_jobs}
+          if not p.is_file():
+              print("Campaign summary missing; no evidence-integrity pass.")
+              print(json.dumps(job_results, indent=2))
+              raise SystemExit(1)
+          report = json.loads(p.read_text())
+          print(json.dumps({"status": report.get("status"), "integrity_checks": report.get("integrity_checks"), "job_results": job_results}, indent=2))
+          if any(job_results[k] != expected_jobs[k] for k in expected_jobs):
+              raise SystemExit("At least one P-phase did not complete successfully.")
+          if report.get("status") != "EVIDENCE_INTEGRITY_PASS_INTERPRETATION_OPEN":
+              raise SystemExit("10-run evidence-integrity gate did not pass; inspect the artifact report.")
+          PY
