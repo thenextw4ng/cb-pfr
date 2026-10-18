@@ -123,19 +123,29 @@ jobs:
           python - <<'PY'
           import hashlib, json, os
           from pathlib import Path
+          import h5py
           round_dir = Path(os.environ["ROUND"])
           summary = json.loads((round_dir / "STUDY_SUMMARY.json").read_text())
           case = summary["cases"][0]
           physical = case["physical_results"]
           sp = round_dir / case["candidate_id"] / physical["statepoint"]
+          # Version metadata must come from the actual statepoint, not an optional
+          # summary field which older runners may omit.
+          with h5py.File(sp, "r") as statepoint:
+              version_raw = statepoint.attrs.get("openmc_version")
+          if version_raw is None:
+              raise SystemExit("statepoint is missing the OpenMC version attribute")
+          openmc_version = ".".join(str(int(v)) for v in version_raw)
+          summary_version = physical.get("openmc_version")
+          if summary_version and str(summary_version) != openmc_version:
+              raise SystemExit(f"OpenMC version mismatch: summary={summary_version}, statepoint={openmc_version}")
           audit = {
               "phase": os.environ["PHASE"],
               "candidate_id": case["candidate_id"],
               "seed": case["seed"],
               "settings": summary["settings"],
               "upstream_commit": summary["upstream_commit"],
-              "openmc_version": physical.get("openmc_version"),
-              "mgxs_group_structure_audit": physical.get("mgxs_group_structure_audit"),
+              "openmc_version": openmc_version,
               "mgxs_energy_group_boundaries_eV": physical.get("mgxs_energy_group_boundaries"),
               "mgxs_sha256": physical.get("mgxs_sha256_after_transport"),
               "statepoint_sha256": hashlib.sha256(sp.read_bytes()).hexdigest(),
