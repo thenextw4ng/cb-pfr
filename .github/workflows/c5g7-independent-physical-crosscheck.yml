@@ -1,0 +1,202 @@
+name: C5G7 independent physical cross-check
+
+on:
+  push:
+    branches:
+      - experiment/c5g7-independent-physical-crosscheck-20261018
+    paths:
+      - .github/workflows/c5g7-independent-physical-crosscheck.yml
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Completed or active P4/P5 source campaign run ID"
+        required: true
+        type: string
+        default: "39098770358"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  independent-sn-benchmark:
+    name: Independent C5G7 S_N transport reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Check out CB-PFR protocol
+        uses: actions/checkout@v4
+
+      - name: Install Fortran compiler
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y gfortran
+
+      - name: Checkout pinned independent S_N solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/EmreSakarya/c5g7-2d-transport-benchmark.git /tmp/c5g7-sn
+          git -C /tmp/c5g7-sn checkout --detach db421c969ee2de83e2d2ae2b14bda368567b558d
+          test "$(git -C /tmp/c5g7-sn rev-parse HEAD)" = "db421c969ee2de83e2d2ae2b14bda368567b558d"
+          mkdir -p "$GITHUB_WORKSPACE/independent-crosscheck-results"
+          git -C /tmp/c5g7-sn rev-parse HEAD > "$GITHUB_WORKSPACE/independent-crosscheck-results/sn_solver_commit.txt"
+
+      - name: Compile and run fine-mesh independent transport solution
+        shell: bash
+        env:
+          OMP_NUM_THREADS: "4"
+        run: |
+          set -euo pipefail
+          gfortran -O3 -march=native -fopenmp -ffree-line-length-none \
+            /tmp/c5g7-sn/src/c5g7_transport.f90 -o /tmp/c5g7-sn/c5g7
+          cd /tmp/c5g7-sn
+          OMP_NUM_THREADS=4 ./c5g7 16 24 4 3 \
+            > "$GITHUB_WORKSPACE/independent-crosscheck-results/sn_solver.log" 2>&1
+          cp c5g7_pinpower.csv "$GITHUB_WORKSPACE/independent-crosscheck-results/"
+          cp c5g7_flux.csv "$GITHUB_WORKSPACE/independent-crosscheck-results/"
+          cat "$GITHUB_WORKSPACE/independent-crosscheck-results/sn_solver.log"
+          test -s "$GITHUB_WORKSPACE/independent-crosscheck-results/c5g7_pinpower.csv"
+
+      - name: Preserve the independent solver output immediately
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-independent-sn-reference-${{ github.run_id }}
+          path: independent-crosscheck-results/
+          if-no-files-found: warn
+          retention-days: 30
+
+  compare-with-heldout-openmc:
+    name: Audit held-out OpenMC data against public and independent references
+    needs: independent-sn-benchmark
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      SOURCE_RUN_ID: ${{ inputs.source_run_id || '39098770358' }}
+    steps:
+      - name: Check out CB-PFR comparison script
+        uses: actions/checkout@v4
+
+      - name: Wait for all source campaign jobs to complete (bounded)
+        id: wait_source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid source run ID" >&2; exit 2; }
+          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?per_page=100"
+          DEADLINE=$((SECONDS + 18000)) # 5 hours; leaves time for auditing and reporting
+          while true; do
+            JOBS_JSON="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "$API_URL")"
+            TOTAL="$(jq '.jobs | length' <<< "$JOBS_JSON")"
+            PENDING="$(jq '[.jobs[] | select(.status != "completed")] | length' <<< "$JOBS_JSON")"
+            FAILED="$(jq '[.jobs[] | select(.status == "completed" and .conclusion != "success" and .name != "P-6 selection comparison and held-out audit")] | length' <<< "$JOBS_JSON")"
+            echo "Source run $SOURCE_RUN_ID: visible_jobs=$TOTAL pending=$PENDING completed_non_success=$FAILED"
+            if (( TOTAL >= 37 && PENDING == 0 )); then
+              echo "source_complete=true" >> "$GITHUB_OUTPUT"
+              echo "Source P4/P5 campaign and P6 aggregate are complete."
+              break
+            fi
+            if (( SECONDS >= DEADLINE )); then
+              echo "::warning::Source campaign was not fully complete within 5 hours. Downloading currently available artifacts and reporting incompleteness."
+              echo "source_complete=false" >> "$GITHUB_OUTPUT"
+              break
+            fi
+            sleep 60
+          done
+
+      - name: Download available P4/P5 and P6 artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          run-id: ${{ inputs.source_run_id || '39098770358' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: c5g7-p45-*
+          path: /tmp/c5g7-p45-artifacts
+          merge-multiple: false
+
+      - name: Install post-run audit dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Independently re-audit every available P4/P5 raw statepoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "numpy<3" "h5py>=3.10,<4"
+          python - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          root = Path("/tmp/c5g7-p45-artifacts")
+          audit_script = Path("scripts/audit_c5g7_smoke_statepoints.py").resolve()
+          studies = sorted(root.rglob("STUDY_SUMMARY.json"))
+          outcomes = []
+          for study in studies:
+              rel = study.relative_to(root)
+              if not any(f"-{phase}-" in rel.parts[0] for phase in ("P4", "P5")):
+                  continue
+              out = study.parent / "analysis" / "raw_hdf5_posthoc_reaudit.json"
+              out.parent.mkdir(parents=True, exist_ok=True)
+              if out.exists():
+                  out.unlink()
+              proc = subprocess.run(
+                  [sys.executable, str(audit_script), "--study-summary", str(study),
+                   "--out", str(out), "--expected-candidates", "1"],
+                  text=True, capture_output=True
+              )
+              rep = {}
+              if out.is_file():
+                  try: rep = json.loads(out.read_text())
+                  except json.JSONDecodeError: pass
+              outcomes.append({"study": str(rel), "returncode": proc.returncode,
+                               "status": rep.get("status", "NO_REPORT"),
+                               "failed_checks": rep.get("failed_checks", []),
+                               "stderr": proc.stderr[-1500:]})
+          out = root / "POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json"
+          out.parent.mkdir(parents=True, exist_ok=True)
+          report = {"study_count": len(outcomes),
+                    "pass_count": sum(x["status"] == "PASS" and x["returncode"] == 0 for x in outcomes),
+                    "fail_count": sum(not (x["status"] == "PASS" and x["returncode"] == 0) for x in outcomes),
+                    "outcomes": outcomes}
+          out.write_text(json.dumps(report, indent=2) + "\n")
+          print(json.dumps({k:v for k,v in report.items() if k != "outcomes"}, indent=2))
+          PY
+
+      - name: Download independent solver output from prerequisite job
+        uses: actions/download-artifact@v4
+        with:
+          name: c5g7-independent-sn-reference-${{ github.run_id }}
+          path: /tmp/c5g7-independent-sn
+
+      - name: Generate benchmark and held-out comparison report
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/independent-crosscheck-report"
+          if [ -f /tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json ]; then
+            cp /tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json \
+              "$GITHUB_WORKSPACE/independent-crosscheck-report/"
+          fi
+          python scripts/compare_c5g7_independent_crosscheck.py \
+            --artifacts-root /tmp/c5g7-p45-artifacts \
+            --sn-csv /tmp/c5g7-independent-sn/c5g7_pinpower.csv \
+            --sn-log /tmp/c5g7-independent-sn/sn_solver.log \
+            --outdir "$GITHUB_WORKSPACE/independent-crosscheck-report"
+          cat "$GITHUB_WORKSPACE/independent-crosscheck-report/independent_physical_crosscheck.json"
+
+      - name: Preserve complete cross-check evidence and numerical non-passes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-independent-physical-crosscheck-${{ github.run_id }}
+          path: independent-crosscheck-report/
+          if-no-files-found: warn
+          retention-days: 30
