@@ -13,9 +13,42 @@
         "check candidate ranking and uncertainty handling within the C5G7 design space"
       ],
       "primary_reference": "https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation",
-      "current_evidence": "Corrected-group 18-run smoke dataset passed record integrity but selected no winner; P4/P5 held-out campaign is still running; independent S_N results for six layouts are partially complete; fuel-only spatial-mask correction has been regression-tested; model-fidelity and convergence review remain open.",
-      "known_blocker": "The independent S_N solver's pinned mesh-convergence study documents its expected -181.7 pcm residual at 16 cells per pin from Cartesian/digital-disk discretization; this is a known numerical bias, not a zero-bias oracle. Independent review of the actual OpenMC model/tally mapping remains open, and no design-specific physical acceptance band exists for noncanonical layouts.",
-      "crosscode_note": "The S_N solver README and convergence.log report k_eff=1.184733 at 16 cells/pin, -181.7 pcm versus the NEA value; mesh refinement reduces the offset from about -3616 pcm at four cells/pin to -182 pcm at sixteen cells/pin. Treat it as a numerical comparator with a known discretization bias, not official acceptance."
+      "current_evidence": "Corrected-group 18-run smoke dataset passed record integrity but selected no winner. The six-layout independent S_N transport run #39104899024 completed all six solver jobs; corrected posthoc artifact audit #39110583084 verified JSON/CSV consistency, all 6 layout signatures, patched source hashes, fixed reflectors, settings, and 1056 true fuel pins + 4 instrument tubes + 96 zero-power guide tubes per block. Full Python 3.12 regression #39110583360 passed 211 tests. The P4/P5 held-out OpenMC campaign is still in progress, so the cross-code comparison and P6 decision are not yet final.",
+      "known_blocker": "The independent S_N solver's pinned mesh-convergence study documents its expected -181.7 pcm residual at 16 cells per pin from Cartesian/digital-disk discretization; this is a known numerical bias, not a zero-bias oracle. The completed S_N screen is computational evidence only. Independent review of generated OpenMC model/tally mapping remains open, the P4/P5 held-out OpenMC campaign is incomplete, and no design-specific physical acceptance band exists for noncanonical layouts.",
+      "crosscode_note": "The S_N solver README and convergence.log report k_eff=1.184733 at 16 cells/pin, -181.7 pcm versus the NEA value; mesh refinement reduces the offset from about -3616 pcm at four cells/pin to -182 pcm at sixteen cells/pin. Treat it as a numerical comparator with a known discretization bias, not official acceptance.",
+      "six_layout_independent_s_n_screen": {
+        "status": "COMPLETE_COMPUTATIONAL_SCREEN_NOT_PHYSICAL_VALIDATION",
+        "source_run_id": 39104899024,
+        "source_run_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/39104899024",
+        "corrected_posthoc_run_id": 39110583084,
+        "corrected_posthoc_run_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/39110583084",
+        "corrected_posthoc_artifact_id": 12130630849,
+        "corrected_posthoc_artifact_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/39110583084/artifacts/12130630849",
+        "solver_upstream_commit": "db421c969ee2de83e2d2ae2b14bda368567b558d",
+        "settings": {
+          "cells_per_pin": 16,
+          "azimuthal_directions": 24,
+          "polar_directions": 4,
+          "inner_passes": 3,
+          "openmp_threads": 4
+        },
+        "layout_count": 6,
+        "per_four_assembly_block": {
+          "mesh_bins": 1156,
+          "true_fuel_pins": 1056,
+          "central_instrument_tubes": 4,
+          "zero_power_guide_tubes": 96
+        },
+        "integrity_findings": [
+          "patched solver source SHA-256 matches layout metadata for all six layouts",
+          "source-derived layout signatures match layout metadata for all six layouts",
+          "five reflector positions remain fixed for all six layouts",
+          "solver settings match expected profile",
+          "CSV and JSON summary rows/counts agree"
+        ],
+        "convergence_caveat": "Solver logs stop before maxout=800; source contains an internal tol=1e-5 stop rule, but detailed residuals are only printed every ten iterations and the exact terminal residual/iteration is not preserved. This is not an independent convergence certificate.",
+        "physical_validation_status": "NOT_ESTABLISHED"
+      }
     },
     "KRITZ2": {
       "role": "deferred_alternative_not_selected",
@@ -122,9 +155,9 @@
     {
       "id": "A2",
       "name": "C5G7 canonical convergence",
-      "status": "IN_PROGRESS_HIGH_BUDGET_P45_AND_INDEPENDENT_S_N_REVIEW_OPEN",
+      "status": "INDEPENDENT_S_N_SCREEN_COMPLETE_P4_P5_AND_CONVERGENCE_REVIEW_OPEN",
       "pass_condition": "three independent high-budget seeds on corrected model; raw statepoints audited; benchmark comparison reproducible",
-      "note": "New P4/P5 campaign and independent S_N runs are incomplete. Successful jobs do not certify source stationarity."
+      "note": "Six-layout independent S_N transport completed and corrected artifacts passed hash/layout/reflection/settings checks. P4/P5 high-budget OpenMC campaign and common-mask cross-code comparison remain incomplete. S_N source's internal tol=1e-5 stop rule is recorded, but retained logs do not include terminal residuals; do not claim independent convergence certification."
     },
     {
       "id": "B1",
@@ -159,7 +192,7 @@
       "name": "CB-PFR physical effectiveness",
       "status": "HELDOUT_CAMPAIGN_RUNNING_EFFECTIVENESS_NOT_ESTABLISHED",
       "pass_condition": "compare CB-PFR and baselines on the same physically evaluated candidate pool and common budget",
-      "note": "P4/P5 held-out campaign run #39098770358 has only 10/36 matrix jobs completed at latest inspection; six-layout independent S_N workflow #39104899024 has 3/6 layout jobs completed. No final P6 conclusion yet."
+      "note": "The six-layout independent S_N screen is complete but is not the OpenMC P5 ranking. P4/P5 held-out OpenMC campaign run #39098770358 remains active with jobs incomplete; the corrected cross-code posthoc workflow is waiting for all P4/P5 statepoints and raw-HDF5 re-audits. No P6 decision or physical effectiveness claim is established."
     },
     {
       "id": "Q1",
