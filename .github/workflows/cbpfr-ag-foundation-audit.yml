@@ -21,6 +21,8 @@ on:
       - tests/test_independent_c5g7_fuel_mask.py
       - scripts/compare_c5g7_independent_crosscheck.py
       - scripts/compare_c5g7_six_layout_crosscode.py
+      - scripts/summarize_c5g7_six_layout_independent_transport.py
+      - tests/test_summarize_c5g7_six_layout_independent_transport.py
   workflow_dispatch:
 
 permissions:
@@ -49,6 +51,11 @@ jobs:
         run: |
           python -m py_compile scripts/compare_c5g7_independent_crosscheck.py scripts/compare_c5g7_six_layout_crosscode.py
           python -c "import compare_c5g7_independent_crosscheck, compare_c5g7_six_layout_crosscode; print('cross-code audit modules compile and import')"
+
+      - name: Test six-layout S_N summary excludes non-fuel zero bins
+        env:
+          PYTHONPATH: ${{ github.workspace }}/scripts:${{ github.workspace }}/src:${{ github.workspace }}
+        run: python -m unittest discover -s tests -p 'test_summarize_c5g7_six_layout_independent_transport.py' -v
 
       - name: Test independent cross-code fuel-only spatial mask
         env:
