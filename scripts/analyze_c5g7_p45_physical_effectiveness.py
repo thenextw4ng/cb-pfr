@@ -50,6 +50,13 @@ def mean(values: list[float]) -> float:
     return statistics.fmean(values) if values else math.nan
 
 
+def finite_number(value: Any) -> bool:
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
 def phase_from_artifact(name: str) -> str:
     for phase in ("P4", "P5"):
         if f"-{phase}-" in name:
@@ -220,7 +227,30 @@ def aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "all_standard_mgxs_group_audits_pass": all(row["mgxs_group_structure_audit"] == "PASS" for row in rows),
         "all_statepoint_hashes_present": len(hashes) == len(rows),
         "unique_statepoint_hashes": len(set(hashes)) == len(rows),
+        "all_mgxs_hashes_present": sum(bool(row["mgxs_sha256"]) for row in rows) == len(rows),
         "single_shared_mgxs_hash": len(mgxs_hashes) == 1 and len(mgxs_hashes) > 0,
+        "three_distinct_seeds_per_layout_each_phase": all(
+            len({
+                row["seed"] for row in rows
+                if row["phase"] == phase and row["layout_signature"] == layout
+                and row["seed"] is not None
+            }) == 3
+            for phase in ("P4", "P5") for layout in EXPECTED_LAYOUTS
+        ),
+        "all_source_diagnostics_present": all(
+            row["source_convergence_status"] != "MISSING" for row in rows
+        ),
+        "finite_keff_means": all(finite_number(row["keff_mean"]) for row in rows),
+        "finite_nonnegative_within_run_keff_sds": all(
+            finite_number(row["keff_std_dev_within_run"])
+            and float(row["keff_std_dev_within_run"]) >= 0
+            for row in rows
+        ),
+        "finite_positive_fission_proxy_values": all(
+            finite_number(row["fission_rate_peaking_factor"])
+            and float(row["fission_rate_peaking_factor"]) > 0
+            for row in rows
+        ),
     }
     integrity_pass = all(integrity_checks.values())
     screening: dict[str, list[float]] = {}
@@ -240,9 +270,6 @@ def aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 selected = [row for row in rows if row["phase"] == phase and row["layout_signature"] == layout]
                 selected.sort(key=lambda row: int(row["seed"]))
                 container[layout] = [float(row["fission_rate_peaking_factor"]) for row in selected]
-                if not all(math.isfinite(x) and x > 0 for x in container[layout]):
-                    integrity_checks["finite_positive_fission_proxy_values"] = False
-        integrity_pass = all(integrity_checks.values())
     if integrity_pass:
         p4 = {}
         p5 = {}
