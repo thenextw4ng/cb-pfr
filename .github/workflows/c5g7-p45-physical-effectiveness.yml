@@ -1,0 +1,219 @@
+name: C5G7 P-4/P-5 held-out physical-effectiveness campaign
+
+on:
+  push:
+    branches:
+      - "experiment/c5g7-physical-effectiveness-20261018"
+    paths:
+      - ".github/workflows/c5g7-p45-physical-effectiveness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  p45-independent-transport:
+    name: "${{ matrix.phase }} — ${{ matrix.candidate }} — seed round ${{ matrix.seed_round }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        candidate:
+          - c5g7-2x2-MMUU
+          - c5g7-2x2-MUMU
+          - c5g7-2x2-MUUM
+          - c5g7-2x2-UMMU
+          - c5g7-2x2-UMUM
+          - c5g7-2x2-UUMM
+        seed_round: [0, 1, 2]
+        phase: [P4, P5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned OpenMC 0.16.0
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: c5g7-p45
+          create-args: >-
+            python=3.12
+            openmc=0.16.0
+          cache-environment: true
+
+      - name: Resolve predeclared phase profile and seed
+        shell: bash
+        env:
+          PHASE: ${{ matrix.phase }}
+          SEED_ROUND: ${{ matrix.seed_round }}
+        run: |
+          set -euo pipefail
+          case "$PHASE" in
+            P4)
+              echo "BATCHES=2000" >> "$GITHUB_ENV"
+              echo "INACTIVE=100" >> "$GITHUB_ENV"
+              echo "PARTICLES=5000" >> "$GITHUB_ENV"
+              echo "SEED_BASE=$((810000 + SEED_ROUND * 10000))" >> "$GITHUB_ENV"
+              ;;
+            P5)
+              echo "BATCHES=20000" >> "$GITHUB_ENV"
+              echo "INACTIVE=500" >> "$GITHUB_ENV"
+              echo "PARTICLES=10000" >> "$GITHUB_ENV"
+              echo "SEED_BASE=$((910000 + SEED_ROUND * 10000))" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Unknown phase: $PHASE" >&2
+              exit 2
+              ;;
+          esac
+          echo "Phase=$PHASE seed_round=$SEED_ROUND seed_base=$(grep '^SEED_BASE=' "$GITHUB_ENV" | tail -1 | cut -d= -f2)"
+
+      - name: Stage and verify pinned upstream C5G7 source
+        shell: bash -el {0}
+        run: |
+          set -euo pipefail
+          python scripts/prepare_c5g7_reference.py --destination /tmp/mit-crpg-benchmarks
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected = json.loads(Path("config/benchmarks/c5g7_2x2_design_space.json").read_text())
+          actual = json.loads(Path("/tmp/mit-crpg-benchmarks/UPSTREAM_PROVENANCE.json").read_text())
+          wanted = expected["source_model"]["expected_upstream_commit"]
+          if actual["source_commit"] != wanted:
+              raise SystemExit(f"source revision mismatch: {actual['source_commit']} != {wanted}")
+          print("Pinned C5G7 source verified:", wanted)
+          PY
+
+      - name: Run one isolated OpenMC transport case
+        shell: bash -el {0}
+        env:
+          PHASE: ${{ matrix.phase }}
+          CANDIDATE: ${{ matrix.candidate }}
+        run: |
+          set -euo pipefail
+          ROUND="$GITHUB_WORKSPACE/p45-results/$PHASE/$CANDIDATE/seed_$SEED_BASE"
+          mkdir -p "$(dirname "$ROUND")"
+          python scripts/run_c5g7_layout_study.py \
+            --source-root /tmp/mit-crpg-benchmarks \
+            --design-space config/benchmarks/c5g7_2x2_design_space.json \
+            --output "$ROUND" --mode run \
+            --batches "$BATCHES" --inactive "$INACTIVE" --particles "$PARTICLES" \
+            --threads 1 --seed-base "$SEED_BASE" --candidate-ids "$CANDIDATE"
+          echo "ROUND=$ROUND" >> "$GITHUB_ENV"
+
+      - name: Audit raw HDF5 statepoint against settings and manifest
+        shell: bash -el {0}
+        env:
+          CANDIDATE: ${{ matrix.candidate }}
+        run: |
+          set -euo pipefail
+          python scripts/audit_c5g7_smoke_statepoints.py \
+            --study-summary "$ROUND/STUDY_SUMMARY.json" \
+            --out "$ROUND/analysis/raw_hdf5_audit.json" \
+            --expected-candidates 1
+          CASE_DIR="$ROUND/$CANDIDATE"
+          mkdir -p "$CASE_DIR/analysis"
+          SIGNATURE="${CANDIDATE#c5g7-2x2-}"
+          STATEPOINT_REL="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["physical_results"]["statepoint"])' "$CASE_DIR/CASE_RESULT.json")"
+          python scripts/audit_c5g7_source_convergence.py \
+            --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+            --out-json "$CASE_DIR/analysis/source_convergence.json" \
+            --out-csv "$CASE_DIR/analysis/source_convergence.csv"
+          python scripts/analyze_c5g7_assembly_fission.py \
+            --statepoint "$CASE_DIR/$STATEPOINT_REL" \
+            --candidate-id "$CANDIDATE" --layout-signature "$SIGNATURE" \
+            --out "$CASE_DIR/analysis/assembly_fission.json"
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          round_dir = Path(os.environ["ROUND"])
+          summary = json.loads((round_dir / "STUDY_SUMMARY.json").read_text())
+          case = summary["cases"][0]
+          physical = case["physical_results"]
+          sp = round_dir / case["candidate_id"] / physical["statepoint"]
+          audit = {
+              "phase": os.environ["PHASE"],
+              "candidate_id": case["candidate_id"],
+              "seed": case["seed"],
+              "settings": summary["settings"],
+              "upstream_commit": summary["upstream_commit"],
+              "openmc_version": physical.get("openmc_version"),
+              "mgxs_group_structure_audit": physical.get("mgxs_group_structure_audit"),
+              "mgxs_energy_group_boundaries_eV": physical.get("mgxs_energy_group_boundaries"),
+              "mgxs_sha256": physical.get("mgxs_sha256_after_transport"),
+              "statepoint_sha256": hashlib.sha256(sp.read_bytes()).hexdigest(),
+              "keff_mean": physical.get("keff_mean"),
+              "keff_std_dev_within_run": physical.get("keff_std_dev"),
+              "raw_hdf5_audit": "PASS",
+              "official_benchmark_acceptance": False,
+              "convergence_certified": False
+          }
+          (round_dir / "analysis" / "p45_run_audit.json").write_text(json.dumps(audit, indent=2) + "\n")
+          print(json.dumps(audit, indent=2))
+          PY
+
+      - name: Preserve complete run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-p45-${{ matrix.phase }}-${{ matrix.candidate }}-round-${{ matrix.seed_round }}
+          path: p45-results/${{ matrix.phase }}/${{ matrix.candidate }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  p6-heldout-comparison:
+    name: P-6 selection comparison and held-out audit
+    if: always()
+    needs: p45-independent-transport
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download all available P-4/P-5 run artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: c5g7-p45-*
+          path: /tmp/c5g7-p45-artifacts
+          merge-multiple: false
+
+      - name: Analyze integrity, selection rules, and held-out physical proxy
+        id: analyze
+        continue-on-error: true
+        run: |
+          python scripts/analyze_c5g7_p45_physical_effectiveness.py \
+            --artifacts-root /tmp/c5g7-p45-artifacts \
+            --outdir /tmp/c5g7-p45-summary
+
+      - name: Preserve P-6 comparison report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-p45-P6-heldout-comparison
+          path: /tmp/c5g7-p45-summary/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce the integrity gate without overclaiming physics
+        if: always()
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("/tmp/c5g7-p45-summary/p45_campaign_audit.json")
+          if not p.is_file():
+              raise SystemExit("P-6 report missing; evidence-integrity gate is incomplete.")
+          report = json.loads(p.read_text())
+          print(json.dumps({
+              "campaign_status": report.get("status"),
+              "phase_counts": report.get("phase_counts"),
+              "integrity_checks": report.get("integrity_checks"),
+              "physical_comparison_status": (report.get("physical_comparison") or {}).get("status"),
+              "cbpfr_physical_superiority": ((report.get("physical_comparison") or {}).get("claims") or {}).get("cbpfr_physical_superiority", "NOT_ESTABLISHED")
+          }, indent=2))
+          if report.get("status") != "EVIDENCE_INTEGRITY_PASS_INTERPRETATION_OPEN":
+              raise SystemExit("The 36-run P-4/P-5 evidence-integrity gate is incomplete or failed.")
+          PY
