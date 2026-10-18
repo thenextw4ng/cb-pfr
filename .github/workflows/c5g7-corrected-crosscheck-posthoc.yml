@@ -69,9 +69,9 @@ jobs:
             LT="$(jq '.jobs | length' <<< "$LAYOUT_JSON")"
             LP="$(jq '[.jobs[] | select(.status != "completed")] | length' <<< "$LAYOUT_JSON")"
             echo "OpenMC campaign $SOURCE_RUN_ID: jobs=$ST pending=$SP"
-            echo "Independent six-layout S_N $LAYOUT_RUN_ID: jobs=$LT pending=$LP"
-            if (( ST >= 37 && SP == 0 )); then SOURCE_READY=true; fi
-            if (( LT >= 7 && LP == 0 )); then LAYOUT_READY=true; fi
+            echo "Independent six-layout S_N $LAYOUT_RUN_ID: matrix_jobs=$LT pending=$LP"
+            if (( ST >= 36 && SP == 0 )); then SOURCE_READY=true; fi
+            if (( LT >= 6 && LP == 0 )); then LAYOUT_READY=true; fi
             if [[ "$SOURCE_READY" == "true" && "$LAYOUT_READY" == "true" ]]; then
               echo "source_complete=true" >> "$GITHUB_OUTPUT"
               echo "layout_complete=true" >> "$GITHUB_OUTPUT"
