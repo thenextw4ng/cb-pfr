@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "program_id": "CBPFR-BEAVRS-validation-2026-10",
   "benchmark": "BEAVRS",
   "upstream_repository": "https://github.com/mit-crpg/BEAVRS",
@@ -14,55 +14,120 @@
     "beavrs_uq_report.pdf"
   ],
   "selected_observable": {
-    "status": "PENDING_CASE_SELECTION",
-    "candidates": [
-      "normalized in-core detector/flux distribution at a documented cycle state",
-      "boron letdown curve with depletion/operating-history model"
-    ],
+    "status": "PRELIMINARY_COMPARISON_EXECUTED_NOT_VALIDATED",
+    "observable": "Cycle 1 day-0 tilt-corrected radial detector map at 58 instrumented assembly labels",
+    "measured_file": "measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv",
+    "model_proxy": "normalized assembly-integrated U-235 fission-rate tally",
+    "caveat": "The detector signal and assembly-integrated fission tally are related but not the same measurement operator. Per-position experimental uncertainty and normalization-induced covariance are not propagated by the current comparison.",
     "rule": "Do not compare non-equivalent observables or treat normalized detector signal as absolute power."
   },
   "gates": [
     {
       "id": "B1",
       "name": "Source and nuclear data provenance",
-      "status": "NOT_RUN",
-      "pass_condition": "Pin upstream commit; record hashes, OpenMC version, nuclear-data library/version and provenance."
+      "status": "PARTIAL_PINNED_SOURCE_AND_HASH_RECORDS_EXIST",
+      "pass_condition": "Pin upstream commit; record hashes, OpenMC version, nuclear-data library/version and provenance.",
+      "evidence": [
+        "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412",
+        "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117736764"
+      ],
+      "remaining": "Independently review all generated XML, nuclear-data state and actual transport inputs against the selected benchmark specification."
     },
     {
       "id": "B2",
       "name": "Model-state fidelity",
-      "status": "NOT_RUN",
-      "pass_condition": "Reproduce selected experimental cycle/state, geometry, loading, temperature, boron and control-rod state."
+      "status": "PARTIAL_STATE_OVERRIDES_RECORDED_REVIEW_OPEN",
+      "pass_condition": "Reproduce selected experimental cycle/state, geometry, loading, temperature, boron and control-rod state.",
+      "known_details": {
+        "cycle": "1 day 0",
+        "boron_ppm": 975.25,
+        "inlet_temperature_F": 558.875,
+        "inlet_temperature_K": 565.8583,
+        "control_bank_steps": {
+          "A": 228,
+          "B": 228,
+          "C": 228,
+          "D": 213,
+          "SE": 230
+        }
+      },
+      "remaining": "The SE=230 override differs from the upstream default 228 and the axial step-width assumption needs sensitivity/geometry review. Actual loading and state fidelity need qualified independent review."
     },
     {
       "id": "B3",
       "name": "Measurement-to-tally mapping",
-      "status": "NOT_RUN",
-      "pass_condition": "Match detector channels/positions/response and documented uncertainty to the model observable."
+      "status": "LABEL_SET_AND_COORDINATE_DIAGNOSTICS_COMPLETE_RESPONSE_OPERATOR_UNRESOLVED",
+      "pass_condition": "Match detector channels/positions/response and documented uncertainty to the model observable.",
+      "evidence": [
+        "reports/BEAVRS_COORDINATE_REGISTRATION_AUDIT_2026-10-11.md"
+      ],
+      "findings": {
+        "unique_instrumented_labels": 58,
+        "upstream_model_label_match_count": 58,
+        "raw_measurement_label_match_count": 58,
+        "coordinate_overlay_workflow_run": 38120609560
+      },
+      "remaining": "Assembly fission tally is not an exact detector response model; measurement uncertainty/covariance is not propagated. Do not choose rotations/reflections after examining correlations."
     },
     {
       "id": "B4",
       "name": "OpenMC convergence and repeatability",
-      "status": "NOT_RUN",
-      "pass_condition": "Independent seeds, source convergence, declared precision, raw statepoints/logs and hashes."
+      "status": "RUNS_COMPLETED_BUT_CONVERGENCE_AND_INDEPENDENT_REPLICATION_NOT_CLOSED",
+      "pass_condition": "Independent seeds, source convergence, declared precision, raw statepoints/logs and hashes.",
+      "evidence": [
+        "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412",
+        "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117736764",
+        "https://github.com/thenextw4ng/cb-pfr/actions/runs/38119215203"
+      ],
+      "remaining": "Successful transport and integrity audit do not certify source stationarity or establish repeatability across independent seeds. A new expensive transport is not justified until the model/observable discrepancy is resolved and a protocol is frozen."
     },
     {
       "id": "B5",
       "name": "Quantitative experiment comparison",
-      "status": "NOT_RUN",
-      "pass_condition": "Frozen acceptance criteria and residual table with uncertainty treatment."
+      "status": "SPATIAL_AGREEMENT_POOR_VALIDATION_NOT_PASSED",
+      "pass_condition": "Frozen acceptance criteria and residual table with uncertainty treatment.",
+      "runs": [
+        {
+          "run_id": 38117279412,
+          "keff_mean": 1.00036455,
+          "keff_standard_deviation": 0.00076289,
+          "normalized_map_rmse": 0.33425825558394956,
+          "normalized_map_mae": 0.27573,
+          "mean_absolute_relative_error_percent": 29.001211677965053,
+          "pearson_correlation": -0.07801996934490017,
+          "integrity_status": "PASS_INTEGRITY_ONLY"
+        },
+        {
+          "run_id": 38117736764,
+          "normalized_map_rmse": 0.33425825558394956,
+          "mean_absolute_relative_error_percent": 29.001211677965053,
+          "pearson_correlation": -0.07801996934490017,
+          "integrity_status": "PASS_INTEGRITY_ONLY"
+        },
+        {
+          "run_id": 38119215203,
+          "normalized_map_rmse": 0.3289164869427506,
+          "normalized_map_mae": 0.2696,
+          "mean_absolute_relative_error_percent": 27.747655611674492,
+          "pearson_correlation": 0.03235882827559309,
+          "integrity_status": "PASS_INTEGRITY_ONLY"
+        }
+      ],
+      "remaining": "Spatial agreement remains poor in both raw and tilt-corrected map diagnostics. The 95% Monte Carlo interval on the corrected run's k-effective includes unity, but criticality consistency alone cannot offset the poor spatial agreement or establish validation."
     },
     {
       "id": "B6",
       "name": "Independent reproducibility audit",
-      "status": "NOT_RUN",
-      "pass_condition": "Clean rerun reproduces the input-to-result chain and comparison artifacts."
+      "status": "ARTIFACT_INTEGRITY_PASS_ONLY_REPRODUCIBILITY_REVIEW_OPEN",
+      "pass_condition": "Clean rerun reproduces the input-to-result chain and comparison artifacts.",
+      "remaining": "Recorded raw-statepoint and comparison checks passed integrity; independent clean rerun of the full input-to-result chain and scientific audit of the comparison operator remain open."
     },
     {
       "id": "B7",
       "name": "CB-PFR candidate-effectiveness test",
       "status": "BLOCKED_ON_B1_B6",
-      "pass_condition": "Auditable physical candidate mapping; compare CB-PFR to baselines on same candidate pool and budget."
+      "pass_condition": "Auditable physical candidate mapping; compare CB-PFR to baselines on same candidate pool and budget.",
+      "remaining": "BEAVRS model-to-measurement comparison does not itself measure CB-PFR ranking effectiveness. Keep the BEAVRS and six-layout C5G7 studies separate."
     },
     {
       "id": "Q1",
@@ -73,12 +138,20 @@
   ],
   "overall_status": "NOT_PHYSICALLY_VALIDATED",
   "explicit_nonclaims": [
-    "Selecting BEAVRS is not a completed validation.",
-    "A model run alone is not validation without like-for-like experimental comparison.",
+    "The BEAVRS criticality consistency result is not a spatial validation pass.",
+    "A model run or green workflow is not validation without like-for-like experimental comparison.",
     "Validating the BEAVRS model does not automatically validate CB-PFR candidate ranking.",
-    "QUBO formulation alone does not establish quantum hardware execution or quantum advantage."
+    "The BEAVRS full-core candidate space is distinct from the six C5G7 UO2/MOX layouts.",
+    "QUBO formulation alone does not establish quantum hardware execution or quantum advantage.",
+    "No reactor safety, universal physical superiority, absolute power, or general reactor-design-method claim is supported."
   ],
   "protocol_report": "reports/BEAVRS_VALIDATION_EXECUTION_PLAN_2026-10-11.md",
+  "evidence_reports": [
+    "reports/BEAVRS_CYCLE1_EXPERIMENTAL_COMPARISON_PROTOCOL.md",
+    "reports/BEAVRS_COORDINATE_REGISTRATION_AUDIT_2026-10-11.md",
+    "reports/dual_benchmark_validation_status_2026-10-11.md"
+  ],
   "upstream_commit_url": "https://github.com/mit-crpg/BEAVRS/commit/1ccae04dc3830a5977f08ed7f5f7e1e51ded0d22",
-  "source_freeze_status": "COMMIT_IDENTIFIED; checkout and artifact hashing still required"
+  "source_freeze_status": "PINNED_COMMIT_AND_RUN_HASH_RECORDS_PRESENT; INDEPENDENT_MODEL-FIDELITY REVIEW OPEN",
+  "decision_date": "2026-10-18"
 }
