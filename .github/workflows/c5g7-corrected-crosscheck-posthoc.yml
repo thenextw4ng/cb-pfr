@@ -127,6 +127,8 @@ jobs:
           (root / "POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json").write_text(json.dumps(summary, indent=2)+"\n")
           print(json.dumps({k:v for k,v in summary.items() if k != "outcomes"}, indent=2))
           PY
+          mkdir -p corrected-crosscheck-report
+          cp /tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json corrected-crosscheck-report/
 
       - name: Generate corrected fuel-only cross-code report
         id: report
@@ -147,9 +149,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cbpfr-corrected-crosscheck-posthoc-${{ github.run_id }}
-          path: |
-            corrected-crosscheck-report/
-            /tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json
+          path: corrected-crosscheck-report/
           if-no-files-found: warn
           retention-days: 30
 
