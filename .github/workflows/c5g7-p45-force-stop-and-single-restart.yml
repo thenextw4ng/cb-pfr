@@ -1,0 +1,101 @@
+name: Force-stop stale C5G7 jobs and dispatch one fixed campaign
+
+on:
+  # One-shot control action. Do not edit while an experiment is running.
+  push:
+    branches:
+      - experiment/c5g7-physical-effectiveness-20261018
+    paths:
+      - .github/workflows/c5g7-p45-force-stop-and-single-restart.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  force-stop-and-restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Cancel prior controller and force-stop stale runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          request_cancel() {
+            local id="$1"
+            local endpoint="$2"
+            local code
+            code="$(curl --silent --show-error -o "/tmp/stop-$id.json" -w '%{http_code}' \
+              -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$id/$endpoint")"
+            case "$code" in
+              202) echo "Requested $endpoint for run $id." ;;
+              409|422) echo "Run $id already finished or rejected $endpoint (HTTP $code); will verify state." ;;
+              *) cat "/tmp/stop-$id.json"; echo "Unexpected HTTP $code stopping run $id." >&2; exit 1 ;;
+            esac
+          }
+          # Stop controller 1 so only this controller can dispatch the replacement.
+          request_cancel 39098671386 cancel
+          # Force-cancel long-running OpenMC jobs and the old wait-only audit.
+          request_cancel 39096389643 force-cancel
+          request_cancel 39097575056 force-cancel
+
+      - name: Verify all stale runs have stopped
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          wait_for_stopped() {
+            local id="$1"
+            local expected_min_jobs="$2"
+            for attempt in $(seq 1 120); do
+              local run_json jobs_json status count unfinished
+              run_json="$(curl --fail --silent --show-error \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$id")"
+              status="$(jq -r '.status // "unknown"' <<< "$run_json")"
+              jobs_json="$(curl --fail --silent --show-error \
+                -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=100")"
+              count="$(jq '.jobs | length' <<< "$jobs_json")"
+              unfinished="$(jq '[.jobs[] | select(.status != "completed")] | length' <<< "$jobs_json")"
+              echo "Run $id: status=$status jobs=$count unfinished=$unfinished"
+              if [[ "$status" == "completed" && "$unfinished" == "0" && "$count" -ge "$expected_min_jobs" ]]; then
+                return 0
+              fi
+              sleep 10
+            done
+            echo "Run $id did not stop cleanly; refusing to dispatch another campaign." >&2
+            return 1
+          }
+          wait_for_stopped 39098671386 1
+          wait_for_stopped 39096389643 36
+          wait_for_stopped 39097575056 1
+
+      - name: Dispatch exactly one repaired C5G7 campaign
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -n --arg ref "experiment/c5g7-physical-effectiveness-20261018" '{ref:$ref}')"
+          code="$(curl --silent --show-error -o /tmp/dispatch-response.json -w '%{http_code}' \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/c5g7-p45-physical-effectiveness.yml/dispatches")"
+          if [[ "$code" != "204" ]]; then
+            cat /tmp/dispatch-response.json
+            echo "Repaired campaign dispatch failed with HTTP $code." >&2
+            exit 1
+          fi
+          echo "Exactly one repaired P-4/P-5/P-6 campaign was dispatched on $GITHUB_REF_NAME."
