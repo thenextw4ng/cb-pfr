@@ -76,6 +76,45 @@ jobs:
           print("Deterministic foundation checks passed; physical validation correctly remains NOT ESTABLISHED.")
           PY
 
+      - name: Audit retained low-budget C5G7 repeatability (screen must remain fail-closed)
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: |
+          python scripts/audit_c5g7_validation_gates.py \
+            --runs-csv results/c5g7_repeatability_normalized_2026-10-11/run_level_results.csv \
+            --out ag-foundation-audit/legacy-c5g7-repeatability-screen.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("ag-foundation-audit/legacy-c5g7-repeatability-screen.json").read_text())
+          assert report["run_count"] == 18 and report["candidate_count"] == 6, report
+          assert all(report["global_checks"][key] for key in (
+              "common_compute_settings", "unique_seeds", "unique_statepoint_hashes",
+              "single_mgxs_hash", "all_raw_hdf5_audits_pass"
+          )), report
+          assert report["status"] == "FAIL_OR_INCOMPLETE_CANONICAL_KEFF_SCREEN", report
+          assert report["is_official_benchmark_acceptance"] is False, report
+          print("Retained smoke-data integrity passed; canonical scalar screen remains unpassed as expected.")
+          PY
+
+      - name: Audit corrected-group objective and keep design selection blocked
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: |
+          python scripts/audit_c5g7_corrected_objective.py \
+            --runs-csv results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv \
+            --out ag-foundation-audit/corrected-group-objective-audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("ag-foundation-audit/corrected-group-objective-audit.json").read_text())
+          assert report["status"] == "EVIDENCE_INTEGRITY_PASS_DESIGN_SELECTION_BLOCKED", report
+          assert report["run_count"] == 18 and report["layout_count"] == 6, report
+          assert all(report["checks"].values()), report
+          assert report["decision"]["winner_selected"] is False, report
+          print("Corrected-group records are internally consistent; physical candidate selection remains blocked.")
+          PY
+
       - name: Preserve machine-readable audit
         if: always()
         uses: actions/upload-artifact@v4
