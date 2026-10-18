@@ -17,6 +17,8 @@ on:
       - tests/test_c5g7_selection_qubo.py
       - tests/test_c5g7_layout_selection_qubo.py
       - tests/test_c5g7_objective_protocol.py
+      - tests/test_independent_c5g7_fuel_mask.py
+      - scripts/compare_c5g7_independent_crosscheck.py
   workflow_dispatch:
 
 permissions:
@@ -35,6 +37,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Install numerical audit dependencies
+        run: python -m pip install --disable-pip-version-check "numpy<3" "h5py>=3.10,<4"
+
+      - name: Test independent cross-code fuel-only spatial mask
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: python -m unittest discover -s tests -p 'test_independent_c5g7_fuel_mask.py' -v
 
       - name: Test exact QUBO cardinality encoding
         env:
