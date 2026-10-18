@@ -33,20 +33,39 @@ def parse_sig_dir(d: Path) -> dict:
     if k is None or pmax_log is None or pmin_log is None: issues.append("key metric absent from solver log")
     assembly_sums={str(i):0.0 for i in range(1,5)}
     positive_pin_values=[]
+    seen_coordinates=set()
     n_positive=0
+    n_block_bins=0
     with csv_path.open(newline="",encoding="utf-8") as f:
         reader=csv.DictReader(f)
         if not {"pc","pr","assembly","norm_power"}.issubset(set(reader.fieldnames or [])):
             issues.append("unexpected pin-power CSV schema")
         else:
             for row in reader:
+                x, y = int(row["pc"]), int(row["pr"])
+                if not (1 <= x <= 34 and 18 <= y <= 51):
+                    continue
+                key=(x,y)
+                if key in seen_coordinates:
+                    issues.append(f"duplicate pin-power coordinate {key}")
+                    continue
+                seen_coordinates.add(key)
+                n_block_bins += 1
                 value=float(row["norm_power"])
+                if not math.isfinite(value) or value < 0:
+                    issues.append(f"invalid pin power at coordinate {key}: {value}")
+                    continue
                 aidx=str(int(row["assembly"]))
-                if aidx not in assembly_sums: continue
+                if aidx not in assembly_sums:
+                    if value > 0:
+                        issues.append(f"positive power assigned to unknown assembly {aidx} at {key}")
+                    continue
                 if value>0:
                     n_positive+=1
                     positive_pin_values.append(value)
                     assembly_sums[aidx]+=value
+    if n_block_bins != 1156:
+        issues.append(f"expected 1156 unique bins in 34x34 block, found {n_block_bins}")
     total=sum(assembly_sums.values())
     if total<=0: issues.append("non-positive summed assembly power")
     if n_positive != 1060:
@@ -76,8 +95,9 @@ def parse_sig_dir(d: Path) -> dict:
       "min_positive_normalized_pin_power_csv":pmin,
       "solver_log_max_over_all_reported_bins":pmax_log,
       "solver_log_min_over_all_reported_bins":pmin_log,
-      "positive_pin_bins":n_positive,
-      "non_fuel_zero_bins_excluded_from_positive_min":1156-n_positive,
+      "mesh_block_bins":n_block_bins,
+      "positive_fuel_pin_bins":n_positive,
+      "zero_nonfuel_bins_excluded_from_positive_min":n_block_bins-n_positive,
       "position_power_fractions_percent":{"p00":fractions["1"],"p01":fractions["2"],"p10":fractions["3"],"p11":fractions["4"]},
       "solver_log_sha256":sha(log_path),
       "pinpower_csv_sha256":sha(csv_path),
