@@ -183,6 +183,8 @@ def compare_spatial_maps(openmc_maps, sn_values, fuel_mask):
         "sn_min_normalized_fuel_pin_power": float(rv.min()),
         "comparable_fuel_pin_count": int(mask.sum()),
         "excluded_non_fuel_mesh_bins": int(mask.size-mask.sum()),
+        "excluded_instrument_tube_bins": 4,
+        "excluded_zero_power_guide_tube_bins": 96,
     }
 
 def main():
@@ -256,7 +258,7 @@ def main():
                 "published_mcnp_pin_power_summary":{"max":P_MAX_REF,"min":P_MIN_REF,"max_relative_sd":0.0016,"min_relative_sd":0.0058},
                 "sn_max_vs_published_percent":(snmax/P_MAX_REF-1)*100,
                 "sn_min_vs_published_percent":(snmin/P_MIN_REF-1)*100,
-                "interpretation":"A true-fuel mask excludes 96 zero-power guide-tube bins and four positive-fission instrument-tube bins from the 34x34 block, the solver's CSV has 1,060 positive bins including four central instrument tubes; this audit treats only 1,056 as true fuel pins. Fission-rate and normalized-power tallies are related but not identical. This is cross-code evidence only; not physical validation, a safety limit, or official acceptance.",
+                "interpretation":"A true-fuel mask excludes 96 zero-power guide-tube bins and four positive-fission instrument-tube bins from the 34x34 block. The solver CSV has 1,060 positive bins including four central instrument tubes; this audit treats only 1,056 as true fuel pins. Fission-rate and normalized-power tallies are related but not identical. This is cross-code evidence only; not physical validation, a safety limit, or official acceptance.",
             }
         except Exception as e:
             spatial = {"status":"CROSS_CODE_COMPARISON_FAILED_OR_INCOMPLETE","error":str(e)}
