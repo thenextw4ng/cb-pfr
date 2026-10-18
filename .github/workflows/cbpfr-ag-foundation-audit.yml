@@ -11,6 +11,7 @@ on:
       - src/cbpfr/c5g7_design_qubo.py
       - config/benchmarks/c5g7_validation_protocol.json
       - config/benchmarks/beavrs_validation_manifest.json
+      - config/benchmarks/dual_benchmark_validation_manifest.json
       - tests/test_c5g7_design_qubo.py
       - tests/test_c5g7_layout_enumeration.py
       - tests/test_c5g7_mapping_contract.py
