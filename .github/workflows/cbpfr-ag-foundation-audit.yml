@@ -1,0 +1,86 @@
+name: CB-PFR A-G foundation audit
+
+on:
+  push:
+    branches:
+      - experiment/c5g7-independent-physical-crosscheck-20261018
+    paths:
+      - .github/workflows/cbpfr-ag-foundation-audit.yml
+      - scripts/audit_cbpfr_validation_scope_ag.py
+      - scripts/enumerate_c5g7_layouts.py
+      - src/cbpfr/c5g7_design_qubo.py
+      - config/benchmarks/c5g7_validation_protocol.json
+      - config/benchmarks/beavrs_validation_manifest.json
+      - tests/test_c5g7_design_qubo.py
+      - tests/test_c5g7_layout_enumeration.py
+      - tests/test_c5g7_mapping_contract.py
+      - tests/test_c5g7_selection_qubo.py
+      - tests/test_c5g7_layout_selection_qubo.py
+      - tests/test_c5g7_objective_protocol.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-foundation:
+    name: A-G software/design-space foundation (not physical validation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test exact QUBO cardinality encoding
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: python -m unittest discover -s tests -p 'test_c5g7_design_qubo.py' -v
+
+      - name: Test exhaustive six-layout enumeration
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: python -m unittest discover -s tests -p 'test_c5g7_layout_enumeration.py' -v
+
+      - name: Test physical mapping fails closed pending review
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: python -m unittest discover -s tests -p 'test_c5g7_mapping_contract.py' -v
+
+      - name: Test QUBO selection and objective protocol
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: |
+          python -m unittest discover -s tests -p 'test_c5g7_selection_qubo.py' -v
+          python -m unittest discover -s tests -p 'test_c5g7_layout_selection_qubo.py' -v
+          python -m unittest discover -s tests -p 'test_c5g7_objective_protocol.py' -v
+
+      - name: Generate fail-closed A-G foundation report
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+        run: |
+          python scripts/audit_cbpfr_validation_scope_ag.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("ag-foundation-audit/cbpfr_ag_foundation_audit.json")
+          report=json.loads(p.read_text())
+          assert report["all_deterministic_checks_pass"], report
+          assert report["gate_status"]["A_model_identity_fidelity"]["status"].startswith("BLOCKED"), report
+          assert report["gate_status"]["E_experimental_or_trusted_benchmark_validation"]["status"] == "NOT_ESTABLISHED", report
+          assert report["overall_physical_validation_status"] == "NOT_ESTABLISHED", report
+          print("Deterministic foundation checks passed; physical validation correctly remains NOT ESTABLISHED.")
+          PY
+
+      - name: Preserve machine-readable audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-ag-foundation-audit-${{ github.run_id }}
+          path: ag-foundation-audit/
+          if-no-files-found: warn
+          retention-days: 30
