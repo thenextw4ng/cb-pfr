@@ -1,0 +1,77 @@
+name: Re-summarize completed six-layout S_N artifacts
+
+on:
+  push:
+    branches:
+      - experiment/c5g7-independent-physical-crosscheck-20261018
+    paths:
+      - .github/workflows/c5g7-six-layout-summary-posthoc.yml
+      - scripts/summarize_c5g7_six_layout_independent_transport.py
+      - tests/test_summarize_c5g7_six_layout_independent_transport.py
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Completed six-layout independent S_N run ID"
+        required: true
+        default: "39104899024"
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  resummarize:
+    name: Corrected posthoc summary without new transport
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out summary code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download existing layout-specific S_N artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.source_run_id || '39104899024' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: sn-c5g7-*
+          path: /tmp/sn-layout-artifacts
+          merge-multiple: false
+
+      - name: Run corrected six-layout summarizer against existing artifacts
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/summarize_c5g7_six_layout_independent_transport.py
+          python scripts/summarize_c5g7_six_layout_independent_transport.py \
+            --root /tmp/sn-layout-artifacts \
+            --outdir corrected-sn-summary
+          cat corrected-sn-summary/six_layout_independent_transport_summary.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("corrected-sn-summary/six_layout_independent_transport_summary.json").read_text())
+          assert report["status"] == "COMPLETE_COMPUTATIONAL_SCREEN", report
+          assert report["candidate_count"] == 6, report
+          assert len(report["layout_coverage"]) == 6, report
+          for item in report["results"]:
+              assert item["status"] == "PASS_RUN_ARTIFACTS", item
+              assert item["positive_fuel_pin_bins"] == 1060, item
+              assert item["mesh_block_bins"] == 1156, item
+              assert item["min_positive_normalized_pin_power_csv"] > 0, item
+              assert item["max_positive_normalized_pin_power_csv"] is not None, item
+          print("Corrected posthoc summary complete; this remains a computational cross-code screen, not physical validation.")
+          PY
+
+      - name: Preserve corrected summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-six-layout-corrected-summary-${{ github.run_id }}
+          path: corrected-sn-summary/
+          if-no-files-found: warn
+          retention-days: 30
