@@ -47,18 +47,18 @@ Reviewer rationale:
 ### Frozen quantity definitions
 - OpenMC mesh: `51×51×1`, three assemblies per axis and 17 pin bins per assembly.
 - The two-by-two fuel-assembly block occupies 34×34 mesh bins: 1,156 bins.
-- The independent Sₙ result's fissionable fuel-pin mask contains 1,060 bins; 96 bins are non-fuel/zero-fission positions and must not be included in fuel-pin relative-error denominators.
+- A 34×34 block contains 1,156 bins: 1,056 true fuel pins, 96 guide-tube cells with zero fission, and four central instrument/fission-chamber cells with tiny positive fission because the simplified chamber material contains trace fissile content. These four cells are not fuel pins and must be excluded from fuel-pin metrics.
 - Reported objective: assembly-integrated fission-rate peaking proxy `max(R_a)/mean(R_a)`.
 - This objective is a **relative fission-rate-shape proxy**, not absolute thermal power in watts, validated pin power, a safety limit, or a full-core power distribution.
 
 ### Required reviewer checks
 1. Reconstruct the physical coordinate and HDF5 array ordering independently. Confirm the correct fuel-region block, axes, bounds and index orientation.
 2. Inspect the new asymmetric synthetic HDF5 regression test in `tests/test_independent_c5g7_fuel_mask.py`; confirm it catches transpose, reflection or one-bin offset errors under the declared convention.
-3. Confirm the 1,060-pixel fuel mask corresponds to the actual fissionable pins for the layout under test, not a mask assumed identical without checking the layout's pin map.
+3. Confirm that the 1,056-true-fuel-pin mask excludes four central instrument tubes (local row/column 9,9 in each assembly) plus 96 guide-tube bins, and verify this against the actual generated assembly pin map.
 4. Verify every reported (R_a) is reproducible from the same statepoint/tally, and that the aggregation and normalization are implemented as specified.
 5. Verify cross-code metrics compare only matched positive fuel-pin bins and that non-fuel zero bins are excluded from relative-error calculations.
 
-**Implemented correction:** cross-code spatial metrics now apply the same 1,060-bin fuel mask to OpenMC and Sₙ results. Earlier unmasked spatial-error values are superseded and must not be cited.
+**Audit correction:** the initial mask was wrong because it treated four trace-positive central instrument/fission-chamber cells as fuel pins. The corrected postprocessing now uses 1,056 true fuel pins, excludes 100 non-fuel positions (four instrument tubes plus 96 zero-power guide tubes), and renormalizes each code's map over the same 1,056-pin set. The first JSON/CSV summary is superseded because the CSV had stale headers that left several fields blank; use the latest corrected posthoc summary artifact only.
 
 Reviewer decision: `[PASS / FAIL / BLOCKED / INCONCLUSIVE]`
 
@@ -145,7 +145,7 @@ Automated evidence available:
 - [A–G foundation audit #39107216357](https://github.com/thenextw4ng/cb-pfr/actions/runs/39107216357)
 - [Full-regression closeout workflow #39107307163](https://github.com/thenextw4ng/cb-pfr/actions/runs/39107307163)
 
-The A–G foundation tests passed, including exact QUBO/layout checks, fail-closed mapping tests, fuel-only mask population and zero handling, and an asymmetric HDF5 coordinate-order regression test. This is software evidence only. Review whether any incomplete/mismatched artifact is blocked instead of promoted.
+The initial A–G foundation tests passed, including exact QUBO/layout checks and asymmetric HDF5 coordinate-order tests. A subsequent audit found the true-fuel mask and output CSV schema were wrong despite those tests passing. Regression tests have been expanded to cover instrument-tube exclusion, 1,056/4/96 population counts, fuel-only normalization, duplicate coordinates, and JSON/CSV consistency. This is a useful example of why CI pass status must not be treated as science acceptance.
 
 Reviewer decision: `[PASS / FAIL / BLOCKED / INCONCLUSIVE]`
 
