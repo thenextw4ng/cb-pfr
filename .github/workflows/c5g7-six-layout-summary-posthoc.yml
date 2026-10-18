@@ -60,10 +60,21 @@ jobs:
           assert len(report["layout_coverage"]) == 6, report
           for item in report["results"]:
               assert item["status"] == "PASS_RUN_ARTIFACTS", item
-              assert item["positive_fuel_pin_bins"] == 1060, item
+              assert item["true_fuel_pin_bins"] == 1056, item\n              assert item["instrument_tube_bins"] == 4, item\n              assert item["zero_power_guide_tube_bins"] == 96, item\n              assert item["excluded_non_fuel_mesh_bins"] == 100, item
               assert item["mesh_block_bins"] == 1156, item
               assert item["min_positive_normalized_pin_power_csv"] > 0, item
               assert item["max_positive_normalized_pin_power_csv"] is not None, item
+          with Path("corrected-sn-summary/six_layout_independent_transport_summary.csv").open(newline="", encoding="utf-8") as f:
+              import csv
+              rows=list(csv.DictReader(f))
+          assert len(rows) == 6, rows
+          for row in rows:
+              assert row["true_fuel_pin_bins"] == "1056", row
+              assert row["instrument_tube_bins"] == "4", row
+              assert row["zero_power_guide_tube_bins"] == "96", row
+              assert row["max_normalized_fuel_pin_power"] != "", row
+              assert row["min_normalized_fuel_pin_power"] != "", row
+          print("JSON/CSV summary consistent: 1056 fuel pins, 4 instrument tubes, 96 zero-power guide bins per layout.")
           print("Corrected posthoc summary complete; this remains a computational cross-code screen, not physical validation.")
           PY
 
