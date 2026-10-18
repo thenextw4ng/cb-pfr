@@ -1,6 +1,13 @@
 name: C5G7 P-6 artifact re-audit (no new transport)
 
 on:
+  # The push path is a one-time bootstrap for this branch; the job waits for the
+  # existing campaign to finish, then re-audits its saved artifacts without transport.
+  push:
+    branches:
+      - experiment/c5g7-physical-effectiveness-20261018
+    paths:
+      - .github/workflows/c5g7-p45-p6-artifact-reaudit.yml
   workflow_dispatch:
     inputs:
       source_run_id:
@@ -17,7 +24,7 @@ jobs:
   reaudit-existing-artifacts:
     name: Re-audit saved P-4/P-5 artifacts and regenerate P-6
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 360
     steps:
       - name: Check out experiment branch
         uses: actions/checkout@v4
@@ -26,35 +33,44 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ID: ${{ github.event.inputs.source_run_id || '39096389643' }}
         run: |
           set -euo pipefail
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "source_run_id must be numeric" >&2; exit 2; }
-          RUN_JSON="$(curl --fail --silent --show-error \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
-          RUN_NAME="$(jq -r '.name // ""' <<< "$RUN_JSON")"
-          RUN_BRANCH="$(jq -r '.head_branch // ""' <<< "$RUN_JSON")"
-          RUN_STATUS="$(jq -r '.status // ""' <<< "$RUN_JSON")"
-          if [[ "$RUN_NAME" != "C5G7 P-4/P-5 held-out physical-effectiveness campaign" ]]; then
-            echo "Refusing source run with unexpected workflow name: $RUN_NAME" >&2
-            exit 2
-          fi
-          if [[ "$RUN_BRANCH" != "experiment/c5g7-physical-effectiveness-20261018" ]]; then
-            echo "Refusing source run from unexpected branch: $RUN_BRANCH" >&2
-            exit 2
-          fi
-          if [[ "$RUN_STATUS" != "completed" ]]; then
-            echo "Source run is not completed yet (status=$RUN_STATUS); wait until all P-4/P-5 jobs finish." >&2
-            exit 2
-          fi
-          echo "Source run accepted: $SOURCE_RUN_ID ($RUN_STATUS, conclusion=$(jq -r '.conclusion // ""' <<< "$RUN_JSON"))"
+          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID"
+          DEADLINE=$((SECONDS + 19800)) # up to 5.5 hours; keep time for artifact auditing
+          while true; do
+            RUN_JSON="$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "$API_URL")"
+            RUN_NAME="$(jq -r '.name // ""' <<< "$RUN_JSON")"
+            RUN_BRANCH="$(jq -r '.head_branch // ""' <<< "$RUN_JSON")"
+            RUN_STATUS="$(jq -r '.status // ""' <<< "$RUN_JSON")"
+            if [[ "$RUN_NAME" != "C5G7 P-4/P-5 held-out physical-effectiveness campaign" ]]; then
+              echo "Refusing source run with unexpected workflow name: $RUN_NAME" >&2
+              exit 2
+            fi
+            if [[ "$RUN_BRANCH" != "experiment/c5g7-physical-effectiveness-20261018" ]]; then
+              echo "Refusing source run from unexpected branch: $RUN_BRANCH" >&2
+              exit 2
+            fi
+            if [[ "$RUN_STATUS" == "completed" ]]; then
+              echo "Source run accepted: $SOURCE_RUN_ID (completed, conclusion=$(jq -r '.conclusion // ""' <<< "$RUN_JSON"))"
+              break
+            fi
+            if (( SECONDS >= DEADLINE )); then
+              echo "Timed out waiting for source campaign to complete; no artifacts were analyzed." >&2
+              exit 2
+            fi
+            echo "Source campaign is $RUN_STATUS; waiting 60 seconds before checking again."
+            sleep 60
+          done
 
       - name: Download saved P-4/P-5 artifacts only
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.source_run_id }}
+          run-id: ${{ github.event.inputs.source_run_id || '39096389643' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           pattern: c5g7-p45-P[45]-*
           path: /tmp/c5g7-p45-artifacts
@@ -140,7 +156,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: c5g7-p45-P6-posthoc-reaudit-run-${{ inputs.source_run_id }}
+          name: c5g7-p45-P6-posthoc-reaudit-run-${{ github.event.inputs.source_run_id || '39096389643' }}
           path: |
             /tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json
             /tmp/c5g7-p45-artifacts/**/analysis/raw_hdf5_audit_reported_before_reaudit.json
