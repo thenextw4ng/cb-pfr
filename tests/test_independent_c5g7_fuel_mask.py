@@ -86,7 +86,7 @@ class IndependentC5G7FuelMaskTests(unittest.TestCase):
         metrics = mod.compare_spatial_maps([openmc.tolist()], reference.tolist(), mask.tolist())
         self.assertEqual(metrics["comparable_fuel_pin_count"], 1056)
         self.assertEqual(metrics["excluded_non_fuel_mesh_bins"], 100)
-        self.assertEqual(metrics["rms_relative_error_percent"], 2.0)
+        self.assertAlmostEqual(metrics["rms_relative_error_percent"], 2.0, places=8)
         self.assertAlmostEqual(metrics["mean_absolute_relative_error_percent"], 2.0, places=8)
         self.assertAlmostEqual(metrics["max_absolute_relative_error_percent"], 2.0, places=8)
 
