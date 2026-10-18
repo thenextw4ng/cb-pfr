@@ -34,6 +34,12 @@ The upstream boundary definitions set west/north core boundaries reflective and 
 
 CB-PFR's four fuel-position permutations alter only the four fuel positions in the explicit 3×3 C5G7 layout, with the five reflector positions fixed. This is a reformulated assembly-placement study, not the legacy burnup-state QUBO formulation.
 
+### Finding A4 — The independent Sₙ reference offset is a documented mesh-discretization bias
+
+The pinned independent solver's own [README](https://github.com/EmreSakarya/c5g7-2d-transport-benchmark/blob/db421c969ee2de83e2d2ae2b14bda368567b558d/README.md) and [mesh-convergence results](https://github.com/EmreSakarya/c5g7-2d-transport-benchmark/blob/db421c969ee2de83e2d2ae2b14bda368567b558d/results/convergence.log) report that at 16 cells per pin (816×816 Cartesian mesh), Sₙ obtains (k_\mathrm{eff}=1.184733), about −181.7 pcm versus the NEA value 1.186550. The solver author attributes the residual and the approximately 5.8% underprediction of maximum normalized pin power to a stairstep Cartesian/digital-disk approximation of curved fuel boundaries; the reported mesh sweep reduces the eigenvalue offset from roughly −3616 pcm at 4 cells per pin to −182 pcm at 16 cells per pin, with a non-monotonic intermediate point.
+
+**Interpretation:** this offset is already documented by the independent solver as its finite-resolution numerical bias. It should not be misdescribed as unexpected evidence that the CB-PFR inputs are wrong. It also means the solver is not a zero-bias ground truth or a strict pass/fail oracle against the MCNP reference at this setting. For cross-code work, compare the layout trends and spatial shape on matched fuel pins, report the known reference bias, and do not turn the −181.7 pcm value into an acceptance band for any alternate layout.
+
 ### Finding A3 — The tally measures mesh-bin reaction rates, not absolute assembly power
 
 The upstream 2-D mesh is 51×51×1 over the full 64.26 cm square domain and has scores `flux`, `fission`, and `nu-fission`. The mesh divides the 3×3 assemblies into 17×17 bins per assembly. For the two-by-two fuel region, the analysis extracts a 34×34 block. That block has 1,156 bins, but the independent Sₙ model identifies 1,060 fissionable fuel pins and 96 non-fuel/zero-power positions.
