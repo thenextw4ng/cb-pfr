@@ -1,0 +1,179 @@
+name: C5G7 P-6 artifact re-audit (no new transport)
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Completed P-4/P-5 campaign run ID whose artifacts should be re-audited"
+        required: true
+        type: string
+        default: "39096389643"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reaudit-existing-artifacts:
+    name: Re-audit saved P-4/P-5 artifacts and regenerate P-6
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out experiment branch
+        uses: actions/checkout@v4
+
+      - name: Validate source campaign run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "source_run_id must be numeric" >&2; exit 2; }
+          RUN_JSON="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
+          RUN_NAME="$(jq -r '.name // ""' <<< "$RUN_JSON")"
+          RUN_BRANCH="$(jq -r '.head_branch // ""' <<< "$RUN_JSON")"
+          RUN_STATUS="$(jq -r '.status // ""' <<< "$RUN_JSON")"
+          if [[ "$RUN_NAME" != "C5G7 P-4/P-5 held-out physical-effectiveness campaign" ]]; then
+            echo "Refusing source run with unexpected workflow name: $RUN_NAME" >&2
+            exit 2
+          fi
+          if [[ "$RUN_BRANCH" != "experiment/c5g7-physical-effectiveness-20261018" ]]; then
+            echo "Refusing source run from unexpected branch: $RUN_BRANCH" >&2
+            exit 2
+          fi
+          if [[ "$RUN_STATUS" != "completed" ]]; then
+            echo "Source run is not completed yet (status=$RUN_STATUS); wait until all P-4/P-5 jobs finish." >&2
+            exit 2
+          fi
+          echo "Source run accepted: $SOURCE_RUN_ID ($RUN_STATUS, conclusion=$(jq -r '.conclusion // ""' <<< "$RUN_JSON"))"
+
+      - name: Download saved P-4/P-5 artifacts only
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: c5g7-p45-P[45]-*
+          path: /tmp/c5g7-p45-artifacts
+          merge-multiple: false
+
+      - name: Install raw HDF5 audit dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pinned audit dependencies
+        run: python -m pip install --disable-pip-version-check "numpy<3" "h5py>=3.10,<4"
+
+      - name: Independently re-run raw HDF5 audit on every stored run
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import shutil
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          root = Path("/tmp/c5g7-p45-artifacts")
+          audit_script = Path("scripts/audit_c5g7_smoke_statepoints.py").resolve()
+          studies = sorted(root.rglob("STUDY_SUMMARY.json"))
+          if not studies:
+              raise SystemExit("No STUDY_SUMMARY.json files found in the selected campaign artifacts.")
+          outcomes = []
+          for study in studies:
+              out = study.parent / "analysis" / "raw_hdf5_audit.json"
+              out.parent.mkdir(parents=True, exist_ok=True)
+              if out.exists():
+                  shutil.copy2(out, out.with_name("raw_hdf5_audit_reported_before_reaudit.json"))
+                  out.unlink()
+              cmd = [
+                  sys.executable, str(audit_script),
+                  "--study-summary", str(study),
+                  "--out", str(out),
+                  "--expected-candidates", "1",
+              ]
+              proc = subprocess.run(cmd, text=True, capture_output=True)
+              log_path = out.with_name("raw_hdf5_reaudit.log")
+              log_path.write_text(proc.stdout + ("\nSTDERR:\n" + proc.stderr if proc.stderr else ""))
+              report = {}
+              if out.exists():
+                  try:
+                      report = json.loads(out.read_text())
+                  except json.JSONDecodeError:
+                      report = {}
+              outcomes.append({
+                  "study_summary": str(study),
+                  "returncode": proc.returncode,
+                  "status": report.get("status", "NO_REPORT"),
+                  "failed_checks": report.get("failed_checks", []),
+                  "log": str(log_path),
+              })
+          summary = {
+              "mode": "posthoc_reaudit_of_saved_statepoints_no_transport_rerun",
+              "study_count": len(studies),
+              "pass_count": sum(x["status"] == "PASS" and x["returncode"] == 0 for x in outcomes),
+              "fail_count": sum(not (x["status"] == "PASS" and x["returncode"] == 0) for x in outcomes),
+              "outcomes": outcomes,
+          }
+          target = root / "POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json"
+          target.write_text(json.dumps(summary, indent=2) + "\n")
+          print(json.dumps({k: v for k, v in summary.items() if k != "outcomes"}, indent=2))
+          if summary["fail_count"]:
+              print("One or more raw HDF5 audits failed; P-6 will still emit a fail-closed report.")
+          PY
+
+      - name: Generate P-6 report from re-audited saved artifacts
+        id: analyze
+        continue-on-error: true
+        run: |
+          python -m py_compile scripts/analyze_c5g7_p45_physical_effectiveness.py
+          python scripts/analyze_c5g7_p45_physical_effectiveness.py \
+            --artifacts-root /tmp/c5g7-p45-artifacts \
+            --outdir /tmp/c5g7-p45-summary
+
+      - name: Preserve re-audit and P-6 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-p45-P6-posthoc-reaudit-run-${{ inputs.source_run_id }}
+          path: |
+            /tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json
+            /tmp/c5g7-p45-artifacts/**/analysis/raw_hdf5_audit_reported_before_reaudit.json
+            /tmp/c5g7-p45-artifacts/**/analysis/raw_hdf5_reaudit.log
+            /tmp/c5g7-p45-summary/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce independent re-audit and P-6 integrity gates
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          raw = Path("/tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json")
+          p6 = Path("/tmp/c5g7-p45-summary/p45_campaign_audit.json")
+          if not raw.is_file() or not p6.is_file():
+              raise SystemExit("Missing post-hoc raw audit or P-6 report; integrity gate is incomplete.")
+          raw_report = json.loads(raw.read_text())
+          p6_report = json.loads(p6.read_text())
+          print(json.dumps({
+              "raw_hdf5_reaudit_pass_count": raw_report.get("pass_count"),
+              "raw_hdf5_reaudit_fail_count": raw_report.get("fail_count"),
+              "p6_status": p6_report.get("status"),
+              "p6_integrity_checks": p6_report.get("integrity_checks"),
+              "physical_comparison_status": (p6_report.get("physical_comparison") or {}).get("status"),
+              "cbpfr_physical_superiority": ((p6_report.get("physical_comparison") or {}).get("claims") or {}).get("cbpfr_physical_superiority", "NOT_ESTABLISHED")
+          }, indent=2))
+          if raw_report.get("study_count") != 36 or raw_report.get("fail_count") != 0:
+              raise SystemExit("Independent HDF5 re-audit incomplete or failed.")
+          if p6_report.get("status") != "EVIDENCE_INTEGRITY_PASS_INTERPRETATION_OPEN":
+              raise SystemExit("P-6 campaign-integrity gate incomplete or failed.")
+          PY
