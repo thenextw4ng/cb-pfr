@@ -61,7 +61,13 @@ def collect(root):
     return rows
 
 def sn_map(path):
+    # The solver CSV spans the full 34x34 two-assembly block (1,156 bins),
+    # but its reported power benchmark covers 1,060 fissionable fuel pins.
+    # The remaining 96 guide/water/non-fissionable locations are zero and
+    # must not be treated as fuel-pin power or compared with the published
+    # positive-fuel minimum.
     a = [[math.nan for _ in range(34)] for _ in range(34)]
+    seen = set()
     count = 0
     with path.open(newline="", encoding="utf-8") as f:
         r = csv.DictReader(f)
@@ -69,17 +75,33 @@ def sn_map(path):
             raise ValueError("S_N pin-power CSV has unexpected columns")
         for row in r:
             x, y = int(row["pc"]), int(row["pr"])
-            # External solver uses global 1-based pin coordinates: x=1..34,
-            # fuel y=18..51; row-major order corresponds to the OpenMC mesh.
             if 1 <= x <= 34 and 18 <= y <= 51:
-                a[y-18][x-1] = float(row["norm_power"]); count += 1
+                key = (x, y)
+                if key in seen:
+                    raise ValueError(f"duplicate S_N pin coordinate {key}")
+                seen.add(key)
+                a[y-18][x-1] = float(row["norm_power"])
+                count += 1
     if count != 1156 or any(not math.isfinite(v) for rr in a for v in rr):
-        raise ValueError(f"expected 1156 finite S_N fuel-pin values, got {count}")
-    flat = [v for rr in a for v in rr]
-    return a, {"pin_count": count, "min_normalized_pin_power": min(flat), "max_normalized_pin_power": max(flat)}
+        raise ValueError(f"expected 1156 finite S_N block bins, got {count}")
+    mask = [[v > 0.0 for v in rr] for rr in a]
+    fuel_values = [v for rr, mr in zip(a, mask) for v, is_fuel in zip(rr, mr) if is_fuel]
+    fuel_count = len(fuel_values)
+    if fuel_count != 1060:
+        raise ValueError(f"expected 1060 positive fuel-pin bins and 96 non-fuel bins, got fuel={fuel_count}")
+    return a, mask, {
+        "mesh_bin_count": count,
+        "fuel_pin_count": fuel_count,
+        "non_fuel_bin_count": count-fuel_count,
+        "min_normalized_fuel_pin_power": min(fuel_values),
+        "max_normalized_fuel_pin_power": max(fuel_values)
+    }
 
-def openmc_map(path):
+def openmc_map(path, fuel_mask):
     import h5py, numpy as np
+    mask = np.asarray(fuel_mask, dtype=bool)
+    if mask.shape != (34,34) or int(mask.sum()) != 1060:
+        raise ValueError(f"fuel-pin mask must contain 1060 of 1156 bins, got {int(mask.sum()) if mask.shape == (34,34) else 'invalid shape'}")
     with h5py.File(path, "r") as f:
         dims = tuple(int(v) for v in f["tallies/meshes/mesh 1/dimension"][:])
         if dims != (51,51,1): raise ValueError(f"OpenMC mesh dimensions {dims}, expected (51,51,1)")
@@ -87,12 +109,42 @@ def openmc_map(path):
         scores = [x.decode() if isinstance(x, bytes) else str(x) for x in t["score_bins"][:]]
         if "fission" not in scores: raise ValueError("OpenMC tally lacks fission score")
         raw = t["results"][:, scores.index("fission"), 0].reshape((51,51), order="F")
-        # Extract 34 x 34 fuel pins; transpose from [x,y] to [row-y,col-x].
+        # The external CSV and OpenMC mesh are both mapped onto the same
+        # y=18..51, x=1..34 block. Apply the independent solver's fuel mask
+        # before normalization so 96 zero-power non-fuel bins do not bias it.
         pins = np.asarray(raw[0:34,17:51].T, dtype=float)
         if pins.shape != (34,34) or not np.isfinite(pins).all() or np.any(pins < 0):
-            raise ValueError("OpenMC fuel pin map invalid")
-        if pins.mean() <= 0: raise ValueError("OpenMC fuel pin mean is not positive")
-        return (pins / pins.mean()).tolist()
+            raise ValueError("OpenMC fuel block mesh invalid")
+        fuel = pins[mask]
+        if fuel.size != 1060 or np.any(fuel <= 0):
+            raise ValueError(f"OpenMC tally must have 1060 positive fuel-bin values; got {fuel.size}, positive={int(np.sum(fuel > 0))}")
+        return (pins / fuel.mean()).tolist()
+
+def compare_spatial_maps(openmc_maps, sn_values, fuel_mask):
+    """Compare normalized fission/power shape only on the shared fissionable-pin mask."""
+    import numpy as np
+    got = np.mean(np.asarray(openmc_maps, dtype=float), axis=0)
+    refa = np.asarray(sn_values, dtype=float)
+    mask = np.asarray(fuel_mask, dtype=bool)
+    if got.shape != (34,34) or refa.shape != (34,34) or mask.shape != (34,34):
+        raise ValueError("spatial maps and mask must all be 34x34")
+    if int(mask.sum()) != 1060:
+        raise ValueError(f"expected 1060 comparable fuel pins, got {int(mask.sum())}")
+    gv, rv = got[mask], refa[mask]
+    if not np.isfinite(gv).all() or not np.isfinite(rv).all() or np.any(rv <= 0) or np.any(gv <= 0):
+        raise ValueError("all matched fuel-pin values must be finite and positive")
+    rel = (gv-rv)/rv
+    return {
+        "rms_relative_error_percent": float(np.sqrt(np.mean(rel*rel))*100),
+        "mean_absolute_relative_error_percent": float(np.mean(np.abs(rel))*100),
+        "max_absolute_relative_error_percent": float(np.max(np.abs(rel))*100),
+        "openmc_max_normalized_fuel_pin_fission_rate": float(gv.max()),
+        "openmc_min_normalized_fuel_pin_fission_rate": float(gv.min()),
+        "sn_max_normalized_fuel_pin_power": float(rv.max()),
+        "sn_min_normalized_fuel_pin_power": float(rv.min()),
+        "comparable_fuel_pin_count": int(mask.sum()),
+        "excluded_non_fuel_mesh_bins": int(mask.size-mask.sum()),
+    }
 
 def main():
     ap = argparse.ArgumentParser()
@@ -142,31 +194,28 @@ def main():
             "official_nea_acceptance":False,
         }
         try:
-            import numpy as np
-            ref, ref_sum = sn_map(a.sn_csv)
-            maps = [openmc_map(Path(x["statepoint"])) for x in canonical]
-            got = np.mean(np.asarray(maps,dtype=float),axis=0)
-            refa = np.asarray(ref,dtype=float)
-            rel = (got-refa)/refa
+            ref, fuel_mask, ref_sum = sn_map(a.sn_csv)
+            maps = [openmc_map(Path(x["statepoint"]), fuel_mask) for x in canonical]
+            metric = compare_spatial_maps(maps, ref, fuel_mask)
+            # The solver's console min is taken over all cells and can be zero
+            # because it includes non-fuel positions. Published fuel-pin metrics
+            # must instead use the positive fuel-only CSV mask.
+            snmax = ref_sum["max_normalized_fuel_pin_power"]
+            snmin = ref_sum["min_normalized_fuel_pin_power"]
             spatial = {
-                "status":"COMPUTED_CROSS_CODE_SHAPE_CHECK_NOT_OFFICIAL_ACCEPTANCE",
-                "n_openmc_seeds":3, "fuel_pin_count":1156,
-                "openmc_quantity":"normalized mesh-bin fission-rate tally; relative-shape proxy, not absolute power",
-                "independent_quantity":"normalized pin-power output from pinned S_N deterministic solver",
-                "comparison_metrics":{
-                    "rms_relative_error_percent":float(np.sqrt(np.mean(rel*rel))*100),
-                    "mean_absolute_relative_error_percent":float(np.mean(np.abs(rel))*100),
-                    "max_absolute_relative_error_percent":float(np.max(np.abs(rel))*100),
-                    "openmc_max_normalized_pin_fission_rate":float(got.max()),
-                    "openmc_min_normalized_pin_fission_rate":float(got.min()),
-                    "sn_max_normalized_pin_power":float(refa.max()),
-                    "sn_min_normalized_pin_power":float(refa.min()),
-                },
+                "status":"COMPUTED_FUEL_MASKED_CROSS_CODE_SHAPE_CHECK_NOT_OFFICIAL_ACCEPTANCE",
+                "n_openmc_seeds":3,
+                "mesh_bin_count":ref_sum["mesh_bin_count"],
+                "fuel_pin_count":ref_sum["fuel_pin_count"],
+                "excluded_non_fuel_mesh_bins":ref_sum["non_fuel_bin_count"],
+                "openmc_quantity":"normalized mesh-bin fission-rate tally averaged and normalized over the matched 1,060 fissionable fuel pins; relative-shape proxy, not absolute power",
+                "independent_quantity":"normalized pin-power output from pinned S_N deterministic solver, restricted to the same 1,060 fuel-pin mask",
+                "comparison_metrics":metric,
                 "sn_pin_map_summary":ref_sum,
                 "published_mcnp_pin_power_summary":{"max":P_MAX_REF,"min":P_MIN_REF,"max_relative_sd":0.0016,"min_relative_sd":0.0058},
-                "sn_max_vs_published_percent":(snmax/P_MAX_REF-1)*100 if snmax is not None else None,
-                "sn_min_vs_published_percent":(snmin/P_MIN_REF-1)*100 if snmin is not None else None,
-                "interpretation":"Fission-rate and normalized-power tallies are related but not identical. This spatial comparison is cross-code evidence only; it is not a safety limit or official acceptance test.",
+                "sn_max_vs_published_percent":(snmax/P_MAX_REF-1)*100,
+                "sn_min_vs_published_percent":(snmin/P_MIN_REF-1)*100,
+                "interpretation":"A fuel-only mask excludes 96 non-fuel bins from the 34x34 block, matching the solver's 1,060 fuel-pin benchmark definition. Fission-rate and normalized-power tallies are related but not identical. This is cross-code evidence only; not physical validation, a safety limit, or official acceptance.",
             }
         except Exception as e:
             spatial = {"status":"CROSS_CODE_COMPARISON_FAILED_OR_INCOMPLETE","error":str(e)}
@@ -193,7 +242,7 @@ def main():
         "keff":snk,"max_normalized_pin_power":snmax,"min_normalized_pin_power":snmin,
         "log_sha256":sha(a.sn_log),"pinpower_csv_sha256":sha(a.sn_csv),
         "limitation":"The solver reports known mesh-discretization bias relative to the MCNP benchmark; treat as an independent comparator, not ground truth."},
-      "canonical_spatial_cross_code_check":spatial,
+      "canonical_spatial_cross_code_check":spatial,\n      "analysis_correction_note":"Fuel-only mask correction excludes 96 non-fuel block bins before spatial error metrics. Any earlier unmasked spatial error values are superseded and must not be used.",
       "cbpfr_heldout_p6":p6summary,
       "decision":{"broad_physical_superiority":"NOT_ESTABLISHED",
         "limited_cbpfr_effectiveness":"ELIGIBLE_FOR_BOUNDED_INTERPRETATION" if not issues and kscreen.get("status")=="PASS_PROJECT_SCREEN" and spatial.get("status","").startswith("COMPUTED") and p6.get("status")=="EVIDENCE_INTEGRITY_PASS_INTERPRETATION_OPEN" else "NOT_ESTABLISHED_OR_REVIEW_REQUIRED",
