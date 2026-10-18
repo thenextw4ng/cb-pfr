@@ -1,11 +1,8 @@
 name: C5G7 P-4/P-5 held-out physical-effectiveness campaign
 
 on:
-  push:
-    branches:
-      - "experiment/c5g7-physical-effectiveness-20261018"
-    paths:
-      - ".github/workflows/c5g7-p45-physical-effectiveness.yml"
+  # Manual reruns only: the initial 36-run campaign was already launched by push.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -103,6 +100,7 @@ jobs:
       - name: Audit raw HDF5 statepoint against settings and manifest
         shell: bash -el {0}
         env:
+          PHASE: ${{ matrix.phase }}
           CANDIDATE: ${{ matrix.candidate }}
         run: |
           set -euo pipefail
