@@ -13,6 +13,49 @@ def sha(path: Path) -> str:
         for b in iter(lambda:f.read(1<<20),b""): h.update(b)
     return h.hexdigest()
 
+def inspect_patched_solver_source(path: Path) -> dict:
+    if not path.is_file():
+        return {"source_file_present": False, "source_hash_match": False,
+                "issues": ["patched Fortran source file missing"]}
+    source_text=path.read_text(encoding="utf-8",errors="replace")
+    assignments={}
+    for match in re.finditer(r"core\((\d+),(\d+)\)\s*=\s*(\d+)",source_text):
+        i,j,value=map(int,match.groups())
+        assignments[(i,j)]=value
+    positions={"p00":(1,3),"p01":(2,3),"p10":(1,2),"p11":(2,2)}
+    material_by_position={}
+    issues=[]
+    for pos,coord in positions.items():
+        value=assignments.get(coord)
+        material_by_position[pos]="MOX" if value==2 else "UO2" if value==1 else "REFLECTOR" if value==0 else "UNKNOWN"
+    sig="".join("M" if material_by_position[p]=="MOX" else "U" if material_by_position[p]=="UO2" else "?" for p in ("p00","p01","p10","p11"))
+    if "?" in sig:
+        issues.append(f"core layout assignments incomplete: signature={sig}")
+    reflectors={(3,3):(assignments.get((3,3))==0),
+                (3,2):(assignments.get((3,2))==0),
+                (1,1):(assignments.get((1,1))==0),
+                (2,1):(assignments.get((2,1))==0),
+                (3,1):(assignments.get((3,1))==0)}
+    if not all(reflectors.values()):
+        issues.append(f"five fixed reflector positions not preserved: {reflectors}")
+    tol_match=re.search(r"\btol\s*=\s*([0-9.]+)e([+-]?\d+)_dp",source_text,re.I)
+    maxout_match=re.search(r"\bmaxout\s*=\s*(\d+)",source_text,re.I)
+    tol=float(tol_match.group(1))*10**int(tol_match.group(2)) if tol_match else None
+    maxout=int(maxout_match.group(1)) if maxout_match else None
+    if tol is None or maxout is None:
+        issues.append("solver source tolerance/max-outer settings not parseable")
+    return {
+        "source_file_present":True,
+        "source_sha256_actual":sha(path),
+        "layout_signature_from_source":sig,
+        "material_by_position_from_source":material_by_position,
+        "fixed_reflector_positions_pass":all(reflectors.values()),
+        "fixed_reflector_assignment_checks":{f"{i},{j}":v for (i,j),v in reflectors.items()},
+        "solver_eigenvalue_tolerance":tol,
+        "solver_max_outer_iterations":maxout,
+        "issues":issues
+    }
+
 def parse_sig_dir(d: Path) -> dict:
     meta_path=d/"layout_metadata.json"
     log_path=d/"sn_solver.log"
@@ -28,9 +71,27 @@ def parse_sig_dir(d: Path) -> dict:
     k=match(r"C5G7\s+k_eff\s+\(this solver\)\s*=\s*([0-9.]+)")
     pmax_log=match(r"Pin power:\s+fuel pins=\s*\d+\s+max=\s*([0-9.]+)")
     pmin_log=match(r"Pin power:\s+fuel pins=\s*\d+\s+max=\s*[0-9.]+\s+min=\s*([0-9.]+)")
+    source_audit=inspect_patched_solver_source(d/"patched_c5g7_transport.f90")
     if meta.get("upstream_commit") != COMMIT: issues.append("unexpected upstream commit")
     if meta.get("layout_signature") not in EXPECTED: issues.append("unexpected layout signature")
+    if not source_audit.get("source_file_present"): issues.append("patched source missing")
+    elif source_audit.get("source_sha256_actual") != meta.get("patched_source_sha256"):
+        issues.append("patched source SHA-256 does not match layout metadata")
+    if source_audit.get("layout_signature_from_source") != meta.get("layout_signature"):
+        issues.append(f"source material mapping {source_audit.get('layout_signature_from_source')} does not match metadata {meta.get('layout_signature')}")
+    if not source_audit.get("fixed_reflector_positions_pass"):
+        issues.append("the five reflector positions are not preserved in patched source")
+    if source_audit.get("issues"): issues.extend(source_audit["issues"])
     if k is None or pmax_log is None or pmin_log is None: issues.append("key metric absent from solver log")
+    expected_settings={"cells_per_pin":16,"azimuthal_directions":24,"polar_directions":4,"inner_passes":3,"openmp_threads":4}
+    if meta.get("settings") != expected_settings:
+        issues.append(f"unexpected transport settings: {meta.get('settings')}")
+    outer_rows=re.findall(r"outer\s+(\d+)\s+k\s*=\s*[*.0-9]+\s+\|dk\|\s*=\s*([0-9.Ee+-]+)\s+\|dFd\|\s*=\s*([0-9.Ee+-]+)",log)
+    last_logged_outer=int(outer_rows[-1][0]) if outer_rows else None
+    if last_logged_outer is None:
+        issues.append("outer iteration diagnostics missing from solver log")
+    elif source_audit.get("solver_max_outer_iterations") and last_logged_outer >= source_audit["solver_max_outer_iterations"]:
+        issues.append("solver log reached maximum outer iteration; convergence should not be inferred")
     assembly_sums={str(i):0.0 for i in range(1,5)}
     fuel_values_raw=[]
     seen_coordinates=set()
@@ -109,7 +170,13 @@ def parse_sig_dir(d: Path) -> dict:
       "issues":issues,
       "settings":meta.get("settings"),
       "solver":{"repository":"https://github.com/EmreSakarya/c5g7-2d-transport-benchmark","upstream_commit":meta.get("upstream_commit"),
-        "patched_source_sha256":meta.get("patched_source_sha256"),"compile_flags":meta.get("compile_flags")},
+        "patched_source_sha256_metadata":meta.get("patched_source_sha256"),
+        "patched_source_sha256_actual":source_audit.get("source_sha256_actual"),
+        "patched_source_hash_match":source_audit.get("source_sha256_actual")==meta.get("patched_source_sha256"),
+        "compile_flags":meta.get("compile_flags"),
+        "source_layout_signature":source_audit.get("layout_signature_from_source"),
+        "material_by_position_from_source":source_audit.get("material_by_position_from_source"),
+        "fixed_reflector_positions_pass":source_audit.get("fixed_reflector_positions_pass")},
       "keff":k,
       "difference_from_canonical_published_reference_pcm":((k-1.18655)*100000 if k is not None else None),
       "difference_note":"Reference comparison is meaningful as a benchmark check only for canonical UMMU; not an acceptance test for other permutations.",
@@ -128,7 +195,11 @@ def parse_sig_dir(d: Path) -> dict:
       "position_power_fractions_percent_true_fuel_only":{"p00":fractions["1"],"p01":fractions["2"],"p10":fractions["3"],"p11":fractions["4"]},
       "solver_log_sha256":sha(log_path),
       "pinpower_csv_sha256":sha(csv_path),
-      "interpretation":"Four central instrument-tube cells have tiny positive fission and are excluded from true fuel-pin metrics; 96 guide-tube bins are zero. Values are renormalized over 1,056 true fuel pins."
+      "outer_iteration_diagnostics":{"last_logged_outer_iteration":last_logged_outer,"max_outer_iterations_from_source":source_audit.get("solver_max_outer_iterations"),
+        "tolerance_from_source":source_audit.get("solver_eigenvalue_tolerance"),
+        "status":"STOPPED_BEFORE_MAXOUT_SOURCE_STOP_RULE_INFERRED" if last_logged_outer is not None and source_audit.get("solver_max_outer_iterations") and last_logged_outer < source_audit["solver_max_outer_iterations"] else "REVIEW_REQUIRED",
+        "interpretation":"The solver source exits when source residual and absolute keff change are both below tol=1e-5. Diagnostics are printed every ten iterations, so the exact terminal iteration/residual is not recorded in this CSV/log; stopping before maxout supports the internal stop-rule inference, not a full model/benchmark convergence certificate."},
+      "interpretation":"Four central instrument-tube cells have tiny positive fission and are excluded from true fuel-pin metrics; 96 guide-tube bins are zero. Values are renormalized over 1,056 true fuel pins. Assembly names printed in the solver console remain canonical labels after material placement is patched; this audit uses position IDs and metadata instead."
     }
 
 def main():
