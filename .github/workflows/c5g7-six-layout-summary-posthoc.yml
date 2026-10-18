@@ -60,7 +60,10 @@ jobs:
           assert len(report["layout_coverage"]) == 6, report
           for item in report["results"]:
               assert item["status"] == "PASS_RUN_ARTIFACTS", item
-              assert item["true_fuel_pin_bins"] == 1056, item\n              assert item["instrument_tube_bins"] == 4, item\n              assert item["zero_power_guide_tube_bins"] == 96, item\n              assert item["excluded_non_fuel_mesh_bins"] == 100, item
+              assert item["true_fuel_pin_bins"] == 1056, item
+              assert item["instrument_tube_bins"] == 4, item
+              assert item["zero_power_guide_tube_bins"] == 96, item
+              assert item["excluded_non_fuel_mesh_bins"] == 100, item
               assert item["mesh_block_bins"] == 1156, item
               assert item["min_positive_normalized_pin_power_csv"] > 0, item
               assert item["max_positive_normalized_pin_power_csv"] is not None, item
