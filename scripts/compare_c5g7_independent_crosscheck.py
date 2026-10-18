@@ -246,7 +246,7 @@ def main():
                 "n_openmc_seeds":3,
                 "mesh_bin_count":ref_sum["mesh_bin_count"],
                 "fuel_pin_count":ref_sum["fuel_pin_count"],
-                "excluded_non_fuel_mesh_bins":ref_sum["non_fuel_bin_count"],
+                "excluded_non_fuel_mesh_bins":ref_sum["excluded_non_fuel_bin_count"],\n                "instrument_tube_count":ref_sum["instrument_tube_count"],\n                "zero_power_guide_tube_count":ref_sum["zero_power_guide_tube_count"],
                 "openmc_quantity":"normalized mesh-bin fission-rate tally averaged and normalized over the matched 1,056 true fuel pins, excluding four central instrument tubes; relative-shape proxy, not absolute power",
                 "independent_quantity":"normalized pin-power output from pinned S_N deterministic solver, restricted to the same 1,056 true fuel-pin mask",
                 "comparison_metrics":metric,
@@ -254,7 +254,7 @@ def main():
                 "published_mcnp_pin_power_summary":{"max":P_MAX_REF,"min":P_MIN_REF,"max_relative_sd":0.0016,"min_relative_sd":0.0058},
                 "sn_max_vs_published_percent":(snmax/P_MAX_REF-1)*100,
                 "sn_min_vs_published_percent":(snmin/P_MIN_REF-1)*100,
-                "interpretation":"A true-fuel mask excludes 96 zero-power guide-tube bins and four positive-fission instrument-tube bins from the 34x34 block, matching the solver's 1,060 fuel-pin benchmark definition. Fission-rate and normalized-power tallies are related but not identical. This is cross-code evidence only; not physical validation, a safety limit, or official acceptance.",
+                "interpretation":"A true-fuel mask excludes 96 zero-power guide-tube bins and four positive-fission instrument-tube bins from the 34x34 block, the solver's CSV has 1,060 positive bins including four central instrument tubes; this audit treats only 1,056 as true fuel pins. Fission-rate and normalized-power tallies are related but not identical. This is cross-code evidence only; not physical validation, a safety limit, or official acceptance.",
             }
         except Exception as e:
             spatial = {"status":"CROSS_CODE_COMPARISON_FAILED_OR_INCOMPLETE","error":str(e)}
