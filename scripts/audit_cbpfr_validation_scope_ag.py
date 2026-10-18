@@ -58,6 +58,20 @@ def main() -> int:
     )
     protocol = load_json(ROOT / "config" / "benchmarks" / "c5g7_validation_protocol.json")
     beavrs = load_json(ROOT / "config" / "benchmarks" / "beavrs_validation_manifest.json")
+    dual = load_json(ROOT / "config" / "benchmarks" / "dual_benchmark_validation_manifest.json")
+    beavrs_gates = {str(g.get("id")): g for g in beavrs.get("gates", []) if isinstance(g, dict)}
+    beavrs_spatial_gate = beavrs_gates.get("B5", {})
+    beavrs_runs = beavrs_spatial_gate.get("runs", [])
+    spatial_records_complete = (
+        len(beavrs_runs) >= 3
+        and all(
+            r.get("integrity_status") == "PASS_INTEGRITY_ONLY"
+            and isinstance(r.get("normalized_map_rmse"), (int, float))
+            and isinstance(r.get("pearson_correlation"), (int, float))
+            and isinstance(r.get("mean_absolute_relative_error_percent"), (int, float))
+            for r in beavrs_runs
+        )
+    )
     # A successful algorithmic audit is only a software sub-gate of the wider scientific contract.
     gates = {
         "A_model_identity_fidelity": {
@@ -80,7 +94,7 @@ def main() -> int:
         },
         "E_experimental_or_trusted_benchmark_validation": {
             "status": "NOT_ESTABLISHED",
-            "reason": "The previous BEAVRS map comparison was poor; the current C5G7 independent-solver discrepancy requires model/mapping investigation. No reactor-safety acceptance criterion is asserted."
+            "reason": "BEAVRS spatial comparison is explicitly recorded as not passing validation. The independent S_N solver documents its -181.7 pcm offset at 16 cells/pin as Cartesian/digital-disk discretization bias; this is a known numerical limitation, not an acceptance pass. Independent model/mapping and convergence review remain open."
         },
         "F_fail_closed_evidence_pipeline": {
             "status": "SOFTWARE_SUBGATE_UNDER_AUTOMATED_TEST",
@@ -100,7 +114,11 @@ def main() -> int:
         "layout_manifest_requires_transport_evaluation": layouts_ok,
         "qubo_matrix_matches_direct_energy": qubo_ok,
         "protocol_does_not_claim_official_acceptance": protocol.get("status") != "PHYSICAL_VALIDATION_PASS",
-        "beavrs_manifest_not_physically_validated": beavrs.get("overall_status") != "PHYSICALLY_VALIDATED",
+        "beavrs_manifest_not_physically_validated": beavrs.get("overall_status") == "NOT_PHYSICALLY_VALIDATED",
+        "beavrs_observable_records_preliminary_not_validated": (beavrs.get("selected_observable") or {}).get("status") == "PRELIMINARY_COMPARISON_EXECUTED_NOT_VALIDATED",
+        "beavrs_poor_spatial_agreement_explicitly_recorded": beavrs_spatial_gate.get("status") == "SPATIAL_AGREEMENT_POOR_VALIDATION_NOT_PASSED",
+        "beavrs_run_metrics_and_integrity_status_recorded": spatial_records_complete,
+        "dual_benchmark_manifest_keeps_validation_open": "NOT_ESTABLISHED" in str(dual.get("overall_status", "")) or dual.get("overall_status") == "NOT_PHYSICALLY_VALIDATED",
     }
     out = {
         "schema_version": "1.0",
@@ -117,6 +135,9 @@ def main() -> int:
         "manifest_statuses_observed": {
             "c5g7_validation_protocol": protocol.get("status", "MISSING"),
             "beavrs_validation_manifest": beavrs.get("overall_status", "MISSING"),
+            "beavrs_selected_observable_status": (beavrs.get("selected_observable") or {}).get("status", "MISSING"),
+            "beavrs_spatial_validation_gate": beavrs_spatial_gate.get("status", "MISSING"),
+            "dual_benchmark_manifest": dual.get("overall_status", "MISSING"),
         },
         "nonclaims": [
             "No reactor-safety claim or universal physical-best claim.",
