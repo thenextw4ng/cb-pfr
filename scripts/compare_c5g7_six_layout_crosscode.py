@@ -20,7 +20,7 @@ def read_json(path: Path) -> dict:
 
 def log_keff(path: Path) -> float | None:
     text=path.read_text(encoding="utf-8",errors="replace")
-    m=re.search(r"C5G7\\s+k_eff\\s+\\(this solver\\)\\s*=\\s*([0-9.]+)",text)
+    m=re.search(r"C5G7\s+k_eff\s+\(this solver\)\s*=\s*([0-9.]+)",text)
     return float(m.group(1)) if m else None
 
 def main() -> int:
@@ -114,7 +114,7 @@ def main() -> int:
             "The S_N solver uses a Cartesian digital-disk approximation; geometry/discretization differences need interpretation."
         ]
     }
-    (a.outdir/"six_layout_openmc_sn_crosscheck.json").write_text(json.dumps(report,indent=2,allow_nan=False)+"\\n",encoding="utf-8")
+    (a.outdir/"six_layout_openmc_sn_crosscheck.json").write_text(json.dumps(report,indent=2,allow_nan=False)+"\n",encoding="utf-8")
     with (a.outdir/"six_layout_openmc_sn_crosscheck.csv").open("w",newline="",encoding="utf-8") as f:
         fields=["layout","status","openmc_p5_run_count","openmc_keff_mean","s_n_keff","keff_difference_s_n_minus_openmc_pcm",
                 "rms_relative_error_percent","mean_absolute_relative_error_percent","max_absolute_relative_error_percent",
