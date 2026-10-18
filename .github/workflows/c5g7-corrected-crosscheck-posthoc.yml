@@ -1,0 +1,188 @@
+name: Corrected C5G7 fuel-mask cross-code posthoc audit
+
+on:
+  push:
+    branches:
+      - experiment/c5g7-independent-physical-crosscheck-20261018
+    paths:
+      - .github/workflows/c5g7-corrected-crosscheck-posthoc.yml
+      - scripts/compare_c5g7_independent_crosscheck.py
+      - tests/test_independent_c5g7_fuel_mask.py
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "P4/P5 OpenMC campaign run ID"
+        required: true
+        default: "39098770358"
+        type: string
+      solver_run_id:
+        description: "Completed independent S_N reference run ID (reuses its artifact)"
+        required: true
+        default: "39100496297"
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  corrected-posthoc:
+    name: Corrected fuel-only cross-code comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out analysis code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Wait for P4/P5 source campaign to finish (bounded)
+        id: wait_source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id || '39098770358' }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid source run ID" >&2; exit 2; }
+          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?per_page=100"
+          DEADLINE=$((SECONDS + 18000))
+          while true; do
+            JOBS_JSON="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL")"
+            TOTAL="$(jq '.jobs | length' <<< "$JOBS_JSON")"
+            PENDING="$(jq '[.jobs[] | select(.status != "completed")] | length' <<< "$JOBS_JSON")"
+            NONSUCCESS="$(jq '[.jobs[] | select(.status == "completed" and .conclusion != "success")] | length' <<< "$JOBS_JSON")"
+            echo "Source run $SOURCE_RUN_ID: jobs=$TOTAL pending=$PENDING completed_non_success=$NONSUCCESS"
+            if (( TOTAL >= 37 && PENDING == 0 )); then
+              echo "source_complete=true" >> "$GITHUB_OUTPUT"
+              echo "All six-layout P4/P5 matrix jobs plus aggregate job are complete."
+              break
+            fi
+            if (( SECONDS >= DEADLINE )); then
+              echo "::warning::Source run did not complete within five hours; generating an incomplete evidence report."
+              echo "source_complete=false" >> "$GITHUB_OUTPUT"
+              break
+            fi
+            sleep 60
+          done
+
+      - name: Download the P4/P5 campaign artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          run-id: ${{ inputs.source_run_id || '39098770358' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: c5g7-p45-*
+          path: /tmp/c5g7-p45-artifacts
+          merge-multiple: false
+
+      - name: Reuse completed independent S_N solver artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.solver_run_id || '39100496297' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: c5g7-independent-sn-reference-${{ inputs.solver_run_id || '39100496297' }}
+          path: /tmp/c5g7-independent-sn
+
+      - name: Install audit dependencies
+        run: python -m pip install --disable-pip-version-check "numpy<3" "h5py>=3.10,<4"
+
+      - name: Independently re-audit available P4/P5 statepoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c5g7-p45-artifacts
+          python - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          root = Path("/tmp/c5g7-p45-artifacts")
+          script = Path("scripts/audit_c5g7_smoke_statepoints.py").resolve()
+          studies = sorted(root.rglob("STUDY_SUMMARY.json"))
+          outcomes = []
+          for study in studies:
+              rel = study.relative_to(root)
+              if not any(f"-{phase}-" in rel.parts[0] for phase in ("P4", "P5")):
+                  continue
+              out = study.parent / "analysis" / "raw_hdf5_posthoc_reaudit.json"
+              out.parent.mkdir(parents=True, exist_ok=True)
+              if out.exists(): out.unlink()
+              proc = subprocess.run([sys.executable, str(script), "--study-summary", str(study),
+                                     "--out", str(out), "--expected-candidates", "1"],
+                                    text=True, capture_output=True)
+              rep = {}
+              if out.is_file():
+                  try: rep = json.loads(out.read_text())
+                  except json.JSONDecodeError: pass
+              outcomes.append({"study": str(rel), "returncode": proc.returncode,
+                               "status": rep.get("status", "NO_REPORT"),
+                               "failed_checks": rep.get("failed_checks", []),
+                               "stderr": proc.stderr[-1500:]})
+          summary = {"study_count": len(outcomes),
+                     "pass_count": sum(x["status"] == "PASS" and x["returncode"] == 0 for x in outcomes),
+                     "fail_count": sum(not (x["status"] == "PASS" and x["returncode"] == 0) for x in outcomes),
+                     "outcomes": outcomes}
+          (root / "POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json").write_text(json.dumps(summary, indent=2)+"\n")
+          print(json.dumps({k:v for k,v in summary.items() if k != "outcomes"}, indent=2))
+          PY
+
+      - name: Generate corrected fuel-only cross-code report
+        id: report
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p corrected-crosscheck-report
+          python scripts/compare_c5g7_independent_crosscheck.py \
+            --artifacts-root /tmp/c5g7-p45-artifacts \
+            --sn-csv /tmp/c5g7-independent-sn/c5g7_pinpower.csv \
+            --sn-log /tmp/c5g7-independent-sn/sn_solver.log \
+            --outdir corrected-crosscheck-report
+          cat corrected-crosscheck-report/independent_physical_crosscheck.json
+
+      - name: Preserve corrected report and source audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-corrected-crosscheck-posthoc-${{ github.run_id }}
+          path: |
+            corrected-crosscheck-report/
+            /tmp/c5g7-p45-artifacts/POSTHOC_RAW_HDF5_REAUDIT_SUMMARY.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail closed if campaign, raw audits, or corrected comparison is incomplete
+        if: always()
+        shell: bash
+        env:
+          SOURCE_COMPLETE: ${{ steps.wait_source.outputs.source_complete }}
+          REPORT_OUTCOME: ${{ steps.report.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$SOURCE_COMPLETE" != "true" ]]; then
+            echo "Source campaign incomplete; corrected evidence is partial."
+            exit 1
+          fi
+          if [[ "$REPORT_OUTCOME" != "success" ]]; then
+            echo "Corrected report generation failed; no cross-code acceptance."
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("corrected-crosscheck-report/independent_physical_crosscheck.json")
+          if not p.exists():
+              raise SystemExit("corrected report is missing")
+          report=json.loads(p.read_text())
+          integrity=report.get("integrity", {})
+          spatial=report.get("canonical_spatial_cross_code_check", {})
+          if integrity.get("status") != "PASS":
+              raise SystemExit(f"source run integrity incomplete: {integrity.get('issues', [])[:3]}")
+          if spatial.get("status") != "COMPUTED_FUEL_MASKED_CROSS_CODE_SHAPE_CHECK_NOT_OFFICIAL_ACCEPTANCE":
+              raise SystemExit(f"fuel-masked spatial check incomplete: {spatial.get('status')}")
+          if report.get("decision", {}).get("broad_physical_superiority") != "NOT_ESTABLISHED":
+              raise SystemExit("unexpected broad-claim status; review required")
+          print("Corrected comparison and artifact integrity completed. Physical validation remains a separate gate.")
+          PY
