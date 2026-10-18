@@ -120,7 +120,7 @@ Its own [README and mesh-convergence report](https://github.com/EmreSakarya/c5g7
 
 Required reviewer checks:
 - Judge whether the declared mesh resolution is adequate for the comparison question; do not classify the known offset as an official benchmark tolerance or automatically as a CB-PFR model error.
-- Check the normalized pin map on a matched fuel-only mask. Its maximum pin-power result is approximately 5.8% below the published MCNP summary at this mesh resolution, consistent with the cited discretization bias; this is not a spatial-validation pass.
+- Check the corrected UMMU pin map on the matched 1,056-true-fuel-pin mask. The original solver console metric (normalized over 1,060 positive bins) reported a maximum near 2.3529, about 5.8% below the published MCNP maximum 2.498. After excluding four central instrument-tube cells and renormalizing over true fuel pins only, the posthoc maximum/minimum are 2.344035/0.217344 versus MCNP 2.498/0.232. The corrected metric still shows a discrepancy and is not a spatial-validation pass.
 - Confirm a cross-code comparison remains distinct from experimental validation.
 
 ### BEAVRS experimental path
@@ -142,8 +142,9 @@ Evidence and rationale:
 ## Review F — Evidence pipeline and release traceability
 
 Automated evidence available:
-- [A–G foundation audit #39107216357](https://github.com/thenextw4ng/cb-pfr/actions/runs/39107216357)
-- [Full-regression closeout workflow #39107307163](https://github.com/thenextw4ng/cb-pfr/actions/runs/39107307163)
+- [Latest A–G foundation audit #39110583165](https://github.com/thenextw4ng/cb-pfr/actions/runs/39110583165)
+- [Full-regression closeout #39110583360](https://github.com/thenextw4ng/cb-pfr/actions/runs/39110583360), with 211 tests passed
+- [Corrected six-layout summary #39110583084](https://github.com/thenextw4ng/cb-pfr/actions/runs/39110583084), artifact #12130630849
 
 The initial A–G foundation tests passed, including exact QUBO/layout checks and asymmetric HDF5 coordinate-order tests. A subsequent audit found the true-fuel mask and output CSV schema were wrong despite those tests passing. Regression tests have been expanded to cover instrument-tube exclusion, 1,056/4/96 population counts, fuel-only normalization, duplicate coordinates, and JSON/CSV consistency. This is a useful example of why CI pass status must not be treated as science acceptance.
 
