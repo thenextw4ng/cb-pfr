@@ -61,18 +61,19 @@ def collect(root):
     return rows
 
 def sn_map(path):
-    # The solver CSV spans the full 34x34 two-assembly block (1,156 bins),
-    # but its reported power benchmark covers 1,060 fissionable fuel pins.
-    # The remaining 96 guide/water/non-fissionable locations are zero and
-    # must not be treated as fuel-pin power or compared with the published
-    # positive-fuel minimum.
+    # The 34x34 block has 1,156 bins: 1,056 actual fuel pins, 96 zero-power
+    # guide tubes, and four central instrument/fission-chamber cells. The
+    # instrument cells contain trace fissile material and therefore have tiny
+    # positive fission values; they are NOT fuel pins and must be excluded.
     a = [[math.nan for _ in range(34)] for _ in range(34)]
     seen = set()
+    metadata = {}
     count = 0
+    required = {"pc", "pr", "local_row", "local_col", "norm_power"}
     with path.open(newline="", encoding="utf-8") as f:
         r = csv.DictReader(f)
-        if not {"pc","pr","norm_power"}.issubset(set(r.fieldnames or [])):
-            raise ValueError("S_N pin-power CSV has unexpected columns")
+        if not required.issubset(set(r.fieldnames or [])):
+            raise ValueError(f"S_N pin-power CSV needs columns {sorted(required)}")
         for row in r:
             x, y = int(row["pc"]), int(row["pr"])
             if 1 <= x <= 34 and 18 <= y <= 51:
@@ -80,28 +81,66 @@ def sn_map(path):
                 if key in seen:
                     raise ValueError(f"duplicate S_N pin coordinate {key}")
                 seen.add(key)
-                a[y-18][x-1] = float(row["norm_power"])
+                lr, lc = int(row["local_row"]), int(row["local_col"])
+                expected_lr, expected_lc = (y - 1) % 17 + 1, (x - 1) % 17 + 1
+                if (lr, lc) != (expected_lr, expected_lc):
+                    raise ValueError(
+                        f"local pin coordinate mismatch at {key}: CSV={(lr,lc)}, expected={(expected_lr,expected_lc)}"
+                    )
+                value = float(row["norm_power"])
+                if not math.isfinite(value) or value < 0:
+                    raise ValueError(f"invalid S_N pin power at {key}: {value}")
+                a[y - 18][x - 1] = value
+                metadata[key] = {"local_row": lr, "local_col": lc, "value": value}
                 count += 1
     if count != 1156 or any(not math.isfinite(v) for rr in a for v in rr):
         raise ValueError(f"expected 1156 finite S_N block bins, got {count}")
-    mask = [[v > 0.0 for v in rr] for rr in a]
+    instrument = [m for m in metadata.values() if m["local_row"] == 9 and m["local_col"] == 9]
+    if len(instrument) != 4 or any(m["value"] <= 0 for m in instrument):
+        raise ValueError(f"expected four positive central instrument-tube bins, got {len(instrument)}")
+    mask = [[
+        (v > 0.0) and not (
+            metadata[(x + 1, y + 18)]["local_row"] == 9
+            and metadata[(x + 1, y + 18)]["local_col"] == 9
+        )
+        for x, v in enumerate(rr)
+    ] for y, rr in enumerate(a)]
     fuel_values = [v for rr, mr in zip(a, mask) for v, is_fuel in zip(rr, mr) if is_fuel]
     fuel_count = len(fuel_values)
-    if fuel_count != 1060:
-        raise ValueError(f"expected 1060 positive fuel-pin bins and 96 non-fuel bins, got fuel={fuel_count}")
-    return a, mask, {
+    zero_guide = sum(1 for m in metadata.values()
+                     if m["local_row"] != 9 or m["local_col"] != 9
+                     if m["value"] == 0.0)
+    if fuel_count != 1056 or zero_guide != 96:
+        raise ValueError(
+            f"expected 1056 fuel pins, 4 instrument tubes, and 96 zero-power guide bins; "
+            f"got fuel={fuel_count}, instrument={len(instrument)}, zero_nonfuel={zero_guide}"
+        )
+    fuel_mean = statistics.fmean(fuel_values)
+    if not math.isfinite(fuel_mean) or fuel_mean <= 0:
+        raise ValueError("mean true-fuel pin power must be finite and positive")
+    # Renormalize to the actual 1,056 fuel-pin mean. The upstream solver
+    # normalizes by all 1,060 positive bins, including the four instrument tubes.
+    normalized = [[v / fuel_mean for v in rr] for rr in a]
+    norm_fuel_values = [v for rr, mr in zip(normalized, mask) for v, is_fuel in zip(rr, mr) if is_fuel]
+    return normalized, mask, {
         "mesh_bin_count": count,
         "fuel_pin_count": fuel_count,
-        "non_fuel_bin_count": count-fuel_count,
-        "min_normalized_fuel_pin_power": min(fuel_values),
-        "max_normalized_fuel_pin_power": max(fuel_values)
+        "instrument_tube_count": len(instrument),
+        "zero_power_guide_tube_count": zero_guide,
+        "excluded_non_fuel_bin_count": count - fuel_count,
+        "solver_csv_mean_of_1056_fuel_pins_before_renormalization": fuel_mean,
+        "min_normalized_fuel_pin_power": min(norm_fuel_values),
+        "max_normalized_fuel_pin_power": max(norm_fuel_values),
+        "raw_solver_csv_min_fuel_pin_power": min(fuel_values),
+        "raw_solver_csv_max_fuel_pin_power": max(fuel_values),
+        "solver_csv_normalization_included_instrument_tubes": True,
     }
 
 def openmc_map(path, fuel_mask):
     import h5py, numpy as np
     mask = np.asarray(fuel_mask, dtype=bool)
-    if mask.shape != (34,34) or int(mask.sum()) != 1060:
-        raise ValueError(f"fuel-pin mask must contain 1060 of 1156 bins, got {int(mask.sum()) if mask.shape == (34,34) else 'invalid shape'}")
+    if mask.shape != (34,34) or int(mask.sum()) != 1056:
+        raise ValueError(f"fuel-pin mask must contain 1056 true fuel pins of 1156 bins, got {int(mask.sum()) if mask.shape == (34,34) else 'invalid shape'}")
     with h5py.File(path, "r") as f:
         dims = tuple(int(v) for v in f["tallies/meshes/mesh 1/dimension"][:])
         if dims != (51,51,1): raise ValueError(f"OpenMC mesh dimensions {dims}, expected (51,51,1)")
@@ -116,8 +155,8 @@ def openmc_map(path, fuel_mask):
         if pins.shape != (34,34) or not np.isfinite(pins).all() or np.any(pins < 0):
             raise ValueError("OpenMC fuel block mesh invalid")
         fuel = pins[mask]
-        if fuel.size != 1060 or np.any(fuel <= 0):
-            raise ValueError(f"OpenMC tally must have 1060 positive fuel-bin values; got {fuel.size}, positive={int(np.sum(fuel > 0))}")
+        if fuel.size != 1056 or np.any(fuel <= 0):
+            raise ValueError(f"OpenMC tally must have 1056 positive true-fuel-bin values; got {fuel.size}, positive={int(np.sum(fuel > 0))}")
         return (pins / fuel.mean()).tolist()
 
 def compare_spatial_maps(openmc_maps, sn_values, fuel_mask):
@@ -128,8 +167,8 @@ def compare_spatial_maps(openmc_maps, sn_values, fuel_mask):
     mask = np.asarray(fuel_mask, dtype=bool)
     if got.shape != (34,34) or refa.shape != (34,34) or mask.shape != (34,34):
         raise ValueError("spatial maps and mask must all be 34x34")
-    if int(mask.sum()) != 1060:
-        raise ValueError(f"expected 1060 comparable fuel pins, got {int(mask.sum())}")
+    if int(mask.sum()) != 1056:
+        raise ValueError(f"expected 1056 comparable true fuel pins, got {int(mask.sum())}")
     gv, rv = got[mask], refa[mask]
     if not np.isfinite(gv).all() or not np.isfinite(rv).all() or np.any(rv <= 0) or np.any(gv <= 0):
         raise ValueError("all matched fuel-pin values must be finite and positive")
@@ -208,14 +247,14 @@ def main():
                 "mesh_bin_count":ref_sum["mesh_bin_count"],
                 "fuel_pin_count":ref_sum["fuel_pin_count"],
                 "excluded_non_fuel_mesh_bins":ref_sum["non_fuel_bin_count"],
-                "openmc_quantity":"normalized mesh-bin fission-rate tally averaged and normalized over the matched 1,060 fissionable fuel pins; relative-shape proxy, not absolute power",
-                "independent_quantity":"normalized pin-power output from pinned S_N deterministic solver, restricted to the same 1,060 fuel-pin mask",
+                "openmc_quantity":"normalized mesh-bin fission-rate tally averaged and normalized over the matched 1,056 true fuel pins, excluding four central instrument tubes; relative-shape proxy, not absolute power",
+                "independent_quantity":"normalized pin-power output from pinned S_N deterministic solver, restricted to the same 1,056 true fuel-pin mask",
                 "comparison_metrics":metric,
                 "sn_pin_map_summary":ref_sum,
                 "published_mcnp_pin_power_summary":{"max":P_MAX_REF,"min":P_MIN_REF,"max_relative_sd":0.0016,"min_relative_sd":0.0058},
                 "sn_max_vs_published_percent":(snmax/P_MAX_REF-1)*100,
                 "sn_min_vs_published_percent":(snmin/P_MIN_REF-1)*100,
-                "interpretation":"A fuel-only mask excludes 96 non-fuel bins from the 34x34 block, matching the solver's 1,060 fuel-pin benchmark definition. Fission-rate and normalized-power tallies are related but not identical. This is cross-code evidence only; not physical validation, a safety limit, or official acceptance.",
+                "interpretation":"A true-fuel mask excludes 96 zero-power guide-tube bins and four positive-fission instrument-tube bins from the 34x34 block, matching the solver's 1,060 fuel-pin benchmark definition. Fission-rate and normalized-power tallies are related but not identical. This is cross-code evidence only; not physical validation, a safety limit, or official acceptance.",
             }
         except Exception as e:
             spatial = {"status":"CROSS_CODE_COMPARISON_FAILED_OR_INCOMPLETE","error":str(e)}
