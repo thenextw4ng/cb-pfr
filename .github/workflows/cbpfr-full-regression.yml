@@ -1,0 +1,119 @@
+name: CB-PFR full regression and evidence closeout
+
+on:
+  push:
+    branches:
+      - experiment/c5g7-independent-physical-crosscheck-20261018
+    paths:
+      - .github/workflows/cbpfr-full-regression.yml
+      - pyproject.toml
+      - requirements-dashboard.txt
+      - src/cbpfr/**
+      - pages/**
+      - tests/**
+      - scripts/**
+      - config/benchmarks/**
+      - results/c5g7_repeatability_normalized_2026-10-11/**
+      - results/c5g7_corrected_group_repeatability_smoke_2026-10-11/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-regression:
+    name: Full regression and fail-closed evidence checks (Python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact experiment revision
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements-dashboard.txt
+
+      - name: Install package and project test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install -r requirements-dashboard.txt
+          python -m pip install "h5py>=3.10,<4" "numpy<3"
+
+      - name: Compile project, pages, tests, examples, and scripts
+        run: |
+          python -m py_compile src/cbpfr/*.py pages/*.py tests/*.py examples/*.py scripts/*.py
+
+      - name: Run full unittest regression suite
+        run: python -m unittest discover -s tests -v
+
+      - name: Execute documented examples
+        run: |
+          python examples/toy_qubo_example.py
+          python examples/basic_ranking.py
+
+      - name: Audit exact QUBO and A-G status without promoting physical claims
+        run: |
+          python scripts/audit_cbpfr_validation_scope_ag.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("ag-foundation-audit/cbpfr_ag_foundation_audit.json").read_text())
+          assert report["all_deterministic_checks_pass"], report
+          assert report["overall_physical_validation_status"] == "NOT_ESTABLISHED", report
+          assert report["gate_status"]["A_model_identity_fidelity"]["status"].startswith("BLOCKED"), report
+          assert report["gate_status"]["E_experimental_or_trusted_benchmark_validation"]["status"] == "NOT_ESTABLISHED", report
+          print("A-G software foundations pass; physical validation is intentionally NOT_ESTABLISHED.")
+          PY
+
+      - name: Re-audit the retained low-budget C5G7 dataset
+        run: |
+          python scripts/audit_c5g7_validation_gates.py \
+            --runs-csv results/c5g7_repeatability_normalized_2026-10-11/run_level_results.csv \
+            --out /tmp/c5g7-validation-gates.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/c5g7-validation-gates.json").read_text())
+          assert report["run_count"] == 18 and report["candidate_count"] == 6, report
+          assert all(report["global_checks"][k] for k in (
+            "common_compute_settings", "unique_seeds", "unique_statepoint_hashes",
+            "single_mgxs_hash", "all_raw_hdf5_audits_pass"
+          )), report
+          assert report["status"] == "FAIL_OR_INCOMPLETE_CANONICAL_KEFF_SCREEN", report
+          assert report["is_official_benchmark_acceptance"] is False, report
+          print("Old smoke data integrity passes; canonical scalar acceptance remains unpassed as expected.")
+          PY
+
+      - name: Re-audit the corrected-group six-layout objective dataset
+        run: |
+          python scripts/audit_c5g7_corrected_objective.py \
+            --runs-csv results/c5g7_corrected_group_repeatability_smoke_2026-10-11/run_level_fission_objective.csv \
+            --out /tmp/c5g7-corrected-objective-audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("/tmp/c5g7-corrected-objective-audit.json").read_text())
+          assert report["status"] == "EVIDENCE_INTEGRITY_PASS_DESIGN_SELECTION_BLOCKED", report
+          assert report["run_count"] == 18 and report["layout_count"] == 6, report
+          assert all(report["checks"].values()), report
+          assert report["decision"]["winner_selected"] is False, report
+          print("Corrected-group record integrity passes; candidate selection remains blocked.")
+          PY
+
+      - name: Preserve full regression and evidence-status report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-full-regression-evidence-${{ github.run_id }}
+          path: |
+            ag-foundation-audit/
+            /tmp/c5g7-validation-gates.json
+            /tmp/c5g7-corrected-objective-audit.json
+          if-no-files-found: warn
+          retention-days: 30
