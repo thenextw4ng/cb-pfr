@@ -1,9 +1,9 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "validation_program_id": "CBPFR-ReactorQ-dual-benchmark-2026-10",
   "title": "C5G7 computational benchmark + BEAVRS experimental benchmark",
   "strategy": "separate_complementary_benchmarks_with_BEAVRS_as_selected_experimental_pathway",
-  "overall_status": "BEAVRS_CRITICALITY_CONSISTENT_SPATIAL_MAP_VALIDATION_NOT_ESTABLISHED",
+  "overall_status": "C5G7_CAMPAIGNS_IN_PROGRESS_BEAVRS_SPATIAL_VALIDATION_NOT_ESTABLISHED",
   "benchmark_roles": {
     "C5G7": {
       "role": "computational_transport_benchmark_and_candidate_study",
@@ -13,8 +13,8 @@
         "check candidate ranking and uncertainty handling within the C5G7 design space"
       ],
       "primary_reference": "https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation",
-      "current_evidence": "corrected-group 18-run smoke study exists; canonical high-budget confirmation and independent specification review remain required",
-      "known_blocker": "no defensible mapping from legacy fresh/once_burned/twice_burned QUBO labels to C5G7 UO2/MOX compositions"
+      "current_evidence": "Corrected-group 18-run smoke dataset passed record integrity but selected no winner; P4/P5 held-out campaign is still running; independent S_N results for six layouts are partially complete; fuel-only spatial-mask correction has been regression-tested; model-fidelity and convergence review remain open.",
+      "known_blocker": "The canonical independent S_N solver comparison is discrepant (initial k_eff 1.184733 vs 1.186550 reference, about -181.7 pcm); all six alternative layouts lack a defensible physical acceptance band; independent model specification and spatial mapping review remain open."
     },
     "KRITZ2": {
       "role": "deferred_alternative_not_selected",
@@ -76,7 +76,7 @@
       "measured_data": "measurements/detector_signals/cycle_1/0/radial_measurements_full_tc.csv",
       "model_workflow": "https://github.com/thenextw4ng/cb-pfr/blob/main/.github/workflows/beavrs-cycle1-map-validation.yml",
       "runner": "scripts/run_beavrs_cycle1_map_validation.py",
-      "status": "final 500-batch run and integrity audit completed; keff 1.00036455 ± 0.00076289 (95% MC interval includes unity), but tilt-corrected spatial-map RMSE 0.33426, Pearson correlation -0.0780, MAPE 29.00%; model-to-observable mismatch unresolved",
+      "status": "three recorded runs completed; artifact-integrity checks passed for recorded run artifacts, but spatial-map agreement is poor and model-to-observable mismatch remains unresolved; NOT PHYSICALLY VALIDATED",
       "known_mismatches": [
         "Upstream model temperature is 566.483 K versus reported inlet temperature 565.858 K (about 0.625 K difference).",
         "SE=230 overrides upstream default 228 and exceeds generic helper's 228-step guard; geometry/sensitivity review is required.",
@@ -85,55 +85,80 @@
       "instrumented_labels_source": "measurements/detector_signals/cycle_1/0/radial_measurements_full.csv",
       "mesh": "15x15x1; bounds ±7.5 assembly pitches; central assembly lattice corresponds to upstream core-template rows/columns 2..16",
       "current_workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412",
-      "final_workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412"
+      "final_workflow_run": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412",
+      "run_history": [
+        {
+          "run_id": 38117279412,
+          "url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117279412",
+          "summary": "k_eff 1.00036455 ± 0.00076289; normalized RMSE 0.33426; Pearson -0.0780; mean absolute relative error 29.00%; integrity only."
+        },
+        {
+          "run_id": 38117736764,
+          "url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38117736764",
+          "summary": "same reported poor spatial agreement; artifact-integrity audit PASS_INTEGRITY_ONLY."
+        },
+        {
+          "run_id": 38119215203,
+          "url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38119215203",
+          "summary": "normalized RMSE 0.32892; Pearson 0.03236; mean absolute relative error 27.75%; integrity only."
+        },
+        {
+          "run_id": 38120609560,
+          "url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38120609560",
+          "summary": "plot-only coordinate-registration diagnostic; no neutron transport; does not resolve observable mismatch."
+        }
+      ]
     }
   },
   "gates": [
     {
       "id": "A1",
       "name": "C5G7 model identity and standard group structure",
-      "status": "PARTIAL",
-      "pass_condition": "standard energy group boundaries, source materials/geometry, and tally definitions independently reviewed"
+      "status": "PARTIALLY_AUDITED_REVIEW_OPEN",
+      "pass_condition": "standard energy-group boundaries, source materials/geometry, and tally definitions independently reviewed",
+      "note": "Pinned C5G7 source and nonstandard log-spaced energy-group construction identified; CB-PFR patches generated MGXS to standard C5G7 group boundaries and audits the HDF5 group structure; actual generated XML/MGXS fidelity needs independent sign-off."
     },
     {
       "id": "A2",
       "name": "C5G7 canonical convergence",
-      "status": "PENDING",
-      "pass_condition": "three independent high-budget seeds on corrected model; raw statepoints audited; benchmark comparison reproducible"
+      "status": "IN_PROGRESS_HIGH_BUDGET_P45_AND_INDEPENDENT_S_N_REVIEW_OPEN",
+      "pass_condition": "three independent high-budget seeds on corrected model; raw statepoints audited; benchmark comparison reproducible",
+      "note": "New P4/P5 campaign and independent S_N runs are incomplete. Successful jobs do not certify source stationarity."
     },
     {
       "id": "B1",
       "name": "BEAVRS full-core model preparation",
-      "status": "MODEL_AND_MESH_SPECIFIED; FINAL_RUN_QUEUED",
-      "pass_condition": "pinned source, nuclear data provenance, model geometry/settings, and measured state match audited"
+      "status": "RUN_COMPLETED_PINNED_SOURCE_AND_HASH_RECORDS_PARTIAL",
+      "pass_condition": "pinned source, nuclear data provenance, model geometry/settings, and measured state match audited",
+      "note": "Runs and integrity audits completed for recorded artifacts; SE=230 override and axial step-width assumptions still need sensitivity/model-state review."
     },
     {
       "id": "B2",
       "name": "BEAVRS experimental map comparison",
-      "status": "PASS_CRITICALITY_CONSISTENCY_ONLY",
+      "status": "PRELIMINARY_COMPARISON_EXECUTED_NOT_VALIDATION",
       "pass_condition": "successful OpenMC transport, 58 detector bins mapped, residuals reproduced from uploaded raw statepoint",
-      "note": "k_eff confidence interval includes unity for the modeled critical state; this is a consistency check only, not a full validation certificate."
+      "note": "58 detector labels map consistently, but fission-rate tally is not an exact detector response operator; spatial agreement is poor."
     },
     {
       "id": "B3",
       "name": "BEAVRS uncertainty and model-mismatch review",
-      "status": "FAIL_SPATIAL_MAP_AGREEMENT",
+      "status": "NOT_PASSED_SPATIAL_AGREEMENT",
       "pass_condition": "resolve bank-E mismatch or quantify its effect; include measurement and tally uncertainty and justified acceptance criteria",
-      "note": "Normalized map RMSE 0.33426, Pearson correlation -0.0780, mean absolute relative error 29.00%; detector-response/model-form mismatch must be resolved. Overall physical validation is not established."
+      "note": "Normalized RMSE up to 0.33426, Pearson correlation around -0.0780 to 0.03236, mean absolute relative error around 27.75%-29.00%; model-to-observable response and uncertainty treatment remain unresolved."
     },
     {
       "id": "C1",
       "name": "QUBO-to-physical candidate mapping",
-      "status": "PASS_FOR_REFORMULATED_C5G7_2X2; LEGACY_MAPPING_UNSUPPORTED",
+      "status": "PASS_FOR_REFORMULATED_C5G7_2X2_ONLY_LEGACY_MAPPING_UNSUPPORTED",
       "pass_condition": "explicit candidate variables and constraints correspond to a physically defined candidate space",
-      "note": "The six enumerated 2x2 UO2/MOX layouts have explicit candidate IDs and one-to-one physical layout definitions. This does not map the legacy fresh/once_burned/twice_burned QUBO labels to BEAVRS or C5G7."
+      "note": "The six enumerated 2x2 UO2/MOX layout candidates are explicit. This does not map legacy fresh/once_burned/twice_burned QUBO labels to BEAVRS or C5G7."
     },
     {
       "id": "C2",
       "name": "CB-PFR physical effectiveness",
-      "status": "PARTIAL_SOFTWARE_INTEGRATION_SMOKE_ONLY",
+      "status": "HELDOUT_CAMPAIGN_RUNNING_EFFECTIVENESS_NOT_ESTABLISHED",
       "pass_condition": "compare CB-PFR and baselines on the same physically evaluated candidate pool and common budget",
-      "note": "The 18-run corrected-group C5G7 smoke dataset passed the CB-PFR + exact one-hot QUBO integration workflow under illustrative, non-authoritative limits; benchmark-grade physical effectiveness remains unestablished."
+      "note": "P4/P5 held-out campaign run #39098770358 has only 10/36 matrix jobs completed at latest inspection; six-layout independent S_N workflow #39104899024 has 3/6 layout jobs completed. No final P6 conclusion yet."
     },
     {
       "id": "Q1",
@@ -147,7 +172,9 @@
     "A BEAVRS detector-map comparison does not validate all BEAVRS observables or every operating state.",
     "A successful BEAVRS model comparison does not validate CB-PFR ranking or the legacy burnup-state QUBO mapping.",
     "BEAVRS is not the same candidate space as the six C5G7 UO2/MOX layouts.",
+    "The six-layout QUBO cardinality penalty does not rank neutronically better layouts.",
     "QUBO formulation alone does not prove quantum-device execution or quantum advantage.",
-    "No complete physical-validation claim is made until raw simulation results, uncertainty treatment, model mismatches, and acceptance criteria are independently reviewed."
-  ]
+    "No complete physical-validation claim is made until raw results, uncertainty, model mismatches and acceptance criteria are independently reviewed."
+  ],
+  "last_reviewed": "2026-10-18"
 }
