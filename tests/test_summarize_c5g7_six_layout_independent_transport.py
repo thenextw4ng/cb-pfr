@@ -16,14 +16,37 @@ class SixLayoutTransportSummaryTests(unittest.TestCase):
     def make_bundle(self, root: Path, duplicate_last: bool = False) -> Path:
         d = root / "MMUU"
         d.mkdir()
+        source = d / "patched_c5g7_transport.f90"
+        source.write_text(
+            "! Synthetic, test-only layout source for MMUU\n"
+            "core(1,3) = 2\n"
+            "core(2,3) = 2\n"
+            "core(1,2) = 1\n"
+            "core(2,2) = 1\n"
+            "core(3,3) = 0\n"
+            "core(3,2) = 0\n"
+            "core(1,1) = 0\n"
+            "core(2,1) = 0\n"
+            "core(3,1) = 0\n"
+            "tol = 1.0e-5_dp\n"
+            "maxout = 800\n",
+            encoding="utf-8"
+        )
         (d / "layout_metadata.json").write_text(json.dumps({
             "layout_signature": "MMUU",
             "upstream_commit": mod.COMMIT,
-            "settings": {"cells_per_pin": 16},
-            "patched_source_sha256": "a" * 64,
-            "compile_flags": "-O3"
+            "settings": {
+                "cells_per_pin": 16,
+                "azimuthal_directions": 24,
+                "polar_directions": 4,
+                "inner_passes": 3,
+                "openmp_threads": 4
+            },
+            "patched_source_sha256": mod.sha(source),
+            "compile_flags": "-O3 -march=native -fopenmp -ffree-line-length-none"
         }))
         (d / "sn_solver.log").write_text(
+            "outer   20   k =   1.141478   |dk| =  1.0E-06   |dFd| =  1.0E-06\n"
             "C5G7  k_eff  (this solver) =   1.141478\n"
             "Pin power:  fuel pins= 1060  max= 2.0000  min= 0.0000\n"
         )
@@ -40,7 +63,7 @@ class SixLayoutTransportSummaryTests(unittest.TestCase):
             for x, y in coords:
                 lr, lc = (y - 1) % 17 + 1, (x - 1) % 17 + 1
                 if lr == 9 and lc == 9:
-                    power = 1e-5  # central instrument/fission-chamber tube: positive but not a fuel pin
+                    power = 1e-5  # Central instrument tube: positive, but not fuel.
                 elif guide_zero_count < 96:
                     power = 0.0
                     guide_zero_count += 1
