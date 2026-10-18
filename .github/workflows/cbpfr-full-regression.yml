@@ -106,14 +106,19 @@ jobs:
           print("Corrected-group record integrity passes; candidate selection remains blocked.")
           PY
 
+      - name: Stage regression reports for upload
+        if: always()
+        run: |
+          mkdir -p regression-evidence
+          if [ -d ag-foundation-audit ]; then cp -R ag-foundation-audit regression-evidence/; fi
+          if [ -f /tmp/c5g7-validation-gates.json ]; then cp /tmp/c5g7-validation-gates.json regression-evidence/; fi
+          if [ -f /tmp/c5g7-corrected-objective-audit.json ]; then cp /tmp/c5g7-corrected-objective-audit.json regression-evidence/; fi
+
       - name: Preserve full regression and evidence-status report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cbpfr-full-regression-evidence-${{ github.run_id }}
-          path: |
-            ag-foundation-audit/
-            /tmp/c5g7-validation-gates.json
-            /tmp/c5g7-corrected-objective-audit.json
+          path: regression-evidence/
           if-no-files-found: warn
           retention-days: 30
