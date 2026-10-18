@@ -8,6 +8,7 @@ on:
       - .github/workflows/c5g7-corrected-crosscheck-posthoc.yml
       - scripts/compare_c5g7_independent_crosscheck.py
       - tests/test_independent_c5g7_fuel_mask.py
+      - scripts/compare_c5g7_six_layout_crosscode.py
   workflow_dispatch:
     inputs:
       source_run_id:
@@ -19,6 +20,11 @@ on:
         description: "Completed independent S_N reference run ID (reuses its artifact)"
         required: true
         default: "39100496297"
+        type: string
+      layout_run_id:
+        description: "Six-layout independent S_N workflow run ID"
+        required: true
+        default: "39104899024"
         type: string
 
 permissions:
@@ -39,31 +45,42 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Wait for P4/P5 source campaign to finish (bounded)
+      - name: Wait for P4/P5 and six-layout S_N runs to finish (bounded)
         id: wait_source
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SOURCE_RUN_ID: ${{ inputs.source_run_id || '39098770358' }}
+          LAYOUT_RUN_ID: ${{ inputs.layout_run_id || '39104899024' }}
         run: |
           set -euo pipefail
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid source run ID" >&2; exit 2; }
-          API_URL="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?per_page=100"
+          [[ "$LAYOUT_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid layout run ID" >&2; exit 2; }
+          SOURCE_API="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?per_page=100"
+          LAYOUT_API="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs/$LAYOUT_RUN_ID/jobs?per_page=100"
           DEADLINE=$((SECONDS + 18000))
+          SOURCE_READY=false
+          LAYOUT_READY=false
           while true; do
-            JOBS_JSON="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL")"
-            TOTAL="$(jq '.jobs | length' <<< "$JOBS_JSON")"
-            PENDING="$(jq '[.jobs[] | select(.status != "completed")] | length' <<< "$JOBS_JSON")"
-            NONSUCCESS="$(jq '[.jobs[] | select(.status == "completed" and .conclusion != "success")] | length' <<< "$JOBS_JSON")"
-            echo "Source run $SOURCE_RUN_ID: jobs=$TOTAL pending=$PENDING completed_non_success=$NONSUCCESS"
-            if (( TOTAL >= 37 && PENDING == 0 )); then
+            SOURCE_JSON="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$SOURCE_API")"
+            LAYOUT_JSON="$(curl --fail --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$LAYOUT_API")"
+            ST="$(jq '.jobs | length' <<< "$SOURCE_JSON")"
+            SP="$(jq '[.jobs[] | select(.status != "completed")] | length' <<< "$SOURCE_JSON")"
+            LT="$(jq '.jobs | length' <<< "$LAYOUT_JSON")"
+            LP="$(jq '[.jobs[] | select(.status != "completed")] | length' <<< "$LAYOUT_JSON")"
+            echo "OpenMC campaign $SOURCE_RUN_ID: jobs=$ST pending=$SP"
+            echo "Independent six-layout S_N $LAYOUT_RUN_ID: jobs=$LT pending=$LP"
+            if (( ST >= 37 && SP == 0 )); then SOURCE_READY=true; fi
+            if (( LT >= 7 && LP == 0 )); then LAYOUT_READY=true; fi
+            if [[ "$SOURCE_READY" == "true" && "$LAYOUT_READY" == "true" ]]; then
               echo "source_complete=true" >> "$GITHUB_OUTPUT"
-              echo "All six-layout P4/P5 matrix jobs plus aggregate job are complete."
+              echo "layout_complete=true" >> "$GITHUB_OUTPUT"
               break
             fi
             if (( SECONDS >= DEADLINE )); then
-              echo "::warning::Source run did not complete within five hours; generating an incomplete evidence report."
-              echo "source_complete=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::At least one source run did not complete within five hours; reporting incomplete evidence."
+              echo "source_complete=$SOURCE_READY" >> "$GITHUB_OUTPUT"
+              echo "layout_complete=$LAYOUT_READY" >> "$GITHUB_OUTPUT"
               break
             fi
             sleep 60
@@ -86,6 +103,16 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           name: c5g7-independent-sn-reference-${{ inputs.solver_run_id || '39100496297' }}
           path: /tmp/c5g7-independent-sn
+
+      - name: Download independent S_N artifacts for all six layouts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          run-id: ${{ inputs.layout_run_id || '39104899024' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: sn-c5g7-*
+          path: /tmp/c5g7-sn-layout-artifacts
+          merge-multiple: false
 
       - name: Install audit dependencies
         run: python -m pip install --disable-pip-version-check "numpy<3" "h5py>=3.10,<4"
@@ -143,6 +170,11 @@ jobs:
             --sn-log /tmp/c5g7-independent-sn/sn_solver.log \
             --outdir corrected-crosscheck-report
           cat corrected-crosscheck-report/independent_physical_crosscheck.json
+          python scripts/compare_c5g7_six_layout_crosscode.py \
+            --artifacts-root /tmp/c5g7-p45-artifacts \
+            --sn-root /tmp/c5g7-sn-layout-artifacts \
+            --outdir corrected-crosscheck-report
+          cat corrected-crosscheck-report/six_layout_openmc_sn_crosscheck.json
 
       - name: Preserve corrected report and source audit
         if: always()
@@ -158,11 +190,16 @@ jobs:
         shell: bash
         env:
           SOURCE_COMPLETE: ${{ steps.wait_source.outputs.source_complete }}
+          LAYOUT_COMPLETE: ${{ steps.wait_source.outputs.layout_complete }}
           REPORT_OUTCOME: ${{ steps.report.outcome }}
         run: |
           set -euo pipefail
           if [[ "$SOURCE_COMPLETE" != "true" ]]; then
             echo "Source campaign incomplete; corrected evidence is partial."
+            exit 1
+          fi
+          if [[ "$LAYOUT_COMPLETE" != "true" ]]; then
+            echo "Six-layout independent transport incomplete; no complete six-layout cross-code report."
             exit 1
           fi
           if [[ "$REPORT_OUTCOME" != "success" ]]; then
@@ -173,16 +210,20 @@ jobs:
           import json
           from pathlib import Path
           p=Path("corrected-crosscheck-report/independent_physical_crosscheck.json")
-          if not p.exists():
-              raise SystemExit("corrected report is missing")
+          p6=Path("corrected-crosscheck-report/six_layout_openmc_sn_crosscheck.json")
+          if not p.exists() or not p6.exists():
+              raise SystemExit("one or more corrected reports are missing")
           report=json.loads(p.read_text())
+          six=json.loads(p6.read_text())
           integrity=report.get("integrity", {})
           spatial=report.get("canonical_spatial_cross_code_check", {})
           if integrity.get("status") != "PASS":
               raise SystemExit(f"source run integrity incomplete: {integrity.get('issues', [])[:3]}")
           if spatial.get("status") != "COMPUTED_FUEL_MASKED_CROSS_CODE_SHAPE_CHECK_NOT_OFFICIAL_ACCEPTANCE":
-              raise SystemExit(f"fuel-masked spatial check incomplete: {spatial.get('status')}")
+              raise SystemExit(f"fuel-masked canonical spatial check incomplete: {spatial.get('status')}")
+          if six.get("status") != "COMPLETE_CROSS_CODE_COMPARISON_NOT_VALIDATION":
+              raise SystemExit(f"six-layout cross-code screen incomplete: {six.get('integrity', {}).get('issues', [])[:3]}")
           if report.get("decision", {}).get("broad_physical_superiority") != "NOT_ESTABLISHED":
               raise SystemExit("unexpected broad-claim status; review required")
-          print("Corrected comparison and artifact integrity completed. Physical validation remains a separate gate.")
+          print("Corrected fuel-mask comparisons and artifact integrity completed. Physical validation remains a separate gate.")
           PY
