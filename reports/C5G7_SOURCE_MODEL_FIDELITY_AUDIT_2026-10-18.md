@@ -42,9 +42,9 @@ The pinned independent solver's own [README](https://github.com/EmreSakarya/c5g7
 
 ### Finding A3 — The tally measures mesh-bin reaction rates, not absolute assembly power
 
-The upstream 2-D mesh is 51×51×1 over the full 64.26 cm square domain and has scores `flux`, `fission`, and `nu-fission`. The mesh divides the 3×3 assemblies into 17×17 bins per assembly. For the two-by-two fuel region, the analysis extracts a 34×34 block. That block has 1,156 bins, but the independent Sₙ model identifies 1,060 fissionable fuel pins and 96 non-fuel/zero-power positions.
+The upstream 2-D mesh is 51×51×1 over the full 64.26 cm square domain and has scores `flux`, `fission`, and `nu-fission`. The mesh divides the 3×3 assemblies into 17×17 bins per assembly. For the two-by-two fuel region, the analysis extracts a 34×34 block (1,156 bins). The correct benchmark interpretation is 1,056 actual fuel pins (264 per 17×17 assembly), 96 guide-tube positions with zero fission, and four central instrument/fission-chamber positions. The Sₙ CSV has tiny positive values in those four chamber cells because the simplified instrument-tube material includes trace fissile content; positive fission does not make them fuel pins.
 
-Accordingly, the cross-code shape comparison has been corrected to use the same 1,060-bin fuel mask for normalization and relative-error metrics. The 96 non-fuel bins are excluded; otherwise zeros in the reference field can make relative errors undefined and incorrectly report the minimum as zero fuel-pin power. The fuel-only mask correction is covered by regression tests in [A–G audit run #39106781314](https://github.com/thenextw4ng/cb-pfr/actions/runs/39106781314).
+An initial mask treated every positive Sₙ fission bin as a fuel pin, incorrectly including the four central instrument tubes and giving a false minimum around 1e-5. The corrected comparison explicitly excludes those four positions and the 96 zero-power guide tubes, leaving a shared 1,056-true-fuel-pin mask. Both Sₙ and OpenMC maps are renormalized over those true fuel pins before relative-shape metrics. The solver's raw CSV values and hashes are preserved; the postprocessing records the fuel-only normalization factor. The earlier 1,060-positive-bin mask and its minima are superseded. The correction is covered by regression tests in the updated A–G and six-layout summary workflows.
 
 Even after this correction, OpenMC's mesh-integrated fission tally and the independent solver's normalized pin-power output are related but not identical physical quantities. This remains a code-to-code shape comparison, not a power validation or safety assessment.
 
@@ -58,7 +58,7 @@ Even after this correction, OpenMC's mesh-integrated fission tally and the indep
 ## Evidence required to close Gate B
 
 1. Verify mesh lower-left/upper-right bounds, orientation, Fortran/HDF5 storage order, fuel-block slice, and row/column coordinates with an independently reproduced index map.
-2. Retain the 1,060-pin fuel mask, its source hash, and tests rejecting duplicate, missing, zero or non-finite matched fuel-bin values.
+2. Retain the 1,056-true-fuel-pin mask (excluding four central instrument tubes and 96 guide-tube bins), its source hash, and tests rejecting duplicate, missing, zero or non-finite matched fuel-bin values.
 3. Report fission-rate shape as a relative proxy, separately from absolute power, heat deposition, safety limits, and normalized benchmark pin power.
 4. Compare only like-for-like quantities and state the independent reviewer’s disposition.
 
@@ -67,7 +67,7 @@ Even after this correction, OpenMC's mesh-integrated fission tally and the indep
 | Item | Status | Reason |
 |---|---|---|
 | A — Source provenance and model identity | **PARTIALLY AUDITED / REVIEW OPEN** | Pinned code, lattice, boundaries and intentional energy-group correction identified; independent review of actual generated inputs remains required. |
-| B — Tally semantics and spatial mapping | **CORRECTION IMPLEMENTED / REVIEW OPEN** | Fuel-only comparison now excludes 96 non-fuel bins; tally-to-physical-reference correspondence still needs independent review. |
+| B — Tally semantics and spatial mapping | **CORRECTION IMPLEMENTED / REVIEW OPEN** | Fuel-only comparison excludes 100 non-fuel bins in total (96 guide tubes plus four instrument tubes); tally-to-physical-reference correspondence still needs independent review. |
 | C — QUBO and design-space invariants | **SOFTWARE SUB-GATE PASSED** | Six layouts are enumerated exactly and the cardinality penalty is equal for all feasible variants; it does not rank physical layouts. |
 | D — Integrity and convergence | **IN PROGRESS** | P4/P5 and six-layout Sₙ campaigns are not yet complete; stationarity is not certified by job completion. |
 | E — Benchmark validation | **NOT ESTABLISHED** | Cross-code and experiment comparisons are still required; no physical acceptance band has been justified for alternative layouts. |
