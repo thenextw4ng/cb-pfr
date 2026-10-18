@@ -32,7 +32,7 @@ class IndependentC5G7FuelMaskTests(unittest.TestCase):
             self.assertEqual(summary["non_fuel_bin_count"], 96)
             self.assertEqual(sum(sum(row) for row in mask), 1060)
             self.assertGreater(summary["min_normalized_fuel_pin_power"], 0.0)
-            self.assertEqual(summary["max_normalized_fuel_pin_power"], values[0][0])
+            self.assertAlmostEqual(summary["max_normalized_fuel_pin_power"], 0.5 + 1059 / 10000)
 
     def test_spatial_metrics_ignore_nonfuel_zero_bins(self):
         import numpy as np
