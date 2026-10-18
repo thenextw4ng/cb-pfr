@@ -52,7 +52,8 @@ class IndependentC5G7FuelMaskTests(unittest.TestCase):
             self.assertEqual(summary["excluded_non_fuel_bin_count"], 100)
             self.assertEqual(sum(sum(row) for row in mask), 1056)
             self.assertGreater(summary["min_normalized_fuel_pin_power"], 0.0)
-            self.assertAlmostEqual(summary["max_normalized_fuel_pin_power"], 1.0 if False else summary["max_normalized_fuel_pin_power"])
+            expected_max = (0.5 + 1055 / 10000) / ((0.5 + (0.5 + 1055 / 10000)) / 2)
+            self.assertAlmostEqual(summary["max_normalized_fuel_pin_power"], expected_max, places=10)
             self.assertTrue(summary["solver_csv_normalization_included_instrument_tubes"])
             # Each of the four central instrument positions is excluded even though it has tiny positive fission.
             for y in (26, 43):
