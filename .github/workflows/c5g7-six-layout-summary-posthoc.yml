@@ -65,8 +65,8 @@ jobs:
               assert item["zero_power_guide_tube_bins"] == 96, item
               assert item["excluded_non_fuel_mesh_bins"] == 100, item
               assert item["mesh_block_bins"] == 1156, item
-              assert item["min_positive_normalized_pin_power_csv"] > 0, item
-              assert item["max_positive_normalized_pin_power_csv"] is not None, item
+              assert item["min_normalized_fuel_pin_power"] > 0, item
+              assert item["max_normalized_fuel_pin_power"] is not None, item
           with Path("corrected-sn-summary/six_layout_independent_transport_summary.csv").open(newline="", encoding="utf-8") as f:
               import csv
               rows=list(csv.DictReader(f))
