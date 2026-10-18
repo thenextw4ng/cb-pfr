@@ -60,6 +60,32 @@ class IndependentC5G7FuelMaskTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "finite and positive"):
             mod.compare_spatial_maps([np.ones((34, 34)).tolist()], reference.tolist(), mask.tolist())
 
+    def test_openmc_mesh_extraction_preserves_shared_x_y_coordinate_order(self):
+        import h5py
+        import numpy as np
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "synthetic-statepoint.h5"
+            # Deliberately asymmetric mesh values expose transpose/reflection errors.
+            raw = np.fromfunction(lambda x, y: 1000.0 * y + x + 1.0, (51, 51), dtype=float)
+            mask = np.zeros((34, 34), dtype=bool)
+            mask.flat[:1060] = True
+            fuel_values = raw[0:34, 17:51].T[mask]
+            expected_mean = float(fuel_values.mean())
+            with h5py.File(path, "w") as handle:
+                meshes = handle.create_group("tallies/meshes")
+                mesh = meshes.create_group("mesh 1")
+                mesh.create_dataset("dimension", data=np.array([51, 51, 1], dtype=np.int32))
+                tally = handle.create_group("tallies/tally 1")
+                tally.create_dataset("score_bins", data=np.array([b"fission"]))
+                tally.create_dataset("results", data=raw.flatten(order="F")[:, None, None])
+            got = np.asarray(mod.openmc_map(path, mask), dtype=float)
+            self.assertEqual(got.shape, (34, 34))
+            # Row 0 maps y-bin 18; row 33 maps y-bin 51. Columns map x-bins 1..34.
+            self.assertAlmostEqual(got[0, 0], raw[0, 17] / expected_mean, places=10)
+            self.assertAlmostEqual(got[0, 33], raw[33, 17] / expected_mean, places=10)
+            self.assertAlmostEqual(got[33, 0], raw[0, 50] / expected_mean, places=10)
+            self.assertAlmostEqual(got[33, 33], raw[33, 50] / expected_mean, places=10)
+
     def test_duplicate_pin_coordinates_are_rejected(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "duplicate.csv"
