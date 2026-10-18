@@ -1,0 +1,165 @@
+name: C5G7 six-layout independent S_N transport screen
+
+on:
+  push:
+    branches:
+      - experiment/c5g7-independent-physical-crosscheck-20261018
+    paths:
+      - .github/workflows/c5g7-six-layout-independent-transport.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-sn-layouts:
+    name: Independent S_N transport — ${{ matrix.signature }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        signature: [MMUU, MUMU, MUUM, UMMU, UMUM, UUMM]
+    steps:
+      - name: Check out CB-PFR protocol
+        uses: actions/checkout@v4
+
+      - name: Install Fortran compiler
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y gfortran
+
+      - name: Checkout pinned independent S_N solver
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/EmreSakarya/c5g7-2d-transport-benchmark.git /tmp/c5g7-sn
+          git -C /tmp/c5g7-sn checkout --detach db421c969ee2de83e2d2ae2b14bda368567b558d
+          test "$(git -C /tmp/c5g7-sn rev-parse HEAD)" = "db421c969ee2de83e2d2ae2b14bda368567b558d"
+
+      - name: Patch only the four explicitly enumerated material positions
+        shell: bash
+        env:
+          LAYOUT_SIGNATURE: ${{ matrix.signature }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/sn-results/$LAYOUT_SIGNATURE"
+          python - <<'PY'
+          import hashlib, json, os, re
+          from pathlib import Path
+          src = Path("/tmp/c5g7-sn/src/c5g7_transport.f90")
+          text = src.read_text()
+          sig = os.environ["LAYOUT_SIGNATURE"]
+          assert sig in {"MMUU","MUMU","MUUM","UMMU","UMUM","UUMM"}, sig
+          def cell(letter):
+              return "2" if letter == "M" else "1"
+          # Signature order is p00, p01, p10, p11. The solver's
+          # core(ai,aj) coordinates use the north row at aj=3.
+          replacement = (
+              "core = 0\n"
+              f"  core(1,3)={cell(sig[0])}; core(2,3)={cell(sig[1])}; core(3,3)=0     ! North row\n"
+              f"  core(1,2)={cell(sig[2])}; core(2,2)={cell(sig[3])}; core(3,2)=0     ! Middle row\n"
+              "  core(1,1)=0; core(2,1)=0; core(3,1)=0     ! South row (all reflector)"
+          )
+          pattern = re.compile(
+              r"core = 0\s*\n\s*core\(1,3\)=1; core\(2,3\)=2; core\(3,3\)=0\s*! North row\s*\n"
+              r"\s*core\(1,2\)=2; core\(2,2\)=1; core\(3,2\)=0\s*! Middle row\s*\n"
+              r"\s*core\(1,1\)=0; core\(2,1\)=0; core\(3,1\)=0\s*! South row \(all reflector\)"
+          )
+          patched, n = pattern.subn(replacement, text)
+          if n != 1:
+              raise SystemExit(f"Refusing to patch unexpected upstream source; matches={n}")
+          src.write_text(patched)
+          out = Path(os.environ["GITHUB_WORKSPACE"]) / "sn-results" / sig
+          (out / "patched_c5g7_transport.f90").write_text(patched)
+          meta = {
+              "layout_signature": sig,
+              "candidate_id": "c5g7-2x2-" + sig,
+              "position_order": ["p00","p01","p10","p11"],
+              "material_by_position": {f"p{i//2}{i%2}":("MOX" if sig[i]=="M" else "UO2") for i in range(4)},
+              "upstream_repository": "https://github.com/EmreSakarya/c5g7-2d-transport-benchmark",
+              "upstream_commit": "db421c969ee2de83e2d2ae2b14bda368567b558d",
+              "settings": {"cells_per_pin":16,"azimuthal_directions":24,"polar_directions":4,"inner_passes":3,"openmp_threads":4},
+              "compile_flags": "-O3 -march=native -fopenmp -ffree-line-length-none",
+              "patched_source_sha256": hashlib.sha256(patched.encode()).hexdigest(),
+              "status": "layout-specific deterministic transport run; not a safety certification"
+          }
+          (out / "layout_metadata.json").write_text(json.dumps(meta,indent=2)+"\n")
+          print(json.dumps(meta,indent=2))
+          PY
+
+      - name: Compile and run high-resolution independent transport
+        shell: bash
+        env:
+          LAYOUT_SIGNATURE: ${{ matrix.signature }}
+          OMP_NUM_THREADS: "4"
+        run: |
+          set -euo pipefail
+          gfortran -O3 -march=native -fopenmp -ffree-line-length-none \
+            /tmp/c5g7-sn/src/c5g7_transport.f90 -o /tmp/c5g7-sn/c5g7
+          cd /tmp/c5g7-sn
+          OMP_NUM_THREADS=4 ./c5g7 16 24 4 3 \
+            > "$GITHUB_WORKSPACE/sn-results/$LAYOUT_SIGNATURE/sn_solver.log" 2>&1
+          cp c5g7_pinpower.csv "$GITHUB_WORKSPACE/sn-results/$LAYOUT_SIGNATURE/"
+          cp c5g7_flux.csv "$GITHUB_WORKSPACE/sn-results/$LAYOUT_SIGNATURE/"
+          grep -E 'C5G7  k_eff|difference|Pin power:|wrote c5g7_pinpower.csv|wall time' \
+            "$GITHUB_WORKSPACE/sn-results/$LAYOUT_SIGNATURE/sn_solver.log"
+          test -s "$GITHUB_WORKSPACE/sn-results/$LAYOUT_SIGNATURE/c5g7_pinpower.csv"
+
+      - name: Preserve layout-specific model, pin map, flux map, and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sn-c5g7-${{ matrix.signature }}
+          path: sn-results/${{ matrix.signature }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+  aggregate-six-layouts:
+    name: Aggregate six-layout independent-transport evidence
+    if: always()
+    needs: independent-sn-layouts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out analysis protocol
+        uses: actions/checkout@v4
+
+      - name: Download all completed layout artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sn-c5g7-*
+          path: /tmp/sn-layout-artifacts
+          merge-multiple: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Summarize independent transport metrics without a safety pass/fail claim
+        id: summary
+        continue-on-error: true
+        run: |
+          python scripts/summarize_c5g7_six_layout_independent_transport.py \
+            --root /tmp/sn-layout-artifacts \
+            --outdir "$GITHUB_WORKSPACE/sn-summary"
+
+      - name: Preserve CSV and JSON audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c5g7-six-layout-independent-transport-summary-${{ github.run_id }}
+          path: sn-summary/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Mark incomplete layout coverage as non-passing
+        if: always()
+        run: |
+          if [ "${{ needs.independent-sn-layouts.result }}" != "success" ] || [ "${{ steps.summary.outcome }}" != "success" ]; then
+            echo "At least one layout transport run or evidence-integrity check is incomplete; no physical-feasibility claim."
+            exit 1
+          fi
+          echo "Six-layout independent transport screen completed. Design-specific physical feasibility and safety remain unestablished."
