@@ -1,0 +1,98 @@
+name: Audit completed P4/P5 artifact bundles
+
+on:
+  push:
+    branches:
+      - experiment/c5g7-independent-physical-crosscheck-20261018
+    paths:
+      - .github/workflows/cbpfr-audit-p45-artifacts.yml
+      - scripts/audit_c5g7_run_bundle.py
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "P4/P5 campaign run ID to audit"
+        required: true
+        default: "39098770358"
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  audit-available-artifacts:
+    name: Audit available P4/P5 input/output hashes and model identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout audit code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install HDF5 audit dependency
+        run: python -m pip install --disable-pip-version-check "h5py>=3.10,<4"
+
+      - name: Download currently available P4/P5 artifact bundles
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          run-id: ${{ inputs.source_run_id || '39098770358' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: c5g7-p45-*
+          path: /tmp/p45-artifacts
+          merge-multiple: false
+
+      - name: Hash and inspect every available bundle
+        id: audit
+        run: |
+          set -euo pipefail
+          mkdir -p p45-bundle-audit
+          python scripts/audit_c5g7_run_bundle.py \
+            --bundle-root /tmp/p45-artifacts \
+            --out p45-bundle-audit/p45_artifact_bundle_audit.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("p45-bundle-audit/p45_artifact_bundle_audit.json")
+          report=json.loads(p.read_text())
+          assert report["record_count"] > 0, report
+          assert report["all_input_output_hashes_and_hdf5_pass"], report
+          print(json.dumps({
+            "record_count": report["record_count"],
+            "integrity_pass_count": report["integrity_pass_count"],
+            "incomplete_or_fail_count": report["incomplete_or_fail_count"],
+            "physical_validation_status": report["physical_validation_status"],
+            "coverage_complete": report["record_count"] == 36
+          },indent=2))
+          PY
+
+      - name: Preserve record-level evidence audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-p45-bundle-audit-${{ github.run_id }}
+          path: p45-bundle-audit/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Explain partial campaign coverage without weakening acceptance
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("p45-bundle-audit/p45_artifact_bundle_audit.json")
+          if not p.exists():
+              print("No bundle report emitted; artifact download may have returned no completed jobs.")
+              raise SystemExit(0)
+          r=json.loads(p.read_text())
+          if r["record_count"] < 36:
+              print(f"PARTIAL COVERAGE: audited {r['record_count']}/36 expected P4/P5 artifacts. This is an integrity snapshot, not a complete campaign result.")
+          else:
+              print("Full P4/P5 artifact inventory present. Interpret physical gates separately.")
+          print("Physical validation remains",r["physical_validation_status"])
+          PY
