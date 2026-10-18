@@ -14,7 +14,8 @@
       ],
       "primary_reference": "https://www.oecd-nea.org/jcms/pl_13548/benchmark-on-deterministic-transport-calculations-without-spatial-homogenisation",
       "current_evidence": "Corrected-group 18-run smoke dataset passed record integrity but selected no winner; P4/P5 held-out campaign is still running; independent S_N results for six layouts are partially complete; fuel-only spatial-mask correction has been regression-tested; model-fidelity and convergence review remain open.",
-      "known_blocker": "The canonical independent S_N solver comparison is discrepant (initial k_eff 1.184733 vs 1.186550 reference, about -181.7 pcm); all six alternative layouts lack a defensible physical acceptance band; independent model specification and spatial mapping review remain open."
+      "known_blocker": "The independent S_N solver's pinned mesh-convergence study documents its expected -181.7 pcm residual at 16 cells per pin from Cartesian/digital-disk discretization; this is a known numerical bias, not a zero-bias oracle. Independent review of the actual OpenMC model/tally mapping remains open, and no design-specific physical acceptance band exists for noncanonical layouts.",
+      "crosscode_note": "The S_N solver README and convergence.log report k_eff=1.184733 at 16 cells/pin, -181.7 pcm versus the NEA value; mesh refinement reduces the offset from about -3616 pcm at four cells/pin to -182 pcm at sixteen cells/pin. Treat it as a numerical comparator with a known discretization bias, not official acceptance."
     },
     "KRITZ2": {
       "role": "deferred_alternative_not_selected",
