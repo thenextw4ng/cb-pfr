@@ -13,7 +13,7 @@
     "id": "T8-C5G7-OpenMC-SN-2026-10",
     "name": "C5G7 transport campaign — OpenMC and deterministic S_N",
     "openmcRuns": 46,
-    "activeHistories": 4090500000,
+    "activeHistories": 4090540000,
     "snRuns": 7,
     "layouts": 6,
     "inferredSymmetryClasses": 4,
@@ -27,7 +27,7 @@
     "lowBudgetRegretPercent": 1.6,
     "p4SelectedLayout": "MMUU",
     "p5SelectedLayout": "MMUU",
-    "historiesInterpretation": "Configured active neutron histories summed across run plans; this is not the number of independent design observations."
+    "historiesInterpretation": "Exact sum of the five phase totals is 4,090,540,000 configured active histories; Table 6 rounds this to 4.0905 × 10^9. This is not the number of independent design observations."
   },
   "phases": [
     {
