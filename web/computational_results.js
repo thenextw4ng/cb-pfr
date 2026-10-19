@@ -81,7 +81,7 @@
     var c = data.campaign;
     var cards = [
       ["46", "OpenMC cases", "P1–P5 transport campaign"],
-      ["4.0905 × 10⁹", "Configured active histories", "Not independent design observations"],
+      ["≈4.0905 × 10⁹", "Configured active histories", "Phase ledger sums to 4,090,540,000"],
       ["7", "Deterministic S_N runs", "One canonical reference + six layouts"],
       ["6 → 4*", "Layout labels / inferred classes", "*Symmetry mapping needs confirmation"]
     ];
@@ -113,7 +113,7 @@
       data.phases.map(function(x) {
         return '<tr><td><b>' + esc(x.phase) + '</b></td><td class="numeric">' + x.cases + '</td><td class="numeric">' + esc(x.settings) + '</td><td class="numeric">' + esc(x.activePerCase) + '</td><td class="numeric">' + esc(x.totalActive) + '</td><td>' + esc(x.role) + '</td></tr>';
       }).join("") +
-      '</tbody><tfoot><tr><th>TOTAL</th><th>46</th><th>—</th><th>—</th><th>4,090,500,000</th><th>Reported configured active histories</th></tr></tfoot></table>';
+      '</tbody><tfoot><tr><th>TOTAL</th><th>46</th><th>—</th><th>—</th><th>' + Number(data.campaign.activeHistories).toLocaleString("en-US") + '</th><th>Reported configured active histories</th></tr></tfoot></table>';
 
     document.getElementById("crFindings").innerHTML = data.findings.map(function(x, i) {
       return '<div class="cr-finding"><div class="cr-finding-top"><span class="cr-finding-index">0' + (i + 1) + '</span><span class="cr-finding-status">' + esc(x.status) + '</span></div><h4>' + esc(x.title) + '</h4><p>' + esc(x.body) + '</p></div>';
