@@ -1,0 +1,276 @@
+{
+  "schema_version": "1.0",
+  "updated": "2026-10-19",
+  "title": "CB-PFR full-paper computational run summary",
+  "source": {
+    "document": "SPC_FullPaper_CB-PFR_Revisi_v3.pdf",
+    "sha256": "3f060bfb949f00035eb2aeb1cbdaa94f85d6ebd0fe5e9c5b126cb8ce56b2e938",
+    "locations": "Tables 6, 13, 15–18 and Sections IV.2.4–IV.3.6, PDF pp. 8–18",
+    "kind": "Paper-transcribed aggregate summary",
+    "limitation": "This browser-ready file contains aggregate values transcribed from the paper draft, not raw statepoint/HDF5 outputs. Use archived run artefacts as the primary record when available."
+  },
+  "campaign": {
+    "id": "T8-C5G7-OpenMC-SN-2026-10",
+    "name": "C5G7 transport campaign — OpenMC and deterministic S_N",
+    "openmcRuns": 46,
+    "activeHistories": 4090540000,
+    "snRuns": 7,
+    "layouts": 6,
+    "inferredSymmetryClasses": 4,
+    "statepointIntegrity": "PASS",
+    "sourceConvergence": "NOT CERTIFIED",
+    "lowBudgetSelectedLayout": "MUUM",
+    "lowBudgetSelectedProxy": 1.3078,
+    "heldOutLowestProxyLayout": "MMUU",
+    "heldOutLowestProxy": 1.296065,
+    "lowBudgetRegret": 0.0203,
+    "lowBudgetRegretPercent": 1.6,
+    "p4SelectedLayout": "MMUU",
+    "p5SelectedLayout": "MMUU",
+    "historiesInterpretation": "Exact sum of the five phase totals is 4,090,540,000 configured active histories; Table 6 rounds this to 4.0905 × 10^9. This is not the number of independent design observations."
+  },
+  "phases": [
+    {
+      "phase": "P1",
+      "cases": 6,
+      "settings": "100 / 10 / 1,000",
+      "activePerCase": "90,000",
+      "totalActive": "540,000",
+      "role": "Low-budget screening of six layouts"
+    },
+    {
+      "phase": "P2",
+      "cases": 2,
+      "settings": "2,000 / 100 / 5,000",
+      "activePerCase": "9,500,000",
+      "totalActive": "19,000,000",
+      "role": "Medium-budget anchors: MUMU and UMMU"
+    },
+    {
+      "phase": "P3",
+      "cases": 2,
+      "settings": "20,000 / 500 / 10,000",
+      "activePerCase": "195,000,000",
+      "totalActive": "390,000,000",
+      "role": "High-budget anchors: MUMU and UMMU"
+    },
+    {
+      "phase": "P4",
+      "cases": 18,
+      "settings": "2,000 / 100 / 5,000",
+      "activePerCase": "9,500,000",
+      "totalActive": "171,000,000",
+      "role": "Six-layout screening; three seeds per layout"
+    },
+    {
+      "phase": "P5",
+      "cases": 18,
+      "settings": "20,000 / 500 / 10,000",
+      "activePerCase": "195,000,000",
+      "totalActive": "3,510,000,000",
+      "role": "Held-out evaluation; three new seeds per layout"
+    }
+  ],
+  "canonicalReference": {
+    "layout": "UMMU",
+    "openmcKeff": 1.18647,
+    "referenceKeff": 1.18655,
+    "deltaPcm": -8,
+    "zScore": 0.84,
+    "internalCriterion": "|Δk| ≤ 100 pcm and z ≤ 2",
+    "verdict": "Internal consistency check passed; not official OECD/NEA benchmark acceptance."
+  },
+  "layouts": [
+    {
+      "layout": "MMUU",
+      "symmetryLabel": "MMUU / MUMU (inferred pair)",
+      "keffP4": 1.143528,
+      "keffP5": 1.143709,
+      "fP4": 1.293332,
+      "fP5": 1.296065,
+      "deltaF": -0.00273,
+      "keffSN": 1.141478,
+      "deltaKpcm": -223.1,
+      "snPinMax": 1.722286,
+      "snPinMin": 0.301434,
+      "spatialRmsPct": 7.56,
+      "maxRelativePct": 8.83
+    },
+    {
+      "layout": "MUMU",
+      "symmetryLabel": "MMUU / MUMU (inferred pair)",
+      "keffP4": 1.143793,
+      "keffP5": 1.143691,
+      "fP4": 1.29634,
+      "fP5": 1.296538,
+      "deltaF": -0.0002,
+      "keffSN": 1.141478,
+      "deltaKpcm": -221.3,
+      "snPinMax": 1.722286,
+      "snPinMin": 0.301434,
+      "spatialRmsPct": 7.53,
+      "maxRelativePct": 9.04
+    },
+    {
+      "layout": "MUUM",
+      "symmetryLabel": "Distinct inferred class",
+      "keffP4": 1.156066,
+      "keffP5": 1.156181,
+      "fP4": 1.314518,
+      "fP5": 1.316332,
+      "deltaF": -0.00181,
+      "keffSN": 1.154058,
+      "deltaKpcm": -212.3,
+      "snPinMax": 1.69706,
+      "snPinMin": 0.218818,
+      "spatialRmsPct": 7.7,
+      "maxRelativePct": 8.47
+    },
+    {
+      "layout": "UMMU",
+      "symmetryLabel": "Self-symmetric (paper inference)",
+      "keffP4": 1.186462,
+      "keffP5": 1.18647,
+      "fP4": 1.866914,
+      "fP5": 1.867369,
+      "deltaF": -0.00046,
+      "keffSN": 1.184733,
+      "deltaKpcm": -173.7,
+      "snPinMax": 2.344035,
+      "snPinMin": 0.217344,
+      "spatialRmsPct": 7.66,
+      "maxRelativePct": 8.99
+    },
+    {
+      "layout": "UMUM",
+      "symmetryLabel": "UMUM / UUMM (inferred pair)",
+      "keffP4": 1.204602,
+      "keffP5": 1.204614,
+      "fP4": 1.814682,
+      "fP5": 1.8162,
+      "deltaF": -0.00152,
+      "keffSN": 1.203136,
+      "deltaKpcm": -147.8,
+      "snPinMax": 2.239888,
+      "snPinMin": 0.16144,
+      "spatialRmsPct": 7.91,
+      "maxRelativePct": 10.83
+    },
+    {
+      "layout": "UUMM",
+      "symmetryLabel": "UMUM / UUMM (inferred pair)",
+      "keffP4": 1.205057,
+      "keffP5": 1.20467,
+      "fP4": 1.818978,
+      "fP5": 1.816087,
+      "deltaF": 0.00289,
+      "keffSN": 1.203136,
+      "deltaKpcm": -153.4,
+      "snPinMax": 2.239888,
+      "snPinMin": 0.16144,
+      "spatialRmsPct": 7.89,
+      "maxRelativePct": 11.29
+    }
+  ],
+  "scalingCheck": {
+    "keffP1RmsPcm": 339,
+    "keffP4RmsPcm": 18.5,
+    "observedRatioKeff": 18.3,
+    "expectedRatioKeff": 17.4,
+    "proxyP1Rms": 0.0242,
+    "proxyP4Rms": 0.0019,
+    "observedRatioProxy": 12.7,
+    "interpretation": "Directionally consistent with H^-1/2 under this campaign, but not a formal verification; only six layouts and P4/P5 may include source-convergence bias."
+  },
+  "symmetryPairs": [
+    {
+      "pair": "MMUU − MUMU",
+      "deltaKeffP4Pcm": -26.5,
+      "deltaKeffP5Pcm": 1.8,
+      "deltaFP4": -0.003,
+      "deltaFP5": -0.00047,
+      "deltaSN": 0
+    },
+    {
+      "pair": "UMUM − UUMM",
+      "deltaKeffP4Pcm": -45.5,
+      "deltaKeffP5Pcm": -5.6,
+      "deltaFP4": -0.0043,
+      "deltaFP5": 0.00011,
+      "deltaSN": 0
+    }
+  ],
+  "crossCode": {
+    "keffRankKendallTau": 1,
+    "peakMetricKendallTau": 0.67,
+    "spatialRmsRangePct": [
+      7.53,
+      7.91
+    ],
+    "maximumSpatialDifferenceRangePct": [
+      8.47,
+      11.29
+    ],
+    "interpretation": "The two codes give the same k-effective ordering across four paper-inferred classes, but peak metrics reorder classes. Spatial differences are too large to call this physical validation."
+  },
+  "selectionComparison": {
+    "p4ChosenByAll": "MMUU",
+    "p5ChosenByAll": "MMUU",
+    "meanHeldOutRegret": {
+      "cbpfr": 0.0000365,
+      "pointEstimate": 0.0000232,
+      "uniformMargin": 0.0000232
+    },
+    "bootstrapResamples": 10000,
+    "equalRegretPercent": 97.45,
+    "pointLowerPercent": 2.38,
+    "cbpfrLowerPercent": 0.17,
+    "independentUnits": "Three held-out seeds per layout; 10,000 bootstrap resamples are not 10,000 independent OpenMC experiments.",
+    "conclusion": "This transport campaign does not demonstrate CB-PFR superiority over point estimate or uniform margin."
+  },
+  "findings": [
+    {
+      "title": "Budget changes the screening decision",
+      "status": "Illustrative",
+      "body": "The lowest-budget P1 selected MUUM (F_fission proxy 1.3078). The P5 held-out mean was lowest for MMUU (1.296065), with MUMU close behind (1.296538). The paper reports P1-selection regret 0.0203, about 1.6%, against the P5 empirical reference; that reference is not exact physical truth."
+    },
+    {
+      "title": "Canonical k-effective consistency check",
+      "status": "Internal check",
+      "body": "For canonical UMMU, OpenMC reported k_eff = 1.186470 versus the cited 1.18655 reference: −8.0 pcm, z = 0.84. This passes the paper's internal threshold only; it is not official benchmark acceptance."
+    },
+    {
+      "title": "Cross-code ranking depends on the metric",
+      "status": "Metric-dependent",
+      "body": "The k-effective ordering agrees (Kendall τ = 1.00 across four inferred classes), while the peak-power metric gives τ = 0.67. The spatial RMS difference is 7.53–7.91%, so the S_N comparison is not physical validation."
+    },
+    {
+      "title": "No observed selector superiority in this campaign",
+      "status": "No superiority shown",
+      "body": "Point estimate, uniform margin and CB-PFR all select MMUU at P4 and P5. Mean held-out regret is 2.32×10⁻⁵ for point estimate and uniform margin versus 3.65×10⁻⁵ for CB-PFR, under the paper's stated empirical reference and three-seed design."
+    },
+    {
+      "title": "Error scaling is consistent, not certified",
+      "status": "Limited evidence",
+      "body": "P1-to-P4 RMS deviations change from 339 to 18.5 pcm for k_eff (ratio 18.3, predicted 17.4), and from 0.0242 to 0.0019 for the assembly proxy (ratio 12.7). The paper treats this as a plausibility check, not a precision verification."
+    }
+  ],
+  "limitations": [
+    "Source/eigenvalue convergence is not certified for this campaign, even though statepoint structure, MGXS presence and uniqueness checks passed.",
+    "Only six enumerated layouts and three seeds per layout were used at P4/P5; the evidence does not support broad statistical generalization.",
+    "The four symmetry classes are inferred from the deterministic S_N results and the stated position convention; their mapping still needs confirmation against the repository's position map.",
+    "The OpenMC assembly-integrated F_fission proxy is not absolute thermal power, pin-power peaking, or a reactor-safety metric.",
+    "P5's mean is an empirical held-out reference, not exact ground truth. Bootstrap resamples do not create additional independent simulations.",
+    "The six layouts were enumerated; the QUBO-variable-to-material-placement mapping is not implemented in this campaign."
+  ],
+  "relatedArchivedReplay": {
+    "url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38853860378",
+    "studyId": "CBPFR-C5G7-equal-budget-policy-replay-2026-10-16",
+    "lowBudgetObservations": 1200,
+    "highBudgetReferenceRuns": 60,
+    "decisionBlocks": 28,
+    "evaluationsPerDecision": 18,
+    "newOpenMCRuns": 0,
+    "note": "This is a separate archived observation/replay campaign already represented under the existing Experiments & paper section. Do not merge its rows with the 46-run P1–P5 campaign."
+  }
+}
