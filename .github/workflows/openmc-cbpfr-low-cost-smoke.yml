@@ -1,0 +1,42 @@
+name: Low-cost OpenMC CB-PFR smoke test
+on:
+  push:
+    branches: [research/openmc-cbpfr-low-cost-smoke]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  openmc-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: openmc
+          create-args: >-
+            python=3.11
+            openmc
+          cache-environment: true
+      - name: Verify OpenMC
+        shell: bash -el {0}
+        run: |
+          python -c "import openmc; print('OpenMC', openmc.__version__)"
+          openmc --version
+      - name: Run low-cost OpenMC smoke test
+        shell: bash -el {0}
+        env:
+          OPENMC_BATCHES: "20"
+          OPENMC_INACTIVE: "5"
+          OPENMC_PARTICLES: "500"
+          OPENMC_THREADS: "2"
+          FEASIBILITY_THRESHOLD: "1.0"
+          CBPFR_Z: "1.96"
+        run: python scripts/run_openmc_cbpfr_low_cost_smoke.py
+      - name: Upload inputs and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openmc-cbpfr-low-cost-smoke
+          path: results/openmc_cbpfr_smoke_2026-10-11/
+          if-no-files-found: warn

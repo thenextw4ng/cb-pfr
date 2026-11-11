@@ -1,0 +1,109 @@
+{
+  "study_id": "cbpfr_openmc_subcriticality_replicated_screen_v1",
+  "run_url": "https://github.com/thenextw4ng/cb-pfr/actions/runs/38123032286",
+  "artifact_name": "openmc-cbpfr-subcriticality-replicated-screen",
+  "openmc_version": "0.15.3",
+  "status": "completed",
+  "run_settings": {
+    "batches": 20,
+    "inactive": 6,
+    "particles_per_batch": 500,
+    "threads": 2,
+    "seeds": [
+      20261021,
+      20261022,
+      20261023,
+      20261024,
+      20261025
+    ],
+    "runs_total": 25,
+    "solver": "conventional eigenvalue; random_ray settings cleared"
+  },
+  "criterion": {
+    "observable": "k-effective",
+    "subcritical_threshold": 1,
+    "cbpfr_rule": "mean + 1.96 * between-seed SD <= 1.0",
+    "uniform_margin": 0.02,
+    "caveat": "five-seed between-seed SD is not a calibrated confidence interval"
+  },
+  "candidate_summary": {
+    "four_fuel": {
+      "fuel_positions": 4,
+      "replicates": 5,
+      "mean_keff": 1.320255657316754,
+      "between_seed_sd": 0.008991662472118751,
+      "mean_openmc_reported_sd": 0.008056349955539934,
+      "empirical_min": 1.3079690573306695,
+      "empirical_max": 1.329125060513124,
+      "subcritical_runs": 0
+    },
+    "three_fuel": {
+      "fuel_positions": 3,
+      "replicates": 5,
+      "mean_keff": 1.3115041251916784,
+      "between_seed_sd": 0.01534588320145922,
+      "mean_openmc_reported_sd": 0.009520217789000283,
+      "empirical_min": 1.2890636756329632,
+      "empirical_max": 1.330605677318015,
+      "subcritical_runs": 0
+    },
+    "two_fuel_adjacent": {
+      "fuel_positions": 2,
+      "replicates": 5,
+      "mean_keff": 1.156996693142578,
+      "between_seed_sd": 0.018199018404555626,
+      "mean_openmc_reported_sd": 0.010525919131132478,
+      "empirical_min": 1.1304860862157595,
+      "empirical_max": 1.1791051368243446,
+      "subcritical_runs": 0
+    },
+    "two_fuel_diagonal": {
+      "fuel_positions": 2,
+      "replicates": 5,
+      "mean_keff": 1.2072846908326051,
+      "between_seed_sd": 0.011954566276128707,
+      "mean_openmc_reported_sd": 0.010132660556086652,
+      "empirical_min": 1.193670442242907,
+      "empirical_max": 1.2256123006753739,
+      "subcritical_runs": 0
+    },
+    "one_fuel": {
+      "fuel_positions": 1,
+      "replicates": 5,
+      "mean_keff": 0.8380795244598556,
+      "between_seed_sd": 0.010166392745149038,
+      "mean_openmc_reported_sd": 0.009040884086770071,
+      "empirical_min": 0.8262539818945235,
+      "empirical_max": 0.8484703941585541,
+      "subcritical_runs": 5
+    }
+  },
+  "policy_summary": {
+    "point_estimate": {
+      "heldout_subcritical_rate": 1,
+      "mean_heldout_keff": 0.8380795244598556,
+      "selected_candidate": "one_fuel",
+      "folds": 5
+    },
+    "cbpfr_upper_bound": {
+      "heldout_subcritical_rate": 1,
+      "mean_heldout_keff": 0.8380795244598556,
+      "selected_candidate": "one_fuel",
+      "folds": 5
+    },
+    "uniform_margin": {
+      "heldout_subcritical_rate": 1,
+      "mean_heldout_keff": 0.8380795244598556,
+      "selected_candidate": "one_fuel",
+      "folds": 5
+    }
+  },
+  "physical_validation": "NOT_ESTABLISHED",
+  "conclusions": [
+    "OpenMC executed 25 runs on five distinct toy configurations.",
+    "All three ranking policies selected one_fuel in all five leave-one-seed-out folds.",
+    "No CB-PFR advantage was demonstrated.",
+    "No defensible QUBO-to-physics mapping; no QUBO-only comparison.",
+    "Not a canonical C5G7 benchmark or safety validation."
+  ]
+}
