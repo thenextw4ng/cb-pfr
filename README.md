@@ -6,6 +6,10 @@
 **Version:** 0.1.0  
 **Status:** research prototype / methodological working paper
 
+## Selected benchmark direction
+
+- [Fixed-budget ranking-and-selection benchmark design](reports/SELECTED_FIXED_BUDGET_RANKING_SELECTION_BENCHMARK_2026-10-11.md): selected to test CB-PFR's method effect under equal budgets, candidate-specific uncertainty, and held-out latent truth. This is a design specification; confirmatory runs have not yet been performed.
+
 ## Research question
 
 Optimization can produce candidates that look good under nominal estimates but become fragile when downstream quantities are uncertain. CB-PFR studies whether candidate selection can incorporate uncertainty into the feasibility screen **after** optimization.

@@ -1,0 +1,39 @@
+name: CB-PFR synthetic confirmatory benchmark
+
+on:
+  push:
+    branches:
+      - research/fixed-budget-ranking-selection-benchmark
+    paths:
+      - "scripts/run_cbpfr_rs_synthetic_confirmatory.py"
+      - ".github/workflows/cbpfr-rs-synthetic-confirmatory.yml"
+      - "reports/CB_PFR_RS_SYNTHETIC_CONFIRMATORY_PREREGISTRATION_2026-10-11.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  confirmatory-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout locked research branch
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install numerical dependencies
+        run: python -m pip install --upgrade numpy scipy
+      - name: Run locked synthetic benchmark
+        run: python scripts/run_cbpfr_rs_synthetic_confirmatory.py | tee confirmatory_run.log
+      - name: Upload raw records and summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbpfr-rs-synthetic-confirmatory
+          path: |
+            results/fixed_budget_ranking_selection_confirmatory/
+            confirmatory_run.log
+          if-no-files-found: error
+          retention-days: 90
