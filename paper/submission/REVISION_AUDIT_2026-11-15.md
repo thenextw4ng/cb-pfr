@@ -33,7 +33,7 @@ Audited the six-page uploaded manuscript CB-PFR_revised_manuscript_clean (1).pdf
 - 4,000 rows = 1,000 paired pools × four methods.
 - Success rates in the current PDF: CB-PFR 97.6%, point estimate 93.3%, uniform margin 96.6%, QUBO-only 85.7%.
 - The PDF reports paired differences of +4.3 pp vs point [3.0, 5.7], +1.0 pp vs uniform [0.3, 1.7], and +11.9 pp vs QUBO-only [9.8, 14.0]. It reports discordant-pool sign tests 47 vs 4 (p < 10^-9) against point and 12 vs 2 (p = 0.013) against uniform.
-- Recompute these from the archived 4,000 rows with a deterministic, documented resampling seed before submission; raw CSV alone is not a substitute for bootstrap/sign-test code.
+- A separate audit recomputation (50,000 paired resamples, seed 20261115, percentile interval) reproduced +4.3 [3.0, 5.7] vs point and +11.9 [9.8, 14.0] vs QUBO-only, but returned +1.0 [0.3, 1.8] vs uniform rather than the manuscript's [0.3, 1.7]. Exact two-sided sign tests from the CSV give p=2.4163×10^-10 (47:4) and p=0.01294 (12:2). This small bootstrap endpoint discrepancy means the historical resampling seed/count/quantile convention must be recovered before final submission; do not silently change either value.
 
 ## Manuscript corrections required before final PDF
 
